@@ -286,7 +286,6 @@ export function CaseForm({ open, onOpenChange, onSuccess }: CaseFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
                         {accounts.map((account) => (
                           <SelectItem key={account.id} value={account.id}>
                             {account.name}
@@ -312,7 +311,6 @@ export function CaseForm({ open, onOpenChange, onSuccess }: CaseFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
                         {contacts.map((contact) => (
                           <SelectItem key={contact.id} value={contact.id}>
                             {contact.first_name} {contact.last_name}

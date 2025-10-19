@@ -184,7 +184,6 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None (Individual)</SelectItem>
                       {accounts.map((account) => (
                         <SelectItem key={account.id} value={account.id}>
                           {account.name}
