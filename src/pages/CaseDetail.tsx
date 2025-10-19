@@ -29,10 +29,23 @@ interface Case {
   created_at: string;
 }
 
+interface Account {
+  id: string;
+  name: string;
+}
+
+interface Contact {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 const CaseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [caseData, setCaseData] = useState<Case | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -55,6 +68,26 @@ const CaseDetail = () => {
 
       if (error) throw error;
       setCaseData(data);
+
+      // Fetch account if exists
+      if (data.account_id) {
+        const { data: accountData } = await supabase
+          .from("accounts")
+          .select("id, name")
+          .eq("id", data.account_id)
+          .single();
+        if (accountData) setAccount(accountData);
+      }
+
+      // Fetch contact if exists
+      if (data.contact_id) {
+        const { data: contactData } = await supabase
+          .from("contacts")
+          .select("id, first_name, last_name")
+          .eq("id", data.contact_id)
+          .single();
+        if (contactData) setContact(contactData);
+      }
     } catch (error) {
       console.error("Error fetching case:", error);
       toast({
@@ -193,6 +226,18 @@ const CaseDetail = () => {
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
+            {account && (
+              <div>
+                <p className="text-sm font-medium mb-1">Account</p>
+                <p className="text-muted-foreground">{account.name}</p>
+              </div>
+            )}
+            {contact && (
+              <div>
+                <p className="text-sm font-medium mb-1">Contact</p>
+                <p className="text-muted-foreground">{contact.first_name} {contact.last_name}</p>
+              </div>
+            )}
             {caseData.start_date && (
               <div>
                 <p className="text-sm font-medium mb-1">Start Date</p>
