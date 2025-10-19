@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Briefcase } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { CaseForm } from "@/components/CaseForm";
 
 interface Case {
   id: string;
@@ -20,9 +20,9 @@ interface Case {
 }
 
 const Cases = () => {
-  const navigate = useNavigate();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
 
   useEffect(() => {
     fetchCases();
@@ -83,7 +83,7 @@ const Cases = () => {
             Manage and track your investigation cases
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setFormOpen(true)}>
           <Plus className="w-4 h-4" />
           New Case
         </Button>
@@ -99,7 +99,7 @@ const Cases = () => {
             <p className="text-muted-foreground text-center mb-4">
               Get started by creating your first case
             </p>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setFormOpen(true)}>
               <Plus className="w-4 h-4" />
               Create First Case
             </Button>
@@ -142,6 +142,12 @@ const Cases = () => {
           ))}
         </div>
       )}
+
+      <CaseForm 
+        open={formOpen} 
+        onOpenChange={setFormOpen} 
+        onSuccess={fetchCases} 
+      />
     </div>
   );
 };

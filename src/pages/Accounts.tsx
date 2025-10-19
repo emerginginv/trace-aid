@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { AccountForm } from "@/components/AccountForm";
 
 interface Account {
   id: string;
@@ -18,6 +19,7 @@ interface Account {
 const Accounts = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
@@ -60,7 +62,7 @@ const Accounts = () => {
             Manage business accounts and organizations
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setFormOpen(true)}>
           <Plus className="w-4 h-4" />
           New Account
         </Button>
@@ -76,7 +78,7 @@ const Accounts = () => {
             <p className="text-muted-foreground text-center mb-4">
               Start by adding your first business account
             </p>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setFormOpen(true)}>
               <Plus className="w-4 h-4" />
               Create First Account
             </Button>
@@ -112,6 +114,12 @@ const Accounts = () => {
           ))}
         </div>
       )}
+
+      <AccountForm 
+        open={formOpen} 
+        onOpenChange={setFormOpen} 
+        onSuccess={fetchAccounts} 
+      />
     </div>
   );
 };

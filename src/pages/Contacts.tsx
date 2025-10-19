@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, User } from "lucide-react";
 import { toast } from "sonner";
+import { ContactForm } from "@/components/ContactForm";
 
 interface Contact {
   id: string;
@@ -19,6 +20,7 @@ interface Contact {
 const Contacts = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
 
   useEffect(() => {
     fetchContacts();
@@ -65,7 +67,7 @@ const Contacts = () => {
             Manage individual contacts and clients
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setFormOpen(true)}>
           <Plus className="w-4 h-4" />
           New Contact
         </Button>
@@ -81,7 +83,7 @@ const Contacts = () => {
             <p className="text-muted-foreground text-center mb-4">
               Add your first contact to get started
             </p>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setFormOpen(true)}>
               <Plus className="w-4 h-4" />
               Create First Contact
             </Button>
@@ -120,6 +122,12 @@ const Contacts = () => {
           ))}
         </div>
       )}
+
+      <ContactForm 
+        open={formOpen} 
+        onOpenChange={setFormOpen} 
+        onSuccess={fetchContacts} 
+      />
     </div>
   );
 };
