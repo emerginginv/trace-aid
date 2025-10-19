@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, User, Car, MapPin, Package, Pencil, Trash2 } from "lucide-react";
+import { Plus, User, Car, MapPin, Package, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SubjectForm } from "./SubjectForm";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Subject {
   id: string;
@@ -21,6 +23,8 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchSubjects();
@@ -109,6 +113,16 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
     setEditingSubject(null);
   };
 
+  const filteredSubjects = subjects.filter(subject => {
+    const matchesSearch = searchQuery === '' || 
+      subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      subject.notes?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesType = typeFilter === 'all' || subject.subject_type === typeFilter;
+    
+    return matchesSearch && matchesType;
+  });
+
   if (loading) {
     return <p className="text-muted-foreground">Loading subjects...</p>;
   }
@@ -126,6 +140,30 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
         </Button>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search subjects..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="person">Person</SelectItem>
+            <SelectItem value="vehicle">Vehicle</SelectItem>
+            <SelectItem value="location">Location</SelectItem>
+            <SelectItem value="item">Item</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {subjects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -136,9 +174,15 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredSubjects.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No subjects match your search criteria</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {subjects.map((subject) => (
+          {filteredSubjects.map((subject) => (
             <Card key={subject.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">

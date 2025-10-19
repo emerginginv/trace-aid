@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { UpdateForm } from "./UpdateForm";
+import { Input } from "@/components/ui/input";
 
 interface Update {
   id: string;
@@ -18,6 +19,7 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingUpdate, setEditingUpdate] = useState<Update | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleEdit = (update: Update) => {
     setEditingUpdate(update);
@@ -66,6 +68,12 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
     }
   };
 
+  const filteredUpdates = updates.filter(update => {
+    return searchQuery === '' || 
+      update.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      update.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
   if (loading) {
     return <p className="text-muted-foreground">Loading updates...</p>;
   }
@@ -83,6 +91,16 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
         </Button>
       </div>
 
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search updates..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {updates.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -93,9 +111,15 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredUpdates.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No updates match your search criteria</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {updates.map((update) => (
+          {filteredUpdates.map((update) => (
             <Card key={update.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">

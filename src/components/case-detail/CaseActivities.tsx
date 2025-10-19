@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, CheckCircle2, Circle, Pencil, Trash2 } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, Circle, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ActivityForm } from "./ActivityForm";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Activity {
   id: string;
@@ -24,6 +26,9 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const handleEdit = (activity: Activity) => {
     setEditingActivity(activity);
@@ -108,6 +113,20 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
     return colors[type] || "bg-muted";
   };
 
+  const filteredActivities = activities.filter(activity => {
+    const matchesSearch = searchQuery === '' || 
+      activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesType = typeFilter === 'all' || activity.activity_type === typeFilter;
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'completed' && activity.completed) ||
+      (statusFilter === 'pending' && !activity.completed);
+    
+    return matchesSearch && matchesType && matchesStatus;
+  });
+
   if (loading) {
     return <p className="text-muted-foreground">Loading activities...</p>;
   }
@@ -125,6 +144,38 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
         </Button>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search activities..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="task">Task</SelectItem>
+            <SelectItem value="event">Event</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {activities.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -135,9 +186,15 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredActivities.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No activities match your search criteria</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {activities.map((activity) => (
+          {filteredActivities.map((activity) => (
             <Card key={activity.id} className={activity.completed ? "opacity-60" : ""}>
               <CardHeader>
                 <div className="flex items-center gap-3">

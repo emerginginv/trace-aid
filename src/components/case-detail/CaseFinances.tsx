@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, Pencil, Trash2 } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Finance {
   id: string;
@@ -30,6 +32,9 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingFinance, setEditingFinance] = useState<Finance | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchFinances();
@@ -133,6 +138,19 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
     setEditingFinance(null);
   };
 
+  const filteredFinances = finances.filter(finance => {
+    const matchesSearch = searchQuery === '' || 
+      finance.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      finance.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      finance.notes?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesType = typeFilter === 'all' || finance.finance_type === typeFilter;
+    
+    const matchesStatus = statusFilter === 'all' || finance.status === statusFilter;
+    
+    return matchesSearch && matchesType && matchesStatus;
+  });
+
   if (loading) {
     return <p className="text-muted-foreground">Loading finances...</p>;
   }
@@ -148,6 +166,40 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
           <Plus className="h-4 w-4" />
           Add Transaction
         </Button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search finances (description, invoice #, notes)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="retainer">Retainer</SelectItem>
+            <SelectItem value="expense">Expense</SelectItem>
+            <SelectItem value="invoice">Invoice</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 mb-6">
@@ -190,9 +242,15 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredFinances.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No finances match your search criteria</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {finances.map((finance) => (
+          {filteredFinances.map((finance) => (
             <Card key={finance.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
