@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,9 +24,10 @@ interface SubjectFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  editingSubject?: any;
 }
 
-export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess }: SubjectFormProps) => {
+export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubject }: SubjectFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -40,41 +41,73 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess }: SubjectFo
     },
   });
 
+  useEffect(() => {
+    if (editingSubject) {
+      form.reset({
+        subject_type: editingSubject.subject_type,
+        name: editingSubject.name,
+        notes: editingSubject.notes || "",
+        detail_key: "",
+        detail_value: "",
+      });
+    } else {
+      form.reset({
+        subject_type: "person",
+        name: "",
+        notes: "",
+        detail_key: "",
+        detail_value: "",
+      });
+    }
+  }, [editingSubject, form]);
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const details: Record<string, string> = {};
+      const details: Record<string, string> = editingSubject?.details || {};
       if (values.detail_key && values.detail_value) {
         details[values.detail_key] = values.detail_value;
       }
 
-      const { error } = await supabase.from("case_subjects").insert({
+      const subjectData = {
         case_id: caseId,
         user_id: user.id,
         subject_type: values.subject_type,
         name: values.name,
         notes: values.notes || null,
         details,
-      });
+      };
+
+      let error;
+      if (editingSubject) {
+        const result = await supabase
+          .from("case_subjects")
+          .update(subjectData)
+          .eq("id", editingSubject.id);
+        error = result.error;
+      } else {
+        const result = await supabase.from("case_subjects").insert(subjectData);
+        error = result.error;
+      }
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Subject added successfully",
+        description: editingSubject ? "Subject updated successfully" : "Subject added successfully",
       });
 
       form.reset();
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      console.error("Error adding subject:", error);
+      console.error("Error saving subject:", error);
       toast({
         title: "Error",
-        description: "Failed to add subject",
+        description: "Failed to save subject",
         variant: "destructive",
       });
     } finally {
@@ -86,7 +119,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess }: SubjectFo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add Subject</DialogTitle>
+          <DialogTitle>{editingSubject ? "Edit" : "Add"} Subject</DialogTitle>
           <DialogDescription>Add a person, vehicle, location, or item related to this case</DialogDescription>
         </DialogHeader>
 
@@ -179,7 +212,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess }: SubjectFo
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Subject"}
+                {isSubmitting ? (editingSubject ? "Updating..." : "Adding...") : (editingSubject ? "Update Subject" : "Add Subject")}
               </Button>
             </div>
           </form>

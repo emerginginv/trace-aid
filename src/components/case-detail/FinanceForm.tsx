@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,6 +15,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { FinanceFormFields } from "./FinanceFormFields";
 
 const formSchema = z.object({
   finance_type: z.enum(["retainer", "expense", "invoice"]),
@@ -24,6 +26,14 @@ const formSchema = z.object({
   description: z.string().min(1, "Description is required"),
   date: z.date(),
   status: z.enum(["pending", "paid", "overdue"]),
+  subject_id: z.string().optional(),
+  activity_id: z.string().optional(),
+  category: z.string().optional(),
+  start_date: z.date().optional(),
+  end_date: z.date().optional(),
+  billing_frequency: z.string().optional(),
+  invoice_number: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 interface FinanceFormProps {
@@ -31,10 +41,13 @@ interface FinanceFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  editingFinance?: any;
 }
 
-export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess }: FinanceFormProps) => {
+export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFinance }: FinanceFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,8 +57,69 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess }: FinanceFo
       description: "",
       date: new Date(),
       status: "pending",
+      subject_id: undefined,
+      activity_id: undefined,
+      category: undefined,
+      start_date: undefined,
+      end_date: undefined,
+      billing_frequency: undefined,
+      invoice_number: undefined,
+      notes: undefined,
     },
   });
+
+  useEffect(() => {
+    if (editingFinance) {
+      form.reset({
+        finance_type: editingFinance.finance_type,
+        amount: editingFinance.amount.toString(),
+        description: editingFinance.description,
+        date: new Date(editingFinance.date),
+        status: editingFinance.status,
+        subject_id: editingFinance.subject_id || undefined,
+        activity_id: editingFinance.activity_id || undefined,
+        category: editingFinance.category || undefined,
+        start_date: editingFinance.start_date ? new Date(editingFinance.start_date) : undefined,
+        end_date: editingFinance.end_date ? new Date(editingFinance.end_date) : undefined,
+        billing_frequency: editingFinance.billing_frequency || undefined,
+        invoice_number: editingFinance.invoice_number || undefined,
+        notes: editingFinance.notes || undefined,
+      });
+    } else {
+      form.reset({
+        finance_type: "expense",
+        amount: "",
+        description: "",
+        date: new Date(),
+        status: "pending",
+        subject_id: undefined,
+        activity_id: undefined,
+        category: undefined,
+        start_date: undefined,
+        end_date: undefined,
+        billing_frequency: undefined,
+        invoice_number: undefined,
+        notes: undefined,
+      });
+    }
+  }, [editingFinance, form]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const [subjectsRes, activitiesRes] = await Promise.all([
+        supabase.from("case_subjects").select("*").eq("case_id", caseId).eq("user_id", user.id),
+        supabase.from("case_activities").select("*").eq("case_id", caseId).eq("user_id", user.id),
+      ]);
+
+      if (subjectsRes.data) setSubjects(subjectsRes.data);
+      if (activitiesRes.data) setActivities(activitiesRes.data);
+    };
+
+    if (open) fetchData();
+  }, [caseId, open]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
@@ -53,7 +127,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess }: FinanceFo
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("case_finances").insert({
+      const financeData = {
         case_id: caseId,
         user_id: user.id,
         finance_type: values.finance_type,
@@ -61,23 +135,43 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess }: FinanceFo
         description: values.description,
         date: format(values.date, "yyyy-MM-dd"),
         status: values.status,
-      });
+        subject_id: values.subject_id || null,
+        activity_id: values.activity_id || null,
+        category: values.category || null,
+        start_date: values.start_date ? format(values.start_date, "yyyy-MM-dd") : null,
+        end_date: values.end_date ? format(values.end_date, "yyyy-MM-dd") : null,
+        billing_frequency: values.billing_frequency || null,
+        invoice_number: values.invoice_number || null,
+        notes: values.notes || null,
+      };
+
+      let error;
+      if (editingFinance) {
+        const result = await supabase
+          .from("case_finances")
+          .update(financeData)
+          .eq("id", editingFinance.id);
+        error = result.error;
+      } else {
+        const result = await supabase.from("case_finances").insert(financeData);
+        error = result.error;
+      }
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Financial record added successfully",
+        description: editingFinance ? "Transaction updated successfully" : "Transaction added successfully",
       });
 
       form.reset();
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      console.error("Error adding finance record:", error);
+      console.error("Error saving finance record:", error);
       toast({
         title: "Error",
-        description: "Failed to add financial record",
+        description: "Failed to save transaction",
         variant: "destructive",
       });
     } finally {
@@ -87,130 +181,22 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess }: FinanceFo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Financial Transaction</DialogTitle>
+          <DialogTitle>{editingFinance ? "Edit" : "Add"} Financial Transaction</DialogTitle>
           <DialogDescription>Record a retainer, expense, or invoice</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="finance_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="retainer">Retainer</SelectItem>
-                      <SelectItem value="expense">Expense</SelectItem>
-                      <SelectItem value="invoice">Invoice</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Transaction description" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="overdue">Overdue</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FinanceFormFields form={form} subjects={subjects} activities={activities} />
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Transaction"}
+                {isSubmitting ? (editingFinance ? "Updating..." : "Adding...") : (editingFinance ? "Update Transaction" : "Add Transaction")}
               </Button>
             </div>
           </form>

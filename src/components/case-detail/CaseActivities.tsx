@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, Circle, Pencil, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ActivityForm } from "./ActivityForm";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,24 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+
+  const handleEdit = (activity: Activity) => {
+    setEditingActivity(activity);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this activity?")) return;
+    try {
+      const { error } = await supabase.from("case_activities").delete().eq("id", id);
+      if (error) throw error;
+      toast({ title: "Success", description: "Activity deleted" });
+      fetchActivities();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete", variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
     fetchActivities();
@@ -127,7 +145,7 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
                     checked={activity.completed}
                     onCheckedChange={() => toggleComplete(activity)}
                   />
-                  <div className="flex-1">
+                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <CardTitle className={`text-lg ${activity.completed ? "line-through" : ""}`}>
                         {activity.title}
@@ -141,6 +159,14 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
                           Completed {new Date(activity.completed_at).toLocaleDateString()}
                         </Badge>
                       )}
+                    </div>
+                    <div className="flex gap-1 mt-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(activity)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(activity.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                     {activity.due_date && (
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -164,8 +190,9 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
       <ActivityForm
         caseId={caseId}
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingActivity(null); }}
         onSuccess={fetchActivities}
+        editingActivity={editingActivity}
       />
     </>
   );

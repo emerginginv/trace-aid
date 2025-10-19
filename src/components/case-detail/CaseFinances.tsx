@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { Badge } from "@/components/ui/badge";
@@ -15,12 +15,21 @@ interface Finance {
   date: string;
   status: string;
   created_at: string;
+  subject_id?: string;
+  activity_id?: string;
+  category?: string;
+  start_date?: string;
+  end_date?: string;
+  billing_frequency?: string;
+  invoice_number?: string;
+  notes?: string;
 }
 
 export const CaseFinances = ({ caseId }: { caseId: string }) => {
   const [finances, setFinances] = useState<Finance[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingFinance, setEditingFinance] = useState<Finance | null>(null);
 
   useEffect(() => {
     fetchFinances();
@@ -88,6 +97,42 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
 
   const totals = calculateTotals();
 
+  const handleEdit = (finance: Finance) => {
+    setEditingFinance(finance);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this transaction?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("case_finances")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Transaction deleted successfully",
+      });
+      fetchFinances();
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete transaction",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFormClose = () => {
+    setFormOpen(false);
+    setEditingFinance(null);
+  };
+
   if (loading) {
     return <p className="text-muted-foreground">Loading finances...</p>;
   }
@@ -150,22 +195,57 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
           {finances.map((finance) => (
             <Card key={finance.id}>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg">{finance.description}</CardTitle>
-                    <Badge className={getTypeColor(finance.finance_type)}>
-                      {finance.finance_type}
-                    </Badge>
-                    <Badge className={getStatusColor(finance.status)}>
-                      {finance.status}
-                    </Badge>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold">
-                      ${Number(finance.amount).toFixed(2)}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CardTitle className="text-lg">{finance.description}</CardTitle>
+                      <Badge className={getTypeColor(finance.finance_type)}>
+                        {finance.finance_type}
+                      </Badge>
+                      <Badge className={getStatusColor(finance.status)}>
+                        {finance.status}
+                      </Badge>
+                      {finance.category && (
+                        <Badge variant="outline">{finance.category}</Badge>
+                      )}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(finance.date).toLocaleDateString()}
+                    {finance.notes && (
+                      <p className="text-sm text-muted-foreground mb-2">{finance.notes}</p>
+                    )}
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                      <div>Date: {new Date(finance.date).toLocaleDateString()}</div>
+                      {finance.invoice_number && (
+                        <div>Invoice #: {finance.invoice_number}</div>
+                      )}
+                      {finance.start_date && (
+                        <div>Period: {new Date(finance.start_date).toLocaleDateString()} - {finance.end_date ? new Date(finance.end_date).toLocaleDateString() : 'Ongoing'}</div>
+                      )}
+                      {finance.billing_frequency && (
+                        <div>Frequency: {finance.billing_frequency}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="text-right">
+                      <div className="text-2xl font-bold">
+                        ${Number(finance.amount).toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(finance)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(finance.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -178,8 +258,9 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
       <FinanceForm
         caseId={caseId}
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={handleFormClose}
         onSuccess={fetchFinances}
+        editingFinance={editingFinance}
       />
     </>
   );

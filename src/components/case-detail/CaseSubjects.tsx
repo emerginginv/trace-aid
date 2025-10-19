@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, User, Car, MapPin, Package } from "lucide-react";
+import { Plus, User, Car, MapPin, Package, Pencil, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SubjectForm } from "./SubjectForm";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,7 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
 
   useEffect(() => {
     fetchSubjects();
@@ -72,6 +73,42 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
     return colors[type] || "bg-muted";
   };
 
+  const handleEdit = (subject: Subject) => {
+    setEditingSubject(subject);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this subject?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("case_subjects")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Subject deleted successfully",
+      });
+      fetchSubjects();
+    } catch (error) {
+      console.error("Error deleting subject:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete subject",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFormClose = () => {
+    setFormOpen(false);
+    setEditingSubject(null);
+  };
+
   if (loading) {
     return <p className="text-muted-foreground">Loading subjects...</p>;
   }
@@ -109,9 +146,25 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
                     {getIcon(subject.subject_type)}
                     <CardTitle className="text-lg">{subject.name}</CardTitle>
                   </div>
-                  <Badge className={getTypeColor(subject.subject_type)}>
-                    {subject.subject_type}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getTypeColor(subject.subject_type)}>
+                      {subject.subject_type}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(subject)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(subject.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -137,8 +190,9 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
       <SubjectForm
         caseId={caseId}
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={handleFormClose}
         onSuccess={fetchSubjects}
+        editingSubject={editingSubject}
       />
     </>
   );

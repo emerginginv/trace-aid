@@ -114,42 +114,81 @@ export type Database = {
       }
       case_finances: {
         Row: {
+          activity_id: string | null
           amount: number
+          billing_frequency: string | null
           case_id: string
+          category: string | null
           created_at: string
           date: string
           description: string
+          end_date: string | null
           finance_type: string
           id: string
+          invoice_number: string | null
+          notes: string | null
+          start_date: string | null
           status: string | null
+          subject_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          activity_id?: string | null
           amount: number
+          billing_frequency?: string | null
           case_id: string
+          category?: string | null
           created_at?: string
           date?: string
           description: string
+          end_date?: string | null
           finance_type: string
           id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          start_date?: string | null
           status?: string | null
+          subject_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          activity_id?: string | null
           amount?: number
+          billing_frequency?: string | null
           case_id?: string
+          category?: string | null
           created_at?: string
           date?: string
           description?: string
+          end_date?: string | null
           finance_type?: string
           id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          start_date?: string | null
           status?: string | null
+          subject_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "case_finances_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "case_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_finances_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       case_subjects: {
         Row: {
