@@ -70,6 +70,123 @@ export type Database = {
           },
         ]
       }
+      case_activities: {
+        Row: {
+          activity_type: string
+          case_id: string
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          case_id: string
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          case_id?: string
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      case_finances: {
+        Row: {
+          amount: number
+          case_id: string
+          created_at: string
+          date: string
+          description: string
+          finance_type: string
+          id: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          case_id: string
+          created_at?: string
+          date?: string
+          description: string
+          finance_type: string
+          id?: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          case_id?: string
+          created_at?: string
+          date?: string
+          description?: string
+          finance_type?: string
+          id?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      case_subjects: {
+        Row: {
+          case_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          name: string
+          notes: string | null
+          subject_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          name: string
+          notes?: string | null
+          subject_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          name?: string
+          notes?: string | null
+          subject_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       case_updates: {
         Row: {
           case_id: string

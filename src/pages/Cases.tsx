@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase } from "lucide-react";
+import { Plus, Briefcase, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
+import { Link } from "react-router-dom";
 
 interface Case {
   id: string;
@@ -108,7 +109,7 @@ const Cases = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {cases.map((caseItem) => (
-            <Card key={caseItem.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card key={caseItem.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -131,11 +132,19 @@ const Cases = () => {
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                   {caseItem.description || "No description provided"}
                 </p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
                   <span>Started: {new Date(caseItem.start_date).toLocaleDateString()}</span>
                   {caseItem.due_date && (
                     <span>Due: {new Date(caseItem.due_date).toLocaleDateString()}</span>
                   )}
+                </div>
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/cases/${caseItem.id}`}>
+                      View Details
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
+import CaseDetail from "./pages/CaseDetail";
 import Accounts from "./pages/Accounts";
 import Contacts from "./pages/Contacts";
 import NotFound from "./pages/NotFound";
@@ -39,6 +40,16 @@ const App = () => (
               <ProtectedRoute>
                 <DashboardLayout>
                   <Cases />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cases/:id"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <CaseDetail />
                 </DashboardLayout>
               </ProtectedRoute>
             }

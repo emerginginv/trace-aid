@@ -1,0 +1,145 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus, User, Car, MapPin, Package } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { SubjectForm } from "./SubjectForm";
+import { Badge } from "@/components/ui/badge";
+
+interface Subject {
+  id: string;
+  subject_type: string;
+  name: string;
+  details: any;
+  notes: string | null;
+  created_at: string;
+}
+
+export const CaseSubjects = ({ caseId }: { caseId: string }) => {
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+
+  useEffect(() => {
+    fetchSubjects();
+  }, [caseId]);
+
+  const fetchSubjects = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("case_subjects")
+        .select("*")
+        .eq("case_id", caseId)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setSubjects(data || []);
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load subjects",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getIcon = (type: string) => {
+    const icons = {
+      person: User,
+      vehicle: Car,
+      location: MapPin,
+      item: Package,
+    };
+    const Icon = icons[type as keyof typeof icons] || Package;
+    return <Icon className="h-4 w-4" />;
+  };
+
+  const getTypeColor = (type: string) => {
+    const colors: Record<string, string> = {
+      person: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      vehicle: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+      location: "bg-green-500/10 text-green-500 border-green-500/20",
+      item: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+    };
+    return colors[type] || "bg-muted";
+  };
+
+  if (loading) {
+    return <p className="text-muted-foreground">Loading subjects...</p>;
+  }
+
+  return (
+    <>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold">Subjects</h2>
+          <p className="text-muted-foreground">People, vehicles, locations, and items related to this case</p>
+        </div>
+        <Button onClick={() => setFormOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Add Subject
+        </Button>
+      </div>
+
+      {subjects.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground mb-4">No subjects added yet</p>
+            <Button onClick={() => setFormOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Add First Subject
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {subjects.map((subject) => (
+            <Card key={subject.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {getIcon(subject.subject_type)}
+                    <CardTitle className="text-lg">{subject.name}</CardTitle>
+                  </div>
+                  <Badge className={getTypeColor(subject.subject_type)}>
+                    {subject.subject_type}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {subject.notes && (
+                  <p className="text-sm text-muted-foreground mb-2">{subject.notes}</p>
+                )}
+                {subject.details && Object.keys(subject.details).length > 0 && (
+                  <div className="space-y-1">
+                    {Object.entries(subject.details).map(([key, value]) => (
+                      <div key={key} className="text-sm">
+                        <span className="font-medium capitalize">{key.replace("_", " ")}:</span>{" "}
+                        <span className="text-muted-foreground">{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <SubjectForm
+        caseId={caseId}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        onSuccess={fetchSubjects}
+      />
+    </>
+  );
+};
