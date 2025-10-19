@@ -12,6 +12,7 @@ import { CaseSubjects } from "@/components/case-detail/CaseSubjects";
 import { CaseUpdates } from "@/components/case-detail/CaseUpdates";
 import { CaseActivities } from "@/components/case-detail/CaseActivities";
 import { CaseFinances } from "@/components/case-detail/CaseFinances";
+import { CaseAttachments } from "@/components/case-detail/CaseAttachments";
 
 interface Case {
   id: string;
@@ -152,11 +153,12 @@ const CaseDetail = () => {
       </Card>
 
       <Tabs defaultValue="subjects" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="subjects">Subjects</TabsTrigger>
           <TabsTrigger value="updates">Updates</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="finances">Finances</TabsTrigger>
+          <TabsTrigger value="attachments">Attachments</TabsTrigger>
         </TabsList>
 
         <TabsContent value="subjects" className="mt-6">
@@ -173,6 +175,10 @@ const CaseDetail = () => {
 
         <TabsContent value="finances" className="mt-6">
           <CaseFinances caseId={id!} />
+        </TabsContent>
+
+        <TabsContent value="attachments" className="mt-6">
+          <CaseAttachments caseId={id!} />
         </TabsContent>
       </Tabs>
     </div>
