@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,9 +20,10 @@ interface UpdateFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  editingUpdate?: any;
 }
 
-export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess }: UpdateFormProps) => {
+export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdate }: UpdateFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -33,34 +34,60 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess }: UpdateForm
     },
   });
 
+  useEffect(() => {
+    if (editingUpdate) {
+      form.reset({
+        title: editingUpdate.title,
+        description: editingUpdate.description || "",
+      });
+    } else {
+      form.reset({
+        title: "",
+        description: "",
+      });
+    }
+  }, [editingUpdate, form]);
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("case_updates").insert({
+      const updateData = {
         case_id: caseId,
         user_id: user.id,
         title: values.title,
         description: values.description || null,
-      });
+      };
+
+      let error;
+      if (editingUpdate) {
+        const result = await supabase
+          .from("case_updates")
+          .update(updateData)
+          .eq("id", editingUpdate.id);
+        error = result.error;
+      } else {
+        const result = await supabase.from("case_updates").insert(updateData);
+        error = result.error;
+      }
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Update added successfully",
+        description: editingUpdate ? "Update edited successfully" : "Update added successfully",
       });
 
       form.reset();
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      console.error("Error adding update:", error);
+      console.error("Error saving update:", error);
       toast({
         title: "Error",
-        description: "Failed to add update",
+        description: "Failed to save update",
         variant: "destructive",
       });
     } finally {
@@ -72,7 +99,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess }: UpdateForm
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Update</DialogTitle>
+          <DialogTitle>{editingUpdate ? "Edit" : "Add"} Update</DialogTitle>
           <DialogDescription>Add a new progress note or activity log</DialogDescription>
         </DialogHeader>
 
@@ -111,7 +138,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess }: UpdateForm
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Update"}
+                {isSubmitting ? (editingUpdate ? "Updating..." : "Adding...") : (editingUpdate ? "Update" : "Add Update")}
               </Button>
             </div>
           </form>

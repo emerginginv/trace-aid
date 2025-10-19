@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,9 +28,10 @@ interface ActivityFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  editingActivity?: any;
 }
 
-export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess }: ActivityFormProps) => {
+export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingActivity }: ActivityFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -39,8 +40,27 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess }: Activity
       activity_type: "task",
       title: "",
       description: "",
+      due_date: undefined,
     },
   });
+
+  useEffect(() => {
+    if (editingActivity) {
+      form.reset({
+        activity_type: editingActivity.activity_type,
+        title: editingActivity.title,
+        description: editingActivity.description || "",
+        due_date: editingActivity.due_date ? new Date(editingActivity.due_date) : undefined,
+      });
+    } else {
+      form.reset({
+        activity_type: "task",
+        title: "",
+        description: "",
+        due_date: undefined,
+      });
+    }
+  }, [editingActivity, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
@@ -48,31 +68,42 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess }: Activity
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("case_activities").insert({
+      const activityData = {
         case_id: caseId,
         user_id: user.id,
         activity_type: values.activity_type,
         title: values.title,
         description: values.description || null,
         due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
-        completed: false,
-      });
+      };
+
+      let error;
+      if (editingActivity) {
+        const result = await supabase
+          .from("case_activities")
+          .update(activityData)
+          .eq("id", editingActivity.id);
+        error = result.error;
+      } else {
+        const result = await supabase.from("case_activities").insert({ ...activityData, completed: false });
+        error = result.error;
+      }
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Activity added successfully",
+        description: editingActivity ? "Activity updated successfully" : "Activity added successfully",
       });
 
       form.reset();
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      console.error("Error adding activity:", error);
+      console.error("Error saving activity:", error);
       toast({
         title: "Error",
-        description: "Failed to add activity",
+        description: "Failed to save activity",
         variant: "destructive",
       });
     } finally {
@@ -84,7 +115,7 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess }: Activity
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Activity</DialogTitle>
+          <DialogTitle>{editingActivity ? "Edit" : "Add"} Activity</DialogTitle>
           <DialogDescription>Create a new task or event for this case</DialogDescription>
         </DialogHeader>
 
@@ -181,7 +212,7 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess }: Activity
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Activity"}
+                {isSubmitting ? (editingActivity ? "Updating..." : "Adding...") : (editingActivity ? "Update Activity" : "Add Activity")}
               </Button>
             </div>
           </form>
