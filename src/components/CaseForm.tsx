@@ -57,6 +57,18 @@ interface CaseFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  editingCase?: {
+    id: string;
+    title: string;
+    case_number: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    account_id: string | null;
+    contact_id: string | null;
+    start_date: string;
+    due_date: string | null;
+  };
 }
 
 interface Account {
@@ -70,7 +82,7 @@ interface Contact {
   last_name: string;
 }
 
-export function CaseForm({ open, onOpenChange, onSuccess }: CaseFormProps) {
+export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFormProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
 
@@ -91,9 +103,33 @@ export function CaseForm({ open, onOpenChange, onSuccess }: CaseFormProps) {
   useEffect(() => {
     if (open) {
       fetchAccountsAndContacts();
-      generateCaseNumber();
+      if (editingCase) {
+        form.reset({
+          title: editingCase.title,
+          case_number: editingCase.case_number,
+          description: editingCase.description || "",
+          status: editingCase.status as "open" | "closed" | "pending",
+          priority: editingCase.priority as "low" | "medium" | "high",
+          account_id: editingCase.account_id || "",
+          contact_id: editingCase.contact_id || "",
+          start_date: new Date(editingCase.start_date),
+          due_date: editingCase.due_date ? new Date(editingCase.due_date) : undefined,
+        });
+      } else {
+        generateCaseNumber();
+        form.reset({
+          title: "",
+          case_number: "",
+          description: "",
+          status: "open",
+          priority: "medium",
+          account_id: "",
+          contact_id: "",
+          start_date: new Date(),
+        });
+      }
     }
-  }, [open]);
+  }, [open, editingCase]);
 
   const fetchAccountsAndContacts = async () => {
     try {
@@ -142,7 +178,7 @@ export function CaseForm({ open, onOpenChange, onSuccess }: CaseFormProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const { error } = await supabase.from("cases").insert([{
+      const caseData = {
         title: data.title,
         case_number: data.case_number,
         description: data.description,
@@ -152,17 +188,32 @@ export function CaseForm({ open, onOpenChange, onSuccess }: CaseFormProps) {
         contact_id: data.contact_id || null,
         start_date: data.start_date.toISOString().split('T')[0],
         due_date: data.due_date ? data.due_date.toISOString().split('T')[0] : null,
-        user_id: user.id,
-      }]);
+      };
 
-      if (error) throw error;
+      if (editingCase) {
+        const { error } = await supabase
+          .from("cases")
+          .update(caseData)
+          .eq("id", editingCase.id)
+          .eq("user_id", user.id);
 
-      toast.success("Case created successfully");
+        if (error) throw error;
+        toast.success("Case updated successfully");
+      } else {
+        const { error } = await supabase.from("cases").insert([{
+          ...caseData,
+          user_id: user.id,
+        }]);
+
+        if (error) throw error;
+        toast.success("Case created successfully");
+      }
+
       form.reset();
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      toast.error("Failed to create case");
+      toast.error(editingCase ? "Failed to update case" : "Failed to create case");
       console.error(error);
     }
   };
@@ -171,9 +222,9 @@ export function CaseForm({ open, onOpenChange, onSuccess }: CaseFormProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Case</DialogTitle>
+          <DialogTitle>{editingCase ? "Edit Case" : "Create New Case"}</DialogTitle>
           <DialogDescription>
-            Start a new investigation case
+            {editingCase ? "Update case details" : "Start a new investigation case"}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -415,7 +466,10 @@ export function CaseForm({ open, onOpenChange, onSuccess }: CaseFormProps) {
                 Cancel
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Creating..." : "Create Case"}
+                {form.formState.isSubmitting 
+                  ? (editingCase ? "Updating..." : "Creating...") 
+                  : (editingCase ? "Update Case" : "Create Case")
+                }
               </Button>
             </div>
           </form>

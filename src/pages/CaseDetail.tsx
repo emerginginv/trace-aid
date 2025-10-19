@@ -1,13 +1,14 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Plus } from "lucide-react";
+import { ChevronLeft, Edit, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
+import { CaseForm } from "@/components/CaseForm";
 import { CaseSubjects } from "@/components/case-detail/CaseSubjects";
 import { CaseUpdates } from "@/components/case-detail/CaseUpdates";
 import { CaseActivities } from "@/components/case-detail/CaseActivities";
@@ -21,6 +22,8 @@ interface Case {
   description: string | null;
   status: string;
   priority: string | null;
+  account_id: string | null;
+  contact_id: string | null;
   start_date: string | null;
   due_date: string | null;
   created_at: string;
@@ -28,8 +31,11 @@ interface Case {
 
 const CaseDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editFormOpen, setEditFormOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchCaseData();
@@ -80,6 +86,43 @@ const CaseDetail = () => {
     return colors[priority] || "bg-muted";
   };
 
+  const handleDelete = async () => {
+    if (!caseData) return;
+    
+    if (!confirm(`Are you sure you want to delete case "${caseData.title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase
+        .from("cases")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Case deleted successfully",
+      });
+      navigate("/cases");
+    } catch (error) {
+      console.error("Error deleting case:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete case",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -121,6 +164,20 @@ const CaseDetail = () => {
             )}
           </div>
           <p className="text-muted-foreground">Case #{caseData.case_number}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setEditFormOpen(true)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {deleting ? "Deleting..." : "Delete"}
+          </Button>
         </div>
       </div>
 
@@ -181,6 +238,13 @@ const CaseDetail = () => {
           <CaseAttachments caseId={id!} />
         </TabsContent>
       </Tabs>
+
+      <CaseForm 
+        open={editFormOpen} 
+        onOpenChange={setEditFormOpen} 
+        onSuccess={fetchCaseData}
+        editingCase={caseData || undefined}
+      />
     </div>
   );
 };
