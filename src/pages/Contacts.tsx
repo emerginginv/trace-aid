@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, User } from "lucide-react";
+import { Plus, User, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ContactForm } from "@/components/ContactForm";
+import { Input } from "@/components/ui/input";
 
 interface Contact {
   id: string;
@@ -21,6 +22,7 @@ const Contacts = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchContacts();
@@ -50,6 +52,14 @@ const Contacts = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
+  const filteredContacts = contacts.filter(contact => {
+    return searchQuery === '' || 
+      contact.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -73,6 +83,16 @@ const Contacts = () => {
         </Button>
       </div>
 
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search contacts by name, email, or phone..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {contacts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -89,9 +109,15 @@ const Contacts = () => {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredContacts.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No contacts match your search criteria</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {contacts.map((contact) => (
+          {filteredContacts.map((contact) => (
             <Card key={contact.id} className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <div className="flex items-center gap-3">

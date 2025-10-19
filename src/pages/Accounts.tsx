@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Building2 } from "lucide-react";
+import { Plus, Building2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AccountForm } from "@/components/AccountForm";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Account {
   id: string;
@@ -20,6 +22,8 @@ const Accounts = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [industryFilter, setIndustryFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchAccounts();
@@ -45,6 +49,19 @@ const Accounts = () => {
     }
   };
 
+  const uniqueIndustries = Array.from(new Set(accounts.map(a => a.industry).filter(Boolean)));
+
+  const filteredAccounts = accounts.filter(account => {
+    const matchesSearch = searchQuery === '' || 
+      account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      account.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      account.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesIndustry = industryFilter === 'all' || account.industry === industryFilter;
+    
+    return matchesSearch && matchesIndustry;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -68,6 +85,29 @@ const Accounts = () => {
         </Button>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search accounts by name, email, or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={industryFilter} onValueChange={setIndustryFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Industry" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Industries</SelectItem>
+            {uniqueIndustries.map(industry => (
+              <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {accounts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -84,9 +124,15 @@ const Accounts = () => {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredAccounts.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No accounts match your search criteria</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {accounts.map((account) => (
+          {filteredAccounts.map((account) => (
             <Card key={account.id} className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2">
