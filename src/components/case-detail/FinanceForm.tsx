@@ -25,7 +25,7 @@ const formSchema = z.object({
   ),
   description: z.string().min(1, "Description is required"),
   date: z.date(),
-  status: z.enum(["pending", "paid", "overdue"]),
+  status: z.enum(["pending", "paid", "overdue", "approved", "rejected"]),
   subject_id: z.string().optional(),
   activity_id: z.string().optional(),
   category: z.string().optional(),
