@@ -9,6 +9,8 @@ import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import Accounts from "./pages/Accounts";
 import Contacts from "./pages/Contacts";
+import StyleGuide from "./pages/StyleGuide";
+import PremiumShowcase from "./pages/PremiumShowcase";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -74,6 +76,8 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          <Route path="/style-guide" element={<StyleGuide />} />
+          <Route path="/premium-showcase" element={<PremiumShowcase />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
