@@ -57,18 +57,20 @@ const Finance = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Fetch all cases first (needed for joins)
+      const { data: casesData, error: casesError } = await supabase
+        .from("cases")
+        .select("id, title, case_number")
+        .eq("user_id", user.id);
+
+      if (casesError) throw casesError;
+
+      const casesMap = new Map(casesData?.map(c => [c.id, c]) || []);
+
       // Fetch retainer balances by case
       const { data: retainerData, error: retainerError } = await supabase
         .from("retainer_funds")
-        .select(`
-          case_id,
-          amount,
-          created_at,
-          cases (
-            title,
-            case_number
-          )
-        `)
+        .select("case_id, amount, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -78,11 +80,13 @@ const Finance = () => {
       const balanceMap = new Map<string, RetainerBalance>();
       retainerData?.forEach((fund: any) => {
         const caseId = fund.case_id;
+        const caseInfo = casesMap.get(caseId);
+        
         if (!balanceMap.has(caseId)) {
           balanceMap.set(caseId, {
             case_id: caseId,
-            case_title: fund.cases?.title || "Unknown",
-            case_number: fund.cases?.case_number || "N/A",
+            case_title: caseInfo?.title || "Unknown",
+            case_number: caseInfo?.case_number || "N/A",
             balance: 0,
             last_topup: null,
           });
@@ -101,34 +105,26 @@ const Finance = () => {
       // Fetch all expenses
       const { data: expenseData, error: expenseError } = await supabase
         .from("case_finances")
-        .select(`
-          id,
-          date,
-          amount,
-          category,
-          status,
-          invoiced,
-          cases (
-            title,
-            case_number
-          )
-        `)
+        .select("id, case_id, date, amount, category, status, invoiced")
         .eq("user_id", user.id)
         .eq("finance_type", "expense")
         .order("date", { ascending: false });
 
       if (expenseError) throw expenseError;
 
-      const formattedExpenses: Expense[] = expenseData?.map((exp: any) => ({
-        id: exp.id,
-        date: exp.date,
-        case_title: exp.cases?.title || "Unknown",
-        case_number: exp.cases?.case_number || "N/A",
-        category: exp.category,
-        amount: parseFloat(exp.amount),
-        status: exp.status,
-        invoiced: exp.invoiced,
-      })) || [];
+      const formattedExpenses: Expense[] = expenseData?.map((exp: any) => {
+        const caseInfo = casesMap.get(exp.case_id);
+        return {
+          id: exp.id,
+          date: exp.date,
+          case_title: caseInfo?.title || "Unknown",
+          case_number: caseInfo?.case_number || "N/A",
+          category: exp.category,
+          amount: parseFloat(exp.amount),
+          status: exp.status,
+          invoiced: exp.invoiced,
+        };
+      }) || [];
 
       setExpenses(formattedExpenses);
       setTotalOutstandingExpenses(
@@ -140,34 +136,26 @@ const Finance = () => {
       // Fetch all invoices
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("case_finances")
-        .select(`
-          id,
-          invoice_number,
-          date,
-          amount,
-          status,
-          due_date,
-          cases (
-            title,
-            case_number
-          )
-        `)
+        .select("id, case_id, invoice_number, date, amount, status, due_date")
         .eq("user_id", user.id)
         .eq("finance_type", "invoice")
         .order("date", { ascending: false });
 
       if (invoiceError) throw invoiceError;
 
-      const formattedInvoices: Invoice[] = invoiceData?.map((inv: any) => ({
-        id: inv.id,
-        invoice_number: inv.invoice_number,
-        case_title: inv.cases?.title || "Unknown",
-        case_number: inv.cases?.case_number || "N/A",
-        date: inv.date,
-        amount: parseFloat(inv.amount),
-        status: inv.status,
-        due_date: inv.due_date,
-      })) || [];
+      const formattedInvoices: Invoice[] = invoiceData?.map((inv: any) => {
+        const caseInfo = casesMap.get(inv.case_id);
+        return {
+          id: inv.id,
+          invoice_number: inv.invoice_number,
+          case_title: caseInfo?.title || "Unknown",
+          case_number: caseInfo?.case_number || "N/A",
+          date: inv.date,
+          amount: parseFloat(inv.amount),
+          status: inv.status,
+          due_date: inv.due_date,
+        };
+      }) || [];
 
       setInvoices(formattedInvoices);
       setTotalUnpaidInvoices(
