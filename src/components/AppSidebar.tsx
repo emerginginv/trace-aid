@@ -6,6 +6,7 @@ import {
   Building2,
   LogOut,
   Shield,
+  DollarSign,
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,6 +26,7 @@ import { toast } from "sonner";
 const menuItems = [
   { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard" },
   { title: "Cases", icon: Briefcase, url: "/cases" },
+  { title: "Finance", icon: DollarSign, url: "/finance" },
   { title: "Accounts", icon: Building2, url: "/accounts" },
   { title: "Contacts", icon: Users, url: "/contacts" },
 ];

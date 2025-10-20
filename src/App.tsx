@@ -7,6 +7,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
+import Finance from "./pages/Finance";
 import Accounts from "./pages/Accounts";
 import Contacts from "./pages/Contacts";
 import StyleGuide from "./pages/StyleGuide";
@@ -52,6 +53,16 @@ const App = () => (
               <ProtectedRoute>
                 <DashboardLayout>
                   <CaseDetail />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <Finance />
                 </DashboardLayout>
               </ProtectedRoute>
             }
