@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, LayoutGrid, List, Pencil, Trash2 } from "lucide-react";
+import { Plus, Briefcase, Search, LayoutGrid, List, Eye, Trash2 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
@@ -210,7 +210,7 @@ const Cases = () => {
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" size="icon" asChild>
                     <Link to={`/cases/${caseItem.id}`}>
-                      <Pencil className="h-4 w-4" />
+                      <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
                   <Button 
@@ -250,8 +250,8 @@ const Cases = () => {
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" asChild className="flex-1">
                       <Link to={`/cases/${caseItem.id}`}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
                       </Link>
                     </Button>
                     <Button 
@@ -304,7 +304,7 @@ const Cases = () => {
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="icon" asChild>
                           <Link to={`/cases/${caseItem.id}`}>
-                            <Pencil className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
                         <Button 
