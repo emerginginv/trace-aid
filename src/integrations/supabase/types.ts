@@ -487,6 +487,36 @@ export type Database = {
           },
         ]
       }
+      organization_settings: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          default_currency: string | null
+          id: string
+          timezone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string | null
+          default_currency?: string | null
+          id?: string
+          timezone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string | null
+          default_currency?: string | null
+          id?: string
+          timezone?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -494,6 +524,9 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          notification_email: boolean | null
+          notification_push: boolean | null
+          notification_sms: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -502,6 +535,9 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          notification_email?: boolean | null
+          notification_push?: boolean | null
+          notification_sms?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -510,6 +546,9 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          notification_email?: boolean | null
+          notification_push?: boolean | null
+          notification_sms?: boolean | null
           updated_at?: string | null
         }
         Relationships: []

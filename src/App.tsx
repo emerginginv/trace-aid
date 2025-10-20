@@ -11,6 +11,7 @@ import Finance from "./pages/Finance";
 import Accounts from "./pages/Accounts";
 import Contacts from "./pages/Contacts";
 import Users from "./pages/Users";
+import Settings from "./pages/Settings";
 import StyleGuide from "./pages/StyleGuide";
 import PremiumShowcase from "./pages/PremiumShowcase";
 import NotFound from "./pages/NotFound";
@@ -94,6 +95,16 @@ const App = () => (
               <ProtectedRoute>
                 <DashboardLayout>
                   <Users />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <Settings />
                 </DashboardLayout>
               </ProtectedRoute>
             }
