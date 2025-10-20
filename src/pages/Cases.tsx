@@ -188,48 +188,84 @@ const Cases = () => {
                 </div>
               </CardContent>
             </Card>)}
-        </div> : <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Case Number</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCases.map(caseItem => <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell className="font-medium">{caseItem.case_number}</TableCell>
-                  <TableCell>{caseItem.title}</TableCell>
-                  <TableCell>
+        </div> : <>
+          {/* Mobile Card View */}
+          <div className="block sm:hidden space-y-4">
+            {filteredCases.map(caseItem => <Card key={caseItem.id} className="p-4">
+                <div className="space-y-3">
+                  <div>
+                    <div className="font-semibold text-sm">{caseItem.case_number}</div>
+                    <div className="text-foreground font-medium mt-1">{caseItem.title}</div>
+                  </div>
+                  
+                  <div className="flex gap-2">
                     <Badge className={getStatusColor(caseItem.status)}>
                       {caseItem.status}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
                     <Badge className={getPriorityColor(caseItem.priority)}>
                       {caseItem.priority}
                     </Badge>
-                  </TableCell>
-                  <TableCell>{new Date(caseItem.start_date).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    {caseItem.due_date ? new Date(caseItem.due_date).toLocaleDateString() : '-'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to={`/cases/${caseItem.id}`} className="px-[10px] py-[6px]">
-                        View Details
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>)}
-            </TableBody>
-          </Table>
-        </Card>}
+                  </div>
+
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div>Start: {new Date(caseItem.start_date).toLocaleDateString()}</div>
+                    {caseItem.due_date && <div>Due: {new Date(caseItem.due_date).toLocaleDateString()}</div>}
+                  </div>
+
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <Link to={`/cases/${caseItem.id}`}>
+                      View Details
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
+                </div>
+              </Card>)}
+          </div>
+
+          {/* Desktop Table View */}
+          <Card className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Case Number</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCases.map(caseItem => <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell className="font-medium">{caseItem.case_number}</TableCell>
+                    <TableCell>{caseItem.title}</TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(caseItem.status)}>
+                        {caseItem.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getPriorityColor(caseItem.priority)}>
+                        {caseItem.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(caseItem.start_date).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {caseItem.due_date ? new Date(caseItem.due_date).toLocaleDateString() : '-'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={`/cases/${caseItem.id}`} className="px-[10px] py-[6px]">
+                          View Details
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>)}
+              </TableBody>
+            </Table>
+          </Card>
+        </>}
 
       <CaseForm open={formOpen} onOpenChange={setFormOpen} onSuccess={fetchCases} />
     </div>;
