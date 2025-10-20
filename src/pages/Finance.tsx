@@ -238,52 +238,52 @@ const Finance = () => {
 
       {/* Summary Widgets */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="bg-blue-50 border-blue-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-blue-600">
               Total Retainer Funds Available
             </CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <Wallet className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-blue-600">
               ${totalRetainerBalance.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-blue-500">
               Across {retainerBalances.length} case{retainerBalances.length !== 1 ? "s" : ""}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-red-50 border-red-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-red-600">
               Billable Expenses
             </CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
+            <Receipt className="h-4 w-4 text-red-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-red-600">
               ${totalOutstandingExpenses.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-red-500">
               Approved & unbilled
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-green-50 border-green-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-green-600">
               Outstanding Invoices
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-green-600">
               ${totalUnpaidInvoices.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-green-500">
               Unpaid invoices
             </p>
           </CardContent>
