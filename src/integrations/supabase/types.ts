@@ -73,6 +73,7 @@ export type Database = {
       case_activities: {
         Row: {
           activity_type: string
+          assigned_user_id: string | null
           case_id: string
           completed: boolean | null
           completed_at: string | null
@@ -80,12 +81,14 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          status: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
           activity_type: string
+          assigned_user_id?: string | null
           case_id: string
           completed?: boolean | null
           completed_at?: string | null
@@ -93,12 +96,14 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          status?: string
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
           activity_type?: string
+          assigned_user_id?: string | null
           case_id?: string
           completed?: boolean | null
           completed_at?: string | null
@@ -106,6 +111,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          status?: string
           title?: string
           updated_at?: string
           user_id?: string

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,32 +16,60 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
-const formSchema = z.object({
-  activity_type: z.enum(["task", "event"]),
+const taskSchema = z.object({
+  activity_type: z.literal("task"),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   due_date: z.date().optional(),
+  status: z.enum(["to_do", "in_progress", "blocked", "done"]),
+  assigned_user_id: z.string().optional(),
 });
+
+const eventSchema = z.object({
+  activity_type: z.literal("event"),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  due_date: z.date(),
+  status: z.enum(["scheduled", "cancelled", "completed"]),
+  assigned_user_id: z.string().optional(),
+});
+
+interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+}
 
 interface ActivityFormProps {
   caseId: string;
+  activityType: "task" | "event";
+  users: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   editingActivity?: any;
 }
 
-export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingActivity }: ActivityFormProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+export function ActivityForm({
+  caseId,
+  activityType,
+  users,
+  open,
+  onOpenChange,
+  onSuccess,
+  editingActivity,
+}: ActivityFormProps) {
+  const schema = activityType === "task" ? taskSchema : eventSchema;
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
     defaultValues: {
-      activity_type: "task",
+      activity_type: activityType,
       title: "",
       description: "",
       due_date: undefined,
-    },
+      status: activityType === "task" ? "to_do" : "scheduled",
+      assigned_user_id: undefined,
+    } as any,
   });
 
   useEffect(() => {
@@ -51,53 +79,66 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingAct
         title: editingActivity.title,
         description: editingActivity.description || "",
         due_date: editingActivity.due_date ? new Date(editingActivity.due_date) : undefined,
-      });
+        status: editingActivity.status,
+        assigned_user_id: editingActivity.assigned_user_id || undefined,
+      } as any);
     } else {
       form.reset({
-        activity_type: "task",
+        activity_type: activityType,
         title: "",
         description: "",
         due_date: undefined,
-      });
+        status: activityType === "task" ? "to_do" : "scheduled",
+        assigned_user_id: undefined,
+      } as any);
     }
-  }, [editingActivity, form]);
+  }, [editingActivity, activityType, form]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true);
+  const onSubmit = async (values: any) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to perform this action",
+          variant: "destructive",
+        });
+        return;
+      }
 
       const activityData = {
-        case_id: caseId,
-        user_id: user.id,
         activity_type: values.activity_type,
         title: values.title,
         description: values.description || null,
-        due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
+        case_id: caseId,
+        user_id: user.id,
+        due_date: values.due_date?.toISOString() || null,
+        status: values.status,
+        assigned_user_id: values.assigned_user_id || null,
+        completed: values.status === "done" || values.status === "completed",
       };
 
       let error;
       if (editingActivity) {
-        const result = await supabase
+        const { error: updateError } = await supabase
           .from("case_activities")
           .update(activityData)
           .eq("id", editingActivity.id);
-        error = result.error;
+        error = updateError;
       } else {
-        const result = await supabase.from("case_activities").insert({ ...activityData, completed: false });
-        error = result.error;
+        const { error: insertError } = await supabase
+          .from("case_activities")
+          .insert(activityData);
+        error = insertError;
       }
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: editingActivity ? "Activity updated successfully" : "Activity added successfully",
+        description: editingActivity ? `${activityType === "task" ? "Task" : "Event"} updated successfully` : `${activityType === "task" ? "Task" : "Event"} added successfully`,
       });
 
-      form.reset();
-      onOpenChange(false);
       onSuccess();
     } catch (error) {
       console.error("Error saving activity:", error);
@@ -106,43 +147,19 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingAct
         description: "Failed to save activity",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editingActivity ? "Edit" : "Add"} Activity</DialogTitle>
-          <DialogDescription>Create a new task or event for this case</DialogDescription>
+          <DialogTitle>
+            {editingActivity ? `Edit ${activityType === "task" ? "Task" : "Event"}` : `Add New ${activityType === "task" ? "Task" : "Event"}`}
+          </DialogTitle>
         </DialogHeader>
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="activity_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="task">Task</SelectItem>
-                      <SelectItem value="event">Event</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="title"
@@ -150,7 +167,7 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingAct
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Activity title" {...field} />
+                    <Input placeholder="Enter title" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -162,10 +179,79 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingAct
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Description (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Activity details" rows={3} {...field} />
+                    <Textarea
+                      placeholder="Enter description"
+                      {...field}
+                    />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {activityType === "task" ? (
+                        <>
+                          <SelectItem value="to_do">To Do</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="blocked">Blocked</SelectItem>
+                          <SelectItem value="done">Done</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="scheduled">Scheduled</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="assigned_user_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assigned To</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select user (optional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Unassigned</SelectItem>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.full_name || user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -176,7 +262,7 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingAct
               name="due_date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Due Date (optional)</FormLabel>
+                  <FormLabel>{activityType === "task" ? "Due Date (Optional)" : "Date"}</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -187,7 +273,11 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingAct
                             !field.value && "text-muted-foreground"
                           )}
                         >
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </FormControl>
@@ -197,8 +287,10 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingAct
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
+                        disabled={(date) =>
+                          date < new Date(new Date().setHours(0, 0, 0, 0))
+                        }
                         initialFocus
-                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -207,12 +299,16 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingAct
               )}
             />
 
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (editingActivity ? "Updating..." : "Adding...") : (editingActivity ? "Update Activity" : "Add Activity")}
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {editingActivity ? `Update ${activityType === "task" ? "Task" : "Event"}` : `Add ${activityType === "task" ? "Task" : "Event"}`}
               </Button>
             </div>
           </form>
@@ -220,4 +316,4 @@ export const ActivityForm = ({ caseId, open, onOpenChange, onSuccess, editingAct
       </DialogContent>
     </Dialog>
   );
-};
+}

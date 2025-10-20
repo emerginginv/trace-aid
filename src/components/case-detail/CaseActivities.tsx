@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, CheckCircle2, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ActivityForm } from "./ActivityForm";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
 
 interface Activity {
   id: string;
@@ -20,16 +20,30 @@ interface Activity {
   completed: boolean;
   completed_at: string | null;
   created_at: string;
+  updated_at: string;
+  assigned_user_id: string | null;
+  status: string;
 }
 
-export const CaseActivities = ({ caseId }: { caseId: string }) => {
+interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+}
+
+interface CaseActivitiesProps {
+  caseId: string;
+}
+
+export function CaseActivities({ caseId }: CaseActivitiesProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"tasks" | "events">("tasks");
 
   const handleEdit = (activity: Activity) => {
     setEditingActivity(activity);
@@ -38,31 +52,38 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this activity?")) return;
+
     try {
-      const { error } = await supabase.from("case_activities").delete().eq("id", id);
+      const { error } = await supabase
+        .from("case_activities")
+        .delete()
+        .eq("id", id);
+
       if (error) throw error;
-      toast({ title: "Success", description: "Activity deleted" });
+
+      toast({
+        title: "Success",
+        description: "Activity deleted successfully",
+      });
+
       fetchActivities();
     } catch (error) {
-      toast({ title: "Error", description: "Failed to delete", variant: "destructive" });
+      console.error("Error deleting activity:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete activity",
+        variant: "destructive",
+      });
     }
   };
 
-  useEffect(() => {
-    fetchActivities();
-  }, [caseId]);
-
   const fetchActivities = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const { data, error } = await supabase
         .from("case_activities")
         .select("*")
         .eq("case_id", caseId)
-        .eq("user_id", user.id)
-        .order("due_date", { ascending: true, nullsFirst: false });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setActivities(data || []);
@@ -78,192 +99,235 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
     }
   };
 
-  const toggleComplete = async (activity: Activity) => {
+  const fetchUsers = async () => {
     try {
-      const { error } = await supabase
-        .from("case_activities")
-        .update({
-          completed: !activity.completed,
-          completed_at: !activity.completed ? new Date().toISOString() : null,
-        })
-        .eq("id", activity.id);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, email, full_name");
 
       if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `Activity marked as ${!activity.completed ? "completed" : "incomplete"}`,
-      });
-
-      fetchActivities();
+      setUsers(data || []);
     } catch (error) {
-      console.error("Error updating activity:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update activity",
-        variant: "destructive",
-      });
+      console.error("Error fetching users:", error);
     }
   };
 
-  const getTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      task: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-      event: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-    };
-    return colors[type] || "bg-muted";
+  useEffect(() => {
+    fetchActivities();
+    fetchUsers();
+  }, [caseId]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "done":
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "in_progress":
+        return "bg-blue-100 text-blue-800";
+      case "blocked":
+        return "bg-red-100 text-red-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      case "scheduled":
+        return "bg-purple-100 text-purple-800";
+      case "to_do":
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
-  const filteredActivities = activities.filter(activity => {
-    const matchesSearch = searchQuery === '' || 
-      activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      activity.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesType = typeFilter === 'all' || activity.activity_type === typeFilter;
-    
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'completed' && activity.completed) ||
-      (statusFilter === 'pending' && !activity.completed);
-    
-    return matchesSearch && matchesType && matchesStatus;
-  });
+  const getStatusLabel = (status: string) => {
+    return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
 
-  if (loading) {
-    return <p className="text-muted-foreground">Loading activities...</p>;
-  }
+  const getUserName = (userId: string | null) => {
+    if (!userId) return "Unassigned";
+    const user = users.find(u => u.id === userId);
+    return user?.full_name || user?.email || "Unknown User";
+  };
+
+  const filteredActivities = activities
+    .filter((activity) => {
+      const matchesSearch =
+        activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        activity.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = activeTab === "tasks" ? activity.activity_type === "task" : activity.activity_type === "event";
+      const matchesStatus = filterStatus === "all" || activity.status === filterStatus;
+
+      return matchesSearch && matchesType && matchesStatus;
+    });
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">Activities</h2>
-          <p className="text-muted-foreground">Tasks and events for this case</p>
-        </div>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Add Activity
-        </Button>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search activities..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="task">Task</SelectItem>
-            <SelectItem value="event">Event</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {activities.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground mb-4">No activities yet</p>
-            <Button onClick={() => setFormOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Add First Activity
-            </Button>
-          </CardContent>
-        </Card>
-      ) : filteredActivities.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">No activities match your search criteria</p>
-          </CardContent>
-        </Card>
+      {loading ? (
+        <p className="text-muted-foreground">Loading activities...</p>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12"></TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredActivities.map((activity) => (
-                <TableRow key={activity.id} className={activity.completed ? "opacity-60" : ""}>
-                  <TableCell>
-                    <Checkbox
-                      checked={activity.completed}
-                      onCheckedChange={() => toggleComplete(activity)}
-                    />
-                  </TableCell>
-                  <TableCell className={`font-medium ${activity.completed ? "line-through" : ""}`}>
-                    {activity.title}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getTypeColor(activity.activity_type)}>
-                      {activity.activity_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {activity.description || "-"}
-                  </TableCell>
-                  <TableCell>
-                    {activity.due_date ? new Date(activity.due_date).toLocaleDateString() : "-"}
-                  </TableCell>
-                  <TableCell>
-                    {activity.completed ? (
-                      <Badge variant="outline" className="text-green-500 border-green-500/20">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Completed
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">Pending</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(activity)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(activity.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold">Case Activities</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Track tasks and events for this case
+              </p>
+            </div>
+            <Button onClick={() => setFormOpen(true)} size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              Add {activeTab === "tasks" ? "Task" : "Event"}
+            </Button>
+          </div>
+
+          <div className="flex border-b">
+            <button
+              onClick={() => {
+                setActiveTab("tasks");
+                setFilterStatus("all");
+              }}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "tasks"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Tasks
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("events");
+                setFilterStatus("all");
+              }}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "events"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Events
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={`Search ${activeTab}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                {activeTab === "tasks" ? (
+                  <>
+                    <SelectItem value="to_do">To Do</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="blocked">Blocked</SelectItem>
+                    <SelectItem value="done">Done</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {filteredActivities.length === 0 ? (
+            <div className="text-center py-12 border rounded-lg bg-muted/50">
+              <p className="text-muted-foreground">
+                {searchQuery || filterStatus !== "all"
+                  ? `No ${activeTab} match your search`
+                  : `No ${activeTab} yet. Add your first ${activeTab === "tasks" ? "task" : "event"} to get started.`}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                    <TableHead>{activeTab === "tasks" ? "Due Date" : "Date"}</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredActivities.map((activity) => (
+                    <TableRow key={activity.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>{activity.title}</span>
+                          {activity.description && (
+                            <span className="text-sm text-muted-foreground mt-1">
+                              {activity.description}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={getStatusColor(activity.status)}>
+                          {getStatusLabel(activity.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{getUserName(activity.assigned_user_id)}</span>
+                      </TableCell>
+                      <TableCell>
+                        {activity.due_date
+                          ? format(new Date(activity.due_date), "MMM dd, yyyy")
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(activity)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(activity.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       )}
 
       <ActivityForm
         caseId={caseId}
+        activityType={activeTab === "tasks" ? "task" : "event"}
+        users={users}
         open={formOpen}
-        onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingActivity(null); }}
-        onSuccess={fetchActivities}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditingActivity(null);
+        }}
+        onSuccess={() => {
+          fetchActivities();
+          setFormOpen(false);
+          setEditingActivity(null);
+        }}
         editingActivity={editingActivity}
       />
     </>
   );
-};
+}
