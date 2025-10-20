@@ -3,12 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, ArrowRight, Search } from "lucide-react";
+import { Plus, Briefcase, ArrowRight, Search, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Case {
   id: string;
@@ -29,6 +30,7 @@ const Cases = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     fetchCases();
@@ -139,6 +141,24 @@ const Cases = () => {
             <SelectItem value="low">Low</SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex gap-1 border rounded-md p-1">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-8 w-8 p-0"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="h-8 w-8 p-0"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {cases.length === 0 ? (
@@ -163,7 +183,7 @@ const Cases = () => {
             <p className="text-muted-foreground">No cases match your search criteria</p>
           </CardContent>
         </Card>
-      ) : (
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredCases.map((caseItem) => (
             <Card key={caseItem.id} className="hover:shadow-lg transition-shadow">
@@ -207,6 +227,51 @@ const Cases = () => {
             </Card>
           ))}
         </div>
+      ) : (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Case Number</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Start Date</TableHead>
+                <TableHead>Due Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCases.map((caseItem) => (
+                <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableCell className="font-medium">{caseItem.case_number}</TableCell>
+                  <TableCell>{caseItem.title}</TableCell>
+                  <TableCell>
+                    <Badge className={getStatusColor(caseItem.status)}>
+                      {caseItem.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getPriorityColor(caseItem.priority)}>
+                      {caseItem.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{new Date(caseItem.start_date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    {caseItem.due_date ? new Date(caseItem.due_date).toLocaleDateString() : '-'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/cases/${caseItem.id}`}>
+                        View Details
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
       <CaseForm 
