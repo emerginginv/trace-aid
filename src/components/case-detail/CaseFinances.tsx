@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
+import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Finance {
   id: string;
@@ -207,183 +209,196 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">Finances</h2>
-          <p className="text-muted-foreground">Retainers, expenses, and invoices</p>
-        </div>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Add Transaction
-        </Button>
-      </div>
+      <Tabs defaultValue="transactions" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="create-invoice">Create Invoice</TabsTrigger>
+        </TabsList>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search finances (description, invoice #, notes)..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="retainer">Retainer</SelectItem>
-            <SelectItem value="expense">Expense</SelectItem>
-            <SelectItem value="invoice">Invoice</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Retainer</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totals.retainerTotal.toFixed(2)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totals.expenseTotal.toFixed(2)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Invoiced</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totals.invoiceTotal.toFixed(2)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {finances.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground mb-4">No financial records yet</p>
+        <TabsContent value="transactions" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">Finances</h2>
+              <p className="text-muted-foreground">Retainers, expenses, and invoices</p>
+            </div>
             <Button onClick={() => setFormOpen(true)}>
               <Plus className="h-4 w-4" />
-              Add First Transaction
+              Add Transaction
             </Button>
-          </CardContent>
-        </Card>
-      ) : filteredFinances.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">No finances match your search criteria</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredFinances.map((finance) => (
-            <Card key={finance.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CardTitle className="text-lg">{finance.description}</CardTitle>
-                      <Badge className={getTypeColor(finance.finance_type)}>
-                        {finance.finance_type}
-                      </Badge>
-                      <Badge className={getStatusColor(finance.status)}>
-                        {finance.status}
-                      </Badge>
-                      {finance.category && (
-                        <Badge variant="outline">{finance.category}</Badge>
-                      )}
-                    </div>
-                    {finance.notes && (
-                      <p className="text-sm text-muted-foreground mb-2">{finance.notes}</p>
-                    )}
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <div>Date: {new Date(finance.date).toLocaleDateString()}</div>
-                      {finance.invoice_number && (
-                        <div>Invoice #: {finance.invoice_number}</div>
-                      )}
-                      {finance.start_date && (
-                        <div>Period: {new Date(finance.start_date).toLocaleDateString()} - {finance.end_date ? new Date(finance.end_date).toLocaleDateString() : 'Ongoing'}</div>
-                      )}
-                      {finance.billing_frequency && (
-                        <div>Frequency: {finance.billing_frequency}</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="text-right">
-                      <div className="text-2xl font-bold">
-                        ${Number(finance.amount).toFixed(2)}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search finances (description, invoice #, notes)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="retainer">Retainer</SelectItem>
+                <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="invoice">Invoice</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Total Retainer</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${totals.retainerTotal.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${totals.expenseTotal.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Total Invoiced</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${totals.invoiceTotal.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {finances.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <p className="text-muted-foreground mb-4">No financial records yet</p>
+                <Button onClick={() => setFormOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add First Transaction
+                </Button>
+              </CardContent>
+            </Card>
+          ) : filteredFinances.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <p className="text-muted-foreground">No finances match your search criteria</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {filteredFinances.map((finance) => (
+                <Card key={finance.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CardTitle className="text-lg">{finance.description}</CardTitle>
+                          <Badge className={getTypeColor(finance.finance_type)}>
+                            {finance.finance_type}
+                          </Badge>
+                          <Badge className={getStatusColor(finance.status)}>
+                            {finance.status}
+                          </Badge>
+                          {finance.category && (
+                            <Badge variant="outline">{finance.category}</Badge>
+                          )}
+                        </div>
+                        {finance.notes && (
+                          <p className="text-sm text-muted-foreground mb-2">{finance.notes}</p>
+                        )}
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                          <div>Date: {new Date(finance.date).toLocaleDateString()}</div>
+                          {finance.invoice_number && (
+                            <div>Invoice #: {finance.invoice_number}</div>
+                          )}
+                          {finance.start_date && (
+                            <div>Period: {new Date(finance.start_date).toLocaleDateString()} - {finance.end_date ? new Date(finance.end_date).toLocaleDateString() : 'Ongoing'}</div>
+                          )}
+                          {finance.billing_frequency && (
+                            <div>Frequency: {finance.billing_frequency}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="text-right">
+                          <div className="text-2xl font-bold">
+                            ${Number(finance.amount).toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          {finance.finance_type === "expense" && finance.status === "pending" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleApprove(finance.id)}
+                                title="Approve expense"
+                              >
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleReject(finance.id)}
+                                title="Reject expense"
+                              >
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(finance)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(finance.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-1">
-                      {finance.finance_type === "expense" && finance.status === "pending" && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleApprove(finance.id)}
-                            title="Approve expense"
-                          >
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleReject(finance.id)}
-                            title="Reject expense"
-                          >
-                            <XCircle className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(finance)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(finance.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      )}
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="create-invoice">
+          <InvoiceFromExpenses caseId={caseId} />
+        </TabsContent>
+      </Tabs>
 
       <FinanceForm
         caseId={caseId}

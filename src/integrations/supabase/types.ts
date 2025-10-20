@@ -159,6 +159,7 @@ export type Database = {
           finance_type: string
           id: string
           invoice_number: string | null
+          invoiced: boolean | null
           notes: string | null
           start_date: string | null
           status: string | null
@@ -179,6 +180,7 @@ export type Database = {
           finance_type: string
           id?: string
           invoice_number?: string | null
+          invoiced?: boolean | null
           notes?: string | null
           start_date?: string | null
           status?: string | null
@@ -199,6 +201,7 @@ export type Database = {
           finance_type?: string
           id?: string
           invoice_number?: string | null
+          invoiced?: boolean | null
           notes?: string | null
           start_date?: string | null
           status?: string | null
