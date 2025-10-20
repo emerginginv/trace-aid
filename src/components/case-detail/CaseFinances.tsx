@@ -136,9 +136,9 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
   const calculateInvoiceMetrics = () => {
     const invoices = finances.filter(f => f.finance_type === "invoice");
     
-    // Unpaid invoices (sent, partial, overdue)
+    // Unpaid invoices (pending, sent, partial, overdue)
     const unpaidInvoices = invoices.filter(inv => 
-      inv.status === "sent" || inv.status === "partial" || inv.status === "overdue"
+      inv.status === "pending" || inv.status === "sent" || inv.status === "partial" || inv.status === "overdue"
     );
     
     const unpaidCount = unpaidInvoices.length;
