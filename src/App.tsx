@@ -9,7 +9,11 @@ import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import Finance from "./pages/Finance";
 import Accounts from "./pages/Accounts";
+import AccountDetail from "./pages/AccountDetail";
+import AccountEdit from "./pages/AccountEdit";
 import Contacts from "./pages/Contacts";
+import ContactDetail from "./pages/ContactDetail";
+import ContactEdit from "./pages/ContactEdit";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import StyleGuide from "./pages/StyleGuide";
@@ -80,11 +84,51 @@ const App = () => (
             }
           />
           <Route
+            path="/accounts/:id"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <AccountDetail />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/accounts/:id/edit"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <AccountEdit />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/contacts"
             element={
               <ProtectedRoute>
                 <DashboardLayout>
                   <Contacts />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contacts/:id"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <ContactDetail />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contacts/:id/edit"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <ContactEdit />
                 </DashboardLayout>
               </ProtectedRoute>
             }

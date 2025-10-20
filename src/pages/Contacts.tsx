@@ -1,13 +1,24 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, User, Search, LayoutGrid, List } from "lucide-react";
+import { Plus, User, Search, LayoutGrid, List, Eye, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ContactForm } from "@/components/ContactForm";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Contact {
   id: string;
@@ -20,11 +31,14 @@ interface Contact {
 }
 
 const Contacts = () => {
+  const navigate = useNavigate();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [contactToDelete, setContactToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchContacts();
@@ -47,6 +61,28 @@ const Contacts = () => {
       toast.error("Error fetching contacts");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!contactToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", contactToDelete);
+
+      if (error) throw error;
+
+      toast.success("Contact deleted successfully");
+      fetchContacts();
+    } catch (error) {
+      toast.error("Failed to delete contact");
+      console.error(error);
+    } finally {
+      setDeleteDialogOpen(false);
+      setContactToDelete(null);
     }
   };
 
@@ -140,7 +176,7 @@ const Contacts = () => {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredContacts.map((contact) => (
-            <Card key={contact.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card key={contact.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <Avatar>
@@ -153,18 +189,51 @@ const Contacts = () => {
                   </CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {contact.email && (
-                  <p className="text-sm">{contact.email}</p>
-                )}
-                {contact.phone && (
-                  <p className="text-sm">{contact.phone}</p>
-                )}
-                {(contact.city || contact.state) && (
-                  <p className="text-sm text-muted-foreground">
-                    {[contact.city, contact.state].filter(Boolean).join(", ")}
-                  </p>
-                )}
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  {contact.email && (
+                    <p className="text-sm">{contact.email}</p>
+                  )}
+                  {contact.phone && (
+                    <p className="text-sm">{contact.phone}</p>
+                  )}
+                  {(contact.city || contact.state) && (
+                    <p className="text-sm text-muted-foreground">
+                      {[contact.city, contact.state].filter(Boolean).join(", ")}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/contacts/${contact.id}`)}
+                    className="flex-1"
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    View
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/contacts/${contact.id}/edit`)}
+                    className="flex-1"
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setContactToDelete(contact.id);
+                      setDeleteDialogOpen(true);
+                    }}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -178,11 +247,12 @@ const Contacts = () => {
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredContacts.map((contact) => (
-                <TableRow key={contact.id} className="cursor-pointer hover:bg-muted/50">
+                <TableRow key={contact.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
@@ -198,6 +268,37 @@ const Contacts = () => {
                   <TableCell>
                     {[contact.city, contact.state].filter(Boolean).join(", ") || '-'}
                   </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/contacts/${contact.id}`)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/contacts/${contact.id}/edit`)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setContactToDelete(contact.id);
+                          setDeleteDialogOpen(true);
+                        }}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -210,6 +311,23 @@ const Contacts = () => {
         onOpenChange={setFormOpen} 
         onSuccess={fetchContacts} 
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the contact and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

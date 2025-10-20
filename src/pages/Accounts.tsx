@@ -1,13 +1,24 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Building2, Search, LayoutGrid, List } from "lucide-react";
+import { Plus, Building2, Search, LayoutGrid, List, Eye, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AccountForm } from "@/components/AccountForm";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Account {
   id: string;
@@ -20,12 +31,15 @@ interface Account {
 }
 
 const Accounts = () => {
+  const navigate = useNavigate();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [industryFilter, setIndustryFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAccounts();
@@ -52,6 +66,28 @@ const Accounts = () => {
   };
 
   const uniqueIndustries = Array.from(new Set(accounts.map(a => a.industry).filter(Boolean)));
+
+  const handleDelete = async () => {
+    if (!accountToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("accounts")
+        .delete()
+        .eq("id", accountToDelete);
+
+      if (error) throw error;
+
+      toast.success("Account deleted successfully");
+      fetchAccounts();
+    } catch (error) {
+      toast.error("Failed to delete account");
+      console.error(error);
+    } finally {
+      setDeleteDialogOpen(false);
+      setAccountToDelete(null);
+    }
+  };
 
   const filteredAccounts = accounts.filter(account => {
     const matchesSearch = searchQuery === '' || 
@@ -153,28 +189,61 @@ const Accounts = () => {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAccounts.map((account) => (
-            <Card key={account.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card key={account.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-primary" />
                   {account.name}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {account.industry && (
-                  <p className="text-sm text-muted-foreground">{account.industry}</p>
-                )}
-                {account.email && (
-                  <p className="text-sm">{account.email}</p>
-                )}
-                {account.phone && (
-                  <p className="text-sm">{account.phone}</p>
-                )}
-                {(account.city || account.state) && (
-                  <p className="text-sm text-muted-foreground">
-                    {[account.city, account.state].filter(Boolean).join(", ")}
-                  </p>
-                )}
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  {account.industry && (
+                    <p className="text-sm text-muted-foreground">{account.industry}</p>
+                  )}
+                  {account.email && (
+                    <p className="text-sm">{account.email}</p>
+                  )}
+                  {account.phone && (
+                    <p className="text-sm">{account.phone}</p>
+                  )}
+                  {(account.city || account.state) && (
+                    <p className="text-sm text-muted-foreground">
+                      {[account.city, account.state].filter(Boolean).join(", ")}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/accounts/${account.id}`)}
+                    className="flex-1"
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    View
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/accounts/${account.id}/edit`)}
+                    className="flex-1"
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setAccountToDelete(account.id);
+                      setDeleteDialogOpen(true);
+                    }}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -189,11 +258,12 @@ const Accounts = () => {
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredAccounts.map((account) => (
-                <TableRow key={account.id} className="cursor-pointer hover:bg-muted/50">
+                <TableRow key={account.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-primary" />
@@ -205,6 +275,37 @@ const Accounts = () => {
                   <TableCell>{account.phone || '-'}</TableCell>
                   <TableCell>
                     {[account.city, account.state].filter(Boolean).join(", ") || '-'}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/accounts/${account.id}`)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/accounts/${account.id}/edit`)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setAccountToDelete(account.id);
+                          setDeleteDialogOpen(true);
+                        }}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -218,6 +319,23 @@ const Accounts = () => {
         onOpenChange={setFormOpen} 
         onSuccess={fetchAccounts} 
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the account and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
