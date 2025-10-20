@@ -40,6 +40,27 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
 
   useEffect(() => {
     fetchFinances();
+
+    // Set up realtime subscription for finance updates
+    const channel = supabase
+      .channel('case-finances-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'case_finances',
+          filter: `case_id=eq.${caseId}`
+        },
+        () => {
+          fetchFinances();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [caseId]);
 
   const fetchFinances = async () => {

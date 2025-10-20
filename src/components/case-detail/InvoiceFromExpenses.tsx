@@ -34,6 +34,7 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
   const [activities, setActivities] = useState<Record<string, Activity>>({});
   const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
 
   useEffect(() => {
     fetchApprovedExpenses();
@@ -110,7 +111,22 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       .reduce((sum, expense) => sum + Number(expense.amount), 0);
   };
 
-  const handleAddInvoice = () => {
+  const generateInvoiceNumber = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Get the count of existing invoices to generate a unique number
+    const { count } = await supabase
+      .from("case_finances")
+      .select("*", { count: 'exact', head: true })
+      .eq("user_id", user.id)
+      .eq("finance_type", "invoice");
+
+    const invoiceNumber = `INV-${String((count || 0) + 1).padStart(5, '0')}`;
+    return invoiceNumber;
+  };
+
+  const handleAddInvoice = async () => {
     if (selectedExpenses.size === 0) {
       toast({
         title: "No expenses selected",
@@ -120,11 +136,74 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       return;
     }
 
-    // TODO: This will be implemented in Step 3
-    toast({
-      title: "Coming soon",
-      description: `Invoice creation with ${selectedExpenses.size} expense(s) will be implemented next`,
-    });
+    setIsCreatingInvoice(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Calculate total from selected expenses
+      const selectedExpensesList = expenses.filter(e => selectedExpenses.has(e.id));
+      const total = selectedExpensesList.reduce((sum, e) => sum + Number(e.amount), 0);
+
+      // Get the primary subject from the first expense (assuming all expenses are for the same client)
+      const primarySubjectId = selectedExpensesList.find(e => e.subject_id)?.subject_id;
+
+      // Generate invoice number
+      const invoiceNumber = await generateInvoiceNumber();
+      if (!invoiceNumber) throw new Error("Failed to generate invoice number");
+
+      // Create the invoice record
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("case_finances")
+        .insert({
+          case_id: caseId,
+          user_id: user.id,
+          finance_type: "invoice",
+          invoice_number: invoiceNumber,
+          description: `Invoice for ${selectedExpenses.size} expense${selectedExpenses.size !== 1 ? 's' : ''}`,
+          amount: total,
+          date: new Date().toISOString().split('T')[0],
+          status: "pending",
+          subject_id: primarySubjectId,
+          notes: `Generated from expenses: ${selectedExpensesList.map(e => e.description).join(', ')}`,
+        })
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Mark selected expenses as invoiced and link them to this invoice
+      const expenseIds = Array.from(selectedExpenses);
+      const { error: updateError } = await supabase
+        .from("case_finances")
+        .update({ 
+          invoiced: true,
+          invoice_id: invoice.id
+        })
+        .in("id", expenseIds);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Invoice created",
+        description: `Invoice ${invoiceNumber} created successfully with ${selectedExpenses.size} expense(s) totaling $${total.toFixed(2)}`,
+      });
+
+      // Clear selection and refresh the list
+      setSelectedExpenses(new Set());
+      fetchApprovedExpenses();
+
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create invoice. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingInvoice(false);
+    }
   };
 
   if (loading) {
@@ -221,9 +300,13 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
                       {selectedExpenses.size} expense{selectedExpenses.size !== 1 ? 's' : ''} selected
                     </p>
                   </div>
-                  <Button onClick={handleAddInvoice} size="lg">
+                  <Button 
+                    onClick={handleAddInvoice} 
+                    size="lg"
+                    disabled={isCreatingInvoice}
+                  >
                     <FileText className="h-4 w-4" />
-                    Add Invoice
+                    {isCreatingInvoice ? "Creating..." : "Add Invoice"}
                   </Button>
                 </div>
               </CardContent>
