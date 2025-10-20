@@ -7,6 +7,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
+import Calendar from "./pages/Calendar";
 import Finance from "./pages/Finance";
 import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
@@ -59,6 +60,16 @@ const App = () => (
               <ProtectedRoute>
                 <DashboardLayout>
                   <CaseDetail />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <Calendar />
                 </DashboardLayout>
               </ProtectedRoute>
             }
