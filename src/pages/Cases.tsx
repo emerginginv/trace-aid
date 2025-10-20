@@ -10,7 +10,6 @@ import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
 interface Case {
   id: string;
   case_number: string;
@@ -22,7 +21,6 @@ interface Case {
   due_date: string;
   created_at: string;
 }
-
 const Cases = () => {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,22 +29,23 @@ const Cases = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-
   useEffect(() => {
     fetchCases();
   }, []);
-
   const fetchCases = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data, error } = await supabase
-        .from("cases")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from("cases").select("*").eq("user_id", user.id).order("created_at", {
+        ascending: false
+      });
       if (error) throw error;
       setCases(data || []);
     } catch (error) {
@@ -55,47 +54,34 @@ const Cases = () => {
       setLoading(false);
     }
   };
-
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       open: "bg-success",
       closed: "bg-muted",
-      pending: "bg-warning",
+      pending: "bg-warning"
     };
     return colors[status] || "bg-muted";
   };
-
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
       high: "bg-destructive",
       medium: "bg-accent",
-      low: "bg-secondary",
+      low: "bg-secondary"
     };
     return colors[priority] || "bg-muted";
   };
-
   const filteredCases = cases.filter(caseItem => {
-    const matchesSearch = searchQuery === '' || 
-      caseItem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      caseItem.case_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      caseItem.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesSearch = searchQuery === '' || caseItem.title.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.case_number.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || caseItem.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || caseItem.priority === priorityFilter;
-    
     return matchesSearch && matchesStatus && matchesPriority;
   });
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
+    return <div className="flex items-center justify-center py-12">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Cases</h1>
@@ -112,12 +98,7 @@ const Cases = () => {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search cases by title, number, or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Search cases by title, number, or description..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-40">
@@ -142,27 +123,16 @@ const Cases = () => {
           </SelectContent>
         </Select>
         <div className="flex gap-1 border rounded-md p-1">
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-8 w-8 p-0">
             <LayoutGrid className="h-4 w-4" />
           </Button>
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-8 w-8 p-0">
             <List className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {cases.length === 0 ? (
-        <Card>
+      {cases.length === 0 ? <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <Briefcase className="w-8 h-8 text-muted-foreground" />
@@ -176,17 +146,12 @@ const Cases = () => {
               Create First Case
             </Button>
           </CardContent>
-        </Card>
-      ) : filteredCases.length === 0 ? (
-        <Card>
+        </Card> : filteredCases.length === 0 ? <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground">No cases match your search criteria</p>
           </CardContent>
-        </Card>
-      ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredCases.map((caseItem) => (
-            <Card key={caseItem.id} className="hover:shadow-lg transition-shadow">
+        </Card> : viewMode === 'grid' ? <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredCases.map(caseItem => <Card key={caseItem.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -211,9 +176,7 @@ const Cases = () => {
                 </p>
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
                   <span>Started: {new Date(caseItem.start_date).toLocaleDateString()}</span>
-                  {caseItem.due_date && (
-                    <span>Due: {new Date(caseItem.due_date).toLocaleDateString()}</span>
-                  )}
+                  {caseItem.due_date && <span>Due: {new Date(caseItem.due_date).toLocaleDateString()}</span>}
                 </div>
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" asChild>
@@ -224,11 +187,8 @@ const Cases = () => {
                   </Button>
                 </div>
               </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card>
+            </Card>)}
+        </div> : <Card>
           <Table>
             <TableHeader>
               <TableRow>
@@ -242,8 +202,7 @@ const Cases = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCases.map((caseItem) => (
-                <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
+              {filteredCases.map(caseItem => <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="font-medium">{caseItem.case_number}</TableCell>
                   <TableCell>{caseItem.title}</TableCell>
                   <TableCell>
@@ -262,25 +221,17 @@ const Cases = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" asChild>
-                      <Link to={`/cases/${caseItem.id}`}>
+                      <Link to={`/cases/${caseItem.id}`} className="px-[10px] py-[6px]">
                         View Details
                       </Link>
                     </Button>
                   </TableCell>
-                </TableRow>
-              ))}
+                </TableRow>)}
             </TableBody>
           </Table>
-        </Card>
-      )}
+        </Card>}
 
-      <CaseForm 
-        open={formOpen} 
-        onOpenChange={setFormOpen} 
-        onSuccess={fetchCases} 
-      />
-    </div>
-  );
+      <CaseForm open={formOpen} onOpenChange={setFormOpen} onSuccess={fetchCases} />
+    </div>;
 };
-
 export default Cases;
