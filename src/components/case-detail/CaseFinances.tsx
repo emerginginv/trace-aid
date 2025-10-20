@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Finance {
   id: string;
@@ -331,47 +332,58 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {filteredFinances.map((finance) => (
-                <Card key={finance.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CardTitle className="text-lg">{finance.description}</CardTitle>
-                          <Badge className={getTypeColor(finance.finance_type)}>
-                            {finance.finance_type}
-                          </Badge>
-                          <Badge className={getStatusColor(finance.status)}>
-                            {finance.status}
-                          </Badge>
-                          {finance.category && (
-                            <Badge variant="outline">{finance.category}</Badge>
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredFinances.map((finance) => (
+                    <TableRow key={finance.id} className="hover:bg-muted/50">
+                      <TableCell className="font-medium">
+                        {new Date(finance.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{finance.description}</div>
+                          {finance.notes && (
+                            <div className="text-sm text-muted-foreground">{finance.notes}</div>
                           )}
-                        </div>
-                        {finance.notes && (
-                          <p className="text-sm text-muted-foreground mb-2">{finance.notes}</p>
-                        )}
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                          <div>Date: {new Date(finance.date).toLocaleDateString()}</div>
                           {finance.invoice_number && (
-                            <div>Invoice #: {finance.invoice_number}</div>
-                          )}
-                          {finance.start_date && (
-                            <div>Period: {new Date(finance.start_date).toLocaleDateString()} - {finance.end_date ? new Date(finance.end_date).toLocaleDateString() : 'Ongoing'}</div>
-                          )}
-                          {finance.billing_frequency && (
-                            <div>Frequency: {finance.billing_frequency}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Invoice #: {finance.invoice_number}
+                            </div>
                           )}
                         </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="text-right">
-                          <div className="text-2xl font-bold">
-                            ${Number(finance.amount).toFixed(2)}
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getTypeColor(finance.finance_type)}>
+                          {finance.finance_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(finance.status)}>
+                          {finance.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {finance.category && (
+                          <Badge variant="outline">{finance.category}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        ${Number(finance.amount).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
                           {finance.finance_type === "expense" && finance.status === "pending" && (
                             <>
                               <Button
@@ -407,12 +419,12 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
           )}
         </TabsContent>
 
