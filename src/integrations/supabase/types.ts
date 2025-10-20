@@ -520,6 +520,7 @@ export type Database = {
           case_id: string
           created_at: string
           id: string
+          invoice_id: string | null
           note: string | null
           user_id: string
         }
@@ -528,6 +529,7 @@ export type Database = {
           case_id: string
           created_at?: string
           id?: string
+          invoice_id?: string | null
           note?: string | null
           user_id: string
         }
@@ -536,10 +538,19 @@ export type Database = {
           case_id?: string
           created_at?: string
           id?: string
+          invoice_id?: string | null
           note?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "retainer_funds_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "case_finances"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

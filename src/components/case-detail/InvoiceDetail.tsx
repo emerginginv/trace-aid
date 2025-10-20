@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PaymentForm } from "./PaymentForm";
+import { RetainerPaymentForm } from "./RetainerPaymentForm";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface InvoiceDetailProps {
@@ -24,6 +25,7 @@ interface Invoice {
   status: string;
   subject_id?: string;
   notes?: string;
+  case_id: string;
 }
 
 interface LineItem {
@@ -410,14 +412,28 @@ export const InvoiceDetail = ({ invoiceId, onClose }: InvoiceDetailProps) => {
             </div>
           </div>
 
+          {/* Use Retainer Funds Section */}
+          {remainingBalance > 0 && (
+            <div className="mb-8 print:hidden">
+              <h3 className="text-lg font-semibold mb-4">Payment Options</h3>
+              <RetainerPaymentForm
+                invoiceId={invoiceId}
+                invoiceNumber={invoice.invoice_number}
+                caseId={invoice.case_id}
+                remainingBalance={remainingBalance}
+                onSuccess={fetchInvoiceDetails}
+              />
+            </div>
+          )}
+
           {/* Payments Section */}
           <div className="mb-8 print:hidden">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Payment History</h3>
               {remainingBalance > 0 && (
-                <Button onClick={() => setPaymentFormOpen(true)} size="sm">
+                <Button onClick={() => setPaymentFormOpen(true)} size="sm" variant="outline">
                   <Plus className="h-4 w-4" />
-                  Record Payment
+                  Record Manual Payment
                 </Button>
               )}
             </div>

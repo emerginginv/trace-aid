@@ -14,6 +14,7 @@ interface RetainerFund {
   amount: number;
   note: string | null;
   created_at: string;
+  invoice_id: string | null;
 }
 
 interface RetainerFundsWidgetProps {
@@ -205,29 +206,37 @@ export function RetainerFundsWidget({ caseId }: RetainerFundsWidgetProps) {
                   <p className="text-muted-foreground">No transactions yet</p>
                 </div>
               ) : (
-                funds.map((fund) => (
-                  <div
-                    key={fund.id}
-                    className="card-flat p-4 space-y-2 hover-lift transition-smooth"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="text-heading-5 text-success">
-                          +${Number(fund.amount).toLocaleString("en-US", { 
-                            minimumFractionDigits: 2, 
-                            maximumFractionDigits: 2 
-                          })}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {format(new Date(fund.created_at), "MMM d, yyyy 'at' h:mm a")}
+                funds.map((fund) => {
+                  const isDeduction = Number(fund.amount) < 0;
+                  return (
+                    <div
+                      key={fund.id}
+                      className="card-flat p-4 space-y-2 hover-lift transition-smooth"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className={`text-heading-5 ${isDeduction ? 'text-destructive' : 'text-success'}`}>
+                            {isDeduction ? '-' : '+'}${Math.abs(Number(fund.amount)).toLocaleString("en-US", { 
+                              minimumFractionDigits: 2, 
+                              maximumFractionDigits: 2 
+                            })}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(fund.created_at), "MMM d, yyyy 'at' h:mm a")}
+                          </div>
+                          {isDeduction && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Applied to invoice
+                            </div>
+                          )}
                         </div>
                       </div>
+                      {fund.note && (
+                        <p className="text-sm text-foreground/80 mt-2">{fund.note}</p>
+                      )}
                     </div>
-                    {fund.note && (
-                      <p className="text-sm text-foreground/80 mt-2">{fund.note}</p>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </DialogContent>
