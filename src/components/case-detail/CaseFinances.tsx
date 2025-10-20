@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, Eye } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, Eye, AlertCircle, Calendar, TrendingUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
@@ -19,6 +19,7 @@ interface Finance {
   amount: number;
   description: string;
   date: string;
+  due_date?: string;
   status: string;
   created_at: string;
   subject_id?: string;
@@ -131,7 +132,78 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
     return { retainerTotal, expenseTotal, invoiceTotal };
   };
 
+  const calculateInvoiceMetrics = () => {
+    const invoices = finances.filter(f => f.finance_type === "invoice");
+    
+    // Unpaid invoices (sent, partial, overdue)
+    const unpaidInvoices = invoices.filter(inv => 
+      inv.status === "sent" || inv.status === "partial" || inv.status === "overdue"
+    );
+    
+    const unpaidCount = unpaidInvoices.length;
+    const unpaidTotal = unpaidInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+    
+    // Overdue invoices
+    const overdueInvoices = invoices.filter(inv => inv.status === "overdue");
+    const overdueCount = overdueInvoices.length;
+    const overdueTotal = overdueInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+    
+    // Upcoming invoices (due in next 7 days)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    const upcomingInvoices = invoices
+      .filter(inv => {
+        if (!inv.due_date || inv.status === "paid") return false;
+        const dueDate = new Date(inv.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate >= today && dueDate <= nextWeek;
+      })
+      .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+      .slice(0, 5);
+    
+    return {
+      unpaidCount,
+      unpaidTotal,
+      overdueCount,
+      overdueTotal,
+      upcomingInvoices,
+    };
+  };
+
   const totals = calculateTotals();
+  const invoiceMetrics = calculateInvoiceMetrics();
+
+  const getDueDateLabel = (dueDate: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "Due Today";
+    if (diffDays === 1) return "Due Tomorrow";
+    if (diffDays > 1 && diffDays <= 7) return `Due in ${diffDays} days`;
+    return "Upcoming";
+  };
+
+  const getDueDateColor = (dueDate: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "bg-red-500/10 text-red-500 border-red-500/20";
+    if (diffDays === 1) return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+    return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+  };
 
   const handleEdit = (finance: Finance) => {
     setEditingFinance(finance);
@@ -320,6 +392,110 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">${totals.invoiceTotal.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Dashboard Widgets */}
+          {invoiceMetrics.overdueCount > 0 && (
+            <Card className="border-red-500/50 bg-red-500/5">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-500 mb-1">
+                      {invoiceMetrics.overdueCount} {invoiceMetrics.overdueCount === 1 ? 'invoice is' : 'invoices are'} overdue
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Total outstanding: <span className="font-bold text-red-500">${invoiceMetrics.overdueTotal.toFixed(2)}</span>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Unpaid Invoices Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Unpaid Invoices</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <div className="text-2xl font-bold">{invoiceMetrics.unpaidCount}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {invoiceMetrics.unpaidCount === 1 ? 'invoice' : 'invoices'}
+                    </div>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Total outstanding: </span>
+                    <span className="font-bold">${invoiceMetrics.unpaidTotal.toFixed(2)}</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => {
+                      setTypeFilter("invoice");
+                      setStatusFilter("all");
+                    }}
+                  >
+                    View Invoices
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Upcoming Due Dates Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Upcoming Due Dates</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {invoiceMetrics.upcomingInvoices.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    No invoices due in the next 7 days
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {invoiceMetrics.upcomingInvoices.map((invoice) => (
+                      <div 
+                        key={invoice.id}
+                        className="flex items-center justify-between text-sm border-b last:border-0 pb-2 last:pb-0"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            {invoice.invoice_number || invoice.description}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge className={getDueDateColor(invoice.due_date!)} variant="outline">
+                              {getDueDateLabel(invoice.due_date!)}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-right ml-2">
+                          <div className="font-bold">
+                            ${Number(invoice.amount).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-2"
+                      onClick={() => {
+                        setTypeFilter("invoice");
+                      }}
+                    >
+                      View All
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
