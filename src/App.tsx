@@ -10,6 +10,7 @@ import CaseDetail from "./pages/CaseDetail";
 import Finance from "./pages/Finance";
 import Accounts from "./pages/Accounts";
 import Contacts from "./pages/Contacts";
+import Users from "./pages/Users";
 import StyleGuide from "./pages/StyleGuide";
 import PremiumShowcase from "./pages/PremiumShowcase";
 import NotFound from "./pages/NotFound";
@@ -83,6 +84,16 @@ const App = () => (
               <ProtectedRoute>
                 <DashboardLayout>
                   <Contacts />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <Users />
                 </DashboardLayout>
               </ProtectedRoute>
             }
