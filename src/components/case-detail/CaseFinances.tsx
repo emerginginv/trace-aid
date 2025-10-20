@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,8 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+      approved: "bg-green-500/10 text-green-500 border-green-500/20",
+      rejected: "bg-red-500/10 text-red-500 border-red-500/20",
       paid: "bg-green-500/10 text-green-500 border-green-500/20",
       overdue: "bg-red-500/10 text-red-500 border-red-500/20",
     };
@@ -138,6 +140,54 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
     setEditingFinance(null);
   };
 
+  const handleApprove = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("case_finances")
+        .update({ status: "approved" })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Expense approved successfully",
+      });
+      fetchFinances();
+    } catch (error) {
+      console.error("Error approving expense:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve expense",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("case_finances")
+        .update({ status: "rejected" })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Expense rejected",
+      });
+      fetchFinances();
+    } catch (error) {
+      console.error("Error rejecting expense:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reject expense",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredFinances = finances.filter(finance => {
     const matchesSearch = searchQuery === '' || 
       finance.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -196,6 +246,8 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
             <SelectItem value="paid">Paid</SelectItem>
             <SelectItem value="overdue">Overdue</SelectItem>
           </SelectContent>
@@ -290,6 +342,26 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
                       </div>
                     </div>
                     <div className="flex gap-1">
+                      {finance.finance_type === "expense" && finance.status === "pending" && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleApprove(finance.id)}
+                            title="Approve expense"
+                          >
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleReject(finance.id)}
+                            title="Reject expense"
+                          >
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"

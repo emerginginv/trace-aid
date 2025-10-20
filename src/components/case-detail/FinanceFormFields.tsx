@@ -38,6 +38,21 @@ const BILLING_FREQUENCIES = [
 
 export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFieldsProps) => {
   const financeType = form.watch("finance_type");
+  
+  const getStatusOptions = () => {
+    if (financeType === "expense") {
+      return [
+        { value: "pending", label: "Pending" },
+        { value: "approved", label: "Approved" },
+        { value: "rejected", label: "Rejected" },
+      ];
+    }
+    return [
+      { value: "pending", label: "Pending" },
+      { value: "paid", label: "Paid" },
+      { value: "overdue", label: "Overdue" },
+    ];
+  };
 
   return (
     <>
@@ -285,9 +300,11 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
+                {getStatusOptions().map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <FormMessage />
