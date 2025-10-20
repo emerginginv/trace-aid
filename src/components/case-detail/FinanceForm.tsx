@@ -25,7 +25,8 @@ const formSchema = z.object({
   ),
   description: z.string().min(1, "Description is required"),
   date: z.date(),
-  status: z.enum(["pending", "paid", "overdue", "approved", "rejected"]),
+  status: z.enum(["draft", "sent", "pending", "paid", "partial", "overdue", "approved", "rejected"]),
+  due_date: z.date().optional(),
   subject_id: z.string().optional(),
   activity_id: z.string().optional(),
   category: z.string().optional(),
@@ -65,6 +66,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       billing_frequency: undefined,
       invoice_number: undefined,
       notes: undefined,
+      due_date: undefined,
     },
   });
 
@@ -84,6 +86,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         billing_frequency: editingFinance.billing_frequency || undefined,
         invoice_number: editingFinance.invoice_number || undefined,
         notes: editingFinance.notes || undefined,
+        due_date: editingFinance.due_date ? new Date(editingFinance.due_date) : undefined,
       });
     } else {
       form.reset({
@@ -100,6 +103,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         billing_frequency: undefined,
         invoice_number: undefined,
         notes: undefined,
+        due_date: undefined,
       });
     }
   }, [editingFinance, form]);
@@ -143,6 +147,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         billing_frequency: values.billing_frequency || null,
         invoice_number: values.invoice_number || null,
         notes: values.notes || null,
+        due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
       };
 
       let error;

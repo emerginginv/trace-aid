@@ -47,10 +47,19 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
         { value: "rejected", label: "Rejected" },
       ];
     }
+    if (financeType === "invoice") {
+      return [
+        { value: "draft", label: "Draft" },
+        { value: "sent", label: "Sent" },
+        { value: "pending", label: "Pending" },
+        { value: "partial", label: "Partially Paid" },
+        { value: "paid", label: "Paid" },
+        { value: "overdue", label: "Overdue" },
+      ];
+    }
     return [
       { value: "pending", label: "Pending" },
       { value: "paid", label: "Paid" },
-      { value: "overdue", label: "Overdue" },
     ];
   };
 
@@ -185,6 +194,44 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
           </FormItem>
         )}
       />
+
+      {financeType === "invoice" && (
+        <FormField
+          control={form.control}
+          name="due_date"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Due Date (Optional)</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
 
       {financeType === "retainer" && (
         <>

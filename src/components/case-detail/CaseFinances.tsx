@@ -103,10 +103,13 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
+      draft: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+      sent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
       pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
       approved: "bg-green-500/10 text-green-500 border-green-500/20",
       rejected: "bg-red-500/10 text-red-500 border-red-500/20",
       paid: "bg-green-500/10 text-green-500 border-green-500/20",
+      partial: "bg-orange-500/10 text-orange-500 border-orange-500/20",
       overdue: "bg-red-500/10 text-red-500 border-red-500/20",
     };
     return colors[status] || "bg-muted";
@@ -279,9 +282,12 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="partial">Partially Paid</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>

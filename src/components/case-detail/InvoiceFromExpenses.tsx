@@ -164,9 +164,14 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
           description: `Invoice for ${selectedExpenses.size} expense${selectedExpenses.size !== 1 ? 's' : ''}`,
           amount: total,
           date: new Date().toISOString().split('T')[0],
-          status: "pending",
+          status: "draft",
           subject_id: primarySubjectId,
           notes: `Generated from expenses: ${selectedExpensesList.map(e => e.description).join(', ')}`,
+          due_date: (() => {
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+            return dueDate.toISOString().split('T')[0];
+          })(),
         })
         .select()
         .single();
