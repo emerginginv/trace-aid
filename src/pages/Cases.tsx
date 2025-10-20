@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, ArrowRight, Search, LayoutGrid, List } from "lucide-react";
+import { Plus, Briefcase, Search, LayoutGrid, List, Pencil, Trash2 } from "lucide-react";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
 import { Link } from "react-router-dom";
@@ -29,6 +30,8 @@ const Cases = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
   useEffect(() => {
     fetchCases();
   }, []);
@@ -69,6 +72,32 @@ const Cases = () => {
       low: "bg-secondary"
     };
     return colors[priority] || "bg-muted";
+  };
+
+  const handleDeleteClick = (caseId: string) => {
+    setCaseToDelete(caseId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!caseToDelete) return;
+    
+    try {
+      const { error } = await supabase
+        .from("cases")
+        .delete()
+        .eq("id", caseToDelete);
+
+      if (error) throw error;
+
+      toast.success("Case deleted successfully");
+      fetchCases();
+    } catch (error) {
+      toast.error("Error deleting case");
+    } finally {
+      setDeleteDialogOpen(false);
+      setCaseToDelete(null);
+    }
   };
   const filteredCases = cases.filter(caseItem => {
     const matchesSearch = searchQuery === '' || caseItem.title.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.case_number.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -178,12 +207,18 @@ const Cases = () => {
                   <span>Started: {new Date(caseItem.start_date).toLocaleDateString()}</span>
                   {caseItem.due_date && <span>Due: {new Date(caseItem.due_date).toLocaleDateString()}</span>}
                 </div>
-                <div className="flex justify-end">
-                  <Button variant="outline" size="sm" asChild>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="icon" asChild>
                     <Link to={`/cases/${caseItem.id}`}>
-                      View Details
-                      <ArrowRight className="h-4 w-4 ml-2" />
+                      <Pencil className="h-4 w-4" />
                     </Link>
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleDeleteClick(caseItem.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>
@@ -212,12 +247,23 @@ const Cases = () => {
                     {caseItem.due_date && <div>Due: {new Date(caseItem.due_date).toLocaleDateString()}</div>}
                   </div>
 
-                  <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link to={`/cases/${caseItem.id}`}>
-                      View Details
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" asChild className="flex-1">
+                      <Link to={`/cases/${caseItem.id}`}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Link>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDeleteClick(caseItem.id)}
+                      className="flex-1"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </Card>)}
           </div>
@@ -255,11 +301,20 @@ const Cases = () => {
                       {caseItem.due_date ? new Date(caseItem.due_date).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/cases/${caseItem.id}`} className="px-[10px] py-[6px]">
-                          View Details
-                        </Link>
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link to={`/cases/${caseItem.id}`}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleDeleteClick(caseItem.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>)}
               </TableBody>
@@ -268,6 +323,17 @@ const Cases = () => {
         </>}
 
       <CaseForm open={formOpen} onOpenChange={setFormOpen} onSuccess={fetchCases} />
+      
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Case"
+        description="Are you sure you want to delete this case? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteConfirm}
+        variant="destructive"
+      />
     </div>;
 };
 export default Cases;
