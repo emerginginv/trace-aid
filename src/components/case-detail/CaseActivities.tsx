@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, CheckCircle2, Circle, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, CheckCircle2, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ActivityForm } from "./ActivityForm";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Activity {
   id: string;
@@ -193,31 +194,54 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filteredActivities.map((activity) => (
-            <Card key={activity.id} className={activity.completed ? "opacity-60" : ""}>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={activity.completed}
-                    onCheckedChange={() => toggleComplete(activity)}
-                  />
-                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CardTitle className={`text-lg ${activity.completed ? "line-through" : ""}`}>
-                        {activity.title}
-                      </CardTitle>
-                      <Badge className={getTypeColor(activity.activity_type)}>
-                        {activity.activity_type}
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12"></TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Due Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredActivities.map((activity) => (
+                <TableRow key={activity.id} className={activity.completed ? "opacity-60" : ""}>
+                  <TableCell>
+                    <Checkbox
+                      checked={activity.completed}
+                      onCheckedChange={() => toggleComplete(activity)}
+                    />
+                  </TableCell>
+                  <TableCell className={`font-medium ${activity.completed ? "line-through" : ""}`}>
+                    {activity.title}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getTypeColor(activity.activity_type)}>
+                      {activity.activity_type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {activity.description || "-"}
+                  </TableCell>
+                  <TableCell>
+                    {activity.due_date ? new Date(activity.due_date).toLocaleDateString() : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {activity.completed ? (
+                      <Badge variant="outline" className="text-green-500 border-green-500/20">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Completed
                       </Badge>
-                      {activity.completed && activity.completed_at && (
-                        <Badge variant="outline" className="text-green-500 border-green-500/20">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Completed {new Date(activity.completed_at).toLocaleDateString()}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex gap-1 mt-2">
+                    ) : (
+                      <Badge variant="outline">Pending</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(activity)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -225,22 +249,11 @@ export const CaseActivities = ({ caseId }: { caseId: string }) => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    {activity.due_date && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        Due: {new Date(activity.due_date).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              {activity.description && (
-                <CardContent>
-                  <p className="text-muted-foreground">{activity.description}</p>
-                </CardContent>
-              )}
-            </Card>
-          ))}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
