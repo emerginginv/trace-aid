@@ -48,6 +48,7 @@ interface ActivityFormProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   editingActivity?: any;
+  prefilledDate?: Date;
 }
 
 export function ActivityForm({
@@ -58,6 +59,7 @@ export function ActivityForm({
   onOpenChange,
   onSuccess,
   editingActivity,
+  prefilledDate,
 }: ActivityFormProps) {
   const schema = activityType === "task" ? taskSchema : eventSchema;
   const form = useForm<z.infer<typeof schema>>({
@@ -66,7 +68,7 @@ export function ActivityForm({
       activity_type: activityType,
       title: "",
       description: "",
-      due_date: undefined,
+      due_date: prefilledDate || undefined,
       status: activityType === "task" ? "to_do" : "scheduled",
       assigned_user_id: undefined,
     } as any,
@@ -87,12 +89,12 @@ export function ActivityForm({
         activity_type: activityType,
         title: "",
         description: "",
-        due_date: undefined,
+        due_date: prefilledDate || undefined,
         status: activityType === "task" ? "to_do" : "scheduled",
         assigned_user_id: undefined,
       } as any);
     }
-  }, [editingActivity, activityType, form]);
+  }, [editingActivity, activityType, prefilledDate, form]);
 
   const onSubmit = async (values: any) => {
     try {

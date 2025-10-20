@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   startOfMonth,
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ActivityForm } from "./ActivityForm";
 
 interface CalendarActivity {
   id: string;
@@ -52,6 +53,10 @@ export function CaseCalendar({ caseId }: CaseCalendarProps) {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createDate, setCreateDate] = useState<Date | null>(null);
+  const [activityFormOpen, setActivityFormOpen] = useState(false);
+  const [activityType, setActivityType] = useState<"task" | "event">("task");
 
   useEffect(() => {
     fetchData();
@@ -187,8 +192,24 @@ export function CaseCalendar({ caseId }: CaseCalendarProps) {
       : "bg-green-50 text-green-700 border-green-200";
   };
 
+  const handleDayClick = (day: Date) => {
+    setCreateDate(day);
+    setCreateDialogOpen(true);
+  };
+
+  const handleCreateTask = () => {
+    setActivityType("task");
+    setCreateDialogOpen(false);
+    setActivityFormOpen(true);
+  };
+
+  const handleCreateEvent = () => {
+    setActivityType("event");
+    setCreateDialogOpen(false);
+    setActivityFormOpen(true);
+  };
+
   const calendarDays = getCalendarDays();
-  const selectedDayActivities = selectedDate ? getActivitiesForDay(selectedDate) : [];
 
   if (loading) {
     return <div className="p-4">Loading calendar...</div>;
@@ -261,13 +282,16 @@ export function CaseCalendar({ caseId }: CaseCalendarProps) {
             return (
               <div
                 key={idx}
-                onClick={() => setSelectedDate(day)}
-                className={`min-h-[120px] border-b border-r p-2 cursor-pointer hover:bg-muted/50 transition-colors ${
+                onClick={() => handleDayClick(day)}
+                className={`min-h-[120px] border-b border-r p-2 cursor-pointer hover:bg-muted/50 transition-colors relative group ${
                   !isCurrentMonth ? "bg-muted/20 text-muted-foreground" : ""
                 } ${isToday ? "bg-primary/5" : ""}`}
               >
-                <div className={`text-sm font-medium mb-2 ${isToday ? "text-primary" : ""}`}>
-                  {format(day, "d")}
+                <div className="flex items-center justify-between mb-2">
+                  <div className={`text-sm font-medium ${isToday ? "text-primary" : ""}`}>
+                    {format(day, "d")}
+                  </div>
+                  <Plus className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
                 </div>
 
                 <div className="space-y-1">
@@ -299,63 +323,71 @@ export function CaseCalendar({ caseId }: CaseCalendarProps) {
         </div>
       </div>
 
-      {/* Day Detail Modal */}
-      <Dialog open={selectedDate !== null} onOpenChange={() => setSelectedDate(null)}>
-        <DialogContent className="max-w-2xl">
+      {/* Create Activity Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {selectedDate && format(selectedDate, "MMMM d, yyyy")}
+              Create Activity for {createDate && format(createDate, "MMMM d, yyyy")}
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[60vh]">
-            {selectedDayActivities.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No activities scheduled for this day
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {selectedDayActivities.map(activity => (
-                  <div
-                    key={activity.id}
-                    className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge
-                            variant="outline"
-                            className={
-                              activity.type === "task"
-                                ? "bg-blue-50 text-blue-700 border-blue-200"
-                                : "bg-green-50 text-green-700 border-green-200"
-                            }
-                          >
-                            {activity.type === "task" ? "Task" : "Event"}
-                          </Badge>
-                          <Badge variant="outline">{activity.status.replace('_', ' ')}</Badge>
-                        </div>
-                        <h4 className={`font-medium ${
-                          activity.status === "done" || activity.status === "completed" || activity.status === "cancelled"
-                            ? "line-through text-muted-foreground"
-                            : ""
-                        }`}>
-                          {activity.title}
-                        </h4>
-                        {activity.assigned_user_id && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Assigned to: {getUserName(activity.assigned_user_id)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+          <div className="space-y-3 py-4">
+            <Button
+              onClick={handleCreateTask}
+              className="w-full justify-start h-auto py-4"
+              variant="outline"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                  <Plus className="h-5 w-5 text-blue-700" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium">New Task</div>
+                  <div className="text-sm text-muted-foreground">
+                    Create a task with due date on this day
                   </div>
-                ))}
+                </div>
               </div>
-            )}
-          </ScrollArea>
+            </Button>
+
+            <Button
+              onClick={handleCreateEvent}
+              className="w-full justify-start h-auto py-4"
+              variant="outline"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-green-50 border border-green-200 flex items-center justify-center shrink-0">
+                  <Plus className="h-5 w-5 text-green-700" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium">New Event</div>
+                  <div className="text-sm text-muted-foreground">
+                    Schedule an event on this day
+                  </div>
+                </div>
+              </div>
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
+
+      {/* Activity Form */}
+      {caseId && (
+        <ActivityForm
+          caseId={caseId}
+          activityType={activityType}
+          users={users}
+          open={activityFormOpen}
+          onOpenChange={setActivityFormOpen}
+          onSuccess={() => {
+            fetchData();
+            setActivityFormOpen(false);
+            setCreateDate(null);
+          }}
+          prefilledDate={createDate || undefined}
+        />
+      )}
     </div>
   );
 }
