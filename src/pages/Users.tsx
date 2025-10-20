@@ -269,7 +269,7 @@ const Users = () => {
         <CardContent>
           <div className="mb-4 flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name or email..."
                 value={searchTerm}
