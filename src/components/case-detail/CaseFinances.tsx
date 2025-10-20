@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
+import { InvoiceDetail } from "./InvoiceDetail";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,6 +39,7 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFinances();
@@ -234,6 +236,7 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
       <Tabs defaultValue="transactions" className="space-y-6">
         <TabsList>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="create-invoice">Create Invoice</TabsTrigger>
         </TabsList>
 
@@ -384,6 +387,16 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          {finance.finance_type === "invoice" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setSelectedInvoiceId(finance.id)}
+                              title="View invoice"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
                           {finance.finance_type === "expense" && finance.status === "pending" && (
                             <>
                               <Button
@@ -428,6 +441,94 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
           )}
         </TabsContent>
 
+        <TabsContent value="invoices">
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-2xl font-bold">Invoices</h2>
+              <p className="text-muted-foreground">View and manage all invoices</p>
+            </div>
+
+            {finances.filter(f => f.finance_type === "invoice").length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <p className="text-muted-foreground">No invoices created yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice #</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {finances
+                      .filter(f => f.finance_type === "invoice")
+                      .map((invoice) => (
+                        <TableRow key={invoice.id} className="hover:bg-muted/50">
+                          <TableCell className="font-medium">
+                            {invoice.invoice_number}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(invoice.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{invoice.description}</div>
+                              {invoice.notes && (
+                                <div className="text-sm text-muted-foreground">{invoice.notes}</div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(invoice.status)}>
+                              {invoice.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            ${Number(invoice.amount).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setSelectedInvoiceId(invoice.id)}
+                                title="View invoice"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(invoice)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(invoice.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
         <TabsContent value="create-invoice">
           <InvoiceFromExpenses caseId={caseId} />
         </TabsContent>
@@ -440,6 +541,13 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
         onSuccess={fetchFinances}
         editingFinance={editingFinance}
       />
+
+      {selectedInvoiceId && (
+        <InvoiceDetail
+          invoiceId={selectedInvoiceId}
+          onClose={() => setSelectedInvoiceId(null)}
+        />
+      )}
     </>
   );
 };
