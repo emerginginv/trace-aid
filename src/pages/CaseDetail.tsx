@@ -14,6 +14,7 @@ import { CaseUpdates } from "@/components/case-detail/CaseUpdates";
 import { CaseActivities } from "@/components/case-detail/CaseActivities";
 import { CaseFinances } from "@/components/case-detail/CaseFinances";
 import { CaseAttachments } from "@/components/case-detail/CaseAttachments";
+import { RetainerFundsWidget } from "@/components/case-detail/RetainerFundsWidget";
 
 interface Case {
   id: string;
@@ -214,45 +215,49 @@ const CaseDetail = () => {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Case Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {caseData.description && (
-            <div>
-              <p className="text-sm font-medium mb-1">Description</p>
-              <p className="text-muted-foreground">{caseData.description}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Case Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {caseData.description && (
+              <div>
+                <p className="text-sm font-medium mb-1">Description</p>
+                <p className="text-muted-foreground">{caseData.description}</p>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              {account && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Account</p>
+                  <p className="text-muted-foreground">{account.name}</p>
+                </div>
+              )}
+              {contact && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Contact</p>
+                  <p className="text-muted-foreground">{contact.first_name} {contact.last_name}</p>
+                </div>
+              )}
+              {caseData.start_date && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Start Date</p>
+                  <p className="text-muted-foreground">{new Date(caseData.start_date).toLocaleDateString()}</p>
+                </div>
+              )}
+              {caseData.due_date && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Due Date</p>
+                  <p className="text-muted-foreground">{new Date(caseData.due_date).toLocaleDateString()}</p>
+                </div>
+              )}
             </div>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            {account && (
-              <div>
-                <p className="text-sm font-medium mb-1">Account</p>
-                <p className="text-muted-foreground">{account.name}</p>
-              </div>
-            )}
-            {contact && (
-              <div>
-                <p className="text-sm font-medium mb-1">Contact</p>
-                <p className="text-muted-foreground">{contact.first_name} {contact.last_name}</p>
-              </div>
-            )}
-            {caseData.start_date && (
-              <div>
-                <p className="text-sm font-medium mb-1">Start Date</p>
-                <p className="text-muted-foreground">{new Date(caseData.start_date).toLocaleDateString()}</p>
-              </div>
-            )}
-            {caseData.due_date && (
-              <div>
-                <p className="text-sm font-medium mb-1">Due Date</p>
-                <p className="text-muted-foreground">{new Date(caseData.due_date).toLocaleDateString()}</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <RetainerFundsWidget caseId={id!} />
+      </div>
 
       <Tabs defaultValue="subjects" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
