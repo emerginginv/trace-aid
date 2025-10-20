@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Loader2, DollarSign, Receipt, Wallet } from "lucide-react";
+import { Loader2, DollarSign, Receipt, Wallet, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -46,6 +48,13 @@ const Finance = () => {
   const [retainerBalances, setRetainerBalances] = useState<RetainerBalance[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  
+  // Filter states
+  const [retainerSearch, setRetainerSearch] = useState("");
+  const [expenseSearch, setExpenseSearch] = useState("");
+  const [expenseStatusFilter, setExpenseStatusFilter] = useState("all");
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all");
 
   useEffect(() => {
     fetchFinanceData();
@@ -171,6 +180,45 @@ const Finance = () => {
     }
   };
 
+  // Filter functions
+  const filteredRetainerBalances = retainerBalances.filter((balance) => {
+    const searchLower = retainerSearch.toLowerCase();
+    return (
+      balance.case_title.toLowerCase().includes(searchLower) ||
+      balance.case_number.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const filteredExpenses = expenses.filter((expense) => {
+    const searchLower = expenseSearch.toLowerCase();
+    const matchesSearch =
+      expense.case_title.toLowerCase().includes(searchLower) ||
+      expense.case_number.toLowerCase().includes(searchLower) ||
+      (expense.category?.toLowerCase().includes(searchLower) ?? false);
+    
+    const matchesStatus =
+      expenseStatusFilter === "all" ||
+      (expenseStatusFilter === "invoiced" && expense.invoiced) ||
+      (expenseStatusFilter === "approved" && !expense.invoiced && expense.status === "approved") ||
+      (expenseStatusFilter === "pending" && !expense.invoiced && expense.status === "pending");
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredInvoices = invoices.filter((invoice) => {
+    const searchLower = invoiceSearch.toLowerCase();
+    const matchesSearch =
+      invoice.case_title.toLowerCase().includes(searchLower) ||
+      invoice.case_number.toLowerCase().includes(searchLower) ||
+      (invoice.invoice_number?.toLowerCase().includes(searchLower) ?? false);
+    
+    const matchesStatus =
+      invoiceStatusFilter === "all" ||
+      invoice.status === invoiceStatusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -251,9 +299,20 @@ const Finance = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {retainerBalances.length === 0 ? (
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by case name or number..."
+                value={retainerSearch}
+                onChange={(e) => setRetainerSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+          {filteredRetainerBalances.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No retainer funds found
+              No matching retainer funds found
             </p>
           ) : (
             <Table>
@@ -266,7 +325,7 @@ const Finance = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {retainerBalances.map((balance) => (
+                {filteredRetainerBalances.map((balance) => (
                   <TableRow
                     key={balance.case_id}
                     className="cursor-pointer hover:bg-muted/50"
@@ -299,9 +358,31 @@ const Finance = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {expenses.length === 0 ? (
+          <div className="mb-4 flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by case, category..."
+                value={expenseSearch}
+                onChange={(e) => setExpenseSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Select value={expenseStatusFilter} onValueChange={setExpenseStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="invoiced">Invoiced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {filteredExpenses.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No expenses found
+              No matching expenses found
             </p>
           ) : (
             <Table>
@@ -315,7 +396,7 @@ const Finance = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expenses.map((expense) => (
+                {filteredExpenses.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell>
                       {format(new Date(expense.date), "MMM d, yyyy")}
@@ -362,9 +443,32 @@ const Finance = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {invoices.length === 0 ? (
+          <div className="mb-4 flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by invoice #, case..."
+                value={invoiceSearch}
+                onChange={(e) => setInvoiceSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
+                <SelectItem value="partial">Partial</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {filteredInvoices.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No invoices found
+              No matching invoices found
             </p>
           ) : (
             <Table>
@@ -378,7 +482,7 @@ const Finance = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.map((invoice) => (
+                {filteredInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">
                       {invoice.invoice_number || "N/A"}
