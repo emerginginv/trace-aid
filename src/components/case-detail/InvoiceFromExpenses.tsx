@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { FileText, DollarSign } from "lucide-react";
 
-interface ApprovedExpense {
+interface BillableItem {
   id: string;
   description: string;
   amount: number;
@@ -16,6 +16,9 @@ interface ApprovedExpense {
   notes?: string;
   subject_id?: string;
   activity_id?: string;
+  finance_type: 'expense' | 'time';
+  hours?: number;
+  hourly_rate?: number;
 }
 
 interface Subject {
@@ -29,34 +32,34 @@ interface Activity {
 }
 
 export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
-  const [expenses, setExpenses] = useState<ApprovedExpense[]>([]);
+  const [billableItems, setBillableItems] = useState<BillableItem[]>([]);
   const [subjects, setSubjects] = useState<Record<string, Subject>>({});
   const [activities, setActivities] = useState<Record<string, Activity>>({});
-  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
 
   useEffect(() => {
-    fetchApprovedExpenses();
+    fetchBillableItems();
   }, [caseId]);
 
-  const fetchApprovedExpenses = async () => {
+  const fetchBillableItems = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch approved, uninvoiced expenses
-      const { data: expensesData, error: expensesError } = await supabase
+      // Fetch approved, uninvoiced time and expense entries
+      const { data: itemsData, error: itemsError } = await supabase
         .from("case_finances")
         .select("*")
         .eq("case_id", caseId)
         .eq("user_id", user.id)
-        .eq("finance_type", "expense")
+        .in("finance_type", ["expense", "time"])
         .eq("status", "approved")
-        .or("invoiced.is.null,invoiced.eq.false")
+        .is("invoice_id", null)
         .order("date", { ascending: false });
 
-      if (expensesError) throw expensesError;
+      if (itemsError) throw itemsError;
 
       // Fetch related subjects
       const { data: subjectsData } = await supabase
@@ -72,7 +75,7 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
         .eq("case_id", caseId)
         .eq("user_id", user.id);
 
-      setExpenses(expensesData || []);
+      setBillableItems((itemsData || []) as BillableItem[]);
       
       // Create lookup maps for subjects and activities
       const subjectsMap: Record<string, Subject> = {};
@@ -84,10 +87,10 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       setActivities(activitiesMap);
 
     } catch (error) {
-      console.error("Error fetching approved expenses:", error);
+      console.error("Error fetching billable items:", error);
       toast({
         title: "Error",
-        description: "Failed to load approved expenses",
+        description: "Failed to load billable items",
         variant: "destructive",
       });
     } finally {
@@ -95,20 +98,20 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
     }
   };
 
-  const toggleExpense = (expenseId: string) => {
-    const newSelected = new Set(selectedExpenses);
-    if (newSelected.has(expenseId)) {
-      newSelected.delete(expenseId);
+  const toggleItem = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
     } else {
-      newSelected.add(expenseId);
+      newSelected.add(itemId);
     }
-    setSelectedExpenses(newSelected);
+    setSelectedItems(newSelected);
   };
 
   const calculateSubtotal = () => {
-    return expenses
-      .filter(expense => selectedExpenses.has(expense.id))
-      .reduce((sum, expense) => sum + Number(expense.amount), 0);
+    return billableItems
+      .filter(item => selectedItems.has(item.id))
+      .reduce((sum, item) => sum + Number(item.amount), 0);
   };
 
   const generateInvoiceNumber = async () => {
@@ -127,10 +130,10 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
   };
 
   const handleAddInvoice = async () => {
-    if (selectedExpenses.size === 0) {
+    if (selectedItems.size === 0) {
       toast({
-        title: "No expenses selected",
-        description: "Please select at least one expense to create an invoice",
+        title: "No items selected",
+        description: "Please select at least one item to create an invoice",
         variant: "destructive",
       });
       return;
@@ -142,31 +145,40 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Calculate total from selected expenses
-      const selectedExpensesList = expenses.filter(e => selectedExpenses.has(e.id));
-      const total = selectedExpensesList.reduce((sum, e) => sum + Number(e.amount), 0);
+      // Calculate total from selected items
+      const selectedItemsList = billableItems.filter(item => selectedItems.has(item.id));
+      const total = selectedItemsList.reduce((sum, item) => sum + Number(item.amount), 0);
 
-      // Get the primary subject from the first expense (assuming all expenses are for the same client)
-      const primarySubjectId = selectedExpensesList.find(e => e.subject_id)?.subject_id;
+      // Get the primary subject from the first item
+      const primarySubjectId = selectedItemsList.find(item => item.subject_id)?.subject_id;
+      
+      // Count time vs expense items
+      const timeCount = selectedItemsList.filter(item => item.finance_type === 'time').length;
+      const expenseCount = selectedItemsList.filter(item => item.finance_type === 'expense').length;
 
       // Generate invoice number
       const invoiceNumber = await generateInvoiceNumber();
       if (!invoiceNumber) throw new Error("Failed to generate invoice number");
 
+      // Build description based on what's selected
+      const descriptionParts = [];
+      if (timeCount > 0) descriptionParts.push(`${timeCount} time entr${timeCount !== 1 ? 'ies' : 'y'}`);
+      if (expenseCount > 0) descriptionParts.push(`${expenseCount} expense${expenseCount !== 1 ? 's' : ''}`);
+      
       // Create the invoice record
       const { data: invoice, error: invoiceError } = await supabase
         .from("case_finances")
         .insert({
           case_id: caseId,
           user_id: user.id,
-          finance_type: "invoice",
+          finance_type: "expense", // Use 'expense' as the type for invoices
           invoice_number: invoiceNumber,
-          description: `Invoice for ${selectedExpenses.size} expense${selectedExpenses.size !== 1 ? 's' : ''}`,
+          description: `Invoice for ${descriptionParts.join(' and ')}`,
           amount: total,
           date: new Date().toISOString().split('T')[0],
           status: "draft",
           subject_id: primarySubjectId,
-          notes: `Generated from expenses: ${selectedExpensesList.map(e => e.description).join(', ')}`,
+          notes: `Generated from: ${selectedItemsList.map(item => item.description).join(', ')}`,
           due_date: (() => {
             const dueDate = new Date();
             dueDate.setDate(dueDate.getDate() + 30);
@@ -178,26 +190,25 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
 
       if (invoiceError) throw invoiceError;
 
-      // Mark selected expenses as invoiced and link them to this invoice
-      const expenseIds = Array.from(selectedExpenses);
+      // Link selected items to this invoice
+      const itemIds = Array.from(selectedItems);
       const { error: updateError } = await supabase
         .from("case_finances")
         .update({ 
-          invoiced: true,
           invoice_id: invoice.id
         })
-        .in("id", expenseIds);
+        .in("id", itemIds);
 
       if (updateError) throw updateError;
 
       toast({
         title: "Invoice created",
-        description: `Invoice ${invoiceNumber} created successfully with ${selectedExpenses.size} expense(s) totaling $${total.toFixed(2)}`,
+        description: `Invoice ${invoiceNumber} created successfully with ${selectedItems.size} item(s) totaling $${total.toFixed(2)}`,
       });
 
       // Clear selection and refresh the list
-      setSelectedExpenses(new Set());
-      fetchApprovedExpenses();
+      setSelectedItems(new Set());
+      fetchBillableItems();
 
     } catch (error) {
       console.error("Error creating invoice:", error);
@@ -212,7 +223,7 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
   };
 
   if (loading) {
-    return <p className="text-muted-foreground">Loading approved expenses...</p>;
+    return <p className="text-muted-foreground">Loading billable items...</p>;
   }
 
   const subtotal = calculateSubtotal();
@@ -221,73 +232,86 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold">Create Invoice from Expenses</h3>
+          <h3 className="text-lg font-semibold">Create Invoice from Time + Expenses</h3>
           <p className="text-sm text-muted-foreground">
-            Select approved expenses to include in a new invoice
+            Select approved time and expense entries to include in a new invoice
           </p>
         </div>
       </div>
 
-      {expenses.length === 0 ? (
+      {billableItems.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No approved, uninvoiced expenses available</p>
+            <p className="text-muted-foreground">No approved, unbilled items available</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Expenses must be approved before they can be added to an invoice
+              Time and expense entries must be approved before they can be added to an invoice
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="space-y-3">
-            {expenses.map((expense) => (
-              <Card key={expense.id} className="hover:bg-accent/50 transition-colors">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={selectedExpenses.has(expense.id)}
-                      onCheckedChange={() => toggleExpense(expense.id)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium">{expense.description}</h4>
-                            {expense.category && (
-                              <Badge variant="outline" className="text-xs">
-                                {expense.category}
+            {billableItems.map((item) => {
+              const isTime = item.finance_type === 'time';
+              return (
+                <Card 
+                  key={item.id} 
+                  className="hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => toggleItem(item.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={selectedItems.has(item.id)}
+                        onCheckedChange={() => toggleItem(item.id)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant={isTime ? "default" : "secondary"} className="text-xs">
+                                {isTime ? 'TIME' : 'EXPENSE'}
                               </Badge>
+                              <h4 className="font-medium">{item.description}</h4>
+                              {item.category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {item.category}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                              <span>Date: {new Date(item.date).toLocaleDateString()}</span>
+                              {isTime && item.hours && item.hourly_rate && (
+                                <span>{item.hours} hrs @ ${item.hourly_rate}/hr</span>
+                              )}
+                              {item.subject_id && subjects[item.subject_id] && (
+                                <span>Subject: {subjects[item.subject_id].name}</span>
+                              )}
+                              {item.activity_id && activities[item.activity_id] && (
+                                <span>Activity: {activities[item.activity_id].title}</span>
+                              )}
+                            </div>
+                            {item.notes && (
+                              <p className="text-sm text-muted-foreground mt-1">{item.notes}</p>
                             )}
                           </div>
-                          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                            <span>Date: {new Date(expense.date).toLocaleDateString()}</span>
-                            {expense.subject_id && subjects[expense.subject_id] && (
-                              <span>Subject: {subjects[expense.subject_id].name}</span>
-                            )}
-                            {expense.activity_id && activities[expense.activity_id] && (
-                              <span>Activity: {activities[expense.activity_id].title}</span>
-                            )}
-                          </div>
-                          {expense.notes && (
-                            <p className="text-sm text-muted-foreground mt-1">{expense.notes}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold">
-                            ${Number(expense.amount).toFixed(2)}
+                          <div className="text-right">
+                            <div className="text-lg font-bold">
+                              ${Number(item.amount).toFixed(2)}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
-          {selectedExpenses.size > 0 && (
+          {selectedItems.size > 0 && (
             <Card className="border-primary">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -302,7 +326,7 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      {selectedExpenses.size} expense{selectedExpenses.size !== 1 ? 's' : ''} selected
+                      {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
                     </p>
                   </div>
                   <Button 
