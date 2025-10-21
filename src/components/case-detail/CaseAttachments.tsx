@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Attachment {
   id: string;
@@ -30,6 +31,7 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
 
   useEffect(() => {
     fetchAttachments();
@@ -222,6 +224,54 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
     return "other";
   };
 
+  const handlePreview = (attachment: Attachment) => {
+    setPreviewAttachment(attachment);
+  };
+
+  const renderPreviewContent = () => {
+    if (!previewAttachment) return null;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("case-attachments")
+      .getPublicUrl(previewAttachment.file_path);
+
+    if (previewAttachment.file_type.startsWith("image/")) {
+      return <img src={publicUrl} alt={previewAttachment.file_name} className="max-w-full max-h-[80vh] rounded" />;
+    }
+
+    if (previewAttachment.file_type.startsWith("video/")) {
+      return (
+        <video controls className="w-full max-h-[80vh] rounded">
+          <source src={publicUrl} type={previewAttachment.file_type} />
+        </video>
+      );
+    }
+
+    if (previewAttachment.file_type.startsWith("audio/")) {
+      return (
+        <audio controls className="w-full">
+          <source src={publicUrl} type={previewAttachment.file_type} />
+        </audio>
+      );
+    }
+
+    if (previewAttachment.file_type.includes("pdf")) {
+      return <iframe src={publicUrl} className="w-full h-[80vh] rounded" title={previewAttachment.file_name} />;
+    }
+
+    return (
+      <div className="text-center py-12">
+        <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+        <p className="text-lg font-medium mb-2">Preview not available</p>
+        <p className="text-muted-foreground mb-4">Download to view this file</p>
+        <Button onClick={() => handleDownload(previewAttachment)}>
+          <Download className="h-4 w-4 mr-2" />
+          Download File
+        </Button>
+      </div>
+    );
+  };
+
   const filteredAttachments = attachments.filter((attachment) => {
     const matchesSearch = searchQuery === "" || 
       attachment.file_name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -347,6 +397,15 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => handlePreview(attachment)}
+                      className="h-8 text-xs"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      View
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDownload(attachment)}
                       className="h-8 text-xs"
                     >
@@ -396,6 +455,14 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => handlePreview(attachment)}
+                        className="h-8 w-8"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleDownload(attachment)}
                         className="h-8 w-8"
                       >
@@ -417,6 +484,17 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
           </Table>
         </div>
       )}
+
+      <Dialog open={!!previewAttachment} onOpenChange={() => setPreviewAttachment(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{previewAttachment?.file_name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center">
+            {renderPreviewContent()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
