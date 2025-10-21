@@ -7,7 +7,6 @@ import { toast } from "@/hooks/use-toast";
 import { UpdateForm } from "./UpdateForm";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 
 interface Update {
@@ -179,50 +178,49 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
                 const userProfile = userProfiles[update.user_id];
                 
                 return (
-                  <Collapsible key={update.id} open={isExpanded} onOpenChange={() => toggleRow(update.id)} asChild>
-                    <>
-                      <TableRow>
-                        <TableCell>
-                          <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </CollapsibleTrigger>
-                        </TableCell>
-                        <TableCell className="font-medium">{update.title}</TableCell>
-                        <TableCell>{update.update_type}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {userProfile?.full_name || userProfile?.email || "Unknown"}
-                        </TableCell>
-                        <TableCell>{format(new Date(update.created_at), "MMM dd, yyyy")}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(update)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(update.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                  <>
+                    <TableRow key={update.id}>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          onClick={() => toggleRow(update.id)}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TableCell>
+                      <TableCell className="font-medium">{update.title}</TableCell>
+                      <TableCell>{update.update_type}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {userProfile?.full_name || userProfile?.email || "Unknown"}
+                      </TableCell>
+                      <TableCell>{format(new Date(update.created_at), "MMM dd, yyyy")}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(update)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(update.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {isExpanded && update.description && (
+                      <TableRow key={`${update.id}-desc`}>
+                        <TableCell colSpan={6} className="py-3 bg-muted/30 border-0">
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-10">
+                            {update.description}
+                          </p>
                         </TableCell>
                       </TableRow>
-                      {update.description && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="p-0 border-0">
-                            <CollapsibleContent className="px-4 py-3 bg-muted/30">
-                              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                {update.description}
-                              </p>
-                            </CollapsibleContent>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </>
-                  </Collapsible>
+                    )}
+                  </>
                 );
               })}
             </TableBody>
