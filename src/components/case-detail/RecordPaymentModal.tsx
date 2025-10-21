@@ -73,41 +73,37 @@ export default function RecordPaymentModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Record manual payment if any
-      if (manualAmount > 0) {
+      // Combine payments into one record if both exist
+      const totalPaymentAmount = Number(retainerAmount) + Number(manualAmount);
+      
+      if (totalPaymentAmount > 0) {
+        // Record the payment
+        const paymentNotes = [];
+        if (manualAmount > 0) paymentNotes.push(`Manual payment: $${manualAmount.toFixed(2)}`);
+        if (retainerAmount > 0) paymentNotes.push(`Retainer applied: $${retainerAmount.toFixed(2)}`);
+
         const { error: payError } = await supabase.from("invoice_payments").insert({
           invoice_id: invoice.id,
-          amount: manualAmount,
+          amount: totalPaymentAmount,
           user_id: user.id,
           payment_date: new Date().toISOString(),
-          notes: "Manual payment",
+          notes: paymentNotes.join(', '),
         });
 
         if (payError) throw payError;
-      }
 
-      // Record retainer payment if any
-      if (retainerAmount > 0) {
-        const { error: retainerPayError } = await supabase.from("invoice_payments").insert({
-          invoice_id: invoice.id,
-          amount: retainerAmount,
-          user_id: user.id,
-          payment_date: new Date().toISOString(),
-          notes: "Payment from retainer",
-        });
+        // Deduct from retainer balance if retainer was used
+        if (retainerAmount > 0) {
+          const { error: retainerError } = await supabase.from("retainer_funds").insert({
+            case_id: invoice.case_id,
+            amount: -retainerAmount,
+            user_id: user.id,
+            note: `Applied to invoice ${invoice.invoice_number}`,
+            invoice_id: invoice.id,
+          });
 
-        if (retainerPayError) throw retainerPayError;
-
-        // Deduct from retainer balance
-        const { error: retainerError } = await supabase.from("retainer_funds").insert({
-          case_id: invoice.case_id,
-          amount: -retainerAmount,
-          user_id: user.id,
-          note: `Applied to invoice ${invoice.invoice_number}`,
-          invoice_id: invoice.id,
-        });
-
-        if (retainerError) throw retainerError;
+          if (retainerError) throw retainerError;
+        }
       }
 
       // Calculate new balance and status
