@@ -8,11 +8,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
+  update_type: z.string().min(1, "Update type is required"),
 });
 
 interface UpdateFormProps {
@@ -31,6 +33,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     defaultValues: {
       title: "",
       description: "",
+      update_type: "Other",
     },
   });
 
@@ -39,11 +42,13 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       form.reset({
         title: editingUpdate.title,
         description: editingUpdate.description || "",
+        update_type: editingUpdate.update_type || "Other",
       });
     } else {
       form.reset({
         title: "",
         description: "",
+        update_type: "Other",
       });
     }
   }, [editingUpdate, form]);
@@ -59,6 +64,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         user_id: user.id,
         title: values.title,
         description: values.description || null,
+        update_type: values.update_type,
       };
 
       let error;
@@ -114,6 +120,33 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                   <FormControl>
                     <Input placeholder="Update title" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="update_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Update Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select update type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Surveillance">Surveillance</SelectItem>
+                      <SelectItem value="Case Update">Case Update</SelectItem>
+                      <SelectItem value="Accounting">Accounting</SelectItem>
+                      <SelectItem value="Client Contact">Client Contact</SelectItem>
+                      <SelectItem value="3rd Party Contact">3rd Party Contact</SelectItem>
+                      <SelectItem value="Review">Review</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

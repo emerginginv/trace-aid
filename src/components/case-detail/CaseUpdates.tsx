@@ -2,17 +2,27 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { UpdateForm } from "./UpdateForm";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { format } from "date-fns";
 
 interface Update {
   id: string;
   title: string;
   description: string | null;
   created_at: string;
+  update_type: string;
+  user_id: string;
+}
+
+interface UserProfile {
+  id: string;
+  full_name: string;
+  email: string;
 }
 
 export const CaseUpdates = ({ caseId }: { caseId: string }) => {
@@ -21,6 +31,8 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
   const [formOpen, setFormOpen] = useState(false);
   const [editingUpdate, setEditingUpdate] = useState<Update | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const handleEdit = (update: Update) => {
     setEditingUpdate(update);
@@ -57,6 +69,23 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
 
       if (error) throw error;
       setUpdates(data || []);
+
+      // Fetch user profiles for all unique user_ids
+      if (data && data.length > 0) {
+        const uniqueUserIds = [...new Set(data.map(u => u.user_id))];
+        const { data: profiles, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", uniqueUserIds);
+
+        if (profileError) throw profileError;
+        
+        const profileMap: Record<string, UserProfile> = {};
+        profiles?.forEach(profile => {
+          profileMap[profile.id] = profile;
+        });
+        setUserProfiles(profileMap);
+      }
     } catch (error) {
       console.error("Error fetching updates:", error);
       toast({
@@ -69,10 +98,23 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
     }
   };
 
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   const filteredUpdates = updates.filter(update => {
     return searchQuery === '' || 
       update.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      update.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      update.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      update.update_type.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   if (loading) {
@@ -123,30 +165,66 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12"></TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Created By</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUpdates.map((update) => (
-                <TableRow key={update.id}>
-                  <TableCell className="font-medium">{update.title}</TableCell>
-                  <TableCell className="text-muted-foreground">{update.description || "-"}</TableCell>
-                  <TableCell>{new Date(update.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(update)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(update.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredUpdates.map((update) => {
+                const isExpanded = expandedRows.has(update.id);
+                const userProfile = userProfiles[update.user_id];
+                
+                return (
+                  <Collapsible key={update.id} open={isExpanded} onOpenChange={() => toggleRow(update.id)} asChild>
+                    <>
+                      <TableRow>
+                        <TableCell>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </CollapsibleTrigger>
+                        </TableCell>
+                        <TableCell className="font-medium">{update.title}</TableCell>
+                        <TableCell>{update.update_type}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {userProfile?.full_name || userProfile?.email || "Unknown"}
+                        </TableCell>
+                        <TableCell>{format(new Date(update.created_at), "MMM dd, yyyy")}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(update)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(update.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {update.description && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="p-0 border-0">
+                            <CollapsibleContent className="px-4 py-3 bg-muted/30">
+                              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                {update.description}
+                              </p>
+                            </CollapsibleContent>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  </Collapsible>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
