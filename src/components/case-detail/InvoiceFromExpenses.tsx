@@ -38,6 +38,8 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+  const [retainerBalance, setRetainerBalance] = useState(0);
+  const [retainerUsed, setRetainerUsed] = useState(0);
 
   useEffect(() => {
     fetchBillableItems();
@@ -74,6 +76,16 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
         .select("id, title")
         .eq("case_id", caseId)
         .eq("user_id", user.id);
+
+      // Calculate available retainer balance
+      const { data: retainerData } = await supabase
+        .from("retainer_funds")
+        .select("amount")
+        .eq("case_id", caseId)
+        .eq("user_id", user.id);
+
+      const balance = retainerData?.reduce((sum, r) => sum + Number(r.amount), 0) || 0;
+      setRetainerBalance(balance);
 
       setBillableItems((itemsData || []) as BillableItem[]);
       
@@ -160,8 +172,9 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
           user_id: user.id,
           invoice_number: invoiceNumber,
           total: totalAmount,
+          retainer_applied: retainerUsed,
           date: new Date().toISOString().split('T')[0],
-          status: "unpaid",
+          status: "draft",
           notes: "",
           due_date: (() => {
             const dueDate = new Date();
@@ -189,14 +202,33 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
         throw new Error("Invoice created, but failed to link items");
       }
 
-      // 3. Done!
+      // 3. If retainer funds were applied, record the transaction
+      if (retainerUsed > 0) {
+        const { error: retainerError } = await supabase
+          .from("retainer_funds")
+          .insert({
+            case_id: caseId,
+            user_id: user.id,
+            amount: -retainerUsed,
+            invoice_id: invoice.id,
+            note: `Applied to invoice ${invoiceNumber}`,
+          });
+
+        if (retainerError) {
+          console.error("Failed to record retainer usage:", retainerError);
+        }
+      }
+
+      // 4. Done!
+      const balanceDue = totalAmount - retainerUsed;
       toast({
         title: "Invoice created successfully!",
-        description: `Invoice ${invoiceNumber} created with ${selectedItems.size} item(s) totaling $${totalAmount.toFixed(2)}`,
+        description: `Invoice ${invoiceNumber} created with ${selectedItems.size} item(s). ${retainerUsed > 0 ? `$${retainerUsed.toFixed(2)} retainer applied. ` : ''}Balance due: $${balanceDue.toFixed(2)}`,
       });
 
       // Clear selection and refresh the list
       setSelectedItems(new Set());
+      setRetainerUsed(0);
       fetchBillableItems();
 
     } catch (error) {
@@ -311,8 +343,53 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
                   <span className="text-2xl">${subtotal.toFixed(2)}</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
+              <CardContent className="space-y-4">
+                {retainerBalance > 0 && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm font-medium mb-2">
+                      This case has <strong>${retainerBalance.toFixed(2)}</strong> in available retainer funds.
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Would you like to apply some or all of it to this invoice?
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">$</span>
+                      <input
+                        type="number"
+                        placeholder="Amount to apply"
+                        value={retainerUsed || ""}
+                        max={Math.min(subtotal, retainerBalance)}
+                        min={0}
+                        step={0.01}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          const maxApply = Math.min(subtotal, retainerBalance);
+                          setRetainerUsed(Math.min(value, maxApply));
+                        }}
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span className="font-medium">${subtotal.toFixed(2)}</span>
+                  </div>
+                  {retainerUsed > 0 && (
+                    <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
+                      <span>Retainer Applied:</span>
+                      <span className="font-medium">-${retainerUsed.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-base font-bold pt-2 border-t">
+                    <span>Balance Due:</span>
+                    <span>${(subtotal - retainerUsed).toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
                   <div>
                     <p className="text-sm text-muted-foreground">
                       {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
@@ -324,7 +401,7 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
                     disabled={isCreatingInvoice}
                   >
                     <FileText className="h-4 w-4" />
-                    {isCreatingInvoice ? "Creating..." : "Add Invoice"}
+                    {isCreatingInvoice ? "Creating..." : "Create Invoice"}
                   </Button>
                 </div>
               </CardContent>

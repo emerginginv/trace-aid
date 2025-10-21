@@ -9,6 +9,7 @@ import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
 import { InvoiceDetail } from "./InvoiceDetail";
 import { FinanceReports } from "./FinanceReports";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -859,12 +860,20 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
                           {new Date(invoice.date).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(invoice.status)}>
-                            {invoice.status}
-                          </Badge>
+                          <StatusBadge status={invoice.status} />
                         </TableCell>
-                        <TableCell className="text-right font-bold">
-                          ${Number(invoice.total).toFixed(2)}
+                        <TableCell className="text-right">
+                          <div className="font-bold">${Number(invoice.total).toFixed(2)}</div>
+                          {invoice.retainer_applied > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              Retainer: -${Number(invoice.retainer_applied).toFixed(2)}
+                            </div>
+                          )}
+                          {invoice.balance_due !== invoice.total && (
+                            <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                              Due: ${Number(invoice.balance_due || invoice.total).toFixed(2)}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">

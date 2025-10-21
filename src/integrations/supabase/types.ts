@@ -516,6 +516,7 @@ export type Database = {
       }
       invoices: {
         Row: {
+          balance_due: number | null
           case_id: string
           created_at: string
           date: string
@@ -523,12 +524,14 @@ export type Database = {
           id: string
           invoice_number: string
           notes: string | null
+          retainer_applied: number | null
           status: string
           total: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          balance_due?: number | null
           case_id: string
           created_at?: string
           date?: string
@@ -536,12 +539,14 @@ export type Database = {
           id?: string
           invoice_number: string
           notes?: string | null
+          retainer_applied?: number | null
           status?: string
           total: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          balance_due?: number | null
           case_id?: string
           created_at?: string
           date?: string
@@ -549,6 +554,7 @@ export type Database = {
           id?: string
           invoice_number?: string
           notes?: string | null
+          retainer_applied?: number | null
           status?: string
           total?: number
           updated_at?: string

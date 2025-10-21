@@ -10,12 +10,15 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import html2pdf from "html2pdf.js";
 import { EditInvoiceItemsDialog } from "@/components/case-detail/EditInvoiceItemsDialog";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface Invoice {
   id: string;
   case_id: string;
   invoice_number: string;
   total: number;
+  retainer_applied: number;
+  balance_due: number;
   date: string;
   due_date: string | null;
   status: string;
@@ -225,14 +228,17 @@ export default function InvoiceDetail() {
     <div className="space-y-6">
       {/* Header Actions */}
       <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/finance")}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Finance
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/finance")}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Finance
+          </Button>
+          <StatusBadge status={invoice.status} />
+        </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -395,13 +401,19 @@ export default function InvoiceDetail() {
                 <span className="text-gray-600">Subtotal:</span>
                 <span className="font-medium">${Number(invoice.total).toFixed(2)}</span>
               </div>
+              {invoice.retainer_applied > 0 && (
+                <div className="flex justify-between text-sm text-blue-600">
+                  <span>Retainer Applied:</span>
+                  <span className="font-medium">-${Number(invoice.retainer_applied).toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-300">
                 <span>Total:</span>
                 <span>${Number(invoice.total).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-red-600 font-semibold">
                 <span>Balance Due:</span>
-                <span>${Number(invoice.total).toFixed(2)}</span>
+                <span>${Number(invoice.balance_due || invoice.total).toFixed(2)}</span>
               </div>
             </div>
           </div>
