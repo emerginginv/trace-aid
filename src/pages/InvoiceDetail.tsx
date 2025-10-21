@@ -36,6 +36,29 @@ interface InvoiceItem {
 interface CaseInfo {
   title: string;
   case_number: string;
+  account_id: string | null;
+  contact_id: string | null;
+}
+
+interface AccountInfo {
+  name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+interface ContactInfo {
+  first_name: string;
+  last_name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 interface OrgSettings {
@@ -55,6 +78,8 @@ export default function InvoiceDetail() {
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [caseInfo, setCaseInfo] = useState<CaseInfo | null>(null);
+  const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [orgSettings, setOrgSettings] = useState<OrgSettings | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -94,12 +119,40 @@ export default function InvoiceDetail() {
       // Fetch case info
       const { data: caseData, error: caseError } = await supabase
         .from("cases")
-        .select("title, case_number")
+        .select("title, case_number, account_id, contact_id")
         .eq("id", invoiceData.case_id)
         .maybeSingle();
 
       if (caseError) throw caseError;
       setCaseInfo(caseData);
+
+      // Fetch account info if available
+      if (caseData?.account_id) {
+        const { data: accountData, error: accountError } = await supabase
+          .from("accounts")
+          .select("name, address, city, state, zip_code, email, phone")
+          .eq("id", caseData.account_id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!accountError && accountData) {
+          setAccountInfo(accountData);
+        }
+      }
+
+      // Fetch contact info if available
+      if (caseData?.contact_id) {
+        const { data: contactData, error: contactError } = await supabase
+          .from("contacts")
+          .select("first_name, last_name, address, city, state, zip_code, email, phone")
+          .eq("id", caseData.contact_id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!contactError && contactData) {
+          setContactInfo(contactData);
+        }
+      }
 
       // Fetch invoice items
       const { data: itemsData, error: itemsError } = await supabase
@@ -261,7 +314,33 @@ export default function InvoiceDetail() {
         {/* Bill To Section */}
         <div className="mb-10">
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Bill To</h3>
-          <p className="font-semibold text-base">{caseInfo.title}</p>
+          {accountInfo ? (
+            <>
+              <p className="font-semibold text-base">{accountInfo.name}</p>
+              {accountInfo.address && <p className="text-sm text-gray-600">{accountInfo.address}</p>}
+              {(accountInfo.city || accountInfo.state || accountInfo.zip_code) && (
+                <p className="text-sm text-gray-600">
+                  {[accountInfo.city, accountInfo.state, accountInfo.zip_code].filter(Boolean).join(", ")}
+                </p>
+              )}
+              {accountInfo.email && <p className="text-sm text-gray-600">{accountInfo.email}</p>}
+              {accountInfo.phone && <p className="text-sm text-gray-600">{accountInfo.phone}</p>}
+            </>
+          ) : contactInfo ? (
+            <>
+              <p className="font-semibold text-base">{contactInfo.first_name} {contactInfo.last_name}</p>
+              {contactInfo.address && <p className="text-sm text-gray-600">{contactInfo.address}</p>}
+              {(contactInfo.city || contactInfo.state || contactInfo.zip_code) && (
+                <p className="text-sm text-gray-600">
+                  {[contactInfo.city, contactInfo.state, contactInfo.zip_code].filter(Boolean).join(", ")}
+                </p>
+              )}
+              {contactInfo.email && <p className="text-sm text-gray-600">{contactInfo.email}</p>}
+              {contactInfo.phone && <p className="text-sm text-gray-600">{contactInfo.phone}</p>}
+            </>
+          ) : (
+            <p className="font-semibold text-base">{caseInfo.title}</p>
+          )}
         </div>
 
         {/* Line Items Table */}
