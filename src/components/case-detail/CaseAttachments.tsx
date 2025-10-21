@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -29,6 +29,7 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"list" | "card">("list");
 
   useEffect(() => {
     fetchAttachments();
@@ -259,6 +260,24 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex gap-1 border rounded-lg p-1">
+          <Button 
+            variant={viewMode === "list" ? "secondary" : "ghost"} 
+            size="icon"
+            onClick={() => setViewMode("list")}
+            className="h-8 w-8"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant={viewMode === "card" ? "secondary" : "ghost"} 
+            size="icon"
+            onClick={() => setViewMode("card")}
+            className="h-8 w-8"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+        </div>
         <label htmlFor="file-upload">
           <Button disabled={uploading} asChild>
             <span>
@@ -292,35 +311,93 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
             <p className="text-muted-foreground">No files match your search criteria</p>
           </CardContent>
         </Card>
+      ) : viewMode === "card" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredAttachments.map((attachment) => {
+            const { data: { publicUrl } } = supabase.storage
+              .from("case-attachments")
+              .getPublicUrl(attachment.file_path);
+
+            return (
+              <Card key={attachment.id} className="overflow-hidden">
+                <CardContent className="p-3">
+                  <div className="w-full h-40 bg-muted rounded overflow-hidden flex items-center justify-center">
+                    {attachment.file_type.startsWith("image/") ? (
+                      <img 
+                        src={publicUrl} 
+                        alt={attachment.file_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : attachment.file_type.startsWith("video/") ? (
+                      <video 
+                        src={publicUrl} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      getFileIcon(attachment.file_type)
+                    )}
+                  </div>
+                  <div className="mt-2 text-sm font-medium truncate" title={attachment.file_name}>
+                    {attachment.file_name}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {formatFileSize(attachment.file_size)} • {new Date(attachment.created_at).toLocaleDateString()}
+                  </div>
+                  <div className="flex justify-end gap-2 mt-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDownload(attachment)}
+                      className="h-8 text-xs"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(attachment)}
+                      className="h-8 text-xs text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       ) : (
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-20">Preview</TableHead>
-                <TableHead>File Name</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Uploaded</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-16 py-2">Preview</TableHead>
+                <TableHead className="py-2">File Name</TableHead>
+                <TableHead className="py-2">Size</TableHead>
+                <TableHead className="py-2">Uploaded</TableHead>
+                <TableHead className="text-right py-2">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredAttachments.map((attachment) => (
-                <TableRow key={attachment.id}>
-                  <TableCell>
+                <TableRow key={attachment.id} className="text-sm">
+                  <TableCell className="py-1.5">
                     <div className="flex items-center justify-center">
                       {getFilePreview(attachment)}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{attachment.file_name}</TableCell>
-                  <TableCell>{formatFileSize(attachment.file_size)}</TableCell>
-                  <TableCell>{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                  <TableCell className="font-medium py-1.5">{attachment.file_name}</TableCell>
+                  <TableCell className="py-1.5">{formatFileSize(attachment.file_size)}</TableCell>
+                  <TableCell className="py-1.5">{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right py-1.5">
+                    <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDownload(attachment)}
+                        className="h-8 w-8"
                       >
                         <Download className="h-4 w-4" />
                       </Button>
@@ -328,6 +405,7 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(attachment)}
+                        className="h-8 w-8"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
