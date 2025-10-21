@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, User, Car, MapPin, Package, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, User, Car, MapPin, Package, Pencil, Trash2, Search, Building2, Box, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SubjectForm } from "./SubjectForm";
+import { SubjectAttachments } from "./SubjectAttachments";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Subject {
   id: string;
@@ -25,6 +27,7 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchSubjects();
@@ -59,22 +62,36 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
   const getIcon = (type: string) => {
     const icons = {
       person: User,
+      business: Building2,
       vehicle: Car,
-      location: MapPin,
-      item: Package,
+      asset: Box,
+      other: FileText,
     };
-    const Icon = icons[type as keyof typeof icons] || Package;
+    const Icon = icons[type as keyof typeof icons] || FileText;
     return <Icon className="h-4 w-4" />;
   };
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       person: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      business: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
       vehicle: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-      location: "bg-green-500/10 text-green-500 border-green-500/20",
-      item: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+      asset: "bg-green-500/10 text-green-500 border-green-500/20",
+      other: "bg-orange-500/10 text-orange-500 border-orange-500/20",
     };
     return colors[type] || "bg-muted";
+  };
+
+  const toggleExpanded = (subjectId: string) => {
+    setExpandedSubjects((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(subjectId)) {
+        newSet.delete(subjectId);
+      } else {
+        newSet.add(subjectId);
+      }
+      return newSet;
+    });
   };
 
   const handleEdit = (subject: Subject) => {
@@ -157,9 +174,10 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="person">Person</SelectItem>
+            <SelectItem value="business">Business</SelectItem>
             <SelectItem value="vehicle">Vehicle</SelectItem>
-            <SelectItem value="location">Location</SelectItem>
-            <SelectItem value="item">Item</SelectItem>
+            <SelectItem value="asset">Asset</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -181,7 +199,7 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-1">
           {filteredSubjects.map((subject) => (
             <Card key={subject.id}>
               <CardHeader>
@@ -211,12 +229,12 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 {subject.notes && (
                   <p className="text-sm text-muted-foreground mb-2">{subject.notes}</p>
                 )}
                 {subject.details && Object.keys(subject.details).length > 0 && (
-                  <div className="space-y-1">
+                  <div className="space-y-1 pb-4 border-b">
                     {Object.entries(subject.details).map(([key, value]) => (
                       <div key={key} className="text-sm">
                         <span className="font-medium capitalize">{key.replace("_", " ")}:</span>{" "}
@@ -225,6 +243,23 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
                     ))}
                   </div>
                 )}
+                
+                <Collapsible 
+                  open={expandedSubjects.has(subject.id)}
+                  onOpenChange={() => toggleExpanded(subject.id)}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full">
+                      {expandedSubjects.has(subject.id) ? "Hide" : "Show"} Attachments
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-4">
+                    <SubjectAttachments 
+                      subjectId={subject.id} 
+                      subjectName={subject.name}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
               </CardContent>
             </Card>
           ))}
