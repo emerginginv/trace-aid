@@ -20,6 +20,14 @@ interface Attachment {
   created_at: string;
 }
 
+interface UploadingFile {
+  id: string;
+  file: File;
+  preview: string;
+  status: 'uploading' | 'complete' | 'error';
+  progress?: number;
+}
+
 interface CaseAttachmentsProps {
   caseId: string;
 }
@@ -33,6 +41,8 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     fetchAttachments();
@@ -88,46 +98,82 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+  const uploadFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    
+    // Create uploading entries with local previews
+    const newUploadingFiles: UploadingFile[] = fileArray.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      preview: URL.createObjectURL(file),
+      status: 'uploading' as const,
+    }));
 
+    setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
     setUploading(true);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      for (const file of Array.from(files)) {
-        const fileExt = file.name.split(".").pop();
-        const filePath = `${user.id}/${caseId}/${crypto.randomUUID()}.${fileExt}`;
+      for (const uploadingFile of newUploadingFiles) {
+        try {
+          const file = uploadingFile.file;
+          const fileExt = file.name.split(".").pop();
+          const filePath = `${user.id}/${caseId}/${crypto.randomUUID()}.${fileExt}`;
 
-        // Upload file to storage
-        const { error: uploadError } = await supabase.storage
-          .from("case-attachments")
-          .upload(filePath, file);
+          // Upload file to storage
+          const { error: uploadError } = await supabase.storage
+            .from("case-attachments")
+            .upload(filePath, file);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        // Save metadata to database
-        const { error: dbError } = await supabase
-          .from("case_attachments")
-          .insert({
-            case_id: caseId,
-            user_id: user.id,
-            file_name: file.name,
-            file_path: filePath,
-            file_type: file.type || "application/octet-stream",
-            file_size: file.size,
-          });
+          // Save metadata to database
+          const { error: dbError } = await supabase
+            .from("case_attachments")
+            .insert({
+              case_id: caseId,
+              user_id: user.id,
+              file_name: file.name,
+              file_path: filePath,
+              file_type: file.type || "application/octet-stream",
+              file_size: file.size,
+            });
 
-        if (dbError) throw dbError;
+          if (dbError) throw dbError;
+
+          // Update status to complete
+          setUploadingFiles((prev) =>
+            prev.map((f) =>
+              f.id === uploadingFile.id ? { ...f, status: 'complete' as const } : f
+            )
+          );
+
+          // Cleanup blob URL
+          URL.revokeObjectURL(uploadingFile.preview);
+        } catch (error) {
+          console.error(`Error uploading ${uploadingFile.file.name}:`, error);
+          setUploadingFiles((prev) =>
+            prev.map((f) =>
+              f.id === uploadingFile.id ? { ...f, status: 'error' as const } : f
+            )
+          );
+        }
       }
 
       toast({
         title: "Success",
-        description: `${files.length} file(s) uploaded successfully`,
+        description: `${fileArray.length} file(s) uploaded successfully`,
       });
-      fetchAttachments();
+      
+      // Refresh attachments list
+      await fetchAttachments();
+      
+      // Clear completed uploads after a delay
+      setTimeout(() => {
+        setUploadingFiles((prev) => prev.filter((f) => f.status === 'uploading'));
+      }, 2000);
     } catch (error) {
       console.error("Error uploading files:", error);
       toast({
@@ -137,8 +183,35 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
       });
     } finally {
       setUploading(false);
-      event.target.value = "";
     }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    await uploadFiles(files);
+    event.target.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    await uploadFiles(files);
   };
 
   const handleDownload = async (attachment: Attachment) => {
@@ -329,6 +402,67 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
 
   return (
     <div className="space-y-4">
+      {/* Drag-and-Drop Zone */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => document.getElementById('file-upload')?.click()}
+        className={`w-full border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
+          isDragging
+            ? 'border-primary bg-primary/5'
+            : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+        }`}
+      >
+        <Upload className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground mb-1">
+          Drag and drop files here, or{' '}
+          <span className="text-primary font-medium underline">click to upload</span>
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Supports images, videos, audio, PDF, DOC, and more
+        </p>
+      </div>
+
+      {/* Uploading Files Preview */}
+      {uploadingFiles.length > 0 && (
+        <div className="space-y-2">
+          {uploadingFiles.map((uploadingFile) => (
+            <Card key={uploadingFile.id}>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 flex-shrink-0">
+                    {uploadingFile.file.type.startsWith('image/') ? (
+                      <img
+                        src={uploadingFile.preview}
+                        alt={uploadingFile.file.name}
+                        className="h-10 w-10 object-cover rounded"
+                      />
+                    ) : uploadingFile.file.type.startsWith('video/') ? (
+                      <video
+                        src={uploadingFile.preview}
+                        className="h-10 w-10 object-cover rounded"
+                        muted
+                      />
+                    ) : (
+                      getFileIcon(uploadingFile.file.type, uploadingFile.file.name)
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{uploadingFile.file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {uploadingFile.status === 'uploading' && 'Uploading...'}
+                      {uploadingFile.status === 'complete' && '✓ Uploaded'}
+                      {uploadingFile.status === 'error' && '✗ Upload failed'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -370,14 +504,6 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
             <LayoutGrid className="h-4 w-4" />
           </Button>
         </div>
-        <label htmlFor="file-upload">
-          <Button disabled={uploading} asChild>
-            <span>
-              <Upload className="h-4 w-4 mr-2" />
-              {uploading ? "Uploading..." : "Upload Files"}
-            </span>
-          </Button>
-        </label>
         <input
           id="file-upload"
           type="file"
