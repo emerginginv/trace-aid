@@ -106,17 +106,24 @@ export default function RecordPaymentModal({
         }
       }
 
-      // Calculate new balance and status
-      const remaining = totalDue - totalPaid;
-      const newBalanceDue = Math.max(0, remaining);
-      const newStatus = newBalanceDue <= 0 ? "paid" : totalPaid > 0 ? "partial" : "unpaid";
+      // Calculate new status based on total payments
+      // Fetch current total payments for this invoice
+      const { data: paymentsData } = await supabase
+        .from("invoice_payments")
+        .select("amount")
+        .eq("invoice_id", invoice.id);
 
-      // Update invoice
+      const currentTotalPayments = paymentsData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+      const totalPaidNow = currentTotalPayments + totalPaymentAmount;
+      const remaining = totalDue - totalPaidNow;
+      
+      const newStatus = remaining <= 0.01 ? "paid" : totalPaidNow > 0 ? "partial" : "unpaid";
+
+      // Update invoice status only (balance_due is a generated column)
       const { error: updateError } = await supabase
         .from("invoices")
         .update({
           status: newStatus,
-          balance_due: newBalanceDue,
         })
         .eq("id", invoice.id);
 
