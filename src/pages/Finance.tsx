@@ -5,7 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Loader2, DollarSign, Receipt, Wallet, Search } from "lucide-react";
+import { Loader2, DollarSign, Receipt, Wallet, Search, Eye, Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -321,14 +322,14 @@ const Finance = () => {
                   <TableHead>Case Number</TableHead>
                   <TableHead className="text-right">Current Balance</TableHead>
                   <TableHead>Last Top-Up</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredRetainerBalances.map((balance) => (
                   <TableRow
                     key={balance.case_id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/cases/${balance.case_id}`)}
+                    className="hover:bg-muted/50"
                   >
                     <TableCell className="font-medium">{balance.case_title}</TableCell>
                     <TableCell>{balance.case_number}</TableCell>
@@ -339,6 +340,18 @@ const Finance = () => {
                       {balance.last_topup
                         ? format(new Date(balance.last_topup), "MMM d, yyyy")
                         : "N/A"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => navigate(`/cases/${balance.case_id}`)}
+                          title="View case"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -392,6 +405,7 @@ const Finance = () => {
                   <TableHead>Category</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -424,6 +438,43 @@ const Finance = () => {
                       >
                         {expense.invoiced ? "Invoiced" : expense.status || "Pending"}
                       </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            // Navigate to case finance tab - you can adjust this logic
+                            toast.info("Edit expense functionality coming soon");
+                          }}
+                          title="Edit expense"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={async () => {
+                            if (confirm("Are you sure you want to delete this expense?")) {
+                              const { error } = await supabase
+                                .from("case_finances")
+                                .delete()
+                                .eq("id", expense.id);
+                              
+                              if (error) {
+                                toast.error("Failed to delete expense");
+                              } else {
+                                toast.success("Expense deleted");
+                                fetchFinanceData();
+                              }
+                            }
+                          }}
+                          title="Delete expense"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -478,14 +529,14 @@ const Finance = () => {
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice) => (
                   <TableRow 
                     key={invoice.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/invoices/${invoice.id}`)}
+                    className="hover:bg-muted/50"
                   >
                     <TableCell className="font-medium">
                       {invoice.invoice_number || "N/A"}
@@ -516,6 +567,50 @@ const Finance = () => {
                       >
                         {invoice.status || "Draft"}
                       </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => navigate(`/invoices/${invoice.id}`)}
+                          title="View invoice"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            toast.info("Edit invoice functionality coming soon");
+                          }}
+                          title="Edit invoice"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={async () => {
+                            if (confirm("Are you sure you want to delete this invoice?")) {
+                              const { error } = await supabase
+                                .from("invoices")
+                                .delete()
+                                .eq("id", invoice.id);
+                              
+                              if (error) {
+                                toast.error("Failed to delete invoice");
+                              } else {
+                                toast.success("Invoice deleted");
+                                fetchFinanceData();
+                              }
+                            }
+                          }}
+                          title="Delete invoice"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
