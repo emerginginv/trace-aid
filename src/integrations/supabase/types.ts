@@ -682,7 +682,7 @@ export type Database = {
             foreignKeyName: "retainer_funds_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
-            referencedRelation: "case_finances"
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
