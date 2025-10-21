@@ -137,11 +137,17 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      const isTimeEntry = values.finance_type === 'time';
+      
+      const hours = Number(values.hours || 0);
+      const hourlyRate = Number(values.hourly_rate || 0);
+      const amount = isTimeEntry ? hours * hourlyRate : Number(values.amount || 0);
+
       const financeData = {
         case_id: caseId,
         user_id: user.id,
         finance_type: values.finance_type,
-        amount: Number(values.amount),
+        amount: amount,
         description: values.description,
         date: format(values.date, "yyyy-MM-dd"),
         status: values.status,
@@ -154,8 +160,10 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         invoice_number: values.invoice_number || null,
         notes: values.notes || null,
         due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
-        hours: values.hours ? Number(values.hours) : null,
-        hourly_rate: values.hourly_rate ? Number(values.hourly_rate) : null,
+        ...(isTimeEntry && {
+          hours: hours,
+          hourly_rate: hourlyRate,
+        }),
       };
 
       let error;
