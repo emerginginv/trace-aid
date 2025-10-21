@@ -38,6 +38,17 @@ interface CaseInfo {
   case_number: string;
 }
 
+interface OrgSettings {
+  company_name: string | null;
+  logo_url: string | null;
+  address: string | null;
+  phone: string | null;
+  billing_email: string | null;
+  agency_license_number: string | null;
+  fein_number: string | null;
+  terms: string | null;
+}
+
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -45,6 +56,7 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [caseInfo, setCaseInfo] = useState<CaseInfo | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
+  const [orgSettings, setOrgSettings] = useState<OrgSettings | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -99,6 +111,17 @@ export default function InvoiceDetail() {
 
       if (itemsError) throw itemsError;
       setItems((itemsData || []) as InvoiceItem[]);
+
+      // Fetch organization settings
+      const { data: orgData, error: orgError } = await supabase
+        .from("organization_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgError && orgData) {
+        setOrgSettings(orgData);
+      }
 
     } catch (error) {
       console.error("Error fetching invoice:", error);
@@ -177,118 +200,151 @@ export default function InvoiceDetail() {
       </div>
 
       {/* Invoice Preview */}
-      <div id="invoice-preview" className="bg-background p-8 shadow-md border rounded-lg">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-3xl mb-2">
-                  {invoice.invoice_number}
-                </CardTitle>
-                <p className="text-muted-foreground">
-                  Case: {caseInfo.title} ({caseInfo.case_number})
-                </p>
-              </div>
-              <Badge
-                variant={
-                  invoice.status === "paid"
-                    ? "default"
-                    : invoice.status === "unpaid"
-                    ? "destructive"
-                    : "secondary"
-                }
-              >
-                {invoice.status.toUpperCase()}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Invoice Details */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Invoice Date</p>
-                <p className="font-medium">
-                  {format(new Date(invoice.date), "MMMM d, yyyy")}
-                </p>
+      <div id="invoice-preview" className="bg-white p-10 text-sm text-gray-900 max-w-4xl mx-auto shadow-lg">
+        {/* Header with Logo and Invoice Title */}
+        <div className="flex justify-between items-start mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">INVOICE</h1>
+            <p className="text-sm text-gray-500 mt-1">#{invoice.invoice_number}</p>
+          </div>
+          {orgSettings?.logo_url && (
+            <img 
+              src={orgSettings.logo_url} 
+              alt="Company Logo" 
+              className="h-16 object-contain"
+            />
+          )}
+        </div>
+
+        {/* From/To Section */}
+        <div className="grid grid-cols-2 gap-8 mb-10">
+          <div>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">From</h3>
+            <p className="font-semibold text-base">{orgSettings?.company_name || "Your Company"}</p>
+            {orgSettings?.address && (
+              <p className="text-sm text-gray-600 whitespace-pre-line">{orgSettings.address}</p>
+            )}
+            {orgSettings?.billing_email && (
+              <p className="text-sm text-gray-600">{orgSettings.billing_email}</p>
+            )}
+            {orgSettings?.phone && (
+              <p className="text-sm text-gray-600">{orgSettings.phone}</p>
+            )}
+            {orgSettings?.agency_license_number && (
+              <p className="text-xs text-gray-500 mt-2">License: {orgSettings.agency_license_number}</p>
+            )}
+            {orgSettings?.fein_number && (
+              <p className="text-xs text-gray-500">FEIN: {orgSettings.fein_number}</p>
+            )}
+          </div>
+          <div className="text-right">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Invoice Details</h3>
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Invoice Date:</span>
+                <span className="font-medium">{format(new Date(invoice.date), "MMM d, yyyy")}</span>
               </div>
               {invoice.due_date && (
-                <div>
-                  <p className="text-muted-foreground">Due Date</p>
-                  <p className="font-medium">
-                    {format(new Date(invoice.due_date), "MMMM d, yyyy")}
-                  </p>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Due Date:</span>
+                  <span className="font-medium">{format(new Date(invoice.due_date), "MMM d, yyyy")}</span>
                 </div>
               )}
-            </div>
-
-            {/* Line Items */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">📋 Line Items</h3>
-              {items.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  No items attached to this invoice
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Details</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <Badge variant={item.finance_type === "time" ? "default" : "secondary"}>
-                            {item.finance_type.toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {item.description}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(item.date), "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {item.finance_type === "time" && item.hours && item.hourly_rate
-                            ? `${item.hours} hrs @ $${item.hourly_rate}/hr`
-                            : item.category || "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          ${Number(item.amount).toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-
-            {/* Total */}
-            <div className="border-t pt-4">
-              <div className="flex justify-end">
-                <div className="w-64">
-                  <div className="flex justify-between items-center text-2xl font-bold">
-                    <span>Total:</span>
-                    <span>${Number(invoice.total).toFixed(2)}</span>
-                  </div>
-                </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Case:</span>
+                <span className="font-medium">{caseInfo.case_number}</span>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Notes */}
-            {invoice.notes && (
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-2">Notes</h4>
-                <p className="text-sm text-muted-foreground">{invoice.notes}</p>
+        {/* Bill To Section */}
+        <div className="mb-10">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Bill To</h3>
+          <p className="font-semibold text-base">{caseInfo.title}</p>
+        </div>
+
+        {/* Line Items Table */}
+        <div className="mb-8">
+          <table className="w-full border-t border-b border-gray-300">
+            <thead>
+              <tr className="text-left text-xs uppercase text-gray-500 bg-gray-50">
+                <th className="py-3 px-2 font-semibold">Description</th>
+                <th className="py-3 px-2 font-semibold text-center">Qty</th>
+                <th className="py-3 px-2 font-semibold text-right">Rate</th>
+                <th className="py-3 px-2 font-semibold text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
+                <tr className="border-t border-gray-200">
+                  <td className="py-3 px-2" colSpan={3}>General Invoice</td>
+                  <td className="py-3 px-2 text-right font-medium">${Number(invoice.total).toFixed(2)}</td>
+                </tr>
+              ) : (
+                items.map((item, index) => (
+                  <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="py-3 px-2">
+                      <div className="font-medium">{item.description}</div>
+                      {item.category && (
+                        <div className="text-xs text-gray-500">{item.category}</div>
+                      )}
+                    </td>
+                    <td className="py-3 px-2 text-center">
+                      {item.finance_type === 'time' && item.hours ? item.hours : 1}
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      ${item.finance_type === 'time' && item.hourly_rate 
+                        ? Number(item.hourly_rate).toFixed(2) 
+                        : Number(item.amount).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-2 text-right font-medium">
+                      ${Number(item.amount).toFixed(2)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Totals Section */}
+        <div className="flex justify-end mb-10">
+          <div className="w-80">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="font-medium">${Number(invoice.total).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-300">
+                <span>Total:</span>
+                <span>${Number(invoice.total).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-red-600 font-semibold">
+                <span>Balance Due:</span>
+                <span>${Number(invoice.total).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Terms and Notes */}
+        {(orgSettings?.terms || invoice.notes) && (
+          <div className="text-sm text-gray-600 border-t border-gray-300 pt-6">
+            {orgSettings?.terms && (
+              <div className="mb-4">
+                <h4 className="font-semibold text-gray-900 mb-1">Payment Terms</h4>
+                <p className="whitespace-pre-line">{orgSettings.terms}</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+            {invoice.notes && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Notes</h4>
+                <p className="whitespace-pre-line">{invoice.notes}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Edit Dialog */}
