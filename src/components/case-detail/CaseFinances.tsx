@@ -38,6 +38,7 @@ interface Finance {
 
 export const CaseFinances = ({ caseId }: { caseId: string }) => {
   const [finances, setFinances] = useState<Finance[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingFinance, setEditingFinance] = useState<Finance | null>(null);
@@ -85,6 +86,17 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
 
       if (error) throw error;
       setFinances(data || []);
+
+      // Fetch invoices from the new invoices table
+      const { data: invoicesData, error: invoicesError } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("case_id", caseId)
+        .eq("user_id", user.id)
+        .order("date", { ascending: false });
+
+      if (invoicesError) throw invoicesError;
+      setInvoices(invoicesData || []);
     } catch (error) {
       console.error("Error fetching finances:", error);
       toast({
@@ -799,7 +811,7 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
               <p className="text-muted-foreground">View and manage all invoices</p>
             </div>
 
-            {finances.filter(f => f.finance_type === "invoice").length === 0 ? (
+            {invoices.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <p className="text-muted-foreground">No invoices created yet</p>
@@ -812,67 +824,44 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
                     <TableRow>
                       <TableHead>Invoice #</TableHead>
                       <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {finances
-                      .filter(f => f.finance_type === "invoice")
-                      .map((invoice) => (
-                        <TableRow key={invoice.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium">
-                            {invoice.invoice_number}
-                          </TableCell>
-                          <TableCell>
-                            {new Date(invoice.date).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{invoice.description}</div>
-                              {invoice.notes && (
-                                <div className="text-sm text-muted-foreground">{invoice.notes}</div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(invoice.status)}>
-                              {invoice.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-bold">
-                            ${Number(invoice.amount).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setSelectedInvoiceId(invoice.id)}
-                                title="View invoice"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(invoice)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(invoice.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {invoices.map((invoice) => (
+                      <TableRow key={invoice.id} className="hover:bg-muted/50 cursor-pointer"
+                        onClick={() => window.location.href = `/invoices/${invoice.id}`}
+                      >
+                        <TableCell className="font-medium">
+                          {invoice.invoice_number}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(invoice.date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(invoice.status)}>
+                            {invoice.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-bold">
+                          ${Number(invoice.total).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => window.location.href = `/invoices/${invoice.id}`}
+                              title="View invoice"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </Card>
