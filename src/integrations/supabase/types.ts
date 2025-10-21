@@ -514,6 +514,48 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          case_id: string
+          created_at: string
+          date: string
+          due_date: string | null
+          id: string
+          invoice_number: string
+          notes: string | null
+          status: string
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          date?: string
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          status?: string
+          total: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          date?: string
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organization_settings: {
         Row: {
           company_name: string | null

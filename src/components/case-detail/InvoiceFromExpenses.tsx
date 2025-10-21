@@ -120,16 +120,15 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
 
     // Get the count of existing invoices to generate a unique number
     const { count } = await supabase
-      .from("case_finances")
+      .from("invoices")
       .select("*", { count: 'exact', head: true })
-      .eq("user_id", user.id)
-      .eq("finance_type", "invoice");
+      .eq("user_id", user.id);
 
     const invoiceNumber = `INV-${String((count || 0) + 1).padStart(5, '0')}`;
     return invoiceNumber;
   };
 
-  const handleAddInvoice = async () => {
+  const submitInvoice = async () => {
     if (selectedItems.size === 0) {
       toast({
         title: "No items selected",
@@ -147,38 +146,23 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
 
       // Calculate total from selected items
       const selectedItemsList = billableItems.filter(item => selectedItems.has(item.id));
-      const total = selectedItemsList.reduce((sum, item) => sum + Number(item.amount), 0);
-
-      // Get the primary subject from the first item
-      const primarySubjectId = selectedItemsList.find(item => item.subject_id)?.subject_id;
-      
-      // Count time vs expense items
-      const timeCount = selectedItemsList.filter(item => item.finance_type === 'time').length;
-      const expenseCount = selectedItemsList.filter(item => item.finance_type === 'expense').length;
+      const totalAmount = selectedItemsList.reduce((sum, item) => sum + Number(item.amount), 0);
 
       // Generate invoice number
       const invoiceNumber = await generateInvoiceNumber();
       if (!invoiceNumber) throw new Error("Failed to generate invoice number");
 
-      // Build description based on what's selected
-      const descriptionParts = [];
-      if (timeCount > 0) descriptionParts.push(`${timeCount} time entr${timeCount !== 1 ? 'ies' : 'y'}`);
-      if (expenseCount > 0) descriptionParts.push(`${expenseCount} expense${expenseCount !== 1 ? 's' : ''}`);
-      
-      // Create the invoice record
+      // 1. Create the invoice
       const { data: invoice, error: invoiceError } = await supabase
-        .from("case_finances")
+        .from("invoices")
         .insert({
           case_id: caseId,
           user_id: user.id,
-          finance_type: "expense", // Use 'expense' as the type for invoices
           invoice_number: invoiceNumber,
-          description: `Invoice for ${descriptionParts.join(' and ')}`,
-          amount: total,
+          total: totalAmount,
           date: new Date().toISOString().split('T')[0],
-          status: "draft",
-          subject_id: primarySubjectId,
-          notes: `Generated from: ${selectedItemsList.map(item => item.description).join(', ')}`,
+          status: "unpaid",
+          notes: "",
           due_date: (() => {
             const dueDate = new Date();
             dueDate.setDate(dueDate.getDate() + 30);
@@ -186,24 +170,29 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
           })(),
         })
         .select()
-        .single();
+        .maybeSingle();
 
-      if (invoiceError) throw invoiceError;
+      if (invoiceError || !invoice) {
+        console.error("Failed to create invoice:", invoiceError);
+        throw new Error("Error creating invoice");
+      }
 
-      // Link selected items to this invoice
-      const itemIds = Array.from(selectedItems);
-      const { error: updateError } = await supabase
+      // 2. Link the selected finance records to this invoice
+      const selectedIds = Array.from(selectedItems);
+      const { error: linkError } = await supabase
         .from("case_finances")
-        .update({ 
-          invoice_id: invoice.id
-        })
-        .in("id", itemIds);
+        .update({ invoice_id: invoice.id })
+        .in("id", selectedIds);
 
-      if (updateError) throw updateError;
+      if (linkError) {
+        console.error("Failed to link items to invoice:", linkError);
+        throw new Error("Invoice created, but failed to link items");
+      }
 
+      // 3. Done!
       toast({
-        title: "Invoice created",
-        description: `Invoice ${invoiceNumber} created successfully with ${selectedItems.size} item(s) totaling $${total.toFixed(2)}`,
+        title: "Invoice created successfully!",
+        description: `Invoice ${invoiceNumber} created with ${selectedItems.size} item(s) totaling $${totalAmount.toFixed(2)}`,
       });
 
       // Clear selection and refresh the list
@@ -330,7 +319,7 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
                     </p>
                   </div>
                   <Button 
-                    onClick={handleAddInvoice} 
+                    onClick={submitInvoice} 
                     size="lg"
                     disabled={isCreatingInvoice}
                   >
