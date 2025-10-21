@@ -8,6 +8,7 @@ import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import Calendar from "./pages/Calendar";
 import Finance from "./pages/Finance";
+import InvoiceDetail from "./pages/InvoiceDetail";
 import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
 import AccountEdit from "./pages/AccountEdit";
@@ -78,6 +79,16 @@ const App = () => (
               <ProtectedRoute>
                 <DashboardLayout>
                   <Finance />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invoices/:id"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <InvoiceDetail />
                 </DashboardLayout>
               </ProtectedRoute>
             }

@@ -142,12 +142,11 @@ const Finance = () => {
           .reduce((sum, e) => sum + e.amount, 0)
       );
 
-      // Fetch all invoices
+      // Fetch all invoices from new invoices table
       const { data: invoiceData, error: invoiceError } = await supabase
-        .from("case_finances")
-        .select("id, case_id, invoice_number, date, amount, status, due_date")
+        .from("invoices")
+        .select("id, case_id, invoice_number, date, total, status, due_date")
         .eq("user_id", user.id)
-        .eq("finance_type", "invoice")
         .order("date", { ascending: false });
 
       if (invoiceError) throw invoiceError;
@@ -160,7 +159,7 @@ const Finance = () => {
           case_title: caseInfo?.title || "Unknown",
           case_number: caseInfo?.case_number || "N/A",
           date: inv.date,
-          amount: parseFloat(inv.amount),
+          amount: parseFloat(inv.total),
           status: inv.status,
           due_date: inv.due_date,
         };
@@ -169,7 +168,7 @@ const Finance = () => {
       setInvoices(formattedInvoices);
       setTotalUnpaidInvoices(
         formattedInvoices
-          .filter((i) => i.status !== "paid")
+          .filter((i) => i.status === "unpaid")
           .reduce((sum, i) => sum + i.amount, 0)
       );
     } catch (error: any) {
@@ -483,7 +482,11 @@ const Finance = () => {
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
+                  <TableRow 
+                    key={invoice.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/invoices/${invoice.id}`)}
+                  >
                     <TableCell className="font-medium">
                       {invoice.invoice_number || "N/A"}
                     </TableCell>
@@ -506,11 +509,9 @@ const Finance = () => {
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           invoice.status === "paid"
                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : invoice.status === "sent"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                            : invoice.status === "partial"
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            : invoice.status === "unpaid"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                         }`}
                       >
                         {invoice.status || "Draft"}
