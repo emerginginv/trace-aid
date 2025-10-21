@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Save, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -21,6 +22,12 @@ const organizationSchema = z.object({
   company_name: z.string().trim().max(100, "Company name must be less than 100 characters"),
   default_currency: z.string(),
   timezone: z.string(),
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  billing_email: z.string().email("Invalid email").or(z.literal('')).optional(),
+  agency_license_number: z.string().optional(),
+  fein_number: z.string().optional(),
+  terms: z.string().optional(),
 });
 
 const Settings = () => {
@@ -40,6 +47,14 @@ const Settings = () => {
   const [companyName, setCompanyName] = useState("");
   const [defaultCurrency, setDefaultCurrency] = useState("USD");
   const [timezone, setTimezone] = useState("America/New_York");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [billingEmail, setBillingEmail] = useState("");
+  const [agencyLicenseNumber, setAgencyLicenseNumber] = useState("");
+  const [feinNumber, setFeinNumber] = useState("");
+  const [terms, setTerms] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -89,6 +104,13 @@ const Settings = () => {
         setCompanyName(orgSettings.company_name || "");
         setDefaultCurrency(orgSettings.default_currency || "USD");
         setTimezone(orgSettings.timezone || "America/New_York");
+        setLogoUrl(orgSettings.logo_url || "");
+        setAddress(orgSettings.address || "");
+        setPhone(orgSettings.phone || "");
+        setBillingEmail(orgSettings.billing_email || "");
+        setAgencyLicenseNumber(orgSettings.agency_license_number || "");
+        setFeinNumber(orgSettings.fein_number || "");
+        setTerms(orgSettings.terms || "");
       }
     } catch (error) {
       console.error("Error loading settings:", error);
@@ -136,6 +158,73 @@ const Settings = () => {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!e.target.files || e.target.files.length === 0) return;
+      if (!currentUserId) return;
+
+      const file = e.target.files[0];
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please upload an image file");
+        return;
+      }
+
+      setUploading(true);
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentUserId}/logo.${fileExt}`;
+      const filePath = fileName;
+
+      // Delete old logo if exists
+      if (logoUrl) {
+        const oldPath = logoUrl.split('/').slice(-2).join('/');
+        await supabase.storage.from('organization-logos').remove([oldPath]);
+      }
+
+      // Upload new logo
+      const { error: uploadError } = await supabase.storage
+        .from('organization-logos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('organization-logos')
+        .getPublicUrl(filePath);
+
+      setLogoUrl(data.publicUrl);
+      toast.success("Logo uploaded successfully");
+    } catch (error: any) {
+      console.error("Error uploading logo:", error);
+      toast.error("Failed to upload logo");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeLogo = async () => {
+    try {
+      if (!logoUrl || !currentUserId) return;
+
+      const filePath = logoUrl.split('/').slice(-2).join('/');
+      
+      const { error } = await supabase.storage
+        .from('organization-logos')
+        .remove([filePath]);
+
+      if (error) throw error;
+
+      setLogoUrl("");
+      toast.success("Logo removed");
+    } catch (error: any) {
+      console.error("Error removing logo:", error);
+      toast.error("Failed to remove logo");
+    }
+  };
+
   const saveOrganizationSettings = async () => {
     try {
       // Validate input
@@ -143,6 +232,12 @@ const Settings = () => {
         company_name: companyName,
         default_currency: defaultCurrency,
         timezone: timezone,
+        address: address,
+        phone: phone,
+        billing_email: billingEmail || undefined,
+        agency_license_number: agencyLicenseNumber,
+        fein_number: feinNumber,
+        terms: terms,
       });
 
       if (!validation.success) {
@@ -161,15 +256,24 @@ const Settings = () => {
         .eq("user_id", currentUserId)
         .maybeSingle();
 
+      const updateData = {
+        company_name: companyName,
+        default_currency: defaultCurrency,
+        timezone: timezone,
+        logo_url: logoUrl,
+        address: address,
+        phone: phone,
+        billing_email: billingEmail,
+        agency_license_number: agencyLicenseNumber,
+        fein_number: feinNumber,
+        terms: terms,
+      };
+
       if (existing) {
         // Update existing
         const { error } = await supabase
           .from("organization_settings")
-          .update({
-            company_name: companyName,
-            default_currency: defaultCurrency,
-            timezone: timezone,
-          })
+          .update(updateData)
           .eq("user_id", currentUserId);
 
         if (error) throw error;
@@ -179,9 +283,7 @@ const Settings = () => {
           .from("organization_settings")
           .insert({
             user_id: currentUserId,
-            company_name: companyName,
-            default_currency: defaultCurrency,
-            timezone: timezone,
+            ...updateData,
           });
 
         if (error) throw error;
@@ -331,6 +433,42 @@ const Settings = () => {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div>
+                  <Label htmlFor="logo">Organization Logo</Label>
+                  <div className="mt-2 space-y-3">
+                    {logoUrl && (
+                      <div className="relative inline-block">
+                        <img 
+                          src={logoUrl} 
+                          alt="Organization logo" 
+                          className="h-20 w-auto rounded border border-border"
+                        />
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                          onClick={removeLogo}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    <div>
+                      <Input
+                        id="logo"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={uploading}
+                        className="cursor-pointer"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Upload a logo for your invoices and system branding
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
                   <Label htmlFor="companyName">Company Name</Label>
                   <Input
                     id="companyName"
@@ -338,6 +476,62 @@ const Settings = () => {
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="Enter company name"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="billingEmail">Billing Email</Label>
+                    <Input
+                      id="billingEmail"
+                      type="email"
+                      value={billingEmail}
+                      onChange={(e) => setBillingEmail(e.target.value)}
+                      placeholder="billing@company.com"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="123 Main St, Suite 100&#10;City, State 12345"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="agencyLicense">Agency License #</Label>
+                    <Input
+                      id="agencyLicense"
+                      value={agencyLicenseNumber}
+                      onChange={(e) => setAgencyLicenseNumber(e.target.value)}
+                      placeholder="License number"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="fein">FEIN Number</Label>
+                    <Input
+                      id="fein"
+                      value={feinNumber}
+                      onChange={(e) => setFeinNumber(e.target.value)}
+                      placeholder="12-3456789"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -372,6 +566,20 @@ const Settings = () => {
                       <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="terms">Invoice Terms & Conditions</Label>
+                  <Textarea
+                    id="terms"
+                    value={terms}
+                    onChange={(e) => setTerms(e.target.value)}
+                    placeholder="Enter default invoice terms and conditions..."
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    These terms will appear on your invoices
+                  </p>
                 </div>
               </div>
 

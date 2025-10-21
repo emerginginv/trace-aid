@@ -558,28 +558,49 @@ export type Database = {
       }
       organization_settings: {
         Row: {
+          address: string | null
+          agency_license_number: string | null
+          billing_email: string | null
           company_name: string | null
           created_at: string | null
           default_currency: string | null
+          fein_number: string | null
           id: string
+          logo_url: string | null
+          phone: string | null
+          terms: string | null
           timezone: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          address?: string | null
+          agency_license_number?: string | null
+          billing_email?: string | null
           company_name?: string | null
           created_at?: string | null
           default_currency?: string | null
+          fein_number?: string | null
           id?: string
+          logo_url?: string | null
+          phone?: string | null
+          terms?: string | null
           timezone?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          address?: string | null
+          agency_license_number?: string | null
+          billing_email?: string | null
           company_name?: string | null
           created_at?: string | null
           default_currency?: string | null
+          fein_number?: string | null
           id?: string
+          logo_url?: string | null
+          phone?: string | null
+          terms?: string | null
           timezone?: string | null
           updated_at?: string | null
           user_id?: string
