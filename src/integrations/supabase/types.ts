@@ -122,31 +122,40 @@ export type Database = {
         Row: {
           case_id: string
           created_at: string
+          description: string | null
           file_name: string
           file_path: string
           file_size: number
           file_type: string
           id: string
+          name: string | null
+          tags: string[] | null
           user_id: string
         }
         Insert: {
           case_id: string
           created_at?: string
+          description?: string | null
           file_name: string
           file_path: string
           file_size: number
           file_type: string
           id?: string
+          name?: string | null
+          tags?: string[] | null
           user_id: string
         }
         Update: {
           case_id?: string
           created_at?: string
+          description?: string | null
           file_name?: string
           file_path?: string
           file_size?: number
           file_type?: string
           id?: string
+          name?: string | null
+          tags?: string[] | null
           user_id?: string
         }
         Relationships: []

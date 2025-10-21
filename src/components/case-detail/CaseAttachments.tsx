@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Eye } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Eye, Pencil, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface Attachment {
   id: string;
@@ -18,6 +20,9 @@ interface Attachment {
   file_type: string;
   file_size: number;
   created_at: string;
+  name?: string | null;
+  description?: string | null;
+  tags?: string[] | null;
 }
 
 interface UploadingFile {
@@ -43,6 +48,8 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [editingAttachment, setEditingAttachment] = useState<Attachment | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", tags: "" });
 
   useEffect(() => {
     fetchAttachments();
@@ -334,6 +341,52 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
     return "other";
   };
 
+  const handleEdit = (attachment: Attachment) => {
+    setEditingAttachment(attachment);
+    setEditForm({
+      name: attachment.name || attachment.file_name,
+      description: attachment.description || "",
+      tags: attachment.tags?.join(", ") || "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingAttachment) return;
+
+    try {
+      const tagsArray = editForm.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
+
+      const { error } = await supabase
+        .from("case_attachments")
+        .update({
+          name: editForm.name || editingAttachment.file_name,
+          description: editForm.description || null,
+          tags: tagsArray.length > 0 ? tagsArray : null,
+        })
+        .eq("id", editingAttachment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Attachment updated successfully",
+      });
+
+      setEditingAttachment(null);
+      fetchAttachments();
+    } catch (error) {
+      console.error("Error updating attachment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update attachment",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handlePreview = async (attachment: Attachment) => {
     setPreviewAttachment(attachment);
   };
@@ -388,8 +441,11 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
   };
 
   const filteredAttachments = attachments.filter((attachment) => {
+    const displayName = attachment.name || attachment.file_name;
     const matchesSearch = searchQuery === "" || 
-      attachment.file_name.toLowerCase().includes(searchQuery.toLowerCase());
+      displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      attachment.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      attachment.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesType = typeFilter === "all" || getFileTypeCategory(attachment.file_type) === typeFilter;
     
@@ -554,8 +610,24 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
                       getFileIcon(attachment.file_type, attachment.file_name)
                     )}
                   </div>
-                  <div className="mt-2 text-sm font-medium truncate" title={attachment.file_name}>
-                    {attachment.file_name}
+                  <div className="mt-2">
+                    <div className="text-sm font-medium truncate" title={attachment.name || attachment.file_name}>
+                      {attachment.name || attachment.file_name}
+                    </div>
+                    {attachment.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {attachment.description}
+                      </p>
+                    )}
+                    {attachment.tags && attachment.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {attachment.tags.map((tag, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     {formatFileSize(attachment.file_size)} • {new Date(attachment.created_at).toLocaleDateString()}
@@ -569,6 +641,15 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
                     >
                       <Eye className="h-3 w-3 mr-1" />
                       View
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(attachment)}
+                      className="h-8 text-xs"
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
                     </Button>
                     <Button
                       variant="ghost"
@@ -631,7 +712,25 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium py-1.5">{attachment.file_name}</TableCell>
+                  <TableCell className="py-1.5">
+                    <div>
+                      <div className="font-medium">{attachment.name || attachment.file_name}</div>
+                      {attachment.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {attachment.description}
+                        </p>
+                      )}
+                      {attachment.tags && attachment.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {attachment.tags.map((tag, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="py-1.5">{formatFileSize(attachment.file_size)}</TableCell>
                   <TableCell className="py-1.5">{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right py-1.5">
@@ -643,6 +742,14 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
                         className="h-8 w-8"
                       >
                         <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(attachment)}
+                        className="h-8 w-8"
+                      >
+                        <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -673,10 +780,66 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
       <Dialog open={!!previewAttachment} onOpenChange={() => setPreviewAttachment(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>{previewAttachment?.file_name}</DialogTitle>
+            <DialogTitle>{previewAttachment?.name || previewAttachment?.file_name}</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center">
             {renderPreviewContent()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingAttachment} onOpenChange={() => setEditingAttachment(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Attachment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Name</label>
+              <Input
+                type="text"
+                placeholder="Attachment name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                className="text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Description</label>
+              <Textarea
+                placeholder="Add a description..."
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                className="text-sm resize-none"
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Tags</label>
+              <Input
+                type="text"
+                placeholder="Tags (comma separated)"
+                value={editForm.tags}
+                onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Separate tags with commas</p>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditingAttachment(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveEdit}
+              >
+                Save Changes
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
