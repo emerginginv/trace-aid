@@ -527,6 +527,7 @@ export type Database = {
           retainer_applied: number | null
           status: string
           total: number
+          total_paid: number | null
           updated_at: string
           user_id: string
         }
@@ -542,6 +543,7 @@ export type Database = {
           retainer_applied?: number | null
           status?: string
           total: number
+          total_paid?: number | null
           updated_at?: string
           user_id: string
         }
@@ -557,6 +559,7 @@ export type Database = {
           retainer_applied?: number | null
           status?: string
           total?: number
+          total_paid?: number | null
           updated_at?: string
           user_id?: string
         }

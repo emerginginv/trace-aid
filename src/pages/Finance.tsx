@@ -41,6 +41,7 @@ interface Invoice {
   status: string | null;
   due_date: string | null;
   balance_due?: number;
+  total_paid?: number;
 }
 
 const Finance = () => {
@@ -158,7 +159,7 @@ const Finance = () => {
       // Fetch all invoices from new invoices table
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
-        .select("id, case_id, invoice_number, date, total, status, due_date, balance_due")
+        .select("id, case_id, invoice_number, date, total, status, due_date, balance_due, total_paid")
         .eq("user_id", user.id)
         .order("date", { ascending: false });
 
@@ -177,6 +178,7 @@ const Finance = () => {
           status: inv.status,
           due_date: inv.due_date,
           balance_due: inv.balance_due ? parseFloat(inv.balance_due) : undefined,
+          total_paid: inv.total_paid ? parseFloat(inv.total_paid) : 0,
         };
       }) || [];
 
@@ -541,7 +543,8 @@ const Finance = () => {
                   <TableHead>Invoice #</TableHead>
                   <TableHead>Case</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Total / Paid</TableHead>
+                  <TableHead className="text-right">Balance Due</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -566,17 +569,27 @@ const Finance = () => {
                     <TableCell>
                       {format(new Date(invoice.date), "MMM d, yyyy")}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <div className="space-y-0.5">
+                        <div className="font-medium">${invoice.amount.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Paid: ${(invoice.total_paid || 0).toFixed(2)}
+                        </div>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${invoice.amount.toFixed(2)}
+                      ${(invoice.balance_due || 0).toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           invoice.status === "paid"
                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : invoice.status === "partial"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                             : invoice.status === "unpaid"
                             ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
                         }`}
                       >
                         {invoice.status || "Draft"}

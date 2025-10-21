@@ -41,9 +41,9 @@ export default function RecordPaymentModal({
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
-      const totalPaid = Number(retainerAmount) + Number(manualAmount);
+      const totalPaidNow = Number(retainerAmount) + Number(manualAmount);
       
-      if (totalPaid <= 0) {
+      if (totalPaidNow <= 0) {
         toast({
           title: "Invalid Amount",
           description: "Please enter a payment amount greater than 0",
@@ -61,7 +61,7 @@ export default function RecordPaymentModal({
         return;
       }
 
-      if (totalPaid > totalDue) {
+      if (totalPaidNow > totalDue) {
         toast({
           title: "Payment Exceeds Due",
           description: "Total payment exceeds the amount due",
@@ -73,56 +73,61 @@ export default function RecordPaymentModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Combine payments into one record if both exist
-      const totalPaymentAmount = Number(retainerAmount) + Number(manualAmount);
-      
-      if (totalPaymentAmount > 0) {
-        // Record the payment
-        const paymentNotes = [];
-        if (manualAmount > 0) paymentNotes.push(`Manual payment: $${manualAmount.toFixed(2)}`);
-        if (retainerAmount > 0) paymentNotes.push(`Retainer applied: $${retainerAmount.toFixed(2)}`);
+      // 1️⃣ Fetch current totals from DB to support multiple payments
+      const { data: currentInvoice, error: fetchError } = await supabase
+        .from("invoices")
+        .select("total_paid, total")
+        .eq("id", invoice.id)
+        .single();
 
-        const { error: payError } = await supabase.from("invoice_payments").insert({
-          invoice_id: invoice.id,
-          amount: totalPaymentAmount,
-          user_id: user.id,
-          payment_date: new Date().toISOString(),
-          notes: paymentNotes.join(', '),
-        });
+      if (fetchError) throw fetchError;
 
-        if (payError) throw payError;
+      const prevPaid = currentInvoice?.total_paid || 0;
+      const invoiceTotal = currentInvoice?.total || invoice.total;
+      const newTotalPaid = prevPaid + totalPaidNow;
+      const newBalance = invoiceTotal - newTotalPaid;
 
-        // Deduct from retainer balance if retainer was used
-        if (retainerAmount > 0) {
-          const { error: retainerError } = await supabase.from("retainer_funds").insert({
-            case_id: invoice.case_id,
-            amount: -retainerAmount,
-            user_id: user.id,
-            note: `Applied to invoice ${invoice.invoice_number}`,
-            invoice_id: invoice.id,
-          });
-
-          if (retainerError) throw retainerError;
-        }
+      // 2️⃣ Determine status based on total paid vs invoice total
+      let newStatus = "unpaid";
+      if (newTotalPaid >= invoiceTotal) {
+        newStatus = "paid";
+      } else if (newTotalPaid > 0 && newTotalPaid < invoiceTotal) {
+        newStatus = "partial";
       }
 
-      // Calculate new status based on total payments
-      // Fetch current total payments for this invoice
-      const { data: paymentsData } = await supabase
-        .from("invoice_payments")
-        .select("amount")
-        .eq("invoice_id", invoice.id);
+      // 3️⃣ Record the payment in invoice_payments
+      const paymentNotes = [];
+      if (manualAmount > 0) paymentNotes.push(`Manual payment: $${manualAmount.toFixed(2)}`);
+      if (retainerAmount > 0) paymentNotes.push(`Retainer applied: $${retainerAmount.toFixed(2)}`);
 
-      const currentTotalPayments = paymentsData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-      const totalPaidNow = currentTotalPayments + totalPaymentAmount;
-      const remaining = totalDue - totalPaidNow;
-      
-      const newStatus = remaining <= 0.01 ? "paid" : totalPaidNow > 0 ? "partial" : "unpaid";
+      const { error: payError } = await supabase.from("invoice_payments").insert({
+        invoice_id: invoice.id,
+        amount: totalPaidNow,
+        user_id: user.id,
+        payment_date: new Date().toISOString(),
+        notes: paymentNotes.join(', '),
+      });
 
-      // Update invoice status only (balance_due is a generated column)
+      if (payError) throw payError;
+
+      // 4️⃣ Apply retainer deduction if used
+      if (retainerAmount > 0) {
+        const { error: retainerError } = await supabase.from("retainer_funds").insert({
+          case_id: invoice.case_id,
+          amount: -retainerAmount,
+          user_id: user.id,
+          note: `Applied to invoice ${invoice.invoice_number}`,
+          invoice_id: invoice.id,
+        });
+
+        if (retainerError) throw retainerError;
+      }
+
+      // 5️⃣ Update invoice totals and status
       const { error: updateError } = await supabase
         .from("invoices")
         .update({
+          total_paid: newTotalPaid,
           status: newStatus,
         })
         .eq("id", invoice.id);
@@ -131,7 +136,9 @@ export default function RecordPaymentModal({
 
       toast({
         title: "Payment Recorded",
-        description: `Successfully recorded payment of $${totalPaid.toFixed(2)}`,
+        description: newStatus === "partial"
+          ? `Partial payment recorded ($${totalPaidNow.toFixed(2)}). Remaining: $${Math.max(0, newBalance).toFixed(2)}`
+          : "Invoice fully paid!",
       });
 
       onPaymentRecorded?.();
