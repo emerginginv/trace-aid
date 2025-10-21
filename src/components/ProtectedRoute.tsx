@@ -47,7 +47,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  return user ? <>{children}</> : null;
+  return user ? <>{children}</> : (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-muted-foreground">Redirecting to login...</p>
+      </div>
+    </div>
+  );
 };
 
 export default ProtectedRoute;
