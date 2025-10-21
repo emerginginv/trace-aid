@@ -32,10 +32,35 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchAttachments();
   }, [caseId]);
+
+  useEffect(() => {
+    // Generate signed URLs for all attachments
+    const generatePreviewUrls = async () => {
+      const urls: Record<string, string> = {};
+      for (const attachment of attachments) {
+        try {
+          const { data, error } = await supabase.storage
+            .from("case-attachments")
+            .createSignedUrl(attachment.file_path, 3600);
+          if (data && !error) {
+            urls[attachment.id] = data.signedUrl;
+          }
+        } catch (error) {
+          console.error("Error generating signed URL:", error);
+        }
+      }
+      setPreviewUrls(urls);
+    };
+
+    if (attachments.length > 0) {
+      generatePreviewUrls();
+    }
+  }, [attachments]);
 
   const fetchAttachments = async () => {
     try {
@@ -176,38 +201,50 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
     }
   };
 
-  const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith("image/")) return <ImageIcon className="h-8 w-8 text-primary" />;
-    if (fileType.startsWith("video/")) return <Video className="h-8 w-8 text-primary" />;
-    if (fileType.startsWith("audio/")) return <Music className="h-8 w-8 text-primary" />;
-    if (fileType.includes("pdf")) return <FileText className="h-8 w-8 text-primary" />;
-    return <File className="h-8 w-8 text-primary" />;
+  const getFileIcon = (fileType: string, fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    if (fileType.startsWith("image/")) return <ImageIcon className="h-8 w-8 text-blue-500" />;
+    if (fileType.startsWith("video/")) return <Video className="h-8 w-8 text-purple-500" />;
+    if (fileType.startsWith("audio/")) return <Music className="h-8 w-8 text-green-500" />;
+    if (fileType.includes("pdf") || extension === "pdf") return <FileText className="h-8 w-8 text-red-500" />;
+    if (extension === "doc" || extension === "docx") return <FileText className="h-8 w-8 text-blue-600" />;
+    return <File className="h-8 w-8 text-muted-foreground" />;
   };
 
-  const getFilePreview = (attachment: Attachment) => {
-    const { data: { publicUrl } } = supabase.storage
-      .from("case-attachments")
-      .getPublicUrl(attachment.file_path);
+  const getFilePreview = async (attachment: Attachment) => {
+    try {
+      // Use signed URL for private bucket
+      const { data, error } = await supabase.storage
+        .from("case-attachments")
+        .createSignedUrl(attachment.file_path, 3600); // 1 hour expiry
 
-    if (attachment.file_type.startsWith("image/")) {
-      return (
-        <img 
-          src={publicUrl} 
-          alt={attachment.file_name}
-          className="h-20 w-20 object-cover rounded"
-        />
-      );
+      if (error) throw error;
+      const signedUrl = data.signedUrl;
+
+      if (attachment.file_type.startsWith("image/")) {
+        return (
+          <img 
+            src={signedUrl} 
+            alt={attachment.file_name}
+            className="h-10 w-10 object-cover rounded"
+          />
+        );
+      }
+      if (attachment.file_type.startsWith("video/")) {
+        return (
+          <video 
+            src={signedUrl} 
+            className="h-10 w-10 object-cover rounded"
+            muted
+          />
+        );
+      }
+      return getFileIcon(attachment.file_type, attachment.file_name);
+    } catch (error) {
+      console.error("Error getting file preview:", error);
+      return getFileIcon(attachment.file_type, attachment.file_name);
     }
-    if (attachment.file_type.startsWith("video/")) {
-      return (
-        <video 
-          src={publicUrl} 
-          className="h-20 w-20 object-cover rounded"
-          controls={false}
-        />
-      );
-    }
-    return getFileIcon(attachment.file_type);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -224,25 +261,30 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
     return "other";
   };
 
-  const handlePreview = (attachment: Attachment) => {
+  const handlePreview = async (attachment: Attachment) => {
     setPreviewAttachment(attachment);
   };
 
   const renderPreviewContent = () => {
     if (!previewAttachment) return null;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("case-attachments")
-      .getPublicUrl(previewAttachment.file_path);
+    const signedUrl = previewUrls[previewAttachment.id];
+    if (!signedUrl) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading preview...</p>
+        </div>
+      );
+    }
 
     if (previewAttachment.file_type.startsWith("image/")) {
-      return <img src={publicUrl} alt={previewAttachment.file_name} className="max-w-full max-h-[80vh] rounded" />;
+      return <img src={signedUrl} alt={previewAttachment.file_name} className="max-w-full max-h-[80vh] rounded" />;
     }
 
     if (previewAttachment.file_type.startsWith("video/")) {
       return (
         <video controls className="w-full max-h-[80vh] rounded">
-          <source src={publicUrl} type={previewAttachment.file_type} />
+          <source src={signedUrl} type={previewAttachment.file_type} />
         </video>
       );
     }
@@ -250,13 +292,13 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
     if (previewAttachment.file_type.startsWith("audio/")) {
       return (
         <audio controls className="w-full">
-          <source src={publicUrl} type={previewAttachment.file_type} />
+          <source src={signedUrl} type={previewAttachment.file_type} />
         </audio>
       );
     }
 
     if (previewAttachment.file_type.includes("pdf")) {
-      return <iframe src={publicUrl} className="w-full h-[80vh] rounded" title={previewAttachment.file_name} />;
+      return <iframe src={signedUrl} className="w-full h-[80vh] rounded" title={previewAttachment.file_name} />;
     }
 
     return (
@@ -364,27 +406,26 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
       ) : viewMode === "card" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredAttachments.map((attachment) => {
-            const { data: { publicUrl } } = supabase.storage
-              .from("case-attachments")
-              .getPublicUrl(attachment.file_path);
+            const signedUrl = previewUrls[attachment.id];
 
             return (
               <Card key={attachment.id} className="overflow-hidden">
                 <CardContent className="p-3">
                   <div className="w-full h-40 bg-muted rounded overflow-hidden flex items-center justify-center">
-                    {attachment.file_type.startsWith("image/") ? (
+                    {attachment.file_type.startsWith("image/") && signedUrl ? (
                       <img 
-                        src={publicUrl} 
+                        src={signedUrl} 
                         alt={attachment.file_name}
                         className="w-full h-full object-cover"
                       />
-                    ) : attachment.file_type.startsWith("video/") ? (
+                    ) : attachment.file_type.startsWith("video/") && signedUrl ? (
                       <video 
-                        src={publicUrl} 
+                        src={signedUrl} 
                         className="w-full h-full object-cover"
+                        muted
                       />
                     ) : (
-                      getFileIcon(attachment.file_type)
+                      getFileIcon(attachment.file_type, attachment.file_name)
                     )}
                   </div>
                   <div className="mt-2 text-sm font-medium truncate" title={attachment.file_name}>
@@ -440,11 +481,28 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAttachments.map((attachment) => (
+              {filteredAttachments.map((attachment) => {
+                const signedUrl = previewUrls[attachment.id];
+                
+                return (
                 <TableRow key={attachment.id} className="text-sm">
                   <TableCell className="py-1.5">
                     <div className="flex items-center justify-center">
-                      {getFilePreview(attachment)}
+                      {attachment.file_type.startsWith("image/") && signedUrl ? (
+                        <img 
+                          src={signedUrl} 
+                          alt={attachment.file_name}
+                          className="h-10 w-10 object-cover rounded"
+                        />
+                      ) : attachment.file_type.startsWith("video/") && signedUrl ? (
+                        <video 
+                          src={signedUrl} 
+                          className="h-10 w-10 object-cover rounded"
+                          muted
+                        />
+                      ) : (
+                        getFileIcon(attachment.file_type, attachment.file_name)
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="font-medium py-1.5">{attachment.file_name}</TableCell>
@@ -479,7 +537,8 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+              })}
             </TableBody>
           </Table>
         </div>
