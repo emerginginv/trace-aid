@@ -8,6 +8,8 @@ import { SubjectForm } from "./SubjectForm";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ProfileImageModal } from "./ProfileImageModal";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Subject {
   id: string;
@@ -16,6 +18,7 @@ interface Subject {
   details: any;
   notes: string | null;
   created_at: string;
+  profile_image_url: string | null;
 }
 
 export const CaseSubjects = ({ caseId }: { caseId: string }) => {
@@ -25,6 +28,8 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; subjectId: string } | null>(null);
 
   useEffect(() => {
     fetchSubjects();
@@ -113,6 +118,20 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
     setEditingSubject(null);
   };
 
+  const handleImageClick = (imageUrl: string, subjectId: string) => {
+    setSelectedImage({ url: imageUrl, subjectId });
+    setImageModalOpen(true);
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   const filteredSubjects = subjects.filter(subject => {
     const matchesSearch = searchQuery === '' || 
       subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -186,7 +205,17 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
             <Card key={subject.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() =>
+                        subject.profile_image_url &&
+                        handleImageClick(subject.profile_image_url, subject.id)
+                      }
+                    >
+                      <AvatarImage src={subject.profile_image_url || undefined} />
+                      <AvatarFallback>{getInitials(subject.name)}</AvatarFallback>
+                    </Avatar>
                     {getIcon(subject.subject_type)}
                     <CardTitle className="text-lg">{subject.name}</CardTitle>
                   </div>
@@ -238,6 +267,16 @@ export const CaseSubjects = ({ caseId }: { caseId: string }) => {
         onSuccess={fetchSubjects}
         editingSubject={editingSubject}
       />
+
+      {selectedImage && (
+        <ProfileImageModal
+          open={imageModalOpen}
+          onOpenChange={setImageModalOpen}
+          imageUrl={selectedImage.url}
+          subjectId={selectedImage.subjectId}
+          onImageUpdated={fetchSubjects}
+        />
+      )}
     </>
   );
 };

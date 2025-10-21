@@ -255,6 +255,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          profile_image_url: string | null
           subject_type: string
           updated_at: string
           user_id: string
@@ -266,6 +267,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          profile_image_url?: string | null
           subject_type: string
           updated_at?: string
           user_id: string
@@ -277,6 +279,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          profile_image_url?: string | null
           subject_type?: string
           updated_at?: string
           user_id?: string
@@ -605,6 +608,56 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "case_finances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subject_attachments: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          name: string | null
+          subject_id: string
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          name?: string | null
+          subject_id: string
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          name?: string | null
+          subject_id?: string
+          tags?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_attachments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "case_subjects"
             referencedColumns: ["id"]
           },
         ]

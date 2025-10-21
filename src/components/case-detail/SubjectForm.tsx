@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { ProfileImageUpload } from "./ProfileImageUpload";
 
 const formSchema = z.object({
   subject_type: z.enum(["person", "business", "vehicle", "asset", "other"]),
@@ -49,6 +50,7 @@ interface SubjectFormProps {
 
 export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubject }: SubjectFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -88,6 +90,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         notes: editingSubject.notes || "",
         ...details,
       });
+      setProfileImageUrl(editingSubject.profile_image_url || null);
     } else {
       form.reset({
         subject_type: "person",
@@ -112,6 +115,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         serial_number: "",
         description: "",
       });
+      setProfileImageUrl(null);
     }
   }, [editingSubject, form]);
 
@@ -139,6 +143,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         name: values.name,
         notes: values.notes || null,
         details,
+        profile_image_url: profileImageUrl,
       };
 
       let error;
@@ -185,6 +190,15 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Profile Photo</label>
+              <ProfileImageUpload
+                currentImageUrl={profileImageUrl || undefined}
+                onImageChange={setProfileImageUrl}
+                subjectId={editingSubject?.id}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="subject_type"
