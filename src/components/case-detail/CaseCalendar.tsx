@@ -44,19 +44,22 @@ interface User {
 
 interface CaseCalendarProps {
   caseId?: string;
+  filterStatus?: string;
 }
 
-export function CaseCalendar({ caseId }: CaseCalendarProps) {
+export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: CaseCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [internalFilterStatus, setInternalFilterStatus] = useState<string>("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createDate, setCreateDate] = useState<Date | null>(null);
   const [activityFormOpen, setActivityFormOpen] = useState(false);
   const [activityType, setActivityType] = useState<"task" | "event">("task");
+
+  const filterStatus = externalFilterStatus || internalFilterStatus;
 
   useEffect(() => {
     fetchData();
@@ -217,10 +220,10 @@ export function CaseCalendar({ caseId }: CaseCalendarProps) {
 
   return (
     <div className="space-y-6">
-      {/* Filter by Status */}
-      {!caseId && (
+      {/* Filter by Status - only show when caseId is provided and no external filter */}
+      {caseId && !externalFilterStatus && (
         <div className="flex gap-3">
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <Select value={internalFilterStatus} onValueChange={setInternalFilterStatus}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>

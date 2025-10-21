@@ -20,6 +20,7 @@ export default function Calendar() {
   const [users, setUsers] = useState<User[]>([]);
   const [filterCase, setFilterCase] = useState<string>("all");
   const [filterUser, setFilterUser] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   useEffect(() => {
     fetchFilters();
@@ -81,9 +82,25 @@ export default function Calendar() {
             ))}
           </SelectContent>
         </Select>
+
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="to_do">To Do</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="scheduled">Scheduled</SelectItem>
+            <SelectItem value="done">Done</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="blocked">Blocked</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <CaseCalendar />
+      <CaseCalendar filterStatus={filterStatus} />
     </div>
   );
 }
