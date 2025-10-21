@@ -18,7 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import { FinanceFormFields } from "./FinanceFormFields";
 
 const formSchema = z.object({
-  finance_type: z.enum(["retainer", "expense", "invoice"]),
+  finance_type: z.enum(["retainer", "expense", "time"]),
   amount: z.string().min(1, "Amount is required").refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     "Amount must be a positive number"
@@ -35,6 +35,8 @@ const formSchema = z.object({
   billing_frequency: z.string().optional(),
   invoice_number: z.string().optional(),
   notes: z.string().optional(),
+  hours: z.string().optional(),
+  hourly_rate: z.string().optional(),
 });
 
 interface FinanceFormProps {
@@ -87,6 +89,8 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         invoice_number: editingFinance.invoice_number || undefined,
         notes: editingFinance.notes || undefined,
         due_date: editingFinance.due_date ? new Date(editingFinance.due_date) : undefined,
+        hours: editingFinance.hours?.toString() || undefined,
+        hourly_rate: editingFinance.hourly_rate?.toString() || undefined,
       });
     } else {
       form.reset({
@@ -104,6 +108,8 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         invoice_number: undefined,
         notes: undefined,
         due_date: undefined,
+        hours: undefined,
+        hourly_rate: undefined,
       });
     }
   }, [editingFinance, form]);
@@ -148,6 +154,8 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         invoice_number: values.invoice_number || null,
         notes: values.notes || null,
         due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
+        hours: values.hours ? Number(values.hours) : null,
+        hourly_rate: values.hourly_rate ? Number(values.hourly_rate) : null,
       };
 
       let error;

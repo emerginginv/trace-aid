@@ -173,6 +173,8 @@ export type Database = {
           due_date: string | null
           end_date: string | null
           finance_type: string
+          hourly_rate: number | null
+          hours: number | null
           id: string
           invoice_id: string | null
           invoice_number: string | null
@@ -196,6 +198,8 @@ export type Database = {
           due_date?: string | null
           end_date?: string | null
           finance_type: string
+          hourly_rate?: number | null
+          hours?: number | null
           id?: string
           invoice_id?: string | null
           invoice_number?: string | null
@@ -219,6 +223,8 @@ export type Database = {
           due_date?: string | null
           end_date?: string | null
           finance_type?: string
+          hourly_rate?: number | null
+          hours?: number | null
           id?: string
           invoice_id?: string | null
           invoice_number?: string | null

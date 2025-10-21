@@ -40,7 +40,7 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
   const financeType = form.watch("finance_type");
   
   const getStatusOptions = () => {
-    if (financeType === "expense") {
+    if (financeType === "expense" || financeType === "time") {
       return [
         { value: "pending", label: "Pending" },
         { value: "approved", label: "Approved" },
@@ -80,7 +80,7 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
               <SelectContent>
                 <SelectItem value="retainer">Retainer</SelectItem>
                 <SelectItem value="expense">Expense</SelectItem>
-                <SelectItem value="invoice">Invoice</SelectItem>
+                <SelectItem value="time">Time</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />
@@ -102,21 +102,77 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
         )}
       />
 
-      <FormField
-        control={form.control}
-        name="amount"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Amount</FormLabel>
-            <FormControl>
-              <Input type="number" step="0.01" placeholder="0.00" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      {financeType !== "time" ? (
+        <FormField
+          control={form.control}
+          name="amount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Amount</FormLabel>
+              <FormControl>
+                <Input type="number" step="0.01" placeholder="0.00" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      ) : (
+        <>
+          <FormField
+            control={form.control}
+            name="hours"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Hours</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.25"
+                    placeholder="0.00"
+                    {...field}
+                    onChange={(e) => {
+                      const hours = parseFloat(e.target.value) || 0;
+                      field.onChange(hours.toString());
+                      const rate = parseFloat(form.getValues("hourly_rate") as string) || 0;
+                      form.setValue("amount", (hours * rate).toString());
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="hourly_rate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Hourly Rate</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    {...field}
+                    onChange={(e) => {
+                      const rate = parseFloat(e.target.value) || 0;
+                      field.onChange(rate.toString());
+                      const hours = parseFloat(form.getValues("hours") as string) || 0;
+                      form.setValue("amount", (hours * rate).toString());
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="text-sm text-muted-foreground">
+            Total: ${((parseFloat(form.watch("hours") as string || "0")) * (parseFloat(form.watch("hourly_rate") as string || "0"))).toFixed(2)}
+          </div>
+        </>
+      )}
 
-      {financeType === "expense" && (
+      {(financeType === "expense" || financeType === "time") && (
         <FormField
           control={form.control}
           name="category"

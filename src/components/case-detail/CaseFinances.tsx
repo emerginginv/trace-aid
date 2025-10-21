@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, Eye, AlertCircle, Calendar, TrendingUp } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, Eye, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical, Edit, CheckCircle2, Trash2 as Trash2Icon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface Finance {
   id: string;
@@ -31,6 +32,8 @@ interface Finance {
   billing_frequency?: string;
   invoice_number?: string;
   notes?: string;
+  hours?: number;
+  hourly_rate?: number;
 }
 
 export const CaseFinances = ({ caseId }: { caseId: string }) => {
@@ -98,6 +101,7 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
     const colors: Record<string, string> = {
       retainer: "bg-blue-500/10 text-blue-500 border-blue-500/20",
       expense: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+      time: "bg-purple-500/10 text-purple-500 border-purple-500/20",
       invoice: "bg-green-500/10 text-green-500 border-green-500/20",
     };
     return colors[type] || "bg-muted";
@@ -303,21 +307,38 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
     return matchesSearch && matchesType && matchesStatus;
   });
 
+  const expenseFinances = filteredFinances.filter(
+    (f) => f.finance_type === "retainer" || f.finance_type === "expense"
+  );
+
+  const timeFinances = filteredFinances.filter(
+    (f) => f.finance_type === "time"
+  );
+
+  const timeMetrics = timeFinances.reduce(
+    (acc, curr) => ({
+      totalHours: acc.totalHours + (curr.hours || 0),
+      totalAmount: acc.totalAmount + Number(curr.amount),
+    }),
+    { totalHours: 0, totalAmount: 0 }
+  );
+
   if (loading) {
     return <p className="text-muted-foreground">Loading finances...</p>;
   }
 
   return (
     <>
-      <Tabs defaultValue="transactions" className="space-y-6">
+      <Tabs defaultValue="expenses" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="expenses">Expenses</TabsTrigger>
+          <TabsTrigger value="time">Time</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="create-invoice">Create Invoice</TabsTrigger>
           <TabsTrigger value="reports">Reports & Export</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="transactions" className="space-y-6">
+        <TabsContent value="expenses" className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Finances</h2>
@@ -347,7 +368,6 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="retainer">Retainer</SelectItem>
                 <SelectItem value="expense">Expense</SelectItem>
-                <SelectItem value="invoice">Invoice</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -533,7 +553,7 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredFinances.map((finance) => (
+                  {expenseFinances.map((finance) => (
                     <TableRow key={finance.id} className="hover:bg-muted/50">
                       <TableCell className="font-medium">
                         {new Date(finance.date).toLocaleDateString()}
@@ -623,6 +643,153 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
               </Table>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="time" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Hours Logged</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{timeMetrics.totalHours.toFixed(2)} hrs</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Time Value</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${timeMetrics.totalAmount.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Time Entries</CardTitle>
+                <Button onClick={() => setFormOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Log Time
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search time entries..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {timeFinances.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Clock className="h-12 w-12 mb-4 opacity-20" />
+                  <p>No time entries yet</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead className="text-right">Hours</TableHead>
+                        <TableHead className="text-right">Rate</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {timeFinances.map((finance) => (
+                        <TableRow key={finance.id}>
+                          <TableCell>{new Date(finance.date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{finance.description}</div>
+                              {finance.category && (
+                                <div className="text-sm text-muted-foreground">{finance.category}</div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {finance.subject_id ? (
+                              <Badge variant="outline">Linked</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">{finance.hours?.toFixed(2) || 0}</TableCell>
+                          <TableCell className="text-right">${finance.hourly_rate?.toFixed(2) || 0}</TableCell>
+                          <TableCell className="text-right font-medium">${Number(finance.amount).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(finance.status)}>
+                              {finance.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEdit(finance)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                {finance.status === "pending" && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => handleApprove(finance.id)}>
+                                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                                      Approve
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleReject(finance.id)}>
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Reject
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(finance.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2Icon className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="invoices">
