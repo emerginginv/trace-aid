@@ -51,7 +51,7 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
     fetchFinances();
 
     // Set up realtime subscription for finance updates
-    const channel = supabase
+    const financesChannel = supabase
       .channel('case-finances-changes')
       .on(
         'postgres_changes',
@@ -67,8 +67,26 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
       )
       .subscribe();
 
+    // Set up realtime subscription for invoices updates
+    const invoicesChannel = supabase
+      .channel('invoices-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invoices',
+          filter: `case_id=eq.${caseId}`
+        },
+        () => {
+          fetchFinances();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(financesChannel);
+      supabase.removeChannel(invoicesChannel);
     };
   }, [caseId]);
 
