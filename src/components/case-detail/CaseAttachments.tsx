@@ -310,12 +310,12 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex gap-1 border rounded-lg p-1">
+        <div className="flex gap-1 border rounded-md p-0.5">
           <Button 
             variant={viewMode === "list" ? "secondary" : "ghost"} 
             size="icon"
             onClick={() => setViewMode("list")}
-            className="h-8 w-8"
+            className="h-9 w-9"
           >
             <List className="h-4 w-4" />
           </Button>
@@ -323,7 +323,7 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
             variant={viewMode === "card" ? "secondary" : "ghost"} 
             size="icon"
             onClick={() => setViewMode("card")}
-            className="h-8 w-8"
+            className="h-9 w-9"
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
