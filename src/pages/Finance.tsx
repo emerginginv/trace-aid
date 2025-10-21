@@ -5,7 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Loader2, DollarSign, Receipt, Wallet, Search, Eye, Pencil, Trash2 } from "lucide-react";
+import { Loader2, DollarSign, Receipt, Wallet, Search, Eye, Pencil, Trash2, CircleDollarSign } from "lucide-react";
+import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -34,10 +35,12 @@ interface Invoice {
   invoice_number: string | null;
   case_title: string;
   case_number: string;
+  case_id: string;
   date: string;
   amount: number;
   status: string | null;
   due_date: string | null;
+  balance_due?: number;
 }
 
 const Finance = () => {
@@ -56,6 +59,8 @@ const Finance = () => {
   const [expenseStatusFilter, setExpenseStatusFilter] = useState("all");
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all");
+  const [showPayModal, setShowPayModal] = useState<Invoice | null>(null);
+  const [retainerMap, setRetainerMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchFinanceData();
@@ -111,6 +116,13 @@ const Finance = () => {
       const balances = Array.from(balanceMap.values());
       setRetainerBalances(balances);
       setTotalRetainerBalance(balances.reduce((sum, b) => sum + b.balance, 0));
+      
+      // Create retainer map for quick lookup by case_id
+      const caseRetainerMap: Record<string, number> = {};
+      balances.forEach(b => {
+        caseRetainerMap[b.case_id] = b.balance;
+      });
+      setRetainerMap(caseRetainerMap);
 
       // Fetch all expenses
       const { data: expenseData, error: expenseError } = await supabase
@@ -146,7 +158,7 @@ const Finance = () => {
       // Fetch all invoices from new invoices table
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
-        .select("id, case_id, invoice_number, date, total, status, due_date")
+        .select("id, case_id, invoice_number, date, total, status, due_date, balance_due")
         .eq("user_id", user.id)
         .order("date", { ascending: false });
 
@@ -159,10 +171,12 @@ const Finance = () => {
           invoice_number: inv.invoice_number,
           case_title: caseInfo?.title || "Unknown",
           case_number: caseInfo?.case_number || "N/A",
+          case_id: inv.case_id,
           date: inv.date,
           amount: parseFloat(inv.total),
           status: inv.status,
           due_date: inv.due_date,
+          balance_due: inv.balance_due ? parseFloat(inv.balance_due) : undefined,
         };
       }) || [];
 
@@ -578,6 +592,16 @@ const Finance = () => {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {invoice.status !== "paid" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowPayModal(invoice)}
+                            title="Record payment"
+                          >
+                            <CircleDollarSign className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -619,6 +643,23 @@ const Finance = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Record Payment Modal */}
+      {showPayModal && (
+        <RecordPaymentModal
+          invoice={{
+            id: showPayModal.id,
+            invoice_number: showPayModal.invoice_number || "",
+            case_id: showPayModal.case_id,
+            total: showPayModal.amount,
+            balance_due: showPayModal.balance_due,
+          }}
+          caseRetainerBalance={retainerMap[showPayModal.case_id] || 0}
+          open={!!showPayModal}
+          onClose={() => setShowPayModal(null)}
+          onPaymentRecorded={fetchFinanceData}
+        />
+      )}
     </div>
   );
 };
