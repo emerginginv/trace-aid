@@ -885,6 +885,37 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                // Convert invoice to finance format for editing
+                                const financeData = {
+                                  id: invoice.id,
+                                  finance_type: 'invoice',
+                                  amount: invoice.total,
+                                  description: invoice.invoice_number,
+                                  date: invoice.date,
+                                  due_date: invoice.due_date,
+                                  status: invoice.status,
+                                  invoice_number: invoice.invoice_number,
+                                  notes: invoice.notes,
+                                  created_at: invoice.created_at
+                                };
+                                handleEdit(financeData);
+                              }}
+                              title="Edit invoice"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(invoice.id)}
+                              title="Delete invoice"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
