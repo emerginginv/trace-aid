@@ -9,7 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -29,6 +32,19 @@ const organizationSchema = z.object({
   fein_number: z.string().optional(),
   terms: z.string().optional(),
 });
+
+const inviteSchema = z.object({
+  email: z.string().trim().email({ message: "Invalid email address" }).max(255),
+  role: z.enum(["admin", "member"]),
+});
+
+interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+  created_at: string;
+  roles: string[];
+}
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
@@ -55,6 +71,16 @@ const Settings = () => {
   const [feinNumber, setFeinNumber] = useState("");
   const [terms, setTerms] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  // Users Management State
+  const [users, setUsers] = useState<User[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -298,6 +324,120 @@ const Settings = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      setUsersLoading(true);
+      
+      // Fetch all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, email, full_name, created_at")
+        .order("created_at", { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Fetch all roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      if (rolesError) throw rolesError;
+
+      // Map roles to users
+      const rolesMap = new Map<string, string[]>();
+      userRoles?.forEach((ur) => {
+        if (!rolesMap.has(ur.user_id)) {
+          rolesMap.set(ur.user_id, []);
+        }
+        rolesMap.get(ur.user_id)?.push(ur.role);
+      });
+
+      // Combine data
+      const usersData: User[] = profiles?.map((profile) => ({
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        created_at: profile.created_at,
+        roles: rolesMap.get(profile.id) || [],
+      })) || [];
+
+      setUsers(usersData);
+    } catch (error: any) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load users");
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const handleInviteUser = async () => {
+    try {
+      // Validate input
+      const validation = inviteSchema.safeParse({
+        email: inviteEmail,
+        role: inviteRole,
+      });
+
+      if (!validation.success) {
+        toast.error(validation.error.errors[0].message);
+        return;
+      }
+
+      setInviting(true);
+
+      // Note: In a production app, you'd want to use an edge function with admin privileges
+      toast.info("User invitation requires backend setup. Please use backend to invite users.");
+      
+      setInviteDialogOpen(false);
+      setInviteEmail("");
+      setInviteRole("member");
+    } catch (error: any) {
+      console.error("Error inviting user:", error);
+      toast.error("Failed to invite user");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleRoleChange = async (userId: string, newRole: "admin" | "member") => {
+    try {
+      // First, remove existing role
+      const { error: deleteError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
+
+      // Then add new role
+      const { error: insertError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: newRole });
+
+      if (insertError) throw insertError;
+
+      toast.success("Role updated successfully");
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error updating role:", error);
+      toast.error("Failed to update role");
+    }
+  };
+
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+
+    const matchesRole =
+      roleFilter === "all" ||
+      user.roles.includes(roleFilter);
+
+    return matchesSearch && matchesRole;
+  });
+
+  const isAdmin = currentUserRole === "admin";
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -316,10 +456,11 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="preferences">User Preferences</TabsTrigger>
           <TabsTrigger value="organization">Organization</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()}>Users</TabsTrigger>
         </TabsList>
 
         {/* User Preferences Tab */}
@@ -683,6 +824,175 @@ const Settings = () => {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Users Tab */}
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Users</CardTitle>
+                  <CardDescription>
+                    Manage team members and their roles
+                  </CardDescription>
+                </div>
+                {isAdmin && (
+                  <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Add User
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Invite New User</DialogTitle>
+                        <DialogDescription>
+                          Send an invitation to join your team
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="inviteEmail">Email Address</Label>
+                          <Input
+                            id="inviteEmail"
+                            type="email"
+                            placeholder="user@example.com"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="inviteRole">Role</Label>
+                          <Select value={inviteRole} onValueChange={(value: "admin" | "member") => setInviteRole(value)}>
+                            <SelectTrigger id="inviteRole">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="member">Member</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button onClick={handleInviteUser} disabled={inviting} className="w-full">
+                          {inviting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            "Send Invitation"
+                          )}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Summary Widget */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{users.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {users.filter((u) => u.roles.includes("admin")).length} admin{users.filter((u) => u.roles.includes("admin")).length !== 1 ? "s" : ""}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Search and Filter */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name or email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="member">Member</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Users Table */}
+              {usersLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  No matching users found
+                </p>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email Address</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Joined Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">
+                            {user.full_name || "N/A"}
+                          </TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            {isAdmin ? (
+                              <Select
+                                value={user.roles[0] || "member"}
+                                onValueChange={(value: "admin" | "member") =>
+                                  handleRoleChange(user.id, value)
+                                }
+                              >
+                                <SelectTrigger className="w-[120px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="member">
+                                    <Badge variant="secondary">Member</Badge>
+                                  </SelectItem>
+                                  <SelectItem value="admin">
+                                    <Badge variant="default">Admin</Badge>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge variant={user.roles.includes("admin") ? "default" : "secondary"}>
+                                {user.roles[0] || "Member"}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(user.created_at), "MMM d, yyyy")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
