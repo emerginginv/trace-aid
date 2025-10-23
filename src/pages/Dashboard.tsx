@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase, Users, Building2, TrendingUp, CheckCircle2, Calendar, Bell, DollarSign, Clock, AlertCircle } from "lucide-react";
+import { Briefcase, Users, Building2, TrendingUp, CheckCircle2, Calendar, Bell, DollarSign, Clock, AlertCircle, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatDistanceToNow, format, isToday, isYesterday, isTomorrow, isPast, parseISO } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface Task {
   id: string;
@@ -66,6 +70,12 @@ const mockExpenses: Expense[] = [
 ];
 
 const Dashboard = () => {
+  const { toast } = useToast();
+  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [expandedUpdate, setExpandedUpdate] = useState<string | null>(null);
+  const [expandedExpense, setExpandedExpense] = useState<string | null>(null);
+  
   const [stats, setStats] = useState({
     totalCases: 0,
     activeCases: 0,
@@ -101,8 +111,22 @@ const Dashboard = () => {
     fetchStats();
   }, []);
 
+  const handleTaskToggle = (taskId: string) => {
+    setTasks(prev => prev.map(task => 
+      task.id === taskId 
+        ? { ...task, status: task.status === "completed" ? "pending" : "completed" }
+        : task
+    ));
+    
+    const task = tasks.find(t => t.id === taskId);
+    toast({
+      title: task?.status === "pending" ? "Task completed!" : "Task reopened",
+      description: task?.title,
+    });
+  };
+
   // Sort and filter tasks
-  const dueTasks = mockTasks
+  const dueTasks = tasks
     .filter(task => task.status === "pending")
     .sort((a, b) => {
       const aOverdue = isPast(parseISO(a.dueDate)) && !isToday(parseISO(a.dueDate));
@@ -227,6 +251,11 @@ const Dashboard = () => {
                 
                 return (
                   <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                    <Checkbox 
+                      checked={task.status === "completed"}
+                      onCheckedChange={() => handleTaskToggle(task.id)}
+                      className="mt-0.5"
+                    />
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-sm">{task.title}</p>
@@ -273,7 +302,11 @@ const Dashboard = () => {
               <p className="text-sm text-muted-foreground">No upcoming events</p>
             ) : (
               relevantEvents.map((event) => (
-                <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                <div 
+                  key={event.id} 
+                  className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedEvent(event)}
+                >
                   <div className="flex-1 space-y-1">
                     <p className="font-medium text-sm">{event.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -283,6 +316,7 @@ const Dashboard = () => {
                       <span>{event.time}</span>
                     </div>
                   </div>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </div>
               ))
             )}
@@ -299,16 +333,36 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {mockUpdates.map((update) => (
-              <div key={update.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                <div className="mt-0.5">
-                  {getUpdateIcon(update.type)}
+              <div key={update.id} className="rounded-lg border bg-card">
+                <div 
+                  className="flex items-start gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)}
+                >
+                  <div className="mt-0.5">
+                    {getUpdateIcon(update.type)}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm">{update.message}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(parseISO(update.timestamp), { addSuffix: true })}
+                    </p>
+                  </div>
+                  {expandedUpdate === update.id ? (
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  )}
                 </div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm">{update.message}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(parseISO(update.timestamp), { addSuffix: true })}
-                  </p>
-                </div>
+                {expandedUpdate === update.id && (
+                  <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
+                    <p className="font-medium mb-2">Update Details:</p>
+                    <div className="space-y-1">
+                      <p>Type: <Badge variant="outline">{update.type}</Badge></p>
+                      <p>Time: {format(parseISO(update.timestamp), "PPpp")}</p>
+                      <p>Status: Active</p>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </CardContent>
@@ -324,21 +378,44 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {mockExpenses.map((expense) => (
-              <div key={expense.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                <div className="flex-1 space-y-1">
-                  <p className="font-medium text-sm">{expense.description}</p>
+              <div key={expense.id} className="rounded-lg border bg-card">
+                <div 
+                  className="flex items-start justify-between gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)}
+                >
+                  <div className="flex-1 space-y-1">
+                    <p className="font-medium text-sm">{expense.description}</p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {expense.category}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(parseISO(expense.date), { addSuffix: true })}
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {expense.category}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(parseISO(expense.date), { addSuffix: true })}
-                    </span>
+                    <div className="font-semibold text-sm">
+                      ${expense.amount.toFixed(2)}
+                    </div>
+                    {expandedExpense === expense.id ? (
+                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    )}
                   </div>
                 </div>
-                <div className="font-semibold text-sm">
-                  ${expense.amount.toFixed(2)}
-                </div>
+                {expandedExpense === expense.id && (
+                  <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
+                    <p className="font-medium mb-2">Expense Details:</p>
+                    <div className="space-y-1">
+                      <p>Amount: <span className="font-semibold text-foreground">${expense.amount.toFixed(2)}</span></p>
+                      <p>Category: <Badge variant="outline">{expense.category}</Badge></p>
+                      <p>Date: {format(parseISO(expense.date), "PPP")}</p>
+                      <p>Status: Recorded</p>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
             <div className="pt-2 border-t">
@@ -352,6 +429,57 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Event Details Dialog */}
+      <Dialog open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Event Details</DialogTitle>
+            <DialogDescription>
+              {selectedEvent && getEventDateLabel(selectedEvent.date)} at {selectedEvent?.time}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg mb-2">{selectedEvent.title}</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span>{format(parseISO(selectedEvent.date), "PPPP")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <span>{selectedEvent.time}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{selectedEvent.type}</Badge>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Additional details about this event would appear here. This could include location, participants, related case information, and any notes or attachments.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setSelectedEvent(null)}>
+                  Close
+                </Button>
+                <Button onClick={() => {
+                  toast({
+                    title: "Event action",
+                    description: "Edit functionality would be implemented here",
+                  });
+                  setSelectedEvent(null);
+                }}>
+                  Edit Event
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
