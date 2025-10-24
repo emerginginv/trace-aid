@@ -884,79 +884,77 @@ const Settings = () => {
                     Manage team members and their roles
                   </CardDescription>
                 </div>
-                {isAdmin && (
-                  <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Add User
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Invite New User</DialogTitle>
-                        <DialogDescription>
-                          Send an invitation to join your team
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="inviteFullName">Full Name</Label>
-                          <Input
-                            id="inviteFullName"
-                            type="text"
-                            placeholder="John Doe"
-                            value={inviteFullName}
-                            onChange={(e) => setInviteFullName(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="inviteEmail">Email Address</Label>
-                          <Input
-                            id="inviteEmail"
-                            type="email"
-                            placeholder="user@example.com"
-                            value={inviteEmail}
-                            onChange={(e) => setInviteEmail(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="invitePassword">Temporary Password</Label>
-                          <Input
-                            id="invitePassword"
-                            type="password"
-                            placeholder="Min 6 characters"
-                            value={invitePassword}
-                            onChange={(e) => setInvitePassword(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="inviteRole">Role</Label>
-                          <Select value={inviteRole} onValueChange={(value: "admin" | "user" | "moderator") => setInviteRole(value)}>
-                            <SelectTrigger id="inviteRole">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">User</SelectItem>
-                              <SelectItem value="moderator">Moderator</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button onClick={handleInviteUser} disabled={inviting} className="w-full">
-                          {inviting ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Creating User...
-                            </>
-                          ) : (
-                            "Create User"
-                          )}
-                        </Button>
+                <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Add User
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New User</DialogTitle>
+                      <DialogDescription>
+                        Create a new user account for your team
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="inviteFullName">Full Name</Label>
+                        <Input
+                          id="inviteFullName"
+                          type="text"
+                          placeholder="John Doe"
+                          value={inviteFullName}
+                          onChange={(e) => setInviteFullName(e.target.value)}
+                        />
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
+                      <div>
+                        <Label htmlFor="inviteEmail">Email Address</Label>
+                        <Input
+                          id="inviteEmail"
+                          type="email"
+                          placeholder="user@example.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="invitePassword">Temporary Password</Label>
+                        <Input
+                          id="invitePassword"
+                          type="password"
+                          placeholder="Min 6 characters"
+                          value={invitePassword}
+                          onChange={(e) => setInvitePassword(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="inviteRole">Role</Label>
+                        <Select value={inviteRole} onValueChange={(value: "admin" | "user" | "moderator") => setInviteRole(value)}>
+                          <SelectTrigger id="inviteRole">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="moderator">Moderator</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={handleInviteUser} disabled={inviting} className="w-full">
+                        {inviting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Creating User...
+                          </>
+                        ) : (
+                          "Create User"
+                        )}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
