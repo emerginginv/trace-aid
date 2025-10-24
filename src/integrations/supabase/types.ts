@@ -565,6 +565,51 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          priority: string | null
+          read: boolean
+          related_id: string | null
+          related_type: string | null
+          timestamp: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message: string
+          priority?: string | null
+          read?: boolean
+          related_id?: string | null
+          related_type?: string | null
+          timestamp?: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          priority?: string | null
+          read?: boolean
+          related_id?: string | null
+          related_type?: string | null
+          timestamp?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organization_settings: {
         Row: {
           address: string | null

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,156 +15,91 @@ import {
   Calendar,
   ArrowRight,
   X,
+  Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface Notification {
   id: string;
   type: "task" | "case" | "activity" | "user" | "expense" | "settings";
   title: string;
   message: string;
-  timestamp: Date;
+  timestamp: string;
   read: boolean;
-  link?: string;
-  priority?: "low" | "medium" | "high";
+  link?: string | null;
+  priority?: "low" | "medium" | "high" | null;
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  // Task Notifications
-  {
-    id: "1",
-    type: "task",
-    title: "Task Assigned",
-    message: "New surveillance task assigned to you for Case #00123",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
-    read: false,
-    link: "/cases/cd39ffcb-bc6d-4c57-ac77-362067266228",
-    priority: "high",
-  },
-  {
-    id: "2",
-    type: "task",
-    title: "Task Due Soon",
-    message: "Background check report due in 2 hours",
-    timestamp: new Date(Date.now() - 1000 * 60 * 120), // 2 hours ago
-    read: false,
-    link: "/cases/cd39ffcb-bc6d-4c57-ac77-362067266228",
-    priority: "high",
-  },
-  {
-    id: "3",
-    type: "task",
-    title: "Task Completed",
-    message: "Interview documentation task marked as complete",
-    timestamp: new Date(Date.now() - 1000 * 60 * 240), // 4 hours ago
-    read: true,
-    priority: "low",
-  },
-
-  // Case Management
-  {
-    id: "4",
-    type: "case",
-    title: "Case Status Changed",
-    message: 'Case #00456 status updated to "In Progress"',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-    read: false,
-    link: "/cases",
-    priority: "medium",
-  },
-  {
-    id: "5",
-    type: "case",
-    title: "Case Assigned",
-    message: "New insurance fraud case assigned to you",
-    timestamp: new Date(Date.now() - 1000 * 60 * 180), // 3 hours ago
-    read: false,
-    link: "/cases",
-    priority: "high",
-  },
-
-  // Activity Log
-  {
-    id: "6",
-    type: "activity",
-    title: "New Update",
-    message: "Sarah added a surveillance update to Case #00123",
-    timestamp: new Date(Date.now() - 1000 * 60 * 90), // 1.5 hours ago
-    read: true,
-    link: "/cases/cd39ffcb-bc6d-4c57-ac77-362067266228",
-    priority: "low",
-  },
-  {
-    id: "7",
-    type: "activity",
-    title: "File Uploaded",
-    message: "3 new photos uploaded to Case #00789",
-    timestamp: new Date(Date.now() - 1000 * 60 * 360), // 6 hours ago
-    read: true,
-    link: "/cases",
-    priority: "low",
-  },
-
-  // User/Admin
-  {
-    id: "8",
-    type: "user",
-    title: "New User Added",
-    message: "Michael Chen joined as Investigator",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    read: true,
-    link: "/settings",
-    priority: "low",
-  },
-  {
-    id: "9",
-    type: "user",
-    title: "Role Changed",
-    message: "Emily Rodriguez promoted to Senior Investigator",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-    read: true,
-    link: "/settings",
-    priority: "medium",
-  },
-
-  // Expenses
-  {
-    id: "10",
-    type: "expense",
-    title: "Expense Approved",
-    message: "Travel expense of $450.00 approved",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-    read: false,
-    link: "/finance",
-    priority: "medium",
-  },
-  {
-    id: "11",
-    type: "expense",
-    title: "Expense Added",
-    message: "New surveillance equipment expense pending approval",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    read: true,
-    link: "/finance",
-    priority: "low",
-  },
-
-  // Settings
-  {
-    id: "12",
-    type: "settings",
-    title: "Picklist Updated",
-    message: "New case status 'Under Review' added to system",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-    read: true,
-    link: "/settings",
-    priority: "low",
-  },
-];
-
 const Notifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState("all");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchNotifications();
+
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        },
+        () => {
+          // Refetch notifications when any change occurs
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+
+      // Map and validate the data to match our Notification interface
+      const validatedNotifications: Notification[] = (data || []).map(notif => ({
+        id: notif.id,
+        type: notif.type as Notification['type'],
+        title: notif.title,
+        message: notif.message,
+        timestamp: notif.timestamp,
+        read: notif.read,
+        link: notif.link,
+        priority: notif.priority as Notification['priority'],
+      }));
+
+      setNotifications(validatedNotifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      toast.error('Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getIcon = (type: Notification["type"]) => {
     switch (type) {
@@ -217,18 +152,63 @@ const Notifications = () => {
     return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>;
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+  const markAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Optimistic update
+      setNotifications(notifications.map(n => 
+        n.id === id ? { ...n, read: true } : n
+      ));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      toast.error('Failed to mark notification as read');
+    }
   };
 
-  const dismissNotification = (id: string) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  const dismissNotification = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Optimistic update
+      setNotifications(notifications.filter(n => n.id !== id));
+      toast.success('Notification dismissed');
+    } catch (error) {
+      console.error('Error dismissing notification:', error);
+      toast.error('Failed to dismiss notification');
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (error) throw error;
+
+      // Optimistic update
+      setNotifications(notifications.map(n => ({ ...n, read: true })));
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast.error('Failed to mark all as read');
+    }
   };
 
   const filterNotifications = (type: string) => {
@@ -266,6 +246,14 @@ const Notifications = () => {
 
     return groups;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const filteredNotifications = filterNotifications(activeTab);
   const groupedNotifications = groupByDate(filteredNotifications);
@@ -407,7 +395,7 @@ const Notifications = () => {
                                         className="h-auto p-0 text-xs"
                                         onClick={() => {
                                           markAsRead(notification.id);
-                                          // In a real app, navigate to notification.link
+                                          navigate(notification.link!);
                                         }}
                                       >
                                         View Details
