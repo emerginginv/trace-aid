@@ -109,21 +109,21 @@ const Accounts = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Accounts</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold">Accounts</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">
             Manage business accounts and organizations
           </p>
         </div>
-        <Button className="gap-2" onClick={() => setFormOpen(true)}>
+        <Button className="gap-2 w-full sm:w-auto" onClick={() => setFormOpen(true)}>
           <Plus className="w-4 h-4" />
           New Account
         </Button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
           <Input
@@ -187,7 +187,7 @@ const Accounts = () => {
           </CardContent>
         </Card>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {filteredAccounts.map((account) => (
             <Card key={account.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
@@ -249,8 +249,9 @@ const Accounts = () => {
           ))}
         </div>
       ) : (
-        <Card>
-          <Table>
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+          <Table className="min-w-[700px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -311,6 +312,7 @@ const Accounts = () => {
               ))}
             </TableBody>
           </Table>
+          </div>
         </Card>
       )}
 

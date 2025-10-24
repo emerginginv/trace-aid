@@ -262,18 +262,18 @@ const CaseDetail = () => {
         </Button>
       </div>;
   }
-  return <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
+  return <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <Button variant="ghost" size="icon" asChild className="self-start sm:self-auto">
           <Link to="/cases">
             <ChevronLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold">{caseData.title}</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">{caseData.title}</h1>
             <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-              <SelectTrigger className={`w-[140px] h-7 ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
+              <SelectTrigger className={`w-full sm:w-[140px] h-8 sm:h-7 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -286,31 +286,31 @@ const CaseDetail = () => {
                 {caseData.priority}
               </Badge>}
           </div>
-          <p className="text-slate-500">Case #{caseData.case_number}</p>
+          <p className="text-slate-500 text-sm sm:text-base">Case #{caseData.case_number}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100 w-full sm:w-auto">
             <Edit className="h-4 w-4 mr-2" />
-            Edit
+            <span className="sm:inline">Edit</span>
           </Button>
-          <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200">
+          <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
             <Trash2 className="h-4 w-4 mr-2" />
-            {deleting ? "Deleting..." : "Delete"}
+            <span className="sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Case Information</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Case Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
             {caseData.description && <div>
                 <p className="text-sm font-medium mb-1">Description</p>
                 <p className="text-muted-foreground">{caseData.description}</p>
               </div>}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {account && <div>
                   <p className="text-sm font-medium mb-1">Account</p>
                   <p className="text-muted-foreground">{account.name}</p>
@@ -331,43 +331,43 @@ const CaseDetail = () => {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <RetainerFundsWidget caseId={id!} />
           <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} investigatorIds={caseData.investigator_ids || []} onUpdate={fetchCaseData} />
         </div>
       </div>
 
       <Tabs defaultValue="subjects" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="subjects">Subjects</TabsTrigger>
-          <TabsTrigger value="updates">Updates</TabsTrigger>
-          <TabsTrigger value="activities">Activities</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          <TabsTrigger value="finances">Finances</TabsTrigger>
-          <TabsTrigger value="attachments">Attachments</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
+          <TabsTrigger value="subjects" className="text-xs sm:text-sm px-2 sm:px-3">Subjects</TabsTrigger>
+          <TabsTrigger value="updates" className="text-xs sm:text-sm px-2 sm:px-3">Updates</TabsTrigger>
+          <TabsTrigger value="activities" className="text-xs sm:text-sm px-2 sm:px-3">Activities</TabsTrigger>
+          <TabsTrigger value="calendar" className="text-xs sm:text-sm px-2 sm:px-3">Calendar</TabsTrigger>
+          <TabsTrigger value="finances" className="text-xs sm:text-sm px-2 sm:px-3">Finances</TabsTrigger>
+          <TabsTrigger value="attachments" className="text-xs sm:text-sm px-2 sm:px-3">Attachments</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="subjects" className="mt-6">
+        <TabsContent value="subjects" className="mt-4 sm:mt-6">
           <CaseSubjects caseId={id!} />
         </TabsContent>
 
-        <TabsContent value="updates" className="mt-6">
+        <TabsContent value="updates" className="mt-4 sm:mt-6">
           <CaseUpdates caseId={id!} />
         </TabsContent>
 
-        <TabsContent value="activities" className="mt-6">
+        <TabsContent value="activities" className="mt-4 sm:mt-6">
           <CaseActivities caseId={id!} />
         </TabsContent>
 
-        <TabsContent value="calendar" className="mt-6">
+        <TabsContent value="calendar" className="mt-4 sm:mt-6">
           <CaseCalendar caseId={id!} />
         </TabsContent>
 
-        <TabsContent value="finances" className="mt-6">
+        <TabsContent value="finances" className="mt-4 sm:mt-6">
           <CaseFinances caseId={id!} />
         </TabsContent>
 
-        <TabsContent value="attachments" className="mt-6">
+        <TabsContent value="attachments" className="mt-4 sm:mt-6">
           <CaseAttachments caseId={id!} />
         </TabsContent>
       </Tabs>

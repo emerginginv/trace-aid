@@ -245,15 +245,15 @@ const Notifications = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Notifications</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Stay updated on important events and activities
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {unreadCount > 0 && (
             <Badge variant="default" className="text-sm">
               {unreadCount} Unread
@@ -266,50 +266,50 @@ const Notifications = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">
-            All
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
+          <TabsTrigger value="all" className="text-xs sm:text-sm">
+            <span>All</span>
             {activeTab === "all" && notifications.length > 0 && (
-              <Badge variant="secondary" className="ml-2 text-xs">
+              <Badge variant="secondary" className="ml-1 sm:ml-2 text-xs">
                 {notifications.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="tasks">
-            Tasks
+          <TabsTrigger value="tasks" className="text-xs sm:text-sm">
+            <span>Tasks</span>
             {activeTab === "tasks" && filterNotifications("tasks").length > 0 && (
-              <Badge variant="secondary" className="ml-2 text-xs">
+              <Badge variant="secondary" className="ml-1 sm:ml-2 text-xs">
                 {filterNotifications("tasks").length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="cases">
-            Cases
+          <TabsTrigger value="cases" className="text-xs sm:text-sm">
+            <span>Cases</span>
             {activeTab === "cases" && filterNotifications("cases").length > 0 && (
-              <Badge variant="secondary" className="ml-2 text-xs">
+              <Badge variant="secondary" className="ml-1 sm:ml-2 text-xs">
                 {filterNotifications("cases").length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="system">
-            System
+          <TabsTrigger value="system" className="text-xs sm:text-sm">
+            <span>System</span>
             {activeTab === "system" && filterNotifications("system").length > 0 && (
-              <Badge variant="secondary" className="ml-2 text-xs">
+              <Badge variant="secondary" className="ml-1 sm:ml-2 text-xs">
                 {filterNotifications("system").length}
               </Badge>
             )}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-6">
+        <TabsContent value={activeTab} className="mt-4 sm:mt-6">
           <Card>
             <CardContent className="p-0">
               {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="flex items-center justify-center py-8 sm:py-12">
+                  <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
                 </div>
               ) : (
-                <ScrollArea className="h-[calc(100vh-280px)]">
+                <ScrollArea className="h-[calc(100vh-240px)] sm:h-[calc(100vh-280px)]">
                   {filteredNotifications.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <Bell className="h-12 w-12 text-muted-foreground mb-4" />

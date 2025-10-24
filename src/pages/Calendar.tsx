@@ -63,20 +63,20 @@ export default function Calendar() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-2 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Calendar</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">Calendar</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             View all tasks and events across cases
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
         <Select value={filterCase} onValueChange={setFilterCase}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="All Cases" />
           </SelectTrigger>
@@ -89,7 +89,7 @@ export default function Calendar() {
         </Select>
 
         <Select value={filterUser} onValueChange={setFilterUser}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="All Users" />
           </SelectTrigger>
           <SelectContent>
@@ -103,7 +103,7 @@ export default function Calendar() {
         </Select>
 
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
