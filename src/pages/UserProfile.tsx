@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { Edit, Mail, Shield, User } from "lucide-react";
 import DashboardLayout from "@/layouts/DashboardLayout";
+import { EditProfileDialog } from "@/components/EditProfileDialog";
 
 const UserProfile = () => {
   const navigate = useNavigate();
@@ -15,49 +16,52 @@ const UserProfile = () => {
     full_name: string | null;
     email: string;
     role: string;
+    avatar_url?: string | null;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          navigate("/auth");
-          return;
-        }
-
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("full_name, email")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        const { data: userRole, error: roleError } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error("Error fetching profile:", profileError);
-          return;
-        }
-
-        setUserProfile({
-          full_name: profile?.full_name || null,
-          email: profile?.email || user.email || "",
-          role: userRole?.role || "member",
-        });
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchUserProfile();
   }, [navigate]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("full_name, email, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const { data: userRole, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+        return;
+      }
+
+      setUserProfile({
+        full_name: profile?.full_name || null,
+        email: profile?.email || user.email || "",
+        role: userRole?.role || "member",
+        avatar_url: profile?.avatar_url || null,
+      });
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getInitials = (name: string | null, email: string) => {
     if (name) {
@@ -115,7 +119,7 @@ const UserProfile = () => {
               View and manage your personal information
             </p>
           </div>
-          <Button onClick={() => navigate("/settings")} variant="outline">
+          <Button onClick={() => setEditDialogOpen(true)} variant="outline">
             <Edit className="w-4 h-4 mr-2" />
             Edit Profile
           </Button>
@@ -129,7 +133,7 @@ const UserProfile = () => {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center space-y-4">
                 <Avatar className="h-32 w-32 border-4 border-primary/10">
-                  <AvatarImage src="" alt={userProfile.full_name || userProfile.email} />
+                  <AvatarImage src={userProfile.avatar_url || ""} alt={userProfile.full_name || userProfile.email} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
                     {getInitials(userProfile.full_name, userProfile.email)}
                   </AvatarFallback>
@@ -215,6 +219,17 @@ const UserProfile = () => {
           </CardContent>
         </Card>
       </div>
+
+      <EditProfileDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onProfileUpdated={fetchUserProfile}
+        currentProfile={{
+          full_name: userProfile?.full_name || null,
+          email: userProfile?.email || "",
+          avatar_url: userProfile?.avatar_url || null,
+        }}
+      />
     </DashboardLayout>
   );
 };
