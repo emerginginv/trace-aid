@@ -417,7 +417,7 @@ const Dashboard = () => {
           <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
             {expenses.length === 0 ? <p className="text-sm text-muted-foreground">No recent expenses</p> : <>
                 {expenses.map(expense => <div key={expense.id} className="rounded-lg border bg-card">
-                    <div onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)} className="flex items-start justify-between gap-3 p-3 transition-colors cursor-pointer bg-gray-300">
+                    <div onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)} className="flex items-start justify-between gap-3 p-3 transition-colors cursor-pointer bg-gray-300 rounded-sm">
                       <div className="flex-1 space-y-1">
                         <p className="font-medium text-sm text-gray-800">{expense.description}</p>
                         <div className="flex items-center gap-2">
