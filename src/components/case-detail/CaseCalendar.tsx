@@ -44,11 +44,13 @@ interface User {
 
 interface CaseCalendarProps {
   caseId?: string;
+  filterCase?: string;
+  filterUser?: string;
   filterStatus?: string;
   onNeedCaseSelection?: (callback: (selectedCaseId: string) => void) => void;
 }
 
-export function CaseCalendar({ caseId, filterStatus: externalFilterStatus, onNeedCaseSelection }: CaseCalendarProps) {
+export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: externalFilterStatus, onNeedCaseSelection }: CaseCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -89,10 +91,11 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus, onNee
         .eq("activity_type", "event")
         .not("due_date", "is", null);
 
-      // Filter by case if caseId is provided
-      if (caseId) {
-        tasksQuery = tasksQuery.eq("case_id", caseId);
-        eventsQuery = eventsQuery.eq("case_id", caseId);
+      // Filter by case if caseId or filterCase is provided
+      const activeCaseFilter = caseId || (filterCase && filterCase !== "all" ? filterCase : null);
+      if (activeCaseFilter) {
+        tasksQuery = tasksQuery.eq("case_id", activeCaseFilter);
+        eventsQuery = eventsQuery.eq("case_id", activeCaseFilter);
       }
 
       const [tasksResult, eventsResult, usersResult] = await Promise.all([
@@ -164,8 +167,9 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus, onNee
       const activityDate = new Date(activity.date);
       const matchesDate = isSameDay(activityDate, date);
       const matchesStatus = filterStatus === "all" || activity.status === filterStatus;
+      const matchesUser = !filterUser || filterUser === "all" || activity.assigned_user_id === filterUser;
       
-      return matchesDate && matchesStatus;
+      return matchesDate && matchesStatus && matchesUser;
     });
   };
 

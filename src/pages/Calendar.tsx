@@ -120,6 +120,8 @@ export default function Calendar() {
       </div>
 
       <CaseCalendar 
+        filterCase={filterCase}
+        filterUser={filterUser}
         filterStatus={filterStatus}
         onNeedCaseSelection={handleCaseSelection}
       />
