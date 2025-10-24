@@ -1164,24 +1164,24 @@ const Settings = () => {
                                 }
                               >
                                 <SelectTrigger className="w-[120px]">
-                                  <SelectValue />
+                                  <SelectValue>
+                                    {user.roles[0] === "admin" && <Badge variant="default">Admin</Badge>}
+                                    {user.roles[0] === "moderator" && <Badge variant="outline">Moderator</Badge>}
+                                    {(!user.roles[0] || user.roles[0] === "user") && <Badge variant="secondary">User</Badge>}
+                                  </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="user">
-                                    <Badge variant="secondary">User</Badge>
-                                  </SelectItem>
-                                  <SelectItem value="moderator">
-                                    <Badge variant="outline">Moderator</Badge>
-                                  </SelectItem>
-                                  <SelectItem value="admin">
-                                    <Badge variant="default">Admin</Badge>
-                                  </SelectItem>
+                                  <SelectItem value="user">User</SelectItem>
+                                  <SelectItem value="moderator">Moderator</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
                                 </SelectContent>
                               </Select>
                             ) : (
-                              <Badge variant={user.roles.includes("admin") ? "default" : "secondary"}>
-                                {user.roles[0] || "User"}
-                              </Badge>
+                              <>
+                                {user.roles[0] === "admin" && <Badge variant="default">Admin</Badge>}
+                                {user.roles[0] === "moderator" && <Badge variant="outline">Moderator</Badge>}
+                                {(!user.roles[0] || user.roles[0] === "user") && <Badge variant="secondary">User</Badge>}
+                              </>
                             )}
                           </TableCell>
                           <TableCell>
