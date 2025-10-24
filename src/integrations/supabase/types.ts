@@ -913,40 +913,55 @@ export type Database = {
         Row: {
           billing_email: string | null
           created_at: string
+          current_users_count: number | null
           id: string
           logo_url: string | null
           max_users: number | null
           name: string
           slug: string | null
+          storage_used_gb: number | null
           stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_product_id: string | null
           subscription_status: string | null
           subscription_tier: string | null
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
           billing_email?: string | null
           created_at?: string
+          current_users_count?: number | null
           id?: string
           logo_url?: string | null
           max_users?: number | null
           name: string
           slug?: string | null
+          storage_used_gb?: number | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_product_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
           billing_email?: string | null
           created_at?: string
+          current_users_count?: number | null
           id?: string
           logo_url?: string | null
           max_users?: number | null
           name?: string
           slug?: string | null
+          storage_used_gb?: number | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_product_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: []

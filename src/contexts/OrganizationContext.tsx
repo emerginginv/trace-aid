@@ -11,6 +11,11 @@ interface Organization {
   subscription_status: "active" | "inactive" | "past_due" | "canceled";
   max_users: number;
   billing_email: string | null;
+  stripe_subscription_id: string | null;
+  trial_ends_at: string | null;
+  subscription_product_id: string | null;
+  current_users_count: number;
+  storage_used_gb: number;
 }
 
 interface OrganizationContextType {
@@ -21,6 +26,9 @@ interface OrganizationContextType {
     subscribed: boolean;
     product_id: string | null;
     subscription_end: string | null;
+    subscription_id: string | null;
+    trial_end: string | null;
+    status: string;
   } | null;
   checkSubscription: () => Promise<void>;
 }
@@ -33,6 +41,9 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     subscribed: boolean;
     product_id: string | null;
     subscription_end: string | null;
+    subscription_id: string | null;
+    trial_end: string | null;
+    status: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -99,7 +110,10 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
           .from("organizations")
           .update({
             subscription_tier: tier,
-            subscription_status: data.subscribed ? "active" : "inactive",
+            subscription_status: data.status || (data.subscribed ? "active" : "inactive"),
+            stripe_subscription_id: data.subscription_id,
+            trial_ends_at: data.trial_end,
+            subscription_product_id: data.product_id,
           })
           .eq("id", organization.id);
 

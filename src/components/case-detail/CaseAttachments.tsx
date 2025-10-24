@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { getPlanLimits } from "@/lib/planLimits";
 
 interface Attachment {
   id: string;
@@ -39,6 +41,7 @@ interface CaseAttachmentsProps {
 }
 
 export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachmentsProps) => {
+  const { organization } = useOrganization();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -110,6 +113,25 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
   const uploadFiles = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     
+    // Check storage limits
+    if (organization) {
+      const planLimits = getPlanLimits(organization.subscription_product_id);
+      const totalNewSize = fileArray.reduce((sum, file) => sum + file.size, 0);
+      const totalNewSizeGb = totalNewSize / (1024 * 1024 * 1024);
+      const currentStorageGb = organization.storage_used_gb || 0;
+      const projectedStorage = currentStorageGb + totalNewSizeGb;
+
+      if (projectedStorage > planLimits.storage_gb) {
+        const remainingGb = Math.max(0, planLimits.storage_gb - currentStorageGb);
+        toast({
+          title: "Storage Limit Exceeded",
+          description: `Your ${planLimits.name} allows ${planLimits.storage_gb} GB of storage. You have ${remainingGb.toFixed(2)} GB remaining. Please upgrade your plan to upload more files.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     // Create uploading entries with local previews
     const newUploadingFiles: UploadingFile[] = fileArray.map((file) => ({
       id: crypto.randomUUID(),
@@ -175,6 +197,9 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
         title: "Success",
         description: `${fileArray.length} file(s) uploaded successfully`,
       });
+      
+      // Update organization usage
+      await supabase.functions.invoke("update-org-usage");
       
       // Refresh attachments list
       await fetchAttachments();

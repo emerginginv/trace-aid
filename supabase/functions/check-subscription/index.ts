@@ -58,19 +58,37 @@ serve(async (req) => {
 
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
+      status: "all",
       limit: 1,
     });
-    const hasActiveSub = subscriptions.data.length > 0;
+    const hasActiveSub = subscriptions.data.length > 0 && 
+      (subscriptions.data[0].status === "active" || subscriptions.data[0].status === "trialing");
+    
     let productId = null;
     let subscriptionEnd = null;
+    let subscriptionId = null;
+    let trialEnd = null;
+    let status = "inactive";
 
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
+      subscriptionId = subscription.id;
+      status = subscription.status;
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
+      
+      if (subscription.trial_end) {
+        trialEnd = new Date(subscription.trial_end * 1000).toISOString();
+      }
+      
+      logStep("Subscription found", { 
+        subscriptionId: subscription.id, 
+        status: subscription.status,
+        endDate: subscriptionEnd,
+        trialEnd 
+      });
+      
       productId = subscription.items.data[0].price.product as string;
-      logStep("Determined subscription tier", { productId });
+      logStep("Determined subscription product", { productId });
     } else {
       logStep("No active subscription found");
     }
@@ -78,7 +96,10 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
       product_id: productId,
-      subscription_end: subscriptionEnd
+      subscription_end: subscriptionEnd,
+      subscription_id: subscriptionId,
+      trial_end: trialEnd,
+      status: status
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

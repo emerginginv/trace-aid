@@ -9,7 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { getPlanLimits, isTrialActive, getTrialDaysRemaining } from "@/lib/planLimits";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -122,36 +125,48 @@ const Settings = () => {
       price: "$0",
       priceId: null,
       productId: null,
-      features: ["Up to 2 users", "Basic case management", "Email support"],
+      features: ["Up to 2 users", "5 GB storage", "Basic case management", "Email support"],
       maxUsers: 2,
+      storageGb: 5,
     },
     {
       name: "Standard",
       price: "$49",
       priceId: "price_1SLesURWPtpjyF4hGZI3sw13",
       productId: "prod_TIFNfVbkhFmIuB",
-      features: ["Up to 10 users", "Full case management", "Priority support", "Advanced reporting"],
+      features: ["Up to 10 users", "50 GB storage", "14-day free trial", "Full case management", "Priority support", "Advanced reporting"],
       maxUsers: 10,
+      storageGb: 50,
     },
     {
       name: "Pro",
       price: "$99",
       priceId: "price_1SLeslRWPtpjyF4hxtzH85Ad",
       productId: "prod_TIFN9OVHNQ1tlK",
-      features: ["Unlimited users", "All features", "24/7 support", "Custom integrations", "API access"],
-      maxUsers: -1,
+      features: ["Up to 10 users", "50 GB storage", "14-day free trial", "All features", "24/7 support", "Custom integrations", "API access"],
+      maxUsers: 10,
+      storageGb: 50,
     },
   ];
 
   useEffect(() => {
     loadSettings();
     checkSubscription();
+    updateOrgUsage();
     
     if (searchParams.get("success") === "true") {
       toast.success("Subscription activated successfully!");
       checkSubscription();
     }
   }, [searchParams]);
+
+  const updateOrgUsage = async () => {
+    try {
+      await supabase.functions.invoke("update-org-usage");
+    } catch (error) {
+      console.error("Error updating org usage:", error);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -505,6 +520,23 @@ const Settings = () => {
 
   const handleInviteUser = async () => {
     try {
+      // Check user limits before inviting
+      if (organization) {
+        const planLimits = getPlanLimits(organization.subscription_product_id);
+        const currentUsers = organization.current_users_count || 0;
+        
+        if (planLimits.max_users !== Infinity && currentUsers >= planLimits.max_users) {
+          toast.error(`You've reached the maximum of ${planLimits.max_users} users for your ${planLimits.name}. Please upgrade to add more users.`);
+          return;
+        }
+
+        // Check if trial expired
+        if (subscriptionStatus?.trial_end && !isTrialActive(subscriptionStatus.trial_end) && subscriptionStatus.status !== "active") {
+          toast.error("Your trial has expired. Please add a payment method to continue adding users.");
+          return;
+        }
+      }
+
       // Validate input
       const validation = inviteSchema.safeParse({
         email: inviteEmail,
@@ -579,6 +611,7 @@ const Settings = () => {
         setInvitePassword("");
         setInviteRole("investigator");
         fetchUsers();
+        updateOrgUsage(); // Update usage count after adding user
       }
     } catch (error: any) {
       console.error("Error inviting user:", error);
@@ -1994,29 +2027,100 @@ const Settings = () => {
         {/* Billing Tab */}
         {currentUserRole === 'admin' && (
           <TabsContent value="billing" className="space-y-6">
-            {organization && subscriptionStatus?.subscribed && (
+            {/* Trial Banner */}
+            {subscriptionStatus?.trial_end && isTrialActive(subscriptionStatus.trial_end) && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Free Trial Active</AlertTitle>
+                <AlertDescription>
+                  You have {getTrialDaysRemaining(subscriptionStatus.trial_end)} days remaining in your 14-day free trial.
+                  {subscriptionStatus.trial_end && (
+                    <> Trial ends on {new Date(subscriptionStatus.trial_end).toLocaleDateString()}.</>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Expired Trial Banner */}
+            {subscriptionStatus?.trial_end && !isTrialActive(subscriptionStatus.trial_end) && subscriptionStatus.status !== "active" && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Trial Expired</AlertTitle>
+                <AlertDescription>
+                  Your trial has ended. Please add a payment method to continue using premium features.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Current Plan & Usage */}
+            {organization && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Current Plan</CardTitle>
+                  <CardTitle>Current Plan & Usage</CardTitle>
                   <CardDescription>
-                    Your subscription is {organization.subscription_status}
+                    {subscriptionStatus?.subscribed ? (
+                      <>Your subscription is {subscriptionStatus.status === "trialing" ? "on trial" : organization.subscription_status}</>
+                    ) : (
+                      <>You are on the Free plan</>
+                    )}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-lg capitalize">{organization.subscription_tier} Plan</p>
-                      {subscriptionStatus.subscription_end && (
+                      <p className="font-semibold text-lg capitalize">
+                        {getPlanLimits(organization.subscription_product_id).name}
+                      </p>
+                      {subscriptionStatus?.subscription_end && (
                         <p className="text-sm text-muted-foreground">
-                          Renews on {new Date(subscriptionStatus.subscription_end).toLocaleDateString()}
+                          {subscriptionStatus.status === "trialing" ? "Trial ends" : "Renews"} on {new Date(subscriptionStatus.subscription_end).toLocaleDateString()}
                         </p>
                       )}
                     </div>
-                    <Button onClick={handleManageSubscription} disabled={billingLoading === "portal"}>
-                      {billingLoading === "portal" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Manage Subscription
-                    </Button>
+                    {subscriptionStatus?.subscribed && (
+                      <Button onClick={handleManageSubscription} disabled={billingLoading === "portal"}>
+                        {billingLoading === "portal" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Manage Subscription
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Usage Metrics */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <UsersIcon className="w-4 h-4" />
+                          <span>Users</span>
+                        </div>
+                        <span className="text-muted-foreground">
+                          {organization.current_users_count || 0} / {getPlanLimits(organization.subscription_product_id).max_users === Infinity ? "Unlimited" : getPlanLimits(organization.subscription_product_id).max_users}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={
+                          getPlanLimits(organization.subscription_product_id).max_users === Infinity 
+                            ? 0 
+                            : ((organization.current_users_count || 0) / getPlanLimits(organization.subscription_product_id).max_users) * 100
+                        } 
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <HardDrive className="w-4 h-4" />
+                          <span>Storage</span>
+                        </div>
+                        <span className="text-muted-foreground">
+                          {(organization.storage_used_gb || 0).toFixed(2)} GB / {getPlanLimits(organization.subscription_product_id).storage_gb} GB
+                        </span>
+                      </div>
+                      <Progress 
+                        value={((organization.storage_used_gb || 0) / getPlanLimits(organization.subscription_product_id).storage_gb) * 100} 
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -2048,14 +2152,14 @@ const Settings = () => {
                           </li>
                         ))}
                       </ul>
-                      {!isCurrentPlan && !isFree && (
+                       {!isCurrentPlan && !isFree && (
                         <Button
                           className="w-full"
                           onClick={() => handleSubscribe(tier.priceId!)}
                           disabled={billingLoading === tier.priceId}
                         >
                           {billingLoading === tier.priceId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                          Subscribe
+                          Start 14-Day Free Trial
                         </Button>
                       )}
                       {isFree && !isCurrentPlan && (
