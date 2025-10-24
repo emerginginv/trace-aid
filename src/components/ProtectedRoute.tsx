@@ -7,9 +7,10 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: 'admin' | 'manager' | 'investigator' | 'vendor';
   requiresAnyRole?: ('admin' | 'manager' | 'investigator' | 'vendor')[];
+  blockVendors?: boolean; // Explicitly block vendor access
 }
 
-const ProtectedRoute = ({ children, requiredRole, requiresAnyRole }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors = false }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +47,12 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole }: ProtectedRo
         }
 
         const userRole = data?.role;
+
+        // Block vendors if explicitly requested
+        if (blockVendors && userRole === 'vendor') {
+          navigate("/");
+          return;
+        }
 
         // Check if user has required role
         if (requiredRole && userRole !== requiredRole) {
@@ -87,7 +94,7 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole }: ProtectedRo
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, requiredRole, requiresAnyRole]);
+  }, [navigate, requiredRole, requiresAnyRole, blockVendors]);
 
   if (loading) {
     return (

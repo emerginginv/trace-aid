@@ -102,7 +102,7 @@ const App = () => {
         <Route
           path="/calendar"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Calendar />
               </DashboardLayout>
@@ -112,7 +112,7 @@ const App = () => {
         <Route
           path="/finance"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Finance />
               </DashboardLayout>
@@ -122,7 +122,7 @@ const App = () => {
         <Route
           path="/invoices/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <InvoiceDetail />
               </DashboardLayout>
@@ -142,7 +142,7 @@ const App = () => {
         <Route
           path="/expenses/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <ExpenseDetail />
               </DashboardLayout>
@@ -152,7 +152,7 @@ const App = () => {
         <Route
           path="/accounts"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Accounts />
               </DashboardLayout>
@@ -162,7 +162,7 @@ const App = () => {
         <Route
           path="/accounts/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <AccountDetail />
               </DashboardLayout>
@@ -172,7 +172,7 @@ const App = () => {
         <Route
           path="/accounts/:id/edit"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <AccountEdit />
               </DashboardLayout>
@@ -182,7 +182,7 @@ const App = () => {
         <Route
           path="/contacts"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Contacts />
               </DashboardLayout>
@@ -192,7 +192,7 @@ const App = () => {
         <Route
           path="/contacts/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <ContactDetail />
               </DashboardLayout>
@@ -202,7 +202,7 @@ const App = () => {
         <Route
           path="/contacts/:id/edit"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <ContactEdit />
               </DashboardLayout>
@@ -212,7 +212,7 @@ const App = () => {
         <Route
           path="/users"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Users />
               </DashboardLayout>
@@ -222,7 +222,7 @@ const App = () => {
         <Route
           path="/users/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <UserProfileDetail />
             </ProtectedRoute>
           }
@@ -230,7 +230,7 @@ const App = () => {
         <Route
           path="/settings"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Settings />
               </DashboardLayout>

@@ -54,18 +54,32 @@ const Auth = () => {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const checkSessionAndRedirect = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/dashboard");
+        // Check user role and redirect accordingly
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        if (roleData?.role === "vendor") {
+          navigate("/dashboard"); // Vendor dashboard shows automatically via role check
+        } else {
+          navigate("/dashboard");
+        }
       }
-    });
+    };
+
+    checkSessionAndRedirect();
   }, [navigate]);
 
   const handleSignUp = async (data: SignUpFormData) => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data: authData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -78,9 +92,19 @@ const Auth = () => {
 
       if (error) {
         toast.error(error.message);
-      } else {
+      } else if (authData.user) {
         toast.success("Account created! Redirecting...");
-        setTimeout(() => navigate("/dashboard"), 1000);
+        
+        // Check if user has vendor role
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+
+        setTimeout(() => {
+          navigate("/dashboard"); // Dashboard automatically shows vendor view based on role
+        }, 1000);
       }
     } catch (error) {
       toast.error("An unexpected error occurred");
@@ -93,15 +117,24 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
       if (error) {
         toast.error(error.message);
-      } else {
+      } else if (authData.user) {
         toast.success("Signed in successfully!");
+        
+        // Check user role for appropriate redirect
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+
+        // All users go to dashboard - role determines what they see
         navigate("/dashboard");
       }
     } catch (error) {

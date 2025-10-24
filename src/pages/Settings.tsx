@@ -45,7 +45,7 @@ const inviteSchema = z.object({
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one number"),
-  role: z.enum(["admin", "user", "moderator"]),
+  role: z.enum(["admin", "manager", "investigator", "vendor"]),
 });
 
 interface User {
@@ -91,7 +91,7 @@ const Settings = () => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteFullName, setInviteFullName] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "user" | "moderator">("user");
+  const [inviteRole, setInviteRole] = useState<"admin" | "manager" | "investigator" | "vendor">("investigator");
   const [inviting, setInviting] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -536,7 +536,7 @@ const Settings = () => {
         setInviteEmail("");
         setInviteFullName("");
         setInvitePassword("");
-        setInviteRole("user");
+        setInviteRole("investigator");
         fetchUsers();
       }
     } catch (error: any) {
@@ -547,14 +547,26 @@ const Settings = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: "admin" | "user" | "moderator") => {
+  const handleRoleChange = async (userId: string, newRole: "admin" | "manager" | "investigator" | "vendor") => {
     try {
-      // Check if user already has a role
+      // Prevent users from changing their own role
+      if (userId === currentUserId) {
+        toast.error("You cannot change your own role");
+        return;
+      }
+
+      // Prevent vendors from being elevated (additional security layer)
       const { data: existingRole } = await supabase
         .from("user_roles")
         .select("*")
         .eq("user_id", userId)
         .maybeSingle();
+
+      // Vendors cannot elevate themselves (enforced on backend too via RLS)
+      if (existingRole?.role === 'vendor' && newRole !== 'vendor' && userId === currentUserId) {
+        toast.error("Vendors cannot change their own role");
+        return;
+      }
 
       if (existingRole) {
         // Update existing role
@@ -1310,14 +1322,15 @@ const Settings = () => {
                       </div>
                       <div>
                         <Label htmlFor="inviteRole">Role</Label>
-                        <Select value={inviteRole} onValueChange={(value: "admin" | "user" | "moderator") => setInviteRole(value)}>
+                        <Select value={inviteRole} onValueChange={(value: "admin" | "manager" | "investigator" | "vendor") => setInviteRole(value)}>
                           <SelectTrigger id="inviteRole">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="moderator">Moderator</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="investigator">Investigator</SelectItem>
+                            <SelectItem value="vendor">Vendor</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1406,22 +1419,25 @@ const Settings = () => {
                           <TableCell>
                             {isAdmin ? (
                               <Select
-                                value={user.roles[0] || "user"}
-                                onValueChange={(value: "admin" | "user" | "moderator") =>
+                                value={user.roles[0] || "investigator"}
+                                onValueChange={(value: "admin" | "manager" | "investigator" | "vendor") =>
                                   handleRoleChange(user.id, value)
                                 }
                               >
-                                <SelectTrigger className="w-[120px]">
+                                <SelectTrigger className="w-[140px]">
                                   <SelectValue>
                                     {user.roles[0] === "admin" && <Badge variant="default">Admin</Badge>}
-                                    {user.roles[0] === "moderator" && <Badge variant="outline">Moderator</Badge>}
-                                    {(!user.roles[0] || user.roles[0] === "user") && <Badge variant="secondary">User</Badge>}
+                                    {user.roles[0] === "manager" && <Badge variant="secondary">Manager</Badge>}
+                                    {user.roles[0] === "investigator" && <Badge variant="outline">Investigator</Badge>}
+                                    {user.roles[0] === "vendor" && <Badge className="bg-purple-100 text-purple-700 border-purple-200">Vendor</Badge>}
+                                    {!user.roles[0] && <Badge variant="outline">No Role</Badge>}
                                   </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="user">User</SelectItem>
-                                  <SelectItem value="moderator">Moderator</SelectItem>
                                   <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="manager">Manager</SelectItem>
+                                  <SelectItem value="investigator">Investigator</SelectItem>
+                                  <SelectItem value="vendor">Vendor</SelectItem>
                                 </SelectContent>
                               </Select>
                             ) : (
