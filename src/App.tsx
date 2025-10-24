@@ -3,7 +3,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { OrganizationProvider } from "./contexts/OrganizationContext";
 import Auth from "./pages/Auth";
+import { Onboarding } from "./components/Onboarding";
+import Billing from "./pages/Billing";
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
@@ -41,12 +44,31 @@ const queryClient = new QueryClient({
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Toaster />
-        <Sonner />
-        <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/auth" element={<Auth />} />
+      <OrganizationProvider>
+        <BrowserRouter>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <Onboarding />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/billing"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Billing />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
         <Route
           path="/dashboard"
           element={
@@ -236,9 +258,10 @@ const App = () => {
         <Route path="/style-guide" element={<StyleGuide />} />
         <Route path="/premium-showcase" element={<PremiumShowcase />} />
         <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
-  </QueryClientProvider>
+          </Routes>
+        </BrowserRouter>
+      </OrganizationProvider>
+    </QueryClientProvider>
   );
 };
 

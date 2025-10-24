@@ -1,10 +1,11 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar, CreditCard } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { toast } from "sonner";
+import { HelpFeedback } from "@/components/HelpFeedback";
 const menuItems = [{
   title: "Dashboard",
   icon: LayoutDashboard,
@@ -29,6 +30,10 @@ const menuItems = [{
   title: "Contacts",
   icon: Users,
   url: "/contacts"
+}, {
+  title: "Billing",
+  icon: CreditCard,
+  url: "/billing"
 }];
 export function AppSidebar() {
   const navigate = useNavigate();
@@ -111,6 +116,9 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4 space-y-4">
+        {/* Help & Feedback */}
+        <HelpFeedback />
+        
         {/* Settings and Sign Out buttons */}
         <div className="flex gap-2 bg-slate-600 rounded">
           <SidebarMenuButton onClick={() => navigate("/settings")} className="flex-1 justify-center">
