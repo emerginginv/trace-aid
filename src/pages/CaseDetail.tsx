@@ -52,25 +52,25 @@ const CaseDetail = () => {
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string}>>([]);
+  const [caseStatuses, setCaseStatuses] = useState<Array<{
+    id: string;
+    value: string;
+  }>>([]);
   useEffect(() => {
     fetchCaseData();
     fetchCaseStatuses();
   }, [id]);
-
   const fetchCaseStatuses = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data } = await supabase
-        .from("picklists")
-        .select("id, value")
-        .eq("user_id", user.id)
-        .eq("type", "case_status")
-        .eq("is_active", true)
-        .order("display_order");
-
+      const {
+        data
+      } = await supabase.from("picklists").select("id, value").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true).order("display_order");
       if (data) {
         setCaseStatuses(data);
       }
@@ -138,11 +138,10 @@ const CaseDetail = () => {
   };
   const handleStatusChange = async (newStatus: string) => {
     if (!caseData) return;
-    
+
     // Don't log if status hasn't actually changed
     const oldStatus = caseData.status;
     if (oldStatus === newStatus) return;
-    
     setUpdatingStatus(true);
     try {
       const {
@@ -153,47 +152,40 @@ const CaseDetail = () => {
       if (!user) throw new Error("User not authenticated");
 
       // Get user profile for activity log
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
-
+      const {
+        data: profile
+      } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
 
       // Update case status
-      const { error } = await supabase
-        .from("cases")
-        .update({ status: newStatus })
-        .eq("id", id)
-        .eq("user_id", user.id);
-
+      const {
+        error
+      } = await supabase.from("cases").update({
+        status: newStatus
+      }).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
 
       // Create activity log entry
-      const { error: activityError } = await supabase
-        .from("case_activities")
-        .insert({
-          case_id: id,
-          user_id: user.id,
-          activity_type: "Status Change",
-          title: "Status Changed",
-          description: `Status changed from "${oldStatus}" to "${newStatus}" by ${userName}`,
-          status: "completed"
-        });
-
+      const {
+        error: activityError
+      } = await supabase.from("case_activities").insert({
+        case_id: id,
+        user_id: user.id,
+        activity_type: "Status Change",
+        title: "Status Changed",
+        description: `Status changed from "${oldStatus}" to "${newStatus}" by ${userName}`,
+        status: "completed"
+      });
       if (activityError) {
         console.error("Error creating activity log:", activityError);
       }
 
       // Create notification
-      await NotificationHelpers.caseStatusChanged(
-        caseData.case_number,
-        newStatus,
-        id!
-      );
-
-      setCaseData({ ...caseData, status: newStatus });
+      await NotificationHelpers.caseStatusChanged(caseData.case_number, newStatus, id!);
+      setCaseData({
+        ...caseData,
+        status: newStatus
+      });
       toast({
         title: "Success",
         description: "Case status updated successfully"
@@ -209,7 +201,6 @@ const CaseDetail = () => {
       setUpdatingStatus(false);
     }
   };
-
   const handleDelete = async () => {
     if (!caseData) return;
     if (!confirm(`Are you sure you want to delete case "${caseData.title}"? This action cannot be undone.`)) {
@@ -272,11 +263,9 @@ const CaseDetail = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {caseStatuses.map((status) => (
-                  <SelectItem key={status.id} value={status.value}>
+                {caseStatuses.map(status => <SelectItem key={status.id} value={status.value}>
                     {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
             {caseData.priority && <Badge className={getPriorityColor(caseData.priority)}>
@@ -286,7 +275,7 @@ const CaseDetail = () => {
           <p className="text-muted-foreground">Case #{caseData.case_number}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-green-500 hover:bg-green-400">
+          <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-gray-400 hover:bg-gray-300">
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
