@@ -210,12 +210,23 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { count } = await supabase
+      // Get all existing case numbers to find the highest number
+      const { data: existingCases } = await supabase
         .from("cases")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
+        .select("case_number")
+        .order("case_number", { ascending: false })
+        .limit(1);
 
-      const caseNumber = `CASE-${String((count || 0) + 1).padStart(5, "0")}`;
+      let nextNumber = 1;
+      if (existingCases && existingCases.length > 0) {
+        // Extract the number from the case number format (e.g., "CASE-00001" -> 1)
+        const match = existingCases[0].case_number.match(/CASE-(\d+)/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+
+      const caseNumber = `CASE-${String(nextNumber).padStart(5, "0")}`;
       form.setValue("case_number", caseNumber);
     } catch (error) {
       console.error("Error generating case number:", error);
