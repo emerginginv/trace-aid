@@ -321,7 +321,7 @@ const Dashboard = () => {
                     <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-0.5" />
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm">{task.title}</p>
+                        <p className="font-medium text-sm text-gray-800">{task.title}</p>
                         <Badge variant={getPriorityColor(task.priority) as any} className="text-xs">
                           {task.priority}
                         </Badge>
@@ -357,7 +357,7 @@ const Dashboard = () => {
           <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
             {relevantEvents.length === 0 ? <p className="text-sm text-muted-foreground bg-gray-300">No upcoming events</p> : relevantEvents.map(event => <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedEvent(event)}>
                   <div className="flex-1 space-y-1">
-                    <p className="font-medium text-sm">{event.title}</p>
+                    <p className="font-medium text-sm text-gray-800">{event.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Badge variant="outline" className="text-xs">
                         {getEventDateLabel(event.date)}
@@ -380,12 +380,12 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
             {updates.length === 0 ? <p className="text-sm text-muted-foreground">No recent updates</p> : updates.map(update => <div key={update.id} className="rounded-lg border bg-card">
-                  <div onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)} className="flex items-start gap-3 p-3 transition-colors cursor-pointer bg-zinc-300">
+                  <div onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)} className="flex items-start gap-3 p-3 transition-colors cursor-pointer bg-zinc-300 rounded-sm">
                     <div className="mt-0.5">
                       {getUpdateIcon(update.type)}
                     </div>
                     <div className="flex-1 space-y-1">
-                      <p className="text-sm">{update.message}</p>
+                      <p className="text-sm text-gray-800">{update.message}</p>
                       <p className="text-xs text-muted-foreground">
                         {formatDistanceToNow(parseISO(update.timestamp), {
                     addSuffix: true
@@ -419,12 +419,12 @@ const Dashboard = () => {
                 {expenses.map(expense => <div key={expense.id} className="rounded-lg border bg-card">
                     <div onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)} className="flex items-start justify-between gap-3 p-3 transition-colors cursor-pointer bg-gray-300">
                       <div className="flex-1 space-y-1">
-                        <p className="font-medium text-sm">{expense.description}</p>
+                        <p className="font-medium text-sm text-gray-800">{expense.description}</p>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             {expense.category}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-blue-700">
                             {formatDistanceToNow(parseISO(expense.date), {
                         addSuffix: true
                       })}
@@ -432,7 +432,7 @@ const Dashboard = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="font-semibold text-sm">
+                        <div className="font-semibold text-sm bg-transparent">
                           ${expense.amount.toFixed(2)}
                         </div>
                         {expandedExpense === expense.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
