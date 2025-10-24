@@ -286,7 +286,7 @@ const Dashboard = () => {
       {/* Main Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Due Tasks */}
-        <Card>
+        <Card className="bg-sky-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-primary" />
@@ -327,7 +327,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Calendar Events */}
-        <Card>
+        <Card className="bg-purple-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" />
@@ -351,7 +351,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Updates */}
-        <Card>
+        <Card className="bg-rose-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bell className="w-5 h-5 text-primary" />
@@ -387,7 +387,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Expenses */}
-        <Card>
+        <Card className="bg-teal-100">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-primary" />

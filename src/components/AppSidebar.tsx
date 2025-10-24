@@ -1,41 +1,35 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import {
-  LayoutDashboard,
-  Briefcase,
-  Users,
-  Building2,
-  LogOut,
-  Shield,
-  DollarSign,
-  Settings,
-  Calendar,
-} from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { toast } from "sonner";
-
-const menuItems = [
-  { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard" },
-  { title: "Cases", icon: Briefcase, url: "/cases" },
-  { title: "Calendar", icon: Calendar, url: "/calendar" },
-  { title: "Finance", icon: DollarSign, url: "/finance" },
-  { title: "Accounts", icon: Building2, url: "/accounts" },
-  { title: "Contacts", icon: Users, url: "/contacts" },
-];
-
+const menuItems = [{
+  title: "Dashboard",
+  icon: LayoutDashboard,
+  url: "/dashboard"
+}, {
+  title: "Cases",
+  icon: Briefcase,
+  url: "/cases"
+}, {
+  title: "Calendar",
+  icon: Calendar,
+  url: "/calendar"
+}, {
+  title: "Finance",
+  icon: DollarSign,
+  url: "/finance"
+}, {
+  title: "Accounts",
+  icon: Building2,
+  url: "/accounts"
+}, {
+  title: "Contacts",
+  icon: Users,
+  url: "/contacts"
+}];
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,37 +39,35 @@ export function AppSidebar() {
     role: string;
     avatar_url: string | null;
   } | null>(null);
-
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("full_name, email, avatar_url")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const { data: userRole, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
+      const {
+        data: profile,
+        error: profileError
+      } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", user.id).maybeSingle();
+      const {
+        data: userRole,
+        error: roleError
+      } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
       setUserProfile({
         full_name: profile?.full_name || null,
         email: profile?.email || user.email || "",
         role: userRole?.role || "member",
-        avatar_url: profile?.avatar_url || null,
+        avatar_url: profile?.avatar_url || null
       });
     };
-
     fetchUserProfile();
   }, []);
-
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    const {
+      error
+    } = await supabase.auth.signOut();
     if (error) {
       toast.error("Error signing out");
     } else {
@@ -83,28 +75,20 @@ export function AppSidebar() {
       navigate("/auth");
     }
   };
-
   const getInitials = (name: string | null, email: string) => {
     if (name) {
-      return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
+      return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     }
     return email.charAt(0).toUpperCase();
   };
-
-  return (
-    <Sidebar>
+  return <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="font-semibold text-sm">PI Case Manager</h2>
+            <h2 className="text-3xl font-bold text-sky-300">PI Case Manager</h2>
             <p className="text-xs text-sidebar-foreground/60">Professional Tools</p>
           </div>
         </div>
@@ -115,18 +99,12 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={() => navigate(item.url)}
-                    isActive={location.pathname === item.url}
-                    className="w-full"
-                  >
+              {menuItems.map(item => <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton onClick={() => navigate(item.url)} isActive={location.pathname === item.url} className="w-full">
                     <item.icon className="w-4 h-4" />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                </SidebarMenuItem>)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -135,10 +113,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-4 space-y-4">
         {/* Settings and Sign Out buttons */}
         <div className="flex gap-2">
-          <SidebarMenuButton
-            onClick={() => navigate("/settings")}
-            className="flex-1 justify-center"
-          >
+          <SidebarMenuButton onClick={() => navigate("/settings")} className="flex-1 justify-center">
             <Settings className="w-4 h-4" />
             <span className="sr-only">Settings</span>
           </SidebarMenuButton>
@@ -149,18 +124,11 @@ export function AppSidebar() {
         </div>
 
         {/* User Profile Section */}
-        {userProfile && (
-          <div 
-            className="flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/50 cursor-pointer hover:bg-sidebar-accent transition-colors"
-            onClick={() => navigate("/profile")}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                navigate("/profile");
-              }
-            }}
-          >
+        {userProfile && <div className="flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/50 cursor-pointer hover:bg-sidebar-accent transition-colors" onClick={() => navigate("/profile")} role="button" tabIndex={0} onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          navigate("/profile");
+        }
+      }}>
             <Avatar className="h-10 w-10">
               <AvatarImage src={userProfile.avatar_url || ""} alt={userProfile.full_name || userProfile.email} />
               <AvatarFallback className="bg-primary text-primary-foreground">
@@ -175,9 +143,7 @@ export function AppSidebar() {
                 {userProfile.role}
               </p>
             </div>
-          </div>
-        )}
+          </div>}
       </SidebarFooter>
-    </Sidebar>
-  );
+    </Sidebar>;
 }
