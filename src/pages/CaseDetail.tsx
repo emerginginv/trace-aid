@@ -64,6 +64,7 @@ const CaseDetail = () => {
     id: string;
     value: string;
     color: string;
+    status_type?: string;
   }>>([]);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   useEffect(() => {
@@ -80,7 +81,7 @@ const CaseDetail = () => {
       if (!user) return;
       const {
         data
-      } = await supabase.from("picklists").select("id, value, color").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true).order("display_order");
+      } = await supabase.from("picklists").select("id, value, color, status_type").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true).order("display_order");
       if (data) {
         setCaseStatuses(data);
       }
@@ -288,21 +289,35 @@ const CaseDetail = () => {
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">{caseData.title}</h1>
             {!isVendor && (
-              <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-                <SelectTrigger className={`w-full sm:w-[140px] h-8 sm:h-7 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {caseStatuses.map(status => <SelectItem key={status.id} value={status.value}>
-                      {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
+                  <SelectTrigger className={`w-full sm:w-[140px] h-8 sm:h-7 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {caseStatuses.map(status => <SelectItem key={status.id} value={status.value}>
+                        {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                      </SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {caseStatuses.find(s => s.value === caseData.status)?.status_type && (
+                  <span className="text-xs">
+                    {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
+                  </span>
+                )}
+              </div>
             )}
             {isVendor && (
-              <Badge className="border" style={getStatusStyle(caseData.status)}>
-                {caseData.status}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge className="border" style={getStatusStyle(caseData.status)}>
+                  {caseData.status}
+                </Badge>
+                {caseStatuses.find(s => s.value === caseData.status)?.status_type && (
+                  <span className="text-xs">
+                    {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
+                  </span>
+                )}
+              </div>
             )}
             {caseData.priority && <Badge className={getPriorityColor(caseData.priority)}>
                 {caseData.priority}

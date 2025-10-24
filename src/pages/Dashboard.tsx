@@ -55,6 +55,8 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     totalCases: 0,
     activeCases: 0,
+    openCases: 0,
+    closedCases: 0,
     totalContacts: 0,
     totalAccounts: 0
   });
@@ -78,13 +80,45 @@ const Dashboard = () => {
         count: "exact",
         head: true
       }).eq("user_id", user.id)]);
+      
+      // Fetch all cases to categorize by status_type
+      const { data: allCases } = await supabase
+        .from("cases")
+        .select("status")
+        .eq("user_id", user.id);
+
+      // Fetch status picklists to get status_type
+      const { data: statusPicklists } = await supabase
+        .from("picklists")
+        .select("value, status_type")
+        .eq("user_id", user.id)
+        .eq("type", "case_status")
+        .eq("is_active", true);
+
+      let openCasesCount = 0;
+      let closedCasesCount = 0;
+
+      if (allCases && statusPicklists) {
+        allCases.forEach(caseItem => {
+          const statusPicklist = statusPicklists.find(s => s.value === caseItem.status);
+          if (statusPicklist?.status_type === "open") {
+            openCasesCount++;
+          } else if (statusPicklist?.status_type === "closed") {
+            closedCasesCount++;
+          }
+        });
+      }
+
       const activeCasesResult = await supabase.from("cases").select("*", {
         count: "exact",
         head: true
       }).eq("user_id", user.id).eq("status", "open");
+      
       setStats({
         totalCases: casesResult.count || 0,
         activeCases: activeCasesResult.count || 0,
+        openCases: openCasesCount,
+        closedCases: closedCasesCount,
         totalContacts: contactsResult.count || 0,
         totalAccounts: accountsResult.count || 0
       });
@@ -237,11 +271,17 @@ const Dashboard = () => {
     }
   };
   const statCards = [{
-    title: "Active Cases",
-    value: stats.activeCases,
+    title: "Open Cases",
+    value: stats.openCases,
     icon: Briefcase,
     color: "text-primary",
     bgColor: "bg-primary/10"
+  }, {
+    title: "Closed Cases",
+    value: stats.closedCases,
+    icon: CheckCircle2,
+    color: "text-success",
+    bgColor: "bg-success/10"
   }, {
     title: "Total Cases",
     value: stats.totalCases,
@@ -254,12 +294,6 @@ const Dashboard = () => {
     icon: Building2,
     color: "text-accent",
     bgColor: "bg-accent/10"
-  }, {
-    title: "Contacts",
-    value: stats.totalContacts,
-    icon: Users,
-    color: "text-success",
-    bgColor: "bg-success/10"
   }];
   // Show loading state while checking role
   if (roleLoading) {

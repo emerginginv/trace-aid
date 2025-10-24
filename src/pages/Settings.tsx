@@ -99,14 +99,15 @@ const Settings = () => {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Picklists State
-  const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string, isActive: boolean, color: string}>>([]);
+  const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string, isActive: boolean, color: string, statusType?: string}>>([]);
   const [updateTypes, setUpdateTypes] = useState<Array<{id: string, value: string, isActive: boolean, color: string}>>([]);
   const [expenseCategories, setExpenseCategories] = useState<Array<{id: string, value: string, isActive: boolean, color: string}>>([]);
   const [picklistDialogOpen, setPicklistDialogOpen] = useState(false);
   const [picklistType, setPicklistType] = useState<"status" | "updateType" | "expenseCategory">("status");
-  const [editingPicklistItem, setEditingPicklistItem] = useState<{ id: string; value: string; color: string } | null>(null);
+  const [editingPicklistItem, setEditingPicklistItem] = useState<{ id: string; value: string; color: string; statusType?: string } | null>(null);
   const [picklistValue, setPicklistValue] = useState("");
   const [picklistColor, setPicklistColor] = useState("#6366f1");
+  const [picklistStatusType, setPicklistStatusType] = useState<"open" | "closed">("open");
 
   useEffect(() => {
     loadSettings();
@@ -174,7 +175,7 @@ const Settings = () => {
       if (picklists) {
         const statuses = picklists
           .filter(p => p.type === 'case_status')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
+          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1', statusType: p.status_type || 'open' }));
         const updates = picklists
           .filter(p => p.type === 'update_type')
           .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
@@ -724,22 +725,35 @@ const Settings = () => {
         ? updateTypes.length 
         : expenseCategories.length;
 
+      const insertData: any = {
+        user_id: user.id,
+        type: picklistTypeMap[picklistType],
+        value: picklistValue.trim(),
+        is_active: true,
+        display_order: currentLength,
+        color: picklistColor,
+      };
+
+      // Only add status_type for case_status
+      if (picklistType === "status") {
+        insertData.status_type = picklistStatusType;
+      }
+
       const { data, error } = await supabase
         .from("picklists")
-        .insert({
-          user_id: user.id,
-          type: picklistTypeMap[picklistType],
-          value: picklistValue.trim(),
-          is_active: true,
-          display_order: currentLength,
-          color: picklistColor,
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) throw error;
 
-      const newItem = { id: data.id, value: data.value, isActive: data.is_active, color: data.color || '#6366f1' };
+      const newItem = { 
+        id: data.id, 
+        value: data.value, 
+        isActive: data.is_active, 
+        color: data.color || '#6366f1',
+        ...(picklistType === "status" && { statusType: data.status_type || 'open' })
+      };
       
       if (picklistType === "status") {
         setCaseStatuses([...caseStatuses, newItem]);
@@ -767,12 +781,19 @@ const Settings = () => {
     }
 
     try {
+      const updateData: any = { 
+        value: picklistValue.trim(),
+        color: picklistColor 
+      };
+
+      // Only update status_type for case_status
+      if (picklistType === "status") {
+        updateData.status_type = picklistStatusType;
+      }
+
       const { error } = await supabase
         .from("picklists")
-        .update({ 
-          value: picklistValue.trim(),
-          color: picklistColor 
-        })
+        .update(updateData)
         .eq("id", editingPicklistItem.id);
 
       if (error) throw error;
@@ -780,7 +801,7 @@ const Settings = () => {
       if (picklistType === "status") {
         setCaseStatuses(
           caseStatuses.map((item) =>
-            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim(), color: picklistColor } : item
+            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim(), color: picklistColor, statusType: picklistStatusType } : item
           )
         );
       } else if (picklistType === "updateType") {
@@ -871,14 +892,16 @@ const Settings = () => {
     setEditingPicklistItem(null);
     setPicklistValue("");
     setPicklistColor("#6366f1");
+    setPicklistStatusType("open");
     setPicklistDialogOpen(true);
   };
 
-  const openEditPicklistDialog = (item: { id: string; value: string; color: string }, type: "status" | "updateType" | "expenseCategory") => {
+  const openEditPicklistDialog = (item: { id: string; value: string; color: string; statusType?: string }, type: "status" | "updateType" | "expenseCategory") => {
     setPicklistType(type);
     setEditingPicklistItem(item);
     setPicklistValue(item.value);
     setPicklistColor(item.color);
+    setPicklistStatusType((item.statusType as "open" | "closed") || "open");
     setPicklistDialogOpen(true);
   };
 
@@ -1594,6 +1617,7 @@ const Settings = () => {
                       <TableRow>
                         <TableHead>Status Value</TableHead>
                         <TableHead className="w-[100px]">Color</TableHead>
+                        <TableHead className="w-[120px]">Status Type</TableHead>
                         <TableHead className="w-[100px]">Active</TableHead>
                         <TableHead className="text-right w-[150px]">Actions</TableHead>
                       </TableRow>
@@ -1601,7 +1625,7 @@ const Settings = () => {
                     <TableBody>
                       {caseStatuses.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                             No status values configured
                           </TableCell>
                         </TableRow>
@@ -1616,6 +1640,11 @@ const Settings = () => {
                                   style={{ backgroundColor: status.color }}
                                 />
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={status.statusType === "open" ? "default" : "secondary"}>
+                                {status.statusType === "open" ? "🟢 Open" : "⚪ Closed"}
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               <Badge variant={status.isActive ? "default" : "secondary"}>
@@ -1875,6 +1904,23 @@ const Settings = () => {
                     />
                   </div>
                 </div>
+                {picklistType === "status" && (
+                  <div>
+                    <Label htmlFor="picklistStatusType">Status Type</Label>
+                    <Select value={picklistStatusType} onValueChange={(value: "open" | "closed") => setPicklistStatusType(value)}>
+                      <SelectTrigger id="picklistStatusType">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="open">🟢 Open</SelectItem>
+                        <SelectItem value="closed">⚪ Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Determines if this status represents an open or closed case
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button

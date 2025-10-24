@@ -953,6 +953,7 @@ export type Database = {
           id: string
           is_active: boolean
           organization_id: string | null
+          status_type: string | null
           type: string
           updated_at: string
           user_id: string
@@ -965,6 +966,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           organization_id?: string | null
+          status_type?: string | null
           type: string
           updated_at?: string
           user_id: string
@@ -977,6 +979,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           organization_id?: string | null
+          status_type?: string | null
           type?: string
           updated_at?: string
           user_id?: string

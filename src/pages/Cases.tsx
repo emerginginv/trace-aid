@@ -36,8 +36,9 @@ const Cases = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
-  const [statusPicklists, setStatusPicklists] = useState<Array<{ id: string; value: string; color: string }>>([]);
+  const [statusPicklists, setStatusPicklists] = useState<Array<{ id: string; value: string; color: string; status_type?: string }>>([]);
   const [priorityPicklists, setPriorityPicklists] = useState<Array<{ id: string; value: string; color: string }>>([]);
+  const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchCases();
@@ -51,7 +52,7 @@ const Cases = () => {
       // Fetch status picklists
       const { data: statusData } = await supabase
         .from("picklists")
-        .select("id, value, color")
+        .select("id, value, color, status_type")
         .eq("user_id", user.id)
         .eq("type", "case_status")
         .eq("is_active", true)
@@ -158,7 +159,12 @@ const Cases = () => {
     const matchesSearch = searchQuery === '' || caseItem.title.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.case_number.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || caseItem.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || caseItem.priority === priorityFilter;
-    return matchesSearch && matchesStatus && matchesPriority;
+    
+    // Match status type (open/closed)
+    const statusPicklist = statusPicklists.find(s => s.value === caseItem.status);
+    const matchesStatusType = statusTypeFilter === 'all' || statusPicklist?.status_type === statusTypeFilter;
+    
+    return matchesSearch && matchesStatus && matchesPriority && matchesStatusType;
   });
   if (loading) {
     return <div className="flex items-center justify-center py-12">
@@ -195,15 +201,25 @@ const Cases = () => {
           <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search cases by title, number, or description..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
         </div>
+        <Select value={statusTypeFilter} onValueChange={setStatusTypeFilter}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Case Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Cases</SelectItem>
+            <SelectItem value="open">🔵 Open Cases</SelectItem>
+            <SelectItem value="closed">⚪ Closed Cases</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="open">Open</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
+            {statusPicklists.map(status => (
+              <SelectItem key={status.id} value={status.value}>{status.value}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
@@ -212,9 +228,9 @@ const Cases = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Priority</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
+            {priorityPicklists.map(priority => (
+              <SelectItem key={priority.id} value={priority.value}>{priority.value}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <div className="flex gap-1 border rounded-md p-1 h-10">
