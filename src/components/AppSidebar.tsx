@@ -112,7 +112,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border p-4 space-y-4">
         {/* Settings and Sign Out buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 bg-slate-600">
           <SidebarMenuButton onClick={() => navigate("/settings")} className="flex-1 justify-center">
             <Settings className="w-4 h-4" />
             <span className="sr-only">Settings</span>
