@@ -5,24 +5,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-shadow transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-95 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm hover:shadow-md",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-accent shadow-sm",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm hover:shadow-md",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md rounded-md",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm hover:shadow-md rounded-md",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-accent shadow-sm rounded-md",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm hover:shadow-md rounded-md",
+        ghost: "hover:bg-accent hover:text-accent-foreground rounded-md",
         link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-success text-success-foreground hover:bg-success/90 shadow-sm hover:shadow-md",
-        warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm hover:shadow-md",
+        success: "bg-success text-success-foreground hover:bg-success/90 shadow-sm hover:shadow-md rounded-md",
+        warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm hover:shadow-md rounded-md",
       },
       size: {
-        default: "h-9 px-3 py-1.5",
-        sm: "h-8 px-2.5 py-1",
-        lg: "h-10 px-4 py-2",
-        icon: "h-9 w-9",
+        sm: "h-8 px-2.5 text-xs [&_svg]:size-4",      // 32px height - Compact
+        default: "h-10 px-4 text-sm [&_svg]:size-4",   // 40px height - Standard  
+        lg: "h-12 px-6 text-base [&_svg]:size-5",      // 48px height - Prominent
+        icon: "h-10 w-10 [&_svg]:size-5",              // 40px square - Icon only
       },
     },
     defaultVariants: {
