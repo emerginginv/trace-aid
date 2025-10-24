@@ -10,6 +10,8 @@ import CaseDetail from "./pages/CaseDetail";
 import Calendar from "./pages/Calendar";
 import Finance from "./pages/Finance";
 import InvoiceDetail from "./pages/InvoiceDetail";
+import UpdateDetail from "./pages/UpdateDetail";
+import ExpenseDetail from "./pages/ExpenseDetail";
 import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
 import AccountEdit from "./pages/AccountEdit";
@@ -101,6 +103,26 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <InvoiceDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/updates/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <UpdateDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/expenses/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <ExpenseDetail />
               </DashboardLayout>
             </ProtectedRoute>
           }
