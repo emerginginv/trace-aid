@@ -556,44 +556,25 @@ const Settings = () => {
         return;
       }
 
-      // Prevent vendors from being elevated (additional security layer)
-      const { data: existingRole } = await supabase
-        .from("user_roles")
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      // Vendors cannot elevate themselves (enforced on backend too via RLS)
-      if (existingRole?.role === 'vendor' && newRole !== 'vendor' && userId === currentUserId) {
-        toast.error("Vendors cannot change their own role");
+      if (!organization?.id) {
+        toast.error("No organization selected");
         return;
       }
 
-      if (existingRole) {
-        // Update existing role
-        const { error } = await supabase
-          .from("user_roles")
-          .update({ role: newRole as any }) // Type assertion needed due to Supabase enum mismatch
-          .eq("user_id", userId);
+      // Use the secure RPC function to update role
+      const { error } = await supabase.rpc('update_user_role', {
+        _user_id: userId,
+        _new_role: newRole,
+        _org_id: organization.id
+      });
 
-        if (error) throw error;
-      } else {
-        // Insert new role
-        const { error } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: userId,
-            role: newRole as any, // Type assertion needed due to Supabase enum mismatch
-          });
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       toast.success("Role updated successfully");
       fetchUsers();
     } catch (error: any) {
       console.error("Error updating role:", error);
-      toast.error("Failed to update role");
+      toast.error(error.message || "Failed to update role");
     }
   };
 
