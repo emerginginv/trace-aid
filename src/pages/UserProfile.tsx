@@ -27,22 +27,27 @@ const UserProfile = () => {
           return;
         }
 
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("full_name, email")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
 
-        const { data: userRole } = await supabase
+        const { data: userRole, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+          return;
+        }
 
         setUserProfile({
           full_name: profile?.full_name || null,
           email: profile?.email || user.email || "",
-          role: userRole?.role || "user",
+          role: userRole?.role || "member",
         });
       } catch (error) {
         console.error("Error fetching profile:", error);
