@@ -96,11 +96,20 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: memberData } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!memberData) return;
+
       const { data, error } = await supabase
         .from("case_finances")
         .select("*")
         .eq("case_id", caseId)
-        .eq("user_id", user.id)
+        .eq("organization_id", memberData.organization_id)
         .order("date", { ascending: false });
 
       if (error) throw error;
@@ -111,7 +120,7 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
         .from("invoices")
         .select("*")
         .eq("case_id", caseId)
-        .eq("user_id", user.id)
+        .eq("organization_id", memberData.organization_id)
         .order("date", { ascending: false });
 
       if (invoicesError) throw invoicesError;

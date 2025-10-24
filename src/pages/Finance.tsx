@@ -73,11 +73,20 @@ const Finance = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: memberData } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!memberData) return;
+
       // Fetch all cases first (needed for joins)
       const { data: casesData, error: casesError } = await supabase
         .from("cases")
         .select("id, title, case_number")
-        .eq("user_id", user.id);
+        .eq("organization_id", memberData.organization_id);
 
       if (casesError) throw casesError;
 
@@ -129,7 +138,7 @@ const Finance = () => {
       const { data: expenseData, error: expenseError } = await supabase
         .from("case_finances")
         .select("id, case_id, date, amount, category, status, invoiced")
-        .eq("user_id", user.id)
+        .eq("organization_id", memberData.organization_id)
         .eq("finance_type", "expense")
         .order("date", { ascending: false });
 
@@ -160,7 +169,7 @@ const Finance = () => {
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
         .select("id, case_id, invoice_number, date, total, status, due_date, balance_due, total_paid")
-        .eq("user_id", user.id)
+        .eq("organization_id", memberData.organization_id)
         .order("date", { ascending: false });
 
       if (invoiceError) throw invoiceError;
