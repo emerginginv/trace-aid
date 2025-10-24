@@ -27,14 +27,22 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <Toaster />
-      <Sonner />
-      <Routes>
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Toaster />
+        <Sonner />
+        <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/auth" element={<Auth />} />
         <Route
@@ -209,6 +217,7 @@ const App = () => (
       </Routes>
     </BrowserRouter>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
