@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Briefcase,
@@ -7,11 +8,11 @@ import {
   LogOut,
   Shield,
   DollarSign,
-  UserCog,
   Settings,
   Calendar,
-  Bell,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +25,6 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const menuItems = [
@@ -34,13 +34,43 @@ const menuItems = [
   { title: "Finance", icon: DollarSign, url: "/finance" },
   { title: "Accounts", icon: Building2, url: "/accounts" },
   { title: "Contacts", icon: Users, url: "/contacts" },
-  { title: "Notifications", icon: Bell, url: "/notifications" },
-  { title: "Settings", icon: Settings, url: "/settings" },
 ];
 
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [userProfile, setUserProfile] = useState<{
+    full_name: string | null;
+    email: string;
+    role: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user.id)
+        .single();
+
+      const { data: userRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      setUserProfile({
+        full_name: profile?.full_name || null,
+        email: profile?.email || user.email || "",
+        role: userRole?.role || "User",
+      });
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -50,6 +80,18 @@ export function AppSidebar() {
       toast.success("Signed out successfully");
       navigate("/auth");
     }
+  };
+
+  const getInitials = (name: string | null, email: string) => {
+    if (name) {
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return email.charAt(0).toUpperCase();
   };
 
   return (
@@ -88,15 +130,41 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleSignOut} className="w-full">
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarFooter className="border-t border-sidebar-border p-4 space-y-4">
+        {/* Settings and Sign Out buttons */}
+        <div className="flex gap-2">
+          <SidebarMenuButton
+            onClick={() => navigate("/settings")}
+            className="flex-1 justify-center"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="sr-only">Settings</span>
+          </SidebarMenuButton>
+          <SidebarMenuButton onClick={handleSignOut} className="flex-1 justify-center">
+            <LogOut className="w-4 h-4" />
+            <span className="sr-only">Sign Out</span>
+          </SidebarMenuButton>
+        </div>
+
+        {/* User Profile Section */}
+        {userProfile && (
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/50">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src="" alt={userProfile.full_name || userProfile.email} />
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {getInitials(userProfile.full_name, userProfile.email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {userProfile.full_name || userProfile.email}
+              </p>
+              <p className="text-xs text-sidebar-foreground/60 truncate capitalize">
+                {userProfile.role}
+              </p>
+            </div>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
