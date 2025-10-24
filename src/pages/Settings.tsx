@@ -9,9 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -46,6 +47,7 @@ interface User {
   full_name: string | null;
   created_at: string;
   roles: string[];
+  disabled?: boolean;
 }
 
 const Settings = () => {
@@ -85,6 +87,10 @@ const Settings = () => {
   const [invitePassword, setInvitePassword] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "user" | "moderator">("user");
   const [inviting, setInviting] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -363,9 +369,16 @@ const Settings = () => {
         full_name: profile.full_name,
         created_at: profile.created_at,
         roles: rolesMap.get(profile.id) || [],
+        disabled: false, // TODO: Add disabled field to profiles table if needed
       })) || [];
 
       setUsers(usersData);
+      
+      // Update current user role if we're in the list
+      const currentUser = usersData.find(u => u.id === currentUserId);
+      if (currentUser && currentUser.roles.length > 0) {
+        setCurrentUserRole(currentUser.roles[0]);
+      }
     } catch (error: any) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
@@ -466,7 +479,7 @@ const Settings = () => {
         .from("user_roles")
         .select("*")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
       if (existingRole) {
         // Update existing role
@@ -493,6 +506,97 @@ const Settings = () => {
     } catch (error: any) {
       console.error("Error updating role:", error);
       toast.error("Failed to update role");
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEditUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: editingUser.full_name,
+          email: editingUser.email,
+        })
+        .eq("id", editingUser.id);
+
+      if (error) throw error;
+
+      // Update role if changed
+      if (editingUser.roles.length > 0) {
+        await handleRoleChange(editingUser.id, editingUser.roles[0] as any);
+      }
+
+      toast.success("User updated successfully");
+      setEditDialogOpen(false);
+      setEditingUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      toast.error("Failed to update user");
+    }
+  };
+
+  const handleToggleDisable = async (user: User) => {
+    try {
+      // TODO: Implement user disable/enable functionality
+      // This would require adding a 'disabled' column to the profiles table
+      toast.info("User disable/enable feature coming soon");
+    } catch (error: any) {
+      console.error("Error toggling user status:", error);
+      toast.error("Failed to update user status");
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      // Check if user has any assigned cases
+      const { data: cases, error: casesError } = await supabase
+        .from("cases")
+        .select("id")
+        .eq("user_id", userToDelete.id)
+        .limit(1);
+
+      if (casesError) throw casesError;
+
+      if (cases && cases.length > 0) {
+        toast.error("Cannot delete user: They have cases assigned to them");
+        setDeleteConfirmOpen(false);
+        setUserToDelete(null);
+        return;
+      }
+
+      // Delete user roles first (foreign key constraint)
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userToDelete.id);
+
+      if (roleError) throw roleError;
+
+      // Delete profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", userToDelete.id);
+
+      if (profileError) throw profileError;
+
+      toast.success("User deleted successfully");
+      setDeleteConfirmOpen(false);
+      setUserToDelete(null);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      toast.error("Failed to delete user");
     }
   };
 
@@ -1041,6 +1145,7 @@ const Settings = () => {
                         <TableHead>Email Address</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Joined Date</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1082,6 +1187,33 @@ const Settings = () => {
                           <TableCell>
                             {format(new Date(user.created_at), "MMM d, yyyy")}
                           </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                  <Edit2 className="h-4 w-4 mr-2" />
+                                  Edit User
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setUserToDelete(user);
+                                    setDeleteConfirmOpen(true);
+                                  }}
+                                  className="text-destructive"
+                                  disabled={user.id === currentUserId}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete User
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1090,6 +1222,86 @@ const Settings = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Edit User Dialog */}
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit User</DialogTitle>
+                <DialogDescription>
+                  Update user information and role
+                </DialogDescription>
+              </DialogHeader>
+              {editingUser && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="editFullName">Full Name</Label>
+                    <Input
+                      id="editFullName"
+                      value={editingUser.full_name || ""}
+                      onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editEmail">Email Address</Label>
+                    <Input
+                      id="editEmail"
+                      type="email"
+                      value={editingUser.email}
+                      onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editRole">Role</Label>
+                    <Select 
+                      value={editingUser.roles[0] || "user"}
+                      onValueChange={(value: "admin" | "user" | "moderator") => 
+                        setEditingUser({...editingUser, roles: [value]})
+                      }
+                    >
+                      <SelectTrigger id="editRole">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="moderator">Moderator</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveEditUser}>
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete User</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete {userToDelete?.full_name || userToDelete?.email}?
+                  This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteUser}>
+                  Delete User
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
