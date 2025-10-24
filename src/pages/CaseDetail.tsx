@@ -177,7 +177,7 @@ const CaseDetail = () => {
           <p className="text-muted-foreground">Case #{caseData.case_number}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditFormOpen(true)}>
+          <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-green-500 hover:bg-green-400">
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
