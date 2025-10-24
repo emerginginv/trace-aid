@@ -121,6 +121,7 @@ export function ActivityForm({
       };
 
       let error;
+      let insertedActivity;
       if (editingActivity) {
         const { error: updateError } = await supabase
           .from("case_activities")
@@ -128,13 +129,39 @@ export function ActivityForm({
           .eq("id", editingActivity.id);
         error = updateError;
       } else {
-        const { error: insertError } = await supabase
+        const { data, error: insertError } = await supabase
           .from("case_activities")
-          .insert(activityData);
+          .insert(activityData)
+          .select()
+          .single();
         error = insertError;
+        insertedActivity = data;
       }
 
       if (error) throw error;
+
+      // Create notification for assigned user (only for new tasks)
+      if (!editingActivity && insertedActivity && values.assigned_user_id && values.assigned_user_id !== 'unassigned') {
+        const notificationData = {
+          user_id: values.assigned_user_id,
+          type: 'task',
+          title: values.activity_type === 'task' ? 'New Task Assigned' : 'New Event Scheduled',
+          message: `You have been assigned: ${values.title}`,
+          related_id: insertedActivity.id,
+          related_type: 'case_activity',
+          link: `/cases/${caseId}`,
+          priority: values.due_date && new Date(values.due_date) < new Date(Date.now() + 86400000 * 3) ? 'high' : 'medium',
+          read: false,
+        };
+
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert(notificationData);
+
+        if (notifError) {
+          console.error('Error creating notification:', notifError);
+        }
+      }
 
       toast({
         title: "Success",
