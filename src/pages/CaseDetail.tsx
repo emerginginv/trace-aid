@@ -17,6 +17,7 @@ import { CaseFinances } from "@/components/case-detail/CaseFinances";
 import { CaseAttachments } from "@/components/case-detail/CaseAttachments";
 import { RetainerFundsWidget } from "@/components/case-detail/RetainerFundsWidget";
 import { CaseCalendar } from "@/components/case-detail/CaseCalendar";
+import { NotificationHelpers } from "@/lib/notifications";
 interface Case {
   id: string;
   case_number: string;
@@ -138,6 +139,10 @@ const CaseDetail = () => {
   const handleStatusChange = async (newStatus: string) => {
     if (!caseData) return;
     
+    // Don't log if status hasn't actually changed
+    const oldStatus = caseData.status;
+    if (oldStatus === newStatus) return;
+    
     setUpdatingStatus(true);
     try {
       const {
@@ -147,6 +152,16 @@ const CaseDetail = () => {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Get user profile for activity log
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+
+      const userName = profile?.full_name || user.email || "Unknown User";
+
+      // Update case status
       const { error } = await supabase
         .from("cases")
         .update({ status: newStatus })
@@ -154,6 +169,29 @@ const CaseDetail = () => {
         .eq("user_id", user.id);
 
       if (error) throw error;
+
+      // Create activity log entry
+      const { error: activityError } = await supabase
+        .from("case_activities")
+        .insert({
+          case_id: id,
+          user_id: user.id,
+          activity_type: "Status Change",
+          title: "Status Changed",
+          description: `Status changed from "${oldStatus}" to "${newStatus}" by ${userName}`,
+          status: "completed"
+        });
+
+      if (activityError) {
+        console.error("Error creating activity log:", activityError);
+      }
+
+      // Create notification
+      await NotificationHelpers.caseStatusChanged(
+        caseData.case_number,
+        newStatus,
+        id!
+      );
 
       setCaseData({ ...caseData, status: newStatus });
       toast({
