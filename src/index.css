@@ -106,8 +106,8 @@
     --muted: var(--neutral-100);
     --muted-foreground: var(--neutral-500);
 
-    --accent: 32 95% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: var(--primary-300);
+    --accent-foreground: var(--neutral-800);
 
     --destructive: var(--destructive-500);
     --destructive-foreground: 0 0% 100%;
@@ -204,7 +204,7 @@
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary-500)), hsl(var(--secondary-400)));
-    --gradient-accent: linear-gradient(135deg, hsl(32 95% 55%), hsl(45 93% 55%));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--primary-300)), hsl(var(--primary-400)));
     --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
   }
 
@@ -228,8 +228,8 @@
     --muted: 215 25% 18%;
     --muted-foreground: 215 16% 65%;
 
-    --accent: 32 95% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: var(--primary-400);
+    --accent-foreground: var(--neutral-900);
 
     --destructive: var(--destructive-500);
     --destructive-foreground: 0 0% 100%;
