@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { TemplateList } from "@/components/templates/TemplateList";
 import { EmailTestForm } from "@/components/EmailTestForm";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { useSearchParams } from "react-router-dom";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -109,9 +111,47 @@ const Settings = () => {
   const [picklistColor, setPicklistColor] = useState("#6366f1");
   const [picklistStatusType, setPicklistStatusType] = useState<"open" | "closed">("open");
 
+  // Billing State
+  const { organization, subscriptionStatus, checkSubscription } = useOrganization();
+  const [billingLoading, setBillingLoading] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+
+  const PRICING_TIERS = [
+    {
+      name: "Free",
+      price: "$0",
+      priceId: null,
+      productId: null,
+      features: ["Up to 2 users", "Basic case management", "Email support"],
+      maxUsers: 2,
+    },
+    {
+      name: "Standard",
+      price: "$49",
+      priceId: "price_1SLesURWPtpjyF4hGZI3sw13",
+      productId: "prod_TIFNfVbkhFmIuB",
+      features: ["Up to 10 users", "Full case management", "Priority support", "Advanced reporting"],
+      maxUsers: 10,
+    },
+    {
+      name: "Pro",
+      price: "$99",
+      priceId: "price_1SLeslRWPtpjyF4hxtzH85Ad",
+      productId: "prod_TIFN9OVHNQ1tlK",
+      features: ["Unlimited users", "All features", "24/7 support", "Custom integrations", "API access"],
+      maxUsers: -1,
+    },
+  ];
+
   useEffect(() => {
     loadSettings();
-  }, []);
+    checkSubscription();
+    
+    if (searchParams.get("success") === "true") {
+      toast.success("Subscription activated successfully!");
+      checkSubscription();
+    }
+  }, [searchParams]);
 
   const loadSettings = async () => {
     try {
@@ -916,7 +956,7 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="preferences" className="text-xs sm:text-sm">Preferences</TabsTrigger>
           <TabsTrigger value="organization" className="text-xs sm:text-sm">Organization</TabsTrigger>
           <TabsTrigger value="permissions" className="text-xs sm:text-sm">Permissions</TabsTrigger>
@@ -927,6 +967,12 @@ const Settings = () => {
             <Mail className="w-3 h-3 mr-1" />
             Email
           </TabsTrigger>
+          {currentUserRole === 'admin' && (
+            <TabsTrigger value="billing" className="text-xs sm:text-sm">
+              <CreditCard className="w-3 h-3 mr-1" />
+              Billing
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* User Preferences Tab */}
@@ -1944,9 +1990,126 @@ const Settings = () => {
         <TabsContent value="email" className="space-y-6">
           <EmailTestForm />
         </TabsContent>
+
+        {/* Billing Tab */}
+        {currentUserRole === 'admin' && (
+          <TabsContent value="billing" className="space-y-6">
+            {organization && subscriptionStatus?.subscribed && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Current Plan</CardTitle>
+                  <CardDescription>
+                    Your subscription is {organization.subscription_status}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-lg capitalize">{organization.subscription_tier} Plan</p>
+                      {subscriptionStatus.subscription_end && (
+                        <p className="text-sm text-muted-foreground">
+                          Renews on {new Date(subscriptionStatus.subscription_end).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <Button onClick={handleManageSubscription} disabled={billingLoading === "portal"}>
+                      {billingLoading === "portal" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Manage Subscription
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {PRICING_TIERS.map((tier) => {
+                const isCurrentPlan = tier.name.toLowerCase() === getCurrentTier();
+                const isFree = tier.name === "Free";
+
+                return (
+                  <Card key={tier.name} className={isCurrentPlan ? "border-primary shadow-lg" : ""}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>{tier.name}</CardTitle>
+                        {isCurrentPlan && <Badge>Current Plan</Badge>}
+                      </div>
+                      <CardDescription>
+                        <span className="text-3xl font-bold text-foreground">{tier.price}</span>
+                        {!isFree && <span className="text-muted-foreground">/month</span>}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ul className="space-y-2">
+                        {tier.features.map((feature) => (
+                          <li key={feature} className="flex items-start gap-2">
+                            <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                            <span className="text-sm">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {!isCurrentPlan && !isFree && (
+                        <Button
+                          className="w-full"
+                          onClick={() => handleSubscribe(tier.priceId!)}
+                          disabled={billingLoading === tier.priceId}
+                        >
+                          {billingLoading === tier.priceId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Subscribe
+                        </Button>
+                      )}
+                      {isFree && !isCurrentPlan && (
+                        <Button className="w-full" variant="outline" disabled>
+                          Contact Support
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
+
+  function handleSubscribe(priceId: string) {
+    setBillingLoading(priceId);
+    supabase.functions.invoke("create-checkout", {
+      body: { priceId },
+    }).then(({ data, error }) => {
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    }).catch((error: any) => {
+      toast.error(error.message);
+    }).finally(() => {
+      setBillingLoading(null);
+    });
+  }
+
+  function handleManageSubscription() {
+    setBillingLoading("portal");
+    supabase.functions.invoke("customer-portal")
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (data?.url) {
+          window.open(data.url, "_blank");
+        }
+      }).catch((error: any) => {
+        toast.error(error.message);
+      }).finally(() => {
+        setBillingLoading(null);
+      });
+  }
+
+  function getCurrentTier() {
+    if (!subscriptionStatus?.product_id) return "free";
+    const tier = PRICING_TIERS.find(t => t.productId === subscriptionStatus.product_id);
+    return tier?.name.toLowerCase() || "free";
+  }
 };
 
 export default Settings;

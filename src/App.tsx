@@ -7,7 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
 import Auth from "./pages/Auth";
 import { Onboarding } from "./components/Onboarding";
-import Billing from "./pages/Billing";
+
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
@@ -63,16 +63,6 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Onboarding />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/billing"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <Billing />
-                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
