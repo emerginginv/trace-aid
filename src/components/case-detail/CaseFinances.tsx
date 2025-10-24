@@ -420,31 +420,31 @@ export const CaseFinances = ({ caseId }: { caseId: string }) => {
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <Card>
+            <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Retainer</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400">Total Retainer</CardTitle>
+                <DollarSign className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totals.retainerTotal.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">${totals.retainerTotal.toFixed(2)}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400">Total Expenses</CardTitle>
+                <DollarSign className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totals.expenseTotal.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">${totals.expenseTotal.toFixed(2)}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/50">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Invoiced</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">Total Invoiced</CardTitle>
+                <DollarSign className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totals.invoiceTotal.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">${totals.invoiceTotal.toFixed(2)}</div>
               </CardContent>
             </Card>
           </div>
