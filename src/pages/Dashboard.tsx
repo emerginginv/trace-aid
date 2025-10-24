@@ -8,7 +8,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatDistanceToNow, format, isToday, isYesterday, isTomorrow, isPast, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-
 interface Task {
   id: string;
   title: string;
@@ -16,7 +15,6 @@ interface Task {
   priority: "high" | "medium" | "low";
   status: "pending" | "completed";
 }
-
 interface CalendarEvent {
   id: string;
   title: string;
@@ -24,14 +22,12 @@ interface CalendarEvent {
   time: string;
   type: string;
 }
-
 interface Update {
   id: string;
   message: string;
   timestamp: string;
   type: "info" | "success" | "warning";
 }
-
 interface Expense {
   id: string;
   description: string;
@@ -39,9 +35,10 @@ interface Expense {
   date: string;
   category: string;
 }
-
 const Dashboard = () => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -49,48 +46,49 @@ const Dashboard = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [expandedUpdate, setExpandedUpdate] = useState<string | null>(null);
   const [expandedExpense, setExpandedExpense] = useState<string | null>(null);
-  
   const [stats, setStats] = useState({
     totalCases: 0,
     activeCases: 0,
     totalContacts: 0,
-    totalAccounts: 0,
+    totalAccounts: 0
   });
-
   useEffect(() => {
     const fetchDashboardData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Fetch stats
-      const [casesResult, contactsResult, accountsResult] = await Promise.all([
-        supabase.from("cases").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("contacts").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("accounts").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-      ]);
-
-      const activeCasesResult = await supabase
-        .from("cases")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "open");
-
+      const [casesResult, contactsResult, accountsResult] = await Promise.all([supabase.from("cases").select("*", {
+        count: "exact",
+        head: true
+      }).eq("user_id", user.id), supabase.from("contacts").select("*", {
+        count: "exact",
+        head: true
+      }).eq("user_id", user.id), supabase.from("accounts").select("*", {
+        count: "exact",
+        head: true
+      }).eq("user_id", user.id)]);
+      const activeCasesResult = await supabase.from("cases").select("*", {
+        count: "exact",
+        head: true
+      }).eq("user_id", user.id).eq("status", "open");
       setStats({
         totalCases: casesResult.count || 0,
         activeCases: activeCasesResult.count || 0,
         totalContacts: contactsResult.count || 0,
-        totalAccounts: accountsResult.count || 0,
+        totalAccounts: accountsResult.count || 0
       });
 
       // Fetch tasks from case_activities
-      const { data: activitiesData } = await supabase
-        .from("case_activities")
-        .select("id, title, due_date, status, completed, description")
-        .eq("user_id", user.id)
-        .not("due_date", "is", null)
-        .order("due_date", { ascending: true })
-        .limit(10);
-
+      const {
+        data: activitiesData
+      } = await supabase.from("case_activities").select("id, title, due_date, status, completed, description").eq("user_id", user.id).not("due_date", "is", null).order("due_date", {
+        ascending: true
+      }).limit(10);
       if (activitiesData) {
         const tasksData: Task[] = activitiesData.map(activity => ({
           id: activity.id,
@@ -107,16 +105,11 @@ const Dashboard = () => {
       tomorrow.setDate(tomorrow.getDate() + 2);
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-
-      const { data: eventsData } = await supabase
-        .from("case_activities")
-        .select("id, title, due_date, activity_type")
-        .eq("user_id", user.id)
-        .not("due_date", "is", null)
-        .gte("due_date", yesterday.toISOString().split('T')[0])
-        .lte("due_date", tomorrow.toISOString().split('T')[0])
-        .order("due_date", { ascending: true });
-
+      const {
+        data: eventsData
+      } = await supabase.from("case_activities").select("id, title, due_date, activity_type").eq("user_id", user.id).not("due_date", "is", null).gte("due_date", yesterday.toISOString().split('T')[0]).lte("due_date", tomorrow.toISOString().split('T')[0]).order("due_date", {
+        ascending: true
+      });
       if (eventsData) {
         const calendarEvents: CalendarEvent[] = eventsData.map(event => ({
           id: event.id,
@@ -129,13 +122,11 @@ const Dashboard = () => {
       }
 
       // Fetch recent updates from case_updates
-      const { data: updatesData } = await supabase
-        .from("case_updates")
-        .select("id, title, description, created_at, update_type")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
-
+      const {
+        data: updatesData
+      } = await supabase.from("case_updates").select("id, title, description, created_at, update_type").eq("user_id", user.id).order("created_at", {
+        ascending: false
+      }).limit(5);
       if (updatesData) {
         const recentUpdates: Update[] = updatesData.map(update => ({
           id: update.id,
@@ -147,14 +138,11 @@ const Dashboard = () => {
       }
 
       // Fetch recent expenses from case_finances
-      const { data: expensesData } = await supabase
-        .from("case_finances")
-        .select("id, description, amount, date, category")
-        .eq("user_id", user.id)
-        .eq("finance_type", "expense")
-        .order("date", { ascending: false })
-        .limit(5);
-
+      const {
+        data: expensesData
+      } = await supabase.from("case_finances").select("id, description, amount, date, category").eq("user_id", user.id).eq("finance_type", "expense").order("date", {
+        ascending: false
+      }).limit(5);
       if (expensesData) {
         const recentExpenses: Expense[] = expensesData.map(expense => ({
           id: expense.id,
@@ -166,63 +154,53 @@ const Dashboard = () => {
         setExpenses(recentExpenses);
       }
     };
-
     fetchDashboardData();
   }, []);
-
   const handleTaskToggle = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-
     const newStatus = task.status === "completed" ? "pending" : "completed";
-    
-    // Update in database
-    const { error } = await supabase
-      .from("case_activities")
-      .update({ completed: newStatus === "completed" })
-      .eq("id", taskId);
 
+    // Update in database
+    const {
+      error
+    } = await supabase.from("case_activities").update({
+      completed: newStatus === "completed"
+    }).eq("id", taskId);
     if (error) {
       toast({
         title: "Error",
         description: "Failed to update task",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
     // Update local state
-    setTasks(prev => prev.map(t => 
-      t.id === taskId 
-        ? { ...t, status: newStatus }
-        : t
-    ));
-    
+    setTasks(prev => prev.map(t => t.id === taskId ? {
+      ...t,
+      status: newStatus
+    } : t));
     toast({
       title: newStatus === "completed" ? "Task completed!" : "Task reopened",
-      description: task.title,
+      description: task.title
     });
   };
 
   // Sort and filter tasks
-  const dueTasks = tasks
-    .filter(task => task.status === "pending")
-    .sort((a, b) => {
-      const aOverdue = isPast(parseISO(a.dueDate)) && !isToday(parseISO(a.dueDate));
-      const bOverdue = isPast(parseISO(b.dueDate)) && !isToday(parseISO(b.dueDate));
-      if (aOverdue && !bOverdue) return -1;
-      if (!aOverdue && bOverdue) return 1;
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    });
+  const dueTasks = tasks.filter(task => task.status === "pending").sort((a, b) => {
+    const aOverdue = isPast(parseISO(a.dueDate)) && !isToday(parseISO(a.dueDate));
+    const bOverdue = isPast(parseISO(b.dueDate)) && !isToday(parseISO(b.dueDate));
+    if (aOverdue && !bOverdue) return -1;
+    if (!aOverdue && bOverdue) return 1;
+    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+  });
 
   // Filter events for today, yesterday, tomorrow
-  const relevantEvents = events
-    .filter(event => {
-      const eventDate = parseISO(event.date);
-      return isYesterday(eventDate) || isToday(eventDate) || isTomorrow(eventDate);
-    })
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
+  const relevantEvents = events.filter(event => {
+    const eventDate = parseISO(event.date);
+    return isYesterday(eventDate) || isToday(eventDate) || isTomorrow(eventDate);
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const getEventDateLabel = (dateStr: string) => {
     const date = parseISO(dateStr);
     if (isToday(date)) return "Today";
@@ -230,57 +208,54 @@ const Dashboard = () => {
     if (isTomorrow(date)) return "Tomorrow";
     return format(date, "MMM dd");
   };
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "destructive";
-      case "medium": return "default";
-      case "low": return "secondary";
-      default: return "default";
+      case "high":
+        return "destructive";
+      case "medium":
+        return "default";
+      case "low":
+        return "secondary";
+      default:
+        return "default";
     }
   };
-
   const getUpdateIcon = (type: string) => {
     switch (type) {
-      case "success": return <CheckCircle2 className="w-4 h-4 text-success" />;
-      case "warning": return <AlertCircle className="w-4 h-4 text-warning" />;
-      default: return <Bell className="w-4 h-4 text-info" />;
+      case "success":
+        return <CheckCircle2 className="w-4 h-4 text-success" />;
+      case "warning":
+        return <AlertCircle className="w-4 h-4 text-warning" />;
+      default:
+        return <Bell className="w-4 h-4 text-info" />;
     }
   };
-
-  const statCards = [
-    {
-      title: "Active Cases",
-      value: stats.activeCases,
-      icon: Briefcase,
-      color: "text-primary",
-      bgColor: "bg-primary/10",
-    },
-    {
-      title: "Total Cases",
-      value: stats.totalCases,
-      icon: TrendingUp,
-      color: "text-secondary",
-      bgColor: "bg-secondary/10",
-    },
-    {
-      title: "Accounts",
-      value: stats.totalAccounts,
-      icon: Building2,
-      color: "text-accent",
-      bgColor: "bg-accent/10",
-    },
-    {
-      title: "Contacts",
-      value: stats.totalContacts,
-      icon: Users,
-      color: "text-success",
-      bgColor: "bg-success/10",
-    },
-  ];
-
-  return (
-    <div className="space-y-8">
+  const statCards = [{
+    title: "Active Cases",
+    value: stats.activeCases,
+    icon: Briefcase,
+    color: "text-primary",
+    bgColor: "bg-primary/10"
+  }, {
+    title: "Total Cases",
+    value: stats.totalCases,
+    icon: TrendingUp,
+    color: "text-secondary",
+    bgColor: "bg-secondary/10"
+  }, {
+    title: "Accounts",
+    value: stats.totalAccounts,
+    icon: Building2,
+    color: "text-accent",
+    bgColor: "bg-accent/10"
+  }, {
+    title: "Contacts",
+    value: stats.totalContacts,
+    icon: Users,
+    color: "text-success",
+    bgColor: "bg-success/10"
+  }];
+  return <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground mt-2">
@@ -290,10 +265,9 @@ const Dashboard = () => {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.title}>
+        {statCards.map(stat => {
+        const Icon = stat.icon;
+        return <Card key={stat.title} className="bg-slate-50 rounded">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.title}
@@ -305,9 +279,8 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-3xl font-bold">{stat.value}</div>
               </CardContent>
-            </Card>
-          );
-        })}
+            </Card>;
+      })}
       </div>
 
       {/* Main Dashboard Grid */}
@@ -321,20 +294,11 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {dueTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No pending tasks</p>
-            ) : (
-              dueTasks.map((task) => {
-                const taskDate = parseISO(task.dueDate);
-                const isOverdue = isPast(taskDate) && !isToday(taskDate);
-                
-                return (
-                  <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                    <Checkbox 
-                      checked={task.status === "completed"}
-                      onCheckedChange={() => handleTaskToggle(task.id)}
-                      className="mt-0.5"
-                    />
+            {dueTasks.length === 0 ? <p className="text-sm text-muted-foreground">No pending tasks</p> : dueTasks.map(task => {
+            const taskDate = parseISO(task.dueDate);
+            const isOverdue = isPast(taskDate) && !isToday(taskDate);
+            return <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                    <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-0.5" />
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-sm">{task.title}</p>
@@ -343,28 +307,22 @@ const Dashboard = () => {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {isOverdue ? (
-                          <span className="flex items-center gap-1 text-destructive font-medium">
+                        {isOverdue ? <span className="flex items-center gap-1 text-destructive font-medium">
                             <AlertCircle className="w-3 h-3" />
                             Overdue by {formatDistanceToNow(taskDate)}
-                          </span>
-                        ) : isToday(taskDate) ? (
-                          <span className="flex items-center gap-1">
+                          </span> : isToday(taskDate) ? <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Due today
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
+                          </span> : <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            Due {formatDistanceToNow(taskDate, { addSuffix: true })}
-                          </span>
-                        )}
+                            Due {formatDistanceToNow(taskDate, {
+                      addSuffix: true
+                    })}
+                          </span>}
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  </div>;
+          })}
           </CardContent>
         </Card>
 
@@ -377,15 +335,7 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {relevantEvents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No upcoming events</p>
-            ) : (
-              relevantEvents.map((event) => (
-                <div 
-                  key={event.id} 
-                  className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => setSelectedEvent(event)}
-                >
+            {relevantEvents.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming events</p> : relevantEvents.map(event => <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedEvent(event)}>
                   <div className="flex-1 space-y-1">
                     <p className="font-medium text-sm">{event.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -396,9 +346,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </div>
-              ))
-            )}
+                </div>)}
           </CardContent>
         </Card>
 
@@ -411,43 +359,30 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {updates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No recent updates</p>
-            ) : (
-              updates.map((update) => (
-                <div key={update.id} className="rounded-lg border bg-card">
-                  <div 
-                    className="flex items-start gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer"
-                    onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)}
-                  >
+            {updates.length === 0 ? <p className="text-sm text-muted-foreground">No recent updates</p> : updates.map(update => <div key={update.id} className="rounded-lg border bg-card">
+                  <div className="flex items-start gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)}>
                     <div className="mt-0.5">
                       {getUpdateIcon(update.type)}
                     </div>
                     <div className="flex-1 space-y-1">
                       <p className="text-sm">{update.message}</p>
                       <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(parseISO(update.timestamp), { addSuffix: true })}
+                        {formatDistanceToNow(parseISO(update.timestamp), {
+                    addSuffix: true
+                  })}
                       </p>
                     </div>
-                    {expandedUpdate === update.id ? (
-                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                    )}
+                    {expandedUpdate === update.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                   </div>
-                  {expandedUpdate === update.id && (
-                    <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
+                  {expandedUpdate === update.id && <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
                       <p className="font-medium mb-2">Update Details:</p>
                       <div className="space-y-1">
                         <p>Type: <Badge variant="outline">{update.type}</Badge></p>
                         <p>Time: {format(parseISO(update.timestamp), "PPpp")}</p>
                         <p>Status: Active</p>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
+                    </div>}
+                </div>)}
           </CardContent>
         </Card>
 
@@ -460,16 +395,9 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {expenses.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No recent expenses</p>
-            ) : (
-              <>
-                {expenses.map((expense) => (
-                  <div key={expense.id} className="rounded-lg border bg-card">
-                    <div 
-                      className="flex items-start justify-between gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)}
-                    >
+            {expenses.length === 0 ? <p className="text-sm text-muted-foreground">No recent expenses</p> : <>
+                {expenses.map(expense => <div key={expense.id} className="rounded-lg border bg-card">
+                    <div className="flex items-start justify-between gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)}>
                       <div className="flex-1 space-y-1">
                         <p className="font-medium text-sm">{expense.description}</p>
                         <div className="flex items-center gap-2">
@@ -477,7 +405,9 @@ const Dashboard = () => {
                             {expense.category}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(parseISO(expense.date), { addSuffix: true })}
+                            {formatDistanceToNow(parseISO(expense.date), {
+                        addSuffix: true
+                      })}
                           </span>
                         </div>
                       </div>
@@ -485,15 +415,10 @@ const Dashboard = () => {
                         <div className="font-semibold text-sm">
                           ${expense.amount.toFixed(2)}
                         </div>
-                        {expandedExpense === expense.id ? (
-                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        )}
+                        {expandedExpense === expense.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                       </div>
                     </div>
-                    {expandedExpense === expense.id && (
-                      <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
+                    {expandedExpense === expense.id && <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
                         <p className="font-medium mb-2">Expense Details:</p>
                         <div className="space-y-1">
                           <p>Amount: <span className="font-semibold text-foreground">${expense.amount.toFixed(2)}</span></p>
@@ -501,10 +426,8 @@ const Dashboard = () => {
                           <p>Date: {format(parseISO(expense.date), "PPP")}</p>
                           <p>Status: Recorded</p>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      </div>}
+                  </div>)}
                 <div className="pt-2 border-t">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Total</span>
@@ -513,14 +436,13 @@ const Dashboard = () => {
                     </span>
                   </div>
                 </div>
-              </>
-            )}
+              </>}
           </CardContent>
         </Card>
       </div>
 
       {/* Event Details Dialog */}
-      <Dialog open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
+      <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Event Details</DialogTitle>
@@ -528,8 +450,7 @@ const Dashboard = () => {
               {selectedEvent && getEventDateLabel(selectedEvent.date)} at {selectedEvent?.time}
             </DialogDescription>
           </DialogHeader>
-          {selectedEvent && (
-            <div className="space-y-4">
+          {selectedEvent && <div className="space-y-4">
               <div>
                 <h3 className="font-semibold text-lg mb-2">{selectedEvent.title}</h3>
                 <div className="space-y-2 text-sm">
@@ -556,21 +477,18 @@ const Dashboard = () => {
                   Close
                 </Button>
                 <Button onClick={() => {
-                  toast({
-                    title: "Event action",
-                    description: "Edit functionality would be implemented here",
-                  });
-                  setSelectedEvent(null);
-                }}>
+              toast({
+                title: "Event action",
+                description: "Edit functionality would be implemented here"
+              });
+              setSelectedEvent(null);
+            }}>
                   Edit Event
                 </Button>
               </div>
-            </div>
-          )}
+            </div>}
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
