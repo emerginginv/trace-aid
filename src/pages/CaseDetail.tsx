@@ -286,7 +286,7 @@ const CaseDetail = () => {
                 {caseData.priority}
               </Badge>}
           </div>
-          <p className="text-red-600">Case #{caseData.case_number}</p>
+          <p className="text-slate-500">Case #{caseData.case_number}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100">
