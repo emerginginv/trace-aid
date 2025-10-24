@@ -58,6 +58,7 @@ const CaseDetail = () => {
   const [caseStatuses, setCaseStatuses] = useState<Array<{
     id: string;
     value: string;
+    color: string;
   }>>([]);
   useEffect(() => {
     fetchCaseData();
@@ -73,7 +74,7 @@ const CaseDetail = () => {
       if (!user) return;
       const {
         data
-      } = await supabase.from("picklists").select("id, value").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true).order("display_order");
+      } = await supabase.from("picklists").select("id, value, color").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true).order("display_order");
       if (data) {
         setCaseStatuses(data);
       }
@@ -123,12 +124,23 @@ const CaseDetail = () => {
     }
   };
   const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      open: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-      pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-      closed: "bg-green-500/10 text-green-500 border-green-500/20"
-    };
-    return colors[status] || "bg-muted";
+    const statusItem = caseStatuses.find(s => s.value === status);
+    if (statusItem?.color) {
+      return `border`;
+    }
+    return "bg-muted";
+  };
+  
+  const getStatusStyle = (status: string) => {
+    const statusItem = caseStatuses.find(s => s.value === status);
+    if (statusItem?.color) {
+      return {
+        backgroundColor: `${statusItem.color}20`,
+        color: statusItem.color,
+        borderColor: `${statusItem.color}40`
+      };
+    }
+    return {};
   };
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
@@ -262,7 +274,7 @@ const CaseDetail = () => {
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold">{caseData.title}</h1>
             <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-              <SelectTrigger className={`w-[140px] h-7 ${getStatusColor(caseData.status)}`}>
+              <SelectTrigger className={`w-[140px] h-7 ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
