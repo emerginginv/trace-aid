@@ -26,85 +26,55 @@ const inviteSchema = z.object({
   role: z.enum(["admin", "member"]),
 });
 
+// Mock Users Data
+const MOCK_USERS: User[] = [
+  {
+    id: "1",
+    email: "sarah.martinez@lawfirm.com",
+    full_name: "Sarah Martinez",
+    created_at: "2024-01-15T10:30:00Z",
+    roles: ["admin"],
+  },
+  {
+    id: "2",
+    email: "michael.chen@lawfirm.com",
+    full_name: "Michael Chen",
+    created_at: "2024-02-20T14:20:00Z",
+    roles: ["member"],
+  },
+  {
+    id: "3",
+    email: "jessica.wong@lawfirm.com",
+    full_name: "Jessica Wong",
+    created_at: "2024-03-10T09:15:00Z",
+    roles: ["member"],
+  },
+  {
+    id: "4",
+    email: "david.johnson@lawfirm.com",
+    full_name: "David Johnson",
+    created_at: "2024-04-05T11:45:00Z",
+    roles: ["admin"],
+  },
+  {
+    id: "5",
+    email: "emily.rodriguez@lawfirm.com",
+    full_name: "Emily Rodriguez",
+    created_at: "2024-05-12T16:00:00Z",
+    roles: ["member"],
+  },
+];
+
 const Users = () => {
-  const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<User[]>([]);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>("admin");
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [inviting, setInviting] = useState(false);
-
-  useEffect(() => {
-    fetchUsers();
-    checkCurrentUserRole();
-  }, []);
-
-  const checkCurrentUserRole = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-
-      if (roles && roles.length > 0) {
-        setCurrentUserRole(roles[0].role);
-      }
-    } catch (error) {
-      console.error("Error checking user role:", error);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, email, full_name, created_at")
-        .order("created_at", { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      // Fetch all roles
-      const { data: userRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
-
-      if (rolesError) throw rolesError;
-
-      // Map roles to users
-      const rolesMap = new Map<string, string[]>();
-      userRoles?.forEach((ur) => {
-        if (!rolesMap.has(ur.user_id)) {
-          rolesMap.set(ur.user_id, []);
-        }
-        rolesMap.get(ur.user_id)?.push(ur.role);
-      });
-
-      // Combine data
-      const usersData: User[] = profiles?.map((profile) => ({
-        id: profile.id,
-        email: profile.email,
-        full_name: profile.full_name,
-        created_at: profile.created_at,
-        roles: rolesMap.get(profile.id) || [],
-      })) || [];
-
-      setUsers(usersData);
-    } catch (error: any) {
-      console.error("Error fetching users:", error);
-      toast.error("Failed to load users");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleInviteUser = async () => {
     try {
@@ -136,29 +106,13 @@ const Users = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: "admin" | "member") => {
-    try {
-      // First, remove existing role
-      const { error: deleteError } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId);
-
-      if (deleteError) throw deleteError;
-
-      // Then add new role
-      const { error: insertError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId, role: newRole });
-
-      if (insertError) throw insertError;
-
-      toast.success("Role updated successfully");
-      fetchUsers();
-    } catch (error: any) {
-      console.error("Error updating role:", error);
-      toast.error("Failed to update role");
-    }
+  const handleRoleChange = (userId: string, newRole: "admin" | "member") => {
+    setUsers(users.map(user => 
+      user.id === userId 
+        ? { ...user, roles: [newRole] }
+        : user
+    ));
+    toast.success("Role updated successfully");
   };
 
   const filteredUsers = users.filter((user) => {
