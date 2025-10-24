@@ -98,7 +98,7 @@ const CaseDetail = () => {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       open: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-      in_progress: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+      pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
       closed: "bg-green-500/10 text-green-500 border-green-500/20"
     };
     return colors[status] || "bg-muted";
@@ -212,8 +212,7 @@ const CaseDetail = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="on_hold">On Hold</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
