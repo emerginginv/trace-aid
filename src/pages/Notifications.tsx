@@ -4,10 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Bell,
   CheckCircle2,
-  AlertCircle,
   FileText,
   Users,
   DollarSign,
@@ -18,9 +20,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 interface Notification {
   id: string;
@@ -34,14 +33,14 @@ interface Notification {
 }
 
 const Notifications = () => {
-  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchNotifications();
-
+    
     // Set up realtime subscription
     const channel = supabase
       .channel('notifications-changes')
@@ -52,8 +51,8 @@ const Notifications = () => {
           schema: 'public',
           table: 'notifications'
         },
-        () => {
-          // Refetch notifications when any change occurs
+        (payload) => {
+          console.log('Notification change:', payload);
           fetchNotifications();
         }
       )
@@ -67,10 +66,7 @@ const Notifications = () => {
   const fetchNotifications = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      if (!user) return;
 
       const { data, error } = await supabase
         .from('notifications')
@@ -80,19 +76,19 @@ const Notifications = () => {
 
       if (error) throw error;
 
-      // Map and validate the data to match our Notification interface
-      const validatedNotifications: Notification[] = (data || []).map(notif => ({
-        id: notif.id,
-        type: notif.type as Notification['type'],
-        title: notif.title,
-        message: notif.message,
-        timestamp: notif.timestamp,
-        read: notif.read,
-        link: notif.link,
-        priority: notif.priority as Notification['priority'],
+      // Map database response to our notification type
+      const mappedData: Notification[] = (data || []).map(item => ({
+        id: item.id,
+        type: item.type as Notification['type'],
+        title: item.title,
+        message: item.message,
+        timestamp: item.timestamp,
+        read: item.read,
+        link: item.link,
+        priority: item.priority as Notification['priority'],
       }));
 
-      setNotifications(validatedNotifications);
+      setNotifications(mappedData);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       toast.error('Failed to load notifications');
@@ -161,7 +157,6 @@ const Notifications = () => {
 
       if (error) throw error;
 
-      // Optimistic update
       setNotifications(notifications.map(n => 
         n.id === id ? { ...n, read: true } : n
       ));
@@ -180,7 +175,6 @@ const Notifications = () => {
 
       if (error) throw error;
 
-      // Optimistic update
       setNotifications(notifications.filter(n => n.id !== id));
       toast.success('Notification dismissed');
     } catch (error) {
@@ -202,7 +196,6 @@ const Notifications = () => {
 
       if (error) throw error;
 
-      // Optimistic update
       setNotifications(notifications.map(n => ({ ...n, read: true })));
       toast.success('All notifications marked as read');
     } catch (error) {
@@ -247,14 +240,6 @@ const Notifications = () => {
     return groups;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   const filteredNotifications = filterNotifications(activeTab);
   const groupedNotifications = groupByDate(filteredNotifications);
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -274,7 +259,7 @@ const Notifications = () => {
               {unreadCount} Unread
             </Badge>
           )}
-          <Button variant="outline" size="sm" onClick={markAllAsRead}>
+          <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0}>
             Mark All Read
           </Button>
         </div>
@@ -319,111 +304,117 @@ const Notifications = () => {
         <TabsContent value={activeTab} className="mt-6">
           <Card>
             <CardContent className="p-0">
-              <ScrollArea className="h-[calc(100vh-280px)]">
-                {filteredNotifications.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Bell className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No notifications</h3>
-                    <p className="text-sm text-muted-foreground">
-                      You're all caught up! Check back later for updates.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {Object.entries(groupedNotifications).map(([dateGroup, notifs]) => {
-                      if (notifs.length === 0) return null;
-                      
-                      return (
-                        <div key={dateGroup}>
-                          <div className="px-6 py-3 bg-muted/50">
-                            <h3 className="text-sm font-semibold text-muted-foreground">
-                              {dateGroup}
-                            </h3>
-                          </div>
-                          <div className="divide-y">
-                            {notifs.map((notification) => (
-                              <div
-                                key={notification.id}
-                                className={`flex items-start gap-4 p-4 sm:p-6 hover:bg-muted/50 transition-colors ${
-                                  !notification.read ? "bg-primary/5" : ""
-                                }`}
-                              >
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ScrollArea className="h-[calc(100vh-280px)]">
+                  {filteredNotifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Bell className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No notifications</h3>
+                      <p className="text-sm text-muted-foreground">
+                        You're all caught up! Check back later for updates.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {Object.entries(groupedNotifications).map(([dateGroup, notifs]) => {
+                        if (notifs.length === 0) return null;
+                        
+                        return (
+                          <div key={dateGroup}>
+                            <div className="px-6 py-3 bg-muted/50">
+                              <h3 className="text-sm font-semibold text-muted-foreground">
+                                {dateGroup}
+                              </h3>
+                            </div>
+                            <div className="divide-y">
+                              {notifs.map((notification) => (
                                 <div
-                                  className={`flex-shrink-0 p-2 rounded-full border ${getTypeColor(
-                                    notification.type
-                                  )}`}
+                                  key={notification.id}
+                                  className={`flex items-start gap-4 p-4 sm:p-6 hover:bg-muted/50 transition-colors ${
+                                    !notification.read ? "bg-primary/5" : ""
+                                  }`}
                                 >
-                                  {getIcon(notification.type)}
-                                </div>
+                                  <div
+                                    className={`flex-shrink-0 p-2 rounded-full border ${getTypeColor(
+                                      notification.type
+                                    )}`}
+                                  >
+                                    {getIcon(notification.type)}
+                                  </div>
 
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-2 mb-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <h4 className="font-semibold text-sm">
-                                        {notification.title}
-                                      </h4>
-                                      {!notification.read && (
-                                        <Badge variant="default" className="h-2 w-2 p-0 rounded-full" />
-                                      )}
-                                      {getPriorityBadge(notification.priority)}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2 mb-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <h4 className="font-semibold text-sm">
+                                          {notification.title}
+                                        </h4>
+                                        {!notification.read && (
+                                          <Badge variant="default" className="h-2 w-2 p-0 rounded-full" />
+                                        )}
+                                        {getPriorityBadge(notification.priority)}
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 flex-shrink-0"
+                                        onClick={() => dismissNotification(notification.id)}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
                                     </div>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 flex-shrink-0"
-                                      onClick={() => dismissNotification(notification.id)}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
 
-                                  <p className="text-sm text-muted-foreground mb-2">
-                                    {notification.message}
-                                  </p>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      {notification.message}
+                                    </p>
 
-                                  <div className="flex items-center gap-4 flex-wrap">
-                                    <span className="text-xs text-muted-foreground">
-                                      {formatDistanceToNow(notification.timestamp, {
-                                        addSuffix: true,
-                                      })}
-                                    </span>
+                                    <div className="flex items-center gap-4 flex-wrap">
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatDistanceToNow(new Date(notification.timestamp), {
+                                          addSuffix: true,
+                                        })}
+                                      </span>
 
-                                    {notification.link && (
-                                      <Button
-                                        variant="link"
-                                        size="sm"
-                                        className="h-auto p-0 text-xs"
-                                        onClick={() => {
-                                          markAsRead(notification.id);
-                                          navigate(notification.link!);
-                                        }}
-                                      >
-                                        View Details
-                                        <ArrowRight className="ml-1 h-3 w-3" />
-                                      </Button>
-                                    )}
+                                      {notification.link && (
+                                        <Button
+                                          variant="link"
+                                          size="sm"
+                                          className="h-auto p-0 text-xs"
+                                          onClick={() => {
+                                            markAsRead(notification.id);
+                                            navigate(notification.link!);
+                                          }}
+                                        >
+                                          View Details
+                                          <ArrowRight className="ml-1 h-3 w-3" />
+                                        </Button>
+                                      )}
 
-                                    {!notification.read && (
-                                      <Button
-                                        variant="link"
-                                        size="sm"
-                                        className="h-auto p-0 text-xs"
-                                        onClick={() => markAsRead(notification.id)}
-                                      >
-                                        Mark as Read
-                                      </Button>
-                                    )}
+                                      {!notification.read && (
+                                        <Button
+                                          variant="link"
+                                          size="sm"
+                                          className="h-auto p-0 text-xs"
+                                          onClick={() => markAsRead(notification.id)}
+                                        >
+                                          Mark as Read
+                                        </Button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </ScrollArea>
+                        );
+                      })}
+                    </div>
+                  )}
+                </ScrollArea>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
