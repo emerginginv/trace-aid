@@ -130,7 +130,6 @@ const CaseDetail = () => {
     }
     return "bg-muted";
   };
-  
   const getStatusStyle = (status: string) => {
     const statusItem = caseStatuses.find(s => s.value === status);
     if (statusItem?.color) {
@@ -287,10 +286,10 @@ const CaseDetail = () => {
                 {caseData.priority}
               </Badge>}
           </div>
-          <p className="text-muted-foreground">Case #{caseData.case_number}</p>
+          <p className="text-red-600">Case #{caseData.case_number}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-gray-400 hover:bg-gray-300">
+          <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100">
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
@@ -334,12 +333,7 @@ const CaseDetail = () => {
 
         <div className="space-y-6">
           <RetainerFundsWidget caseId={id!} />
-          <CaseTeamManager 
-            caseId={id!}
-            caseManagerId={caseData.case_manager_id}
-            investigatorIds={caseData.investigator_ids || []}
-            onUpdate={fetchCaseData}
-          />
+          <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} investigatorIds={caseData.investigator_ids || []} onUpdate={fetchCaseData} />
         </div>
       </div>
 
