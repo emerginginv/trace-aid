@@ -132,13 +132,31 @@ const Users = () => {
     }
   };
 
-  const handleRoleChange = (userId: string, newRole: "admin" | "member") => {
-    setUsers(users.map(user => 
-      user.id === userId 
-        ? { ...user, roles: [newRole] }
-        : user
-    ));
-    toast.success("Role updated successfully");
+  const handleRoleChange = async (userId: string, newRole: "admin" | "member") => {
+    try {
+      // Delete existing roles for this user
+      const { error: deleteError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new role
+      const { error: insertError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: newRole });
+
+      if (insertError) throw insertError;
+
+      toast.success("Role updated successfully");
+      
+      // Refresh users to show actual database state
+      fetchUsers();
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast.error("Failed to update role");
+    }
   };
 
   const filteredUsers = users.filter((user) => {
