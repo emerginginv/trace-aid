@@ -359,10 +359,10 @@ const Dashboard = () => {
                   <div className="flex-1 space-y-1">
                     <p className="font-medium text-sm text-gray-800">{event.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs bg-blue-700">
                         {getEventDateLabel(event.date)}
                       </Badge>
-                      <span>{event.time}</span>
+                      <span className="text-gray-800">{event.time}</span>
                     </div>
                   </div>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
