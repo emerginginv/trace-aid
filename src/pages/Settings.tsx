@@ -35,7 +35,9 @@ const organizationSchema = z.object({
 
 const inviteSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
-  role: z.enum(["admin", "member"]),
+  full_name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  role: z.enum(["admin", "user", "moderator"]),
 });
 
 interface User {
@@ -79,7 +81,9 @@ const Settings = () => {
   const [roleFilter, setRoleFilter] = useState("all");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [inviteFullName, setInviteFullName] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "user" | "moderator">("user");
   const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
@@ -375,6 +379,8 @@ const Settings = () => {
       // Validate input
       const validation = inviteSchema.safeParse({
         email: inviteEmail,
+        full_name: inviteFullName,
+        password: invitePassword,
         role: inviteRole,
       });
 
@@ -385,36 +391,75 @@ const Settings = () => {
 
       setInviting(true);
 
-      // Note: In a production app, you'd want to use an edge function with admin privileges
-      toast.info("User invitation requires backend setup. Please use backend to invite users.");
-      
-      setInviteDialogOpen(false);
-      setInviteEmail("");
-      setInviteRole("member");
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: inviteEmail,
+        password: invitePassword,
+        options: {
+          data: {
+            full_name: inviteFullName,
+          },
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (authError) throw authError;
+
+      if (authData.user) {
+        // Add role to user_roles table
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({
+            user_id: authData.user.id,
+            role: inviteRole as any, // Type assertion needed due to Supabase enum mismatch
+          });
+
+        if (roleError) throw roleError;
+
+        toast.success(`User ${inviteEmail} has been added successfully`);
+        setInviteDialogOpen(false);
+        setInviteEmail("");
+        setInviteFullName("");
+        setInvitePassword("");
+        setInviteRole("user");
+        fetchUsers();
+      }
     } catch (error: any) {
       console.error("Error inviting user:", error);
-      toast.error("Failed to invite user");
+      toast.error("Failed to invite user: " + error.message);
     } finally {
       setInviting(false);
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: "admin" | "member") => {
+  const handleRoleChange = async (userId: string, newRole: "admin" | "user" | "moderator") => {
     try {
-      // First, remove existing role
-      const { error: deleteError } = await supabase
+      // Check if user already has a role
+      const { data: existingRole } = await supabase
         .from("user_roles")
-        .delete()
-        .eq("user_id", userId);
+        .select("*")
+        .eq("user_id", userId)
+        .single();
 
-      if (deleteError) throw deleteError;
+      if (existingRole) {
+        // Update existing role
+        const { error } = await supabase
+          .from("user_roles")
+          .update({ role: newRole as any }) // Type assertion needed due to Supabase enum mismatch
+          .eq("user_id", userId);
 
-      // Then add new role
-      const { error: insertError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId, role: newRole });
+        if (error) throw error;
+      } else {
+        // Insert new role
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({
+            user_id: userId,
+            role: newRole as any, // Type assertion needed due to Supabase enum mismatch
+          });
 
-      if (insertError) throw insertError;
+        if (error) throw error;
+      }
 
       toast.success("Role updated successfully");
       fetchUsers();
@@ -856,6 +901,16 @@ const Settings = () => {
                       </DialogHeader>
                       <div className="space-y-4">
                         <div>
+                          <Label htmlFor="inviteFullName">Full Name</Label>
+                          <Input
+                            id="inviteFullName"
+                            type="text"
+                            placeholder="John Doe"
+                            value={inviteFullName}
+                            onChange={(e) => setInviteFullName(e.target.value)}
+                          />
+                        </div>
+                        <div>
                           <Label htmlFor="inviteEmail">Email Address</Label>
                           <Input
                             id="inviteEmail"
@@ -866,13 +921,24 @@ const Settings = () => {
                           />
                         </div>
                         <div>
+                          <Label htmlFor="invitePassword">Temporary Password</Label>
+                          <Input
+                            id="invitePassword"
+                            type="password"
+                            placeholder="Min 6 characters"
+                            value={invitePassword}
+                            onChange={(e) => setInvitePassword(e.target.value)}
+                          />
+                        </div>
+                        <div>
                           <Label htmlFor="inviteRole">Role</Label>
-                          <Select value={inviteRole} onValueChange={(value: "admin" | "member") => setInviteRole(value)}>
+                          <Select value={inviteRole} onValueChange={(value: "admin" | "user" | "moderator") => setInviteRole(value)}>
                             <SelectTrigger id="inviteRole">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="member">Member</SelectItem>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="moderator">Moderator</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
@@ -881,10 +947,10 @@ const Settings = () => {
                           {inviting ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Sending...
+                              Creating User...
                             </>
                           ) : (
-                            "Send Invitation"
+                            "Create User"
                           )}
                         </Button>
                       </div>
@@ -926,7 +992,8 @@ const Settings = () => {
                   <SelectContent>
                     <SelectItem value="all">All Roles</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="moderator">Moderator</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -961,8 +1028,8 @@ const Settings = () => {
                           <TableCell>
                             {isAdmin ? (
                               <Select
-                                value={user.roles[0] || "member"}
-                                onValueChange={(value: "admin" | "member") =>
+                                value={user.roles[0] || "user"}
+                                onValueChange={(value: "admin" | "user" | "moderator") =>
                                   handleRoleChange(user.id, value)
                                 }
                               >
@@ -970,8 +1037,11 @@ const Settings = () => {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="member">
-                                    <Badge variant="secondary">Member</Badge>
+                                  <SelectItem value="user">
+                                    <Badge variant="secondary">User</Badge>
+                                  </SelectItem>
+                                  <SelectItem value="moderator">
+                                    <Badge variant="outline">Moderator</Badge>
                                   </SelectItem>
                                   <SelectItem value="admin">
                                     <Badge variant="default">Admin</Badge>
@@ -980,7 +1050,7 @@ const Settings = () => {
                               </Select>
                             ) : (
                               <Badge variant={user.roles.includes("admin") ? "default" : "secondary"}>
-                                {user.roles[0] || "Member"}
+                                {user.roles[0] || "User"}
                               </Badge>
                             )}
                           </TableCell>

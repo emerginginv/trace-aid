@@ -33,7 +33,6 @@ const menuItems = [
   { title: "Finance", icon: DollarSign, url: "/finance" },
   { title: "Accounts", icon: Building2, url: "/accounts" },
   { title: "Contacts", icon: Users, url: "/contacts" },
-  { title: "Users", icon: UserCog, url: "/users" },
   { title: "Settings", icon: Settings, url: "/settings" },
 ];
 
