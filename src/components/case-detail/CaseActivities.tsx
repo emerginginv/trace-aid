@@ -117,21 +117,38 @@ const MOCK_ACTIVITIES: Activity[] = [
   },
 ];
 
-const MOCK_USERS: User[] = [
-  { id: "user1", email: "sarah.martinez@lawfirm.com", full_name: "Sarah Martinez" },
-  { id: "user2", email: "michael.chen@lawfirm.com", full_name: "Michael Chen" },
-  { id: "user3", email: "jessica.wong@lawfirm.com", full_name: "Jessica Wong" },
-];
-
 export function CaseActivities({ caseId }: CaseActivitiesProps) {
   const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
-  const [users] = useState<User[]>(MOCK_USERS);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<"tasks" | "events">("tasks");
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .order('full_name');
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleEdit = (activity: Activity) => {
     setEditingActivity(activity);
