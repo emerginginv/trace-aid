@@ -94,18 +94,18 @@ const Settings = () => {
 
   // Picklists State
   const [caseStatuses, setCaseStatuses] = useState([
-    { id: "1", value: "Open", isActive: true },
-    { id: "2", value: "In Progress", isActive: true },
-    { id: "3", value: "Pending", isActive: true },
-    { id: "4", value: "Closed", isActive: true },
-    { id: "5", value: "On Hold", isActive: true },
+    { id: "1", value: "open", isActive: true },
+    { id: "2", value: "pending", isActive: true },
+    { id: "3", value: "closed", isActive: true },
   ]);
   const [updateTypes, setUpdateTypes] = useState([
-    { id: "1", value: "Email", isActive: true },
-    { id: "2", value: "Call", isActive: true },
-    { id: "3", value: "Note", isActive: true },
-    { id: "4", value: "Meeting", isActive: true },
-    { id: "5", value: "Document", isActive: true },
+    { id: "1", value: "Surveillance", isActive: true },
+    { id: "2", value: "Case Update", isActive: true },
+    { id: "3", value: "Accounting", isActive: true },
+    { id: "4", value: "Client Contact", isActive: true },
+    { id: "5", value: "3rd Party Contact", isActive: true },
+    { id: "6", value: "Review", isActive: true },
+    { id: "7", value: "Other", isActive: true },
   ]);
   const [picklistDialogOpen, setPicklistDialogOpen] = useState(false);
   const [picklistType, setPicklistType] = useState<"status" | "updateType">("status");
