@@ -2,6 +2,8 @@ import { CaseCalendar } from "@/components/case-detail/CaseCalendar";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Filter } from "lucide-react";
 
 interface Case {
@@ -21,6 +23,9 @@ export default function Calendar() {
   const [filterCase, setFilterCase] = useState<string>("all");
   const [filterUser, setFilterUser] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [caseSelectionOpen, setCaseSelectionOpen] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState<string>("");
+  const [pendingCallback, setPendingCallback] = useState<((caseId: string) => void) | null>(null);
 
   useEffect(() => {
     fetchFilters();
@@ -40,6 +45,20 @@ export default function Calendar() {
       if (usersResult.data) setUsers(usersResult.data);
     } catch (error) {
       console.error("Error fetching filters:", error);
+    }
+  };
+
+  const handleCaseSelection = (callback: (caseId: string) => void) => {
+    setPendingCallback(() => callback);
+    setCaseSelectionOpen(true);
+  };
+
+  const confirmCaseSelection = () => {
+    if (selectedCaseId && pendingCallback) {
+      pendingCallback(selectedCaseId);
+      setCaseSelectionOpen(false);
+      setSelectedCaseId("");
+      setPendingCallback(null);
     }
   };
 
@@ -100,7 +119,62 @@ export default function Calendar() {
         </Select>
       </div>
 
-      <CaseCalendar filterStatus={filterStatus} />
+      <CaseCalendar 
+        filterStatus={filterStatus}
+        onNeedCaseSelection={handleCaseSelection}
+      />
+
+      {/* Case Selection Dialog */}
+      <Dialog open={caseSelectionOpen} onOpenChange={setCaseSelectionOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Case</DialogTitle>
+            <DialogDescription>
+              Choose which case this activity belongs to
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {cases.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No cases available. Please create a case first.
+              </p>
+            ) : (
+              <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a case" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cases.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setCaseSelectionOpen(false);
+                setSelectedCaseId("");
+                setPendingCallback(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmCaseSelection}
+              disabled={!selectedCaseId || cases.length === 0}
+            >
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

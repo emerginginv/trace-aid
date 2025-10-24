@@ -45,9 +45,10 @@ interface User {
 interface CaseCalendarProps {
   caseId?: string;
   filterStatus?: string;
+  onNeedCaseSelection?: (callback: (selectedCaseId: string) => void) => void;
 }
 
-export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: CaseCalendarProps) {
+export function CaseCalendar({ caseId, filterStatus: externalFilterStatus, onNeedCaseSelection }: CaseCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -59,6 +60,7 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
   const [activityFormOpen, setActivityFormOpen] = useState(false);
   const [activityType, setActivityType] = useState<"task" | "event">("task");
   const [editingActivity, setEditingActivity] = useState<any>(null);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>(caseId);
 
   const filterStatus = externalFilterStatus || internalFilterStatus;
 
@@ -197,32 +199,22 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
   };
 
   const handleDayClick = (day: Date, event: React.MouseEvent) => {
-    // Only allow creating activities if caseId is provided
-    if (!caseId) {
-      toast({
-        title: "Cannot create activity",
-        description: "Please select a specific case to create activities",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     setCreateDate(day);
-    setCreateDialogOpen(true);
+    
+    // If no caseId, we need to ask user to select a case
+    if (!caseId && onNeedCaseSelection) {
+      onNeedCaseSelection((selectedCase: string) => {
+        setSelectedCaseId(selectedCase);
+        setCreateDialogOpen(true);
+      });
+    } else {
+      setSelectedCaseId(caseId);
+      setCreateDialogOpen(true);
+    }
   };
 
   const handleActivityClick = async (activity: CalendarActivity, event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent day click handler
-    
-    // Only allow viewing/editing if caseId is provided (we need it for the form)
-    if (!caseId) {
-      toast({
-        title: "Cannot edit activity",
-        description: "Please navigate to the specific case to edit this activity",
-        variant: "destructive",
-      });
-      return;
-    }
     
     try {
       // Fetch full activity details
@@ -236,6 +228,7 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
 
       if (data) {
         setEditingActivity(data);
+        setSelectedCaseId(data.case_id); // Use the case_id from the activity
         setActivityType(data.activity_type as "task" | "event");
         setActivityFormOpen(true);
       }
@@ -428,9 +421,9 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
       </Dialog>
 
       {/* Activity Form */}
-      {caseId && (
+      {selectedCaseId && (
         <ActivityForm
-          caseId={caseId}
+          caseId={selectedCaseId}
           activityType={activityType}
           users={users}
           open={activityFormOpen}
@@ -439,6 +432,7 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
             if (!open) {
               setEditingActivity(null);
               setCreateDate(null);
+              setSelectedCaseId(caseId); // Reset to prop caseId
             }
           }}
           onSuccess={() => {
@@ -446,6 +440,7 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
             setActivityFormOpen(false);
             setEditingActivity(null);
             setCreateDate(null);
+            setSelectedCaseId(caseId); // Reset to prop caseId
           }}
           editingActivity={editingActivity}
           prefilledDate={createDate || undefined}
