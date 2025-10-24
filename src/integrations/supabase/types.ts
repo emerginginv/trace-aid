@@ -1165,6 +1165,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_organization_invite: {
+        Args: { invite_token: string }
+        Returns: Json
+      }
+      get_organization_users: {
+        Args: { org_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+        }[]
+      }
       get_user_organization: { Args: { _user_id: string }; Returns: string }
       get_user_roles: {
         Args: { _user_id: string }
@@ -1183,7 +1198,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "member"
+      app_role: "admin" | "member" | "manager" | "investigator"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1311,7 +1326,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "member"],
+      app_role: ["admin", "member", "manager", "investigator"],
     },
   },
 } as const

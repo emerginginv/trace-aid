@@ -1,99 +1,85 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, UserPlus, Search, Users as UsersIcon, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { z } from "zod";
+import { useNavigate } from "react-router-dom";
+import { UserPlus, Search, Trash2, Mail, Loader2 } from "lucide-react";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { useUserRole } from "@/hooks/useUserRole";
+import { RoleBadge } from "@/components/RoleBadge";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-interface User {
+interface OrgUser {
   id: string;
   email: string;
   full_name: string | null;
+  role: 'admin' | 'manager' | 'investigator';
+  status: 'active' | 'pending';
   created_at: string;
-  roles: string[];
 }
 
 const inviteSchema = z.object({
-  email: z.string().trim().email({ message: "Invalid email address" }).max(255),
-  role: z.enum(["admin", "member"]),
+  email: z.string().email("Invalid email address"),
+  role: z.enum(["admin", "manager", "investigator"]),
 });
 
 const Users = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<User[]>([]);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [users, setUsers] = useState<OrgUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
-  const [inviting, setInviting] = useState(false);
+  const [userToRemove, setUserToRemove] = useState<OrgUser | null>(null);
+  const navigate = useNavigate();
+  const { organization } = useOrganization();
+  const { isAdmin } = useUserRole();
+
+  const form = useForm<z.infer<typeof inviteSchema>>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: {
+      email: "",
+      role: "investigator",
+    },
+  });
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (organization?.id) {
+      fetchUsers();
+    }
+  }, [organization?.id]);
 
   const fetchUsers = async () => {
+    if (!organization?.id) return;
+
     try {
       setLoading(true);
-
-      // Get current user's role
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: userRolesData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-        
-        if (userRolesData && userRolesData.length > 0) {
-          setCurrentUserRole(userRolesData[0].role);
-        }
-      }
-
-      // Fetch all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, email, full_name, created_at")
-        .order("created_at", { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      // Fetch all user roles
-      const { data: userRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
-
-      if (rolesError) throw rolesError;
-
-      // Map roles to users
-      const rolesMap = new Map<string, string[]>();
-      userRoles?.forEach((ur) => {
-        if (!rolesMap.has(ur.user_id)) {
-          rolesMap.set(ur.user_id, []);
-        }
-        rolesMap.get(ur.user_id)?.push(ur.role);
+      const { data, error } = await supabase.rpc('get_organization_users', {
+        org_id: organization.id
       });
 
-      // Combine profiles with their roles
-      const usersData: User[] = profiles?.map((profile) => ({
-        id: profile.id,
-        email: profile.email,
-        full_name: profile.full_name,
-        created_at: profile.created_at,
-        roles: rolesMap.get(profile.id) || [],
-      })) || [];
-
-      setUsers(usersData);
+      if (error) throw error;
+      // Filter out any invalid roles
+      const validUsers = (data || []).filter((u: any) => 
+        ['admin', 'manager', 'investigator'].includes(u.role)
+      );
+      setUsers(validUsers as OrgUser[]);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
@@ -102,76 +88,113 @@ const Users = () => {
     }
   };
 
-  const handleInviteUser = async () => {
+  const handleInviteUser = async (values: z.infer<typeof inviteSchema>) => {
+    if (!organization?.id) return;
+
     try {
-      // Validate input
-      const validation = inviteSchema.safeParse({
-        email: inviteEmail,
-        role: inviteRole,
+      const { error } = await supabase.functions.invoke('send-user-invite', {
+        body: {
+          email: values.email,
+          role: values.role,
+          organizationId: organization.id,
+        }
       });
 
-      if (!validation.success) {
-        toast.error(validation.error.errors[0].message);
-        return;
-      }
+      if (error) throw error;
 
-      setInviting(true);
-
-      // Note: In a production app, you'd want to use an edge function with admin privileges
-      // For now, we'll show a message that this requires backend implementation
-      toast.info("User invitation requires backend setup. Please use Supabase dashboard to invite users.");
-      
+      toast.success(`Invite sent to ${values.email}`);
       setInviteDialogOpen(false);
-      setInviteEmail("");
-      setInviteRole("member");
+      form.reset();
+      fetchUsers();
     } catch (error: any) {
-      console.error("Error inviting user:", error);
-      toast.error("Failed to invite user");
-    } finally {
-      setInviting(false);
+      console.error("Error sending invite:", error);
+      toast.error(error.message || "Failed to send invite");
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: "admin" | "member") => {
+  const handleRoleChange = async (userId: string, newRole: 'admin' | 'manager' | 'investigator') => {
+    if (!organization?.id) return;
+
     try {
-      // Delete existing roles for this user
-      const { error: deleteError } = await supabase
+      // Update in organization_members
+      const { error: memberError } = await supabase
+        .from("organization_members")
+        .update({ role: newRole })
+        .eq("user_id", userId)
+        .eq("organization_id", organization.id);
+
+      if (memberError) throw memberError;
+
+      // Update in user_roles
+      const { error: roleError } = await supabase
         .from("user_roles")
         .delete()
         .eq("user_id", userId);
 
-      if (deleteError) throw deleteError;
+      if (roleError) throw roleError;
 
-      // Insert new role
       const { error: insertError } = await supabase
         .from("user_roles")
         .insert({ user_id: userId, role: newRole });
 
       if (insertError) throw insertError;
 
-      toast.success("Role updated successfully");
-      
-      // Refresh users to show actual database state
+      toast.success("User role updated successfully");
       fetchUsers();
     } catch (error) {
       console.error("Error updating role:", error);
-      toast.error("Failed to update role");
+      toast.error("Failed to update user role");
+    }
+  };
+
+  const handleRemoveUser = async () => {
+    if (!userToRemove || !organization?.id) return;
+
+    try {
+      if (userToRemove.status === 'pending') {
+        // Remove invite
+        const { error } = await supabase
+          .from("organization_invites")
+          .delete()
+          .eq("id", userToRemove.id);
+
+        if (error) throw error;
+        toast.success("Invite cancelled");
+      } else {
+        // Remove member
+        const { error: memberError } = await supabase
+          .from("organization_members")
+          .delete()
+          .eq("user_id", userToRemove.id)
+          .eq("organization_id", organization.id);
+
+        if (memberError) throw memberError;
+
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", userToRemove.id);
+
+        if (roleError) throw roleError;
+
+        toast.success("User removed from organization");
+      }
+
+      fetchUsers();
+    } catch (error) {
+      console.error("Error removing user:", error);
+      toast.error("Failed to remove user");
+    } finally {
+      setUserToRemove(null);
     }
   };
 
   const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-
-    const matchesRole =
-      roleFilter === "all" ||
-      user.roles.includes(roleFilter);
-
+    const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === "all" || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
-
-  const isAdmin = currentUserRole === "admin";
 
   if (loading) {
     return (
@@ -194,167 +217,202 @@ const Users = () => {
           <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-                <UserPlus className="w-4 h-4 mr-2" />
+                <UserPlus className="mr-2 h-4 w-4" />
                 Invite User
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Invite New User</DialogTitle>
+                <DialogTitle>Invite User</DialogTitle>
                 <DialogDescription>
-                  Send an invitation to join your team
+                  Send an invitation to join your organization
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="user@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleInviteUser)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="user@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                <div>
-                  <Label htmlFor="role">Role</Label>
-                  <Select value={inviteRole} onValueChange={(value: "admin" | "member") => setInviteRole(value)}>
-                    <SelectTrigger id="role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="member">Member</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={handleInviteUser} disabled={inviting} className="w-full">
-                  {inviting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    "Send Invitation"
-                  )}
-                </Button>
-              </div>
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin - Full access to all settings and billing</SelectItem>
+                            <SelectItem value="manager">Case Manager - Can create and manage cases</SelectItem>
+                            <SelectItem value="investigator">Investigator - Can view and update assigned cases</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">Send Invite</Button>
+                  </div>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         )}
       </div>
 
-      {/* Summary Widget */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-          <UsersIcon className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{users.length}</div>
-          <p className="text-xs text-muted-foreground">
-            {users.filter((u) => u.roles.includes("admin")).length} admin{users.filter((u) => u.roles.includes("admin")).length !== 1 ? "s" : ""}
-          </p>
-        </CardContent>
-      </Card>
+      <Card className="p-6">
+        <div className="mb-4 text-sm text-muted-foreground">
+          Total Users: {filteredUsers.filter(u => u.status === 'active').length} active, {filteredUsers.filter(u => u.status === 'pending').length} pending
+        </div>
 
-      {/* Users List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Members</CardTitle>
-          <CardDescription>All users with access to the system</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="member">Member</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter by role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="manager">Case Manager</SelectItem>
+              <SelectItem value="investigator">Investigator</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          {filteredUsers.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No matching users found
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email Address</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Joined Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    No users found
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
+              ) : (
+                filteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">
-                      {user.full_name || "N/A"}
+                      {user.full_name || "—"}
                     </TableCell>
-                    <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      {isAdmin ? (
+                      <div className="flex items-center gap-2">
+                        {user.email}
+                        {user.status === 'pending' && (
+                          <Mail className="h-3 w-3 text-muted-foreground" />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {isAdmin && user.status === 'active' ? (
                         <Select
-                          value={user.roles[0] || "member"}
-                          onValueChange={(value: "admin" | "member") =>
-                            handleRoleChange(user.id, value)
-                          }
+                          value={user.role}
+                          onValueChange={(value) => handleRoleChange(user.id, value as 'admin' | 'manager' | 'investigator')}
                         >
-                          <SelectTrigger className="w-[120px]">
+                          <SelectTrigger className="w-[140px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="member">
-                              <Badge variant="secondary">Member</Badge>
-                            </SelectItem>
-                            <SelectItem value="admin">
-                              <Badge variant="default">Admin</Badge>
-                            </SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="manager">Case Manager</SelectItem>
+                            <SelectItem value="investigator">Investigator</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge variant={user.roles.includes("admin") ? "default" : "secondary"}>
-                          {user.roles[0] || "Member"}
-                        </Badge>
+                        <RoleBadge role={user.role} />
                       )}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(user.created_at), "MMM d, yyyy")}
+                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/users/${user.id}`)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        {user.status === 'active' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/users/${user.id}`)}
+                          >
+                            View
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setUserToRemove(user)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
+
+      <AlertDialog open={!!userToRemove} onOpenChange={() => setUserToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {userToRemove?.email} from the organization?
+              {userToRemove?.status === 'active' ? ' They will lose access to all cases and data.' : ' This will cancel their pending invitation.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
