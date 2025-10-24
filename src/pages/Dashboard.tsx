@@ -40,38 +40,12 @@ interface Expense {
   category: string;
 }
 
-// Dummy data
-const mockTasks: Task[] = [
-  { id: "1", title: "Follow up with witness interview", dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), priority: "high", status: "pending" },
-  { id: "2", title: "Submit evidence to client", dueDate: new Date().toISOString(), priority: "high", status: "pending" },
-  { id: "3", title: "Review case documentation", dueDate: new Date().toISOString(), priority: "medium", status: "pending" },
-  { id: "4", title: "Update case notes", dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), priority: "low", status: "pending" },
-];
-
-const mockEvents: CalendarEvent[] = [
-  { id: "1", title: "Client meeting - Johnson Case", date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), time: "10:00 AM", type: "meeting" },
-  { id: "2", title: "Court appearance", date: new Date().toISOString(), time: "2:00 PM", type: "court" },
-  { id: "3", title: "Evidence review session", date: new Date().toISOString(), time: "4:30 PM", type: "review" },
-  { id: "4", title: "Witness interview", date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), time: "9:00 AM", type: "interview" },
-];
-
-const mockUpdates: Update[] = [
-  { id: "1", message: "New evidence uploaded to Case #2024-001", timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), type: "info" },
-  { id: "2", message: "Payment received for Invoice #INV-2024-042", timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), type: "success" },
-  { id: "3", message: "Case status updated: Johnson Investigation", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), type: "info" },
-  { id: "4", message: "Upcoming deadline in 2 days", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), type: "warning" },
-];
-
-const mockExpenses: Expense[] = [
-  { id: "1", description: "Background check service", amount: 150.00, date: new Date().toISOString(), category: "Services" },
-  { id: "2", description: "Court filing fees", amount: 325.00, date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), category: "Legal" },
-  { id: "3", description: "Document printing", amount: 45.50, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), category: "Office" },
-  { id: "4", description: "Mileage reimbursement", amount: 87.20, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), category: "Travel" },
-];
-
 const Dashboard = () => {
   const { toast } = useToast();
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [updates, setUpdates] = useState<Update[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [expandedUpdate, setExpandedUpdate] = useState<string | null>(null);
   const [expandedExpense, setExpandedExpense] = useState<string | null>(null);
@@ -84,10 +58,11 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Fetch stats
       const [casesResult, contactsResult, accountsResult] = await Promise.all([
         supabase.from("cases").select("*", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("contacts").select("*", { count: "exact", head: true }).eq("user_id", user.id),
@@ -106,22 +81,126 @@ const Dashboard = () => {
         totalContacts: contactsResult.count || 0,
         totalAccounts: accountsResult.count || 0,
       });
+
+      // Fetch tasks from case_activities
+      const { data: activitiesData } = await supabase
+        .from("case_activities")
+        .select("id, title, due_date, status, completed, description")
+        .eq("user_id", user.id)
+        .not("due_date", "is", null)
+        .order("due_date", { ascending: true })
+        .limit(10);
+
+      if (activitiesData) {
+        const tasksData: Task[] = activitiesData.map(activity => ({
+          id: activity.id,
+          title: activity.title,
+          dueDate: activity.due_date,
+          priority: activity.status === "urgent" ? "high" : activity.status === "in_progress" ? "medium" : "low",
+          status: activity.completed ? "completed" : "pending"
+        }));
+        setTasks(tasksData);
+      }
+
+      // Fetch calendar events from case_activities with future dates
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 2);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const { data: eventsData } = await supabase
+        .from("case_activities")
+        .select("id, title, due_date, activity_type")
+        .eq("user_id", user.id)
+        .not("due_date", "is", null)
+        .gte("due_date", yesterday.toISOString().split('T')[0])
+        .lte("due_date", tomorrow.toISOString().split('T')[0])
+        .order("due_date", { ascending: true });
+
+      if (eventsData) {
+        const calendarEvents: CalendarEvent[] = eventsData.map(event => ({
+          id: event.id,
+          title: event.title,
+          date: event.due_date,
+          time: "All Day",
+          type: event.activity_type || "task"
+        }));
+        setEvents(calendarEvents);
+      }
+
+      // Fetch recent updates from case_updates
+      const { data: updatesData } = await supabase
+        .from("case_updates")
+        .select("id, title, description, created_at, update_type")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (updatesData) {
+        const recentUpdates: Update[] = updatesData.map(update => ({
+          id: update.id,
+          message: update.title || update.description || "Update",
+          timestamp: update.created_at,
+          type: update.update_type === "status_change" ? "warning" : "info"
+        }));
+        setUpdates(recentUpdates);
+      }
+
+      // Fetch recent expenses from case_finances
+      const { data: expensesData } = await supabase
+        .from("case_finances")
+        .select("id, description, amount, date, category")
+        .eq("user_id", user.id)
+        .eq("finance_type", "expense")
+        .order("date", { ascending: false })
+        .limit(5);
+
+      if (expensesData) {
+        const recentExpenses: Expense[] = expensesData.map(expense => ({
+          id: expense.id,
+          description: expense.description,
+          amount: typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount || '0'),
+          date: expense.date,
+          category: expense.category || "General"
+        }));
+        setExpenses(recentExpenses);
+      }
     };
 
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
-  const handleTaskToggle = (taskId: string) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId 
-        ? { ...task, status: task.status === "completed" ? "pending" : "completed" }
-        : task
+  const handleTaskToggle = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const newStatus = task.status === "completed" ? "pending" : "completed";
+    
+    // Update in database
+    const { error } = await supabase
+      .from("case_activities")
+      .update({ completed: newStatus === "completed" })
+      .eq("id", taskId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update task",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update local state
+    setTasks(prev => prev.map(t => 
+      t.id === taskId 
+        ? { ...t, status: newStatus }
+        : t
     ));
     
-    const task = tasks.find(t => t.id === taskId);
     toast({
-      title: task?.status === "pending" ? "Task completed!" : "Task reopened",
-      description: task?.title,
+      title: newStatus === "completed" ? "Task completed!" : "Task reopened",
+      description: task.title,
     });
   };
 
@@ -137,7 +216,7 @@ const Dashboard = () => {
     });
 
   // Filter events for today, yesterday, tomorrow
-  const relevantEvents = mockEvents
+  const relevantEvents = events
     .filter(event => {
       const eventDate = parseISO(event.date);
       return isYesterday(eventDate) || isToday(eventDate) || isTomorrow(eventDate);
@@ -332,39 +411,43 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {mockUpdates.map((update) => (
-              <div key={update.id} className="rounded-lg border bg-card">
-                <div 
-                  className="flex items-start gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)}
-                >
-                  <div className="mt-0.5">
-                    {getUpdateIcon(update.type)}
+            {updates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No recent updates</p>
+            ) : (
+              updates.map((update) => (
+                <div key={update.id} className="rounded-lg border bg-card">
+                  <div 
+                    className="flex items-start gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                    onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)}
+                  >
+                    <div className="mt-0.5">
+                      {getUpdateIcon(update.type)}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm">{update.message}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(parseISO(update.timestamp), { addSuffix: true })}
+                      </p>
+                    </div>
+                    {expandedUpdate === update.id ? (
+                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    )}
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm">{update.message}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(parseISO(update.timestamp), { addSuffix: true })}
-                    </p>
-                  </div>
-                  {expandedUpdate === update.id ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  {expandedUpdate === update.id && (
+                    <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
+                      <p className="font-medium mb-2">Update Details:</p>
+                      <div className="space-y-1">
+                        <p>Type: <Badge variant="outline">{update.type}</Badge></p>
+                        <p>Time: {format(parseISO(update.timestamp), "PPpp")}</p>
+                        <p>Status: Active</p>
+                      </div>
+                    </div>
                   )}
                 </div>
-                {expandedUpdate === update.id && (
-                  <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
-                    <p className="font-medium mb-2">Update Details:</p>
-                    <div className="space-y-1">
-                      <p>Type: <Badge variant="outline">{update.type}</Badge></p>
-                      <p>Time: {format(parseISO(update.timestamp), "PPpp")}</p>
-                      <p>Status: Active</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -377,55 +460,61 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {mockExpenses.map((expense) => (
-              <div key={expense.id} className="rounded-lg border bg-card">
-                <div 
-                  className="flex items-start justify-between gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)}
-                >
-                  <div className="flex-1 space-y-1">
-                    <p className="font-medium text-sm">{expense.description}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {expense.category}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(parseISO(expense.date), { addSuffix: true })}
-                      </span>
+            {expenses.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No recent expenses</p>
+            ) : (
+              <>
+                {expenses.map((expense) => (
+                  <div key={expense.id} className="rounded-lg border bg-card">
+                    <div 
+                      className="flex items-start justify-between gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                      onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)}
+                    >
+                      <div className="flex-1 space-y-1">
+                        <p className="font-medium text-sm">{expense.description}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {expense.category}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(parseISO(expense.date), { addSuffix: true })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-semibold text-sm">
+                          ${expense.amount.toFixed(2)}
+                        </div>
+                        {expandedExpense === expense.id ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="font-semibold text-sm">
-                      ${expense.amount.toFixed(2)}
-                    </div>
-                    {expandedExpense === expense.id ? (
-                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    {expandedExpense === expense.id && (
+                      <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
+                        <p className="font-medium mb-2">Expense Details:</p>
+                        <div className="space-y-1">
+                          <p>Amount: <span className="font-semibold text-foreground">${expense.amount.toFixed(2)}</span></p>
+                          <p>Category: <Badge variant="outline">{expense.category}</Badge></p>
+                          <p>Date: {format(parseISO(expense.date), "PPP")}</p>
+                          <p>Status: Recorded</p>
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
-                {expandedExpense === expense.id && (
-                  <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
-                    <p className="font-medium mb-2">Expense Details:</p>
-                    <div className="space-y-1">
-                      <p>Amount: <span className="font-semibold text-foreground">${expense.amount.toFixed(2)}</span></p>
-                      <p>Category: <Badge variant="outline">{expense.category}</Badge></p>
-                      <p>Date: {format(parseISO(expense.date), "PPP")}</p>
-                      <p>Status: Recorded</p>
-                    </div>
+                ))}
+                <div className="pt-2 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Total</span>
+                    <span className="text-lg font-bold">
+                      ${expenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
-            <div className="pt-2 border-t">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Total</span>
-                <span className="text-lg font-bold">
-                  ${mockExpenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)}
-                </span>
-              </div>
-            </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
