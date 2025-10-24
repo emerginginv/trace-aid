@@ -287,7 +287,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
         {statCards.map(stat => {
         const Icon = stat.icon;
-        return <Card key={stat.title} className="bg-slate-50 rounded">
+        return <Card key={stat.title} className="rounded bg-gray-700">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.title}
@@ -296,8 +296,8 @@ const Dashboard = () => {
                   <Icon className={`w-4 h-4 ${stat.color}`} />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{stat.value}</div>
+              <CardContent className="bg-transparent">
+                <div className="text-3xl font-bold bg-transparent">{stat.value}</div>
               </CardContent>
             </Card>;
       })}
