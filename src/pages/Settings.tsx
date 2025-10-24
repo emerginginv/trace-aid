@@ -95,8 +95,9 @@ const Settings = () => {
   // Picklists State
   const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string, isActive: boolean}>>([]);
   const [updateTypes, setUpdateTypes] = useState<Array<{id: string, value: string, isActive: boolean}>>([]);
+  const [expenseCategories, setExpenseCategories] = useState<Array<{id: string, value: string, isActive: boolean}>>([]);
   const [picklistDialogOpen, setPicklistDialogOpen] = useState(false);
-  const [picklistType, setPicklistType] = useState<"status" | "updateType">("status");
+  const [picklistType, setPicklistType] = useState<"status" | "updateType" | "expenseCategory">("status");
   const [editingPicklistItem, setEditingPicklistItem] = useState<{ id: string; value: string } | null>(null);
   const [picklistValue, setPicklistValue] = useState("");
 
@@ -171,15 +172,57 @@ const Settings = () => {
         const updates = picklists
           .filter(p => p.type === 'update_type')
           .map(p => ({ id: p.id, value: p.value, isActive: p.is_active }));
+        const categories = picklists
+          .filter(p => p.type === 'expense_category')
+          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active }));
         
         setCaseStatuses(statuses);
         setUpdateTypes(updates);
+        setExpenseCategories(categories);
+        
+        // Initialize default expense categories if none exist
+        if (categories.length === 0 && user) {
+          await initializeExpenseCategories(user.id);
+        }
       }
     } catch (error) {
       console.error("Error loading settings:", error);
       toast.error("Failed to load settings");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const initializeExpenseCategories = async (userId: string) => {
+    try {
+      const defaultCategories = ['Surveillance', 'Research'];
+      const { error } = await supabase
+        .from('picklists')
+        .insert(
+          defaultCategories.map((value, index) => ({
+            user_id: userId,
+            type: 'expense_category',
+            value,
+            display_order: index,
+            is_active: true,
+          }))
+        );
+
+      if (error) throw error;
+
+      // Reload picklists
+      const { data: picklists } = await supabase
+        .from("picklists")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("type", "expense_category")
+        .order("display_order");
+
+      if (picklists) {
+        setExpenseCategories(picklists.map(p => ({ id: p.id, value: p.value, isActive: p.is_active })));
+      }
+    } catch (error) {
+      console.error("Error initializing expense categories:", error);
     }
   };
 
@@ -652,14 +695,26 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      const picklistTypeMap = {
+        status: "case_status",
+        updateType: "update_type",
+        expenseCategory: "expense_category",
+      };
+
+      const currentLength = picklistType === "status" 
+        ? caseStatuses.length 
+        : picklistType === "updateType" 
+        ? updateTypes.length 
+        : expenseCategories.length;
+
       const { data, error } = await supabase
         .from("picklists")
         .insert({
           user_id: user.id,
-          type: picklistType === "status" ? "case_status" : "update_type",
+          type: picklistTypeMap[picklistType],
           value: picklistValue.trim(),
           is_active: true,
-          display_order: picklistType === "status" ? caseStatuses.length : updateTypes.length,
+          display_order: currentLength,
         })
         .select()
         .single();
@@ -670,8 +725,10 @@ const Settings = () => {
       
       if (picklistType === "status") {
         setCaseStatuses([...caseStatuses, newItem]);
-      } else {
+      } else if (picklistType === "updateType") {
         setUpdateTypes([...updateTypes, newItem]);
+      } else {
+        setExpenseCategories([...expenseCategories, newItem]);
       }
 
       setPicklistValue("");
@@ -704,9 +761,15 @@ const Settings = () => {
             item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
           )
         );
-      } else {
+      } else if (picklistType === "updateType") {
         setUpdateTypes(
           updateTypes.map((item) =>
+            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
+          )
+        );
+      } else {
+        setExpenseCategories(
+          expenseCategories.map((item) =>
             item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
           )
         );
@@ -722,7 +785,7 @@ const Settings = () => {
     }
   };
 
-  const handleDeletePicklistItem = async (id: string, type: "status" | "updateType") => {
+  const handleDeletePicklistItem = async (id: string, type: "status" | "updateType" | "expenseCategory") => {
     try {
       const { error } = await supabase
         .from("picklists")
@@ -733,8 +796,10 @@ const Settings = () => {
 
       if (type === "status") {
         setCaseStatuses(caseStatuses.filter((item) => item.id !== id));
-      } else {
+      } else if (type === "updateType") {
         setUpdateTypes(updateTypes.filter((item) => item.id !== id));
+      } else {
+        setExpenseCategories(expenseCategories.filter((item) => item.id !== id));
       }
       toast.success("Value deleted successfully");
     } catch (error) {
@@ -743,14 +808,14 @@ const Settings = () => {
     }
   };
 
-  const openAddPicklistDialog = (type: "status" | "updateType") => {
+  const openAddPicklistDialog = (type: "status" | "updateType" | "expenseCategory") => {
     setPicklistType(type);
     setEditingPicklistItem(null);
     setPicklistValue("");
     setPicklistDialogOpen(true);
   };
 
-  const openEditPicklistDialog = (item: { id: string; value: string }, type: "status" | "updateType") => {
+  const openEditPicklistDialog = (item: { id: string; value: string }, type: "status" | "updateType" | "expenseCategory") => {
     setPicklistType(type);
     setEditingPicklistItem(item);
     setPicklistValue(item.value);
@@ -1575,6 +1640,75 @@ const Settings = () => {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleDeletePicklistItem(type.id, "updateType")}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Expense Category Picklist */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Expense Category Picklist</CardTitle>
+                    <CardDescription>
+                      Manage available categories for expenses
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => openAddPicklistDialog("expenseCategory")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Category
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Category Value</TableHead>
+                        <TableHead className="w-[100px]">Active</TableHead>
+                        <TableHead className="text-right w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenseCategories.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                            No expense categories configured
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        expenseCategories.map((category) => (
+                          <TableRow key={category.id}>
+                            <TableCell className="font-medium">{category.value}</TableCell>
+                            <TableCell>
+                              <Badge variant={category.isActive ? "default" : "secondary"}>
+                                {category.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditPicklistDialog(category, "expenseCategory")}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeletePicklistItem(category.id, "expenseCategory")}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

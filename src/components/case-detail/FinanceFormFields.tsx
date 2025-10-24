@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,28 +18,49 @@ interface FinanceFormFieldsProps {
   activities: any[];
 }
 
-const EXPENSE_CATEGORIES = [
-  "Court Fees",
-  "Filing Fees",
-  "Expert Witness",
-  "Investigation",
-  "Research",
-  "Travel",
-  "Office Supplies",
-  "Other",
-];
-
-const BILLING_FREQUENCIES = [
-  "One-time",
-  "Weekly",
-  "Bi-weekly",
-  "Monthly",
-  "Quarterly",
-  "Annually",
-];
-
 export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFieldsProps) => {
+  const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
   const financeType = form.watch("finance_type");
+
+  useEffect(() => {
+    fetchExpenseCategories();
+  }, []);
+
+  const fetchExpenseCategories = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("picklists")
+        .select("value")
+        .eq("user_id", user.id)
+        .eq("type", "expense_category")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setExpenseCategories(data.map(item => item.value));
+      } else {
+        // Fallback to default categories
+        setExpenseCategories(['Surveillance', 'Research']);
+      }
+    } catch (error) {
+      console.error("Error fetching expense categories:", error);
+      // Fallback to default categories on error
+      setExpenseCategories(['Surveillance', 'Research']);
+    }
+  };
+  const BILLING_FREQUENCIES = [
+    "One-time",
+    "Weekly",
+    "Bi-weekly",
+    "Monthly",
+    "Quarterly",
+    "Annually",
+  ];
   
   const getStatusOptions = () => {
     if (financeType === "expense" || financeType === "time") {
@@ -185,8 +208,8 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
-                  {EXPENSE_CATEGORIES.map((cat) => (
+                <SelectContent className="bg-background z-50">
+                  {expenseCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
                     </SelectItem>
@@ -373,10 +396,10 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select frequency" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {BILLING_FREQUENCIES.map((freq) => (
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="bg-background z-50">
+                  {BILLING_FREQUENCIES.map((freq) => (
                       <SelectItem key={freq} value={freq}>
                         {freq}
                       </SelectItem>
@@ -400,10 +423,10 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
               <FormControl>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {getStatusOptions().map((option) => (
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="bg-background z-50">
+                  {getStatusOptions().map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
