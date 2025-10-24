@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -91,6 +91,26 @@ const Settings = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
+  // Picklists State
+  const [caseStatuses, setCaseStatuses] = useState([
+    { id: "1", value: "Open", isActive: true },
+    { id: "2", value: "In Progress", isActive: true },
+    { id: "3", value: "Pending", isActive: true },
+    { id: "4", value: "Closed", isActive: true },
+    { id: "5", value: "On Hold", isActive: true },
+  ]);
+  const [updateTypes, setUpdateTypes] = useState([
+    { id: "1", value: "Email", isActive: true },
+    { id: "2", value: "Call", isActive: true },
+    { id: "3", value: "Note", isActive: true },
+    { id: "4", value: "Meeting", isActive: true },
+    { id: "5", value: "Document", isActive: true },
+  ]);
+  const [picklistDialogOpen, setPicklistDialogOpen] = useState(false);
+  const [picklistType, setPicklistType] = useState<"status" | "updateType">("status");
+  const [editingPicklistItem, setEditingPicklistItem] = useState<{ id: string; value: string } | null>(null);
+  const [picklistValue, setPicklistValue] = useState("");
 
   useEffect(() => {
     loadSettings();
@@ -614,6 +634,80 @@ const Settings = () => {
 
   const isAdmin = currentUserRole === "admin";
 
+  // Picklist handlers
+  const handleAddPicklistItem = () => {
+    if (!picklistValue.trim()) {
+      toast.error("Please enter a value");
+      return;
+    }
+
+    const newItem = {
+      id: Date.now().toString(),
+      value: picklistValue.trim(),
+      isActive: true,
+    };
+
+    if (picklistType === "status") {
+      setCaseStatuses([...caseStatuses, newItem]);
+    } else {
+      setUpdateTypes([...updateTypes, newItem]);
+    }
+
+    setPicklistValue("");
+    setPicklistDialogOpen(false);
+    setEditingPicklistItem(null);
+    toast.success(`${picklistValue} added successfully`);
+  };
+
+  const handleEditPicklistItem = () => {
+    if (!picklistValue.trim() || !editingPicklistItem) {
+      toast.error("Please enter a value");
+      return;
+    }
+
+    if (picklistType === "status") {
+      setCaseStatuses(
+        caseStatuses.map((item) =>
+          item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
+        )
+      );
+    } else {
+      setUpdateTypes(
+        updateTypes.map((item) =>
+          item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
+        )
+      );
+    }
+
+    setPicklistValue("");
+    setPicklistDialogOpen(false);
+    setEditingPicklistItem(null);
+    toast.success("Value updated successfully");
+  };
+
+  const handleDeletePicklistItem = (id: string, type: "status" | "updateType") => {
+    if (type === "status") {
+      setCaseStatuses(caseStatuses.filter((item) => item.id !== id));
+    } else {
+      setUpdateTypes(updateTypes.filter((item) => item.id !== id));
+    }
+    toast.success("Value deleted successfully");
+  };
+
+  const openAddPicklistDialog = (type: "status" | "updateType") => {
+    setPicklistType(type);
+    setEditingPicklistItem(null);
+    setPicklistValue("");
+    setPicklistDialogOpen(true);
+  };
+
+  const openEditPicklistDialog = (item: { id: string; value: string }, type: "status" | "updateType") => {
+    setPicklistType(type);
+    setEditingPicklistItem(item);
+    setPicklistValue(item.value);
+    setPicklistDialogOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -632,11 +726,12 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="preferences">User Preferences</TabsTrigger>
           <TabsTrigger value="organization">Organization</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
           <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()}>Users</TabsTrigger>
+          <TabsTrigger value="picklists">Picklists</TabsTrigger>
         </TabsList>
 
         {/* User Preferences Tab */}
@@ -1298,6 +1393,199 @@ const Settings = () => {
                 </Button>
                 <Button variant="destructive" onClick={handleDeleteUser}>
                   Delete User
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* Picklists Tab */}
+        <TabsContent value="picklists">
+          <div className="space-y-6">
+            {/* Case Status Picklist */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Case Status Picklist</CardTitle>
+                    <CardDescription>
+                      Manage available status options for cases
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => openAddPicklistDialog("status")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Status
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Status Value</TableHead>
+                        <TableHead className="w-[100px]">Active</TableHead>
+                        <TableHead className="text-right w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {caseStatuses.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                            No status values configured
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        caseStatuses.map((status) => (
+                          <TableRow key={status.id}>
+                            <TableCell className="font-medium">{status.value}</TableCell>
+                            <TableCell>
+                              <Badge variant={status.isActive ? "default" : "secondary"}>
+                                {status.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditPicklistDialog(status, "status")}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeletePicklistItem(status.id, "status")}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Update Type Picklist */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Update Type Picklist</CardTitle>
+                    <CardDescription>
+                      Manage available types for case updates
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => openAddPicklistDialog("updateType")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Type
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type Value</TableHead>
+                        <TableHead className="w-[100px]">Active</TableHead>
+                        <TableHead className="text-right w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {updateTypes.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                            No update types configured
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        updateTypes.map((type) => (
+                          <TableRow key={type.id}>
+                            <TableCell className="font-medium">{type.value}</TableCell>
+                            <TableCell>
+                              <Badge variant={type.isActive ? "default" : "secondary"}>
+                                {type.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditPicklistDialog(type, "updateType")}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeletePicklistItem(type.id, "updateType")}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Add/Edit Picklist Dialog */}
+          <Dialog open={picklistDialogOpen} onOpenChange={setPicklistDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingPicklistItem ? "Edit" : "Add"}{" "}
+                  {picklistType === "status" ? "Case Status" : "Update Type"}
+                </DialogTitle>
+                <DialogDescription>
+                  {editingPicklistItem
+                    ? `Update the ${picklistType === "status" ? "status" : "type"} value`
+                    : `Add a new ${picklistType === "status" ? "status" : "type"} option`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="picklistValue">Value</Label>
+                  <Input
+                    id="picklistValue"
+                    value={picklistValue}
+                    onChange={(e) => setPicklistValue(e.target.value)}
+                    placeholder={`Enter ${picklistType === "status" ? "status" : "type"} value`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        editingPicklistItem ? handleEditPicklistItem() : handleAddPicklistItem();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPicklistDialogOpen(false);
+                    setPicklistValue("");
+                    setEditingPicklistItem(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={editingPicklistItem ? handleEditPicklistItem : handleAddPicklistItem}
+                >
+                  {editingPicklistItem ? "Update" : "Add"}
                 </Button>
               </DialogFooter>
             </DialogContent>
