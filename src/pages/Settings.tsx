@@ -93,20 +93,8 @@ const Settings = () => {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Picklists State
-  const [caseStatuses, setCaseStatuses] = useState([
-    { id: "1", value: "open", isActive: true },
-    { id: "2", value: "pending", isActive: true },
-    { id: "3", value: "closed", isActive: true },
-  ]);
-  const [updateTypes, setUpdateTypes] = useState([
-    { id: "1", value: "Surveillance", isActive: true },
-    { id: "2", value: "Case Update", isActive: true },
-    { id: "3", value: "Accounting", isActive: true },
-    { id: "4", value: "Client Contact", isActive: true },
-    { id: "5", value: "3rd Party Contact", isActive: true },
-    { id: "6", value: "Review", isActive: true },
-    { id: "7", value: "Other", isActive: true },
-  ]);
+  const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string, isActive: boolean}>>([]);
+  const [updateTypes, setUpdateTypes] = useState<Array<{id: string, value: string, isActive: boolean}>>([]);
   const [picklistDialogOpen, setPicklistDialogOpen] = useState(false);
   const [picklistType, setPicklistType] = useState<"status" | "updateType">("status");
   const [editingPicklistItem, setEditingPicklistItem] = useState<{ id: string; value: string } | null>(null);
@@ -167,6 +155,25 @@ const Settings = () => {
         setAgencyLicenseNumber(orgSettings.agency_license_number || "");
         setFeinNumber(orgSettings.fein_number || "");
         setTerms(orgSettings.terms || "");
+      }
+
+      // Load picklists from database
+      const { data: picklists } = await supabase
+        .from("picklists")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("display_order");
+
+      if (picklists) {
+        const statuses = picklists
+          .filter(p => p.type === 'case_status')
+          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active }));
+        const updates = picklists
+          .filter(p => p.type === 'update_type')
+          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active }));
+        
+        setCaseStatuses(statuses);
+        setUpdateTypes(updates);
       }
     } catch (error) {
       console.error("Error loading settings:", error);
@@ -635,63 +642,105 @@ const Settings = () => {
   const isAdmin = currentUserRole === "admin";
 
   // Picklist handlers
-  const handleAddPicklistItem = () => {
+  const handleAddPicklistItem = async () => {
     if (!picklistValue.trim()) {
       toast.error("Please enter a value");
       return;
     }
 
-    const newItem = {
-      id: Date.now().toString(),
-      value: picklistValue.trim(),
-      isActive: true,
-    };
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    if (picklistType === "status") {
-      setCaseStatuses([...caseStatuses, newItem]);
-    } else {
-      setUpdateTypes([...updateTypes, newItem]);
+      const { data, error } = await supabase
+        .from("picklists")
+        .insert({
+          user_id: user.id,
+          type: picklistType === "status" ? "case_status" : "update_type",
+          value: picklistValue.trim(),
+          is_active: true,
+          display_order: picklistType === "status" ? caseStatuses.length : updateTypes.length,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newItem = { id: data.id, value: data.value, isActive: data.is_active };
+      
+      if (picklistType === "status") {
+        setCaseStatuses([...caseStatuses, newItem]);
+      } else {
+        setUpdateTypes([...updateTypes, newItem]);
+      }
+
+      setPicklistValue("");
+      setPicklistDialogOpen(false);
+      setEditingPicklistItem(null);
+      toast.success(`${picklistValue} added successfully`);
+    } catch (error) {
+      console.error("Error adding picklist item:", error);
+      toast.error("Failed to add picklist item");
     }
-
-    setPicklistValue("");
-    setPicklistDialogOpen(false);
-    setEditingPicklistItem(null);
-    toast.success(`${picklistValue} added successfully`);
   };
 
-  const handleEditPicklistItem = () => {
+  const handleEditPicklistItem = async () => {
     if (!picklistValue.trim() || !editingPicklistItem) {
       toast.error("Please enter a value");
       return;
     }
 
-    if (picklistType === "status") {
-      setCaseStatuses(
-        caseStatuses.map((item) =>
-          item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
-        )
-      );
-    } else {
-      setUpdateTypes(
-        updateTypes.map((item) =>
-          item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
-        )
-      );
-    }
+    try {
+      const { error } = await supabase
+        .from("picklists")
+        .update({ value: picklistValue.trim() })
+        .eq("id", editingPicklistItem.id);
 
-    setPicklistValue("");
-    setPicklistDialogOpen(false);
-    setEditingPicklistItem(null);
-    toast.success("Value updated successfully");
+      if (error) throw error;
+
+      if (picklistType === "status") {
+        setCaseStatuses(
+          caseStatuses.map((item) =>
+            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
+          )
+        );
+      } else {
+        setUpdateTypes(
+          updateTypes.map((item) =>
+            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
+          )
+        );
+      }
+
+      setPicklistValue("");
+      setPicklistDialogOpen(false);
+      setEditingPicklistItem(null);
+      toast.success("Value updated successfully");
+    } catch (error) {
+      console.error("Error updating picklist item:", error);
+      toast.error("Failed to update picklist item");
+    }
   };
 
-  const handleDeletePicklistItem = (id: string, type: "status" | "updateType") => {
-    if (type === "status") {
-      setCaseStatuses(caseStatuses.filter((item) => item.id !== id));
-    } else {
-      setUpdateTypes(updateTypes.filter((item) => item.id !== id));
+  const handleDeletePicklistItem = async (id: string, type: "status" | "updateType") => {
+    try {
+      const { error } = await supabase
+        .from("picklists")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      if (type === "status") {
+        setCaseStatuses(caseStatuses.filter((item) => item.id !== id));
+      } else {
+        setUpdateTypes(updateTypes.filter((item) => item.id !== id));
+      }
+      toast.success("Value deleted successfully");
+    } catch (error) {
+      console.error("Error deleting picklist item:", error);
+      toast.error("Failed to delete picklist item");
     }
-    toast.success("Value deleted successfully");
   };
 
   const openAddPicklistDialog = (type: "status" | "updateType") => {

@@ -85,6 +85,7 @@ interface Contact {
 export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFormProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string}>>([]);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
@@ -103,6 +104,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   useEffect(() => {
     if (open) {
       fetchAccountsAndContacts();
+      fetchCaseStatuses();
       if (editingCase) {
         form.reset({
           title: editingCase.title,
@@ -130,6 +132,27 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       }
     }
   }, [open, editingCase]);
+
+  const fetchCaseStatuses = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("picklists")
+        .select("id, value")
+        .eq("user_id", user.id)
+        .eq("type", "case_status")
+        .eq("is_active", true)
+        .order("display_order");
+
+      if (data) {
+        setCaseStatuses(data);
+      }
+    } catch (error) {
+      console.error("Error fetching case statuses:", error);
+    }
+  };
 
   const fetchAccountsAndContacts = async () => {
     try {
@@ -257,9 +280,11 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
+                        {caseStatuses.map((status) => (
+                          <SelectItem key={status.id} value={status.value}>
+                            {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

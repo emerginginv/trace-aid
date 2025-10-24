@@ -51,9 +51,32 @@ const CaseDetail = () => {
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string}>>([]);
   useEffect(() => {
     fetchCaseData();
+    fetchCaseStatuses();
   }, [id]);
+
+  const fetchCaseStatuses = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("picklists")
+        .select("id, value")
+        .eq("user_id", user.id)
+        .eq("type", "case_status")
+        .eq("is_active", true)
+        .order("display_order");
+
+      if (data) {
+        setCaseStatuses(data);
+      }
+    } catch (error) {
+      console.error("Error fetching case statuses:", error);
+    }
+  };
   const fetchCaseData = async () => {
     try {
       const {
@@ -211,9 +234,11 @@ const CaseDetail = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
+                {caseStatuses.map((status) => (
+                  <SelectItem key={status.id} value={status.value}>
+                    {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {caseData.priority && <Badge className={getPriorityColor(caseData.priority)}>
