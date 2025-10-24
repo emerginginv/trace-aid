@@ -43,6 +43,7 @@ export function AppSidebar() {
     full_name: string | null;
     email: string;
     role: string;
+    avatar_url: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export function AppSidebar() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("full_name, email")
+        .select("full_name, email, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -66,6 +67,7 @@ export function AppSidebar() {
         full_name: profile?.full_name || null,
         email: profile?.email || user.email || "",
         role: userRole?.role || "member",
+        avatar_url: profile?.avatar_url || null,
       });
     };
 
@@ -160,7 +162,7 @@ export function AppSidebar() {
             }}
           >
             <Avatar className="h-10 w-10">
-              <AvatarImage src="" alt={userProfile.full_name || userProfile.email} />
+              <AvatarImage src={userProfile.avatar_url || ""} alt={userProfile.full_name || userProfile.email} />
               <AvatarFallback className="bg-primary text-primary-foreground">
                 {getInitials(userProfile.full_name, userProfile.email)}
               </AvatarFallback>
