@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,73 +24,86 @@ interface UserProfile {
   email: string;
 }
 
-// Mock Updates Data
-const MOCK_UPDATES: Update[] = [
-  {
-    id: "1",
-    title: "Initial case assessment completed",
-    description: "Reviewed all documentation and client statements. Case has strong merit based on preliminary analysis.",
-    created_at: "2025-01-15T10:30:00Z",
-    update_type: "Status Update",
-    user_id: "user1",
-  },
-  {
-    id: "2",
-    title: "Discovery documents submitted",
-    description: "Filed motion for discovery. Expecting response within 30 days per court rules.",
-    created_at: "2025-01-20T14:20:00Z",
-    update_type: "Filing",
-    user_id: "user2",
-  },
-  {
-    id: "3",
-    title: "Client meeting notes",
-    description: "Met with client to discuss case strategy. Client approved proceeding with expert witness deposition.",
-    created_at: "2025-02-01T09:15:00Z",
-    update_type: "Meeting",
-    user_id: "user1",
-  },
-  {
-    id: "4",
-    title: "Settlement offer received",
-    description: "Opposing counsel proposed settlement of $150,000. Discussed with client - considering counter-offer.",
-    created_at: "2025-02-10T16:45:00Z",
-    update_type: "Negotiation",
-    user_id: "user2",
-  },
-  {
-    id: "5",
-    title: "Expert witness confirmed",
-    description: "Dr. Anderson agreed to testify. Deposition scheduled for March 15th.",
-    created_at: "2025-02-18T11:00:00Z",
-    update_type: "Witness",
-    user_id: "user1",
-  },
-];
-
-const MOCK_USER_PROFILES: Record<string, UserProfile> = {
-  user1: { id: "user1", full_name: "Sarah Martinez", email: "sarah.martinez@lawfirm.com" },
-  user2: { id: "user2", full_name: "Michael Chen", email: "michael.chen@lawfirm.com" },
-};
-
 export const CaseUpdates = ({ caseId }: { caseId: string }) => {
-  const [updates, setUpdates] = useState<Update[]>(MOCK_UPDATES);
-  const [loading, setLoading] = useState(false);
+  const [updates, setUpdates] = useState<Update[]>([]);
+  const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingUpdate, setEditingUpdate] = useState<Update | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [userProfiles] = useState<Record<string, UserProfile>>(MOCK_USER_PROFILES);
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    fetchUpdates();
+  }, [caseId]);
+
+  const fetchUpdates = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("case_updates")
+        .select("*")
+        .eq("case_id", caseId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setUpdates(data || []);
+
+      // Fetch user profiles for all unique user IDs
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map((u) => u.user_id))];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+
+        if (profiles) {
+          const profileMap: Record<string, UserProfile> = {};
+          profiles.forEach((p) => {
+            profileMap[p.id] = p;
+          });
+          setUserProfiles(profileMap);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching updates:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load updates",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEdit = (update: Update) => {
     setEditingUpdate(update);
     setFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("Delete this update?")) return;
-    setUpdates(updates.filter(u => u.id !== id));
-    toast({ title: "Success", description: "Update deleted" });
+    
+    try {
+      const { error } = await supabase
+        .from("case_updates")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: "Update deleted" });
+      fetchUpdates();
+    } catch (error) {
+      console.error("Error deleting update:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete update",
+        variant: "destructive",
+      });
+    }
   };
 
   const toggleRow = (id: string) => {
@@ -174,8 +187,8 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
                 const userProfile = userProfiles[update.user_id];
                 
                 return (
-                  <>
-                    <TableRow key={update.id}>
+                  <React.Fragment key={update.id}>
+                    <TableRow>
                       <TableCell>
                         <Button 
                           variant="ghost" 
@@ -216,7 +229,7 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </TableBody>
@@ -228,7 +241,7 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
         caseId={caseId}
         open={formOpen}
         onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingUpdate(null); }}
-        onSuccess={() => {}}
+        onSuccess={fetchUpdates}
         editingUpdate={editingUpdate}
       />
     </>
