@@ -392,12 +392,13 @@ const Settings = () => {
       setInviting(true);
 
       // Check if user already exists in profiles
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: profileCheckError } = await supabase
         .from("profiles")
         .select("id")
         .eq("email", inviteEmail)
-        .single();
+        .maybeSingle();
 
+      // Ignore "no rows" errors, only care if we found a user
       if (existingProfile) {
         toast.error(`A user with email ${inviteEmail} already exists in the system`);
         setInviting(false);
