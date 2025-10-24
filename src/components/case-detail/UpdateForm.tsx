@@ -27,6 +27,7 @@ interface UpdateFormProps {
 
 export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdate }: UpdateFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [updateTypes, setUpdateTypes] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -36,6 +37,10 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       update_type: "Other",
     },
   });
+
+  useEffect(() => {
+    fetchUpdateTypes();
+  }, []);
 
   useEffect(() => {
     if (editingUpdate) {
@@ -52,6 +57,50 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       });
     }
   }, [editingUpdate, form]);
+
+  const fetchUpdateTypes = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("picklists")
+        .select("value")
+        .eq("user_id", user.id)
+        .eq("type", "update_type")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setUpdateTypes(data.map(item => item.value));
+      } else {
+        // Default update types if none exist in picklist
+        setUpdateTypes([
+          "Surveillance",
+          "Case Update",
+          "Accounting",
+          "Client Contact",
+          "3rd Party Contact",
+          "Review",
+          "Other"
+        ]);
+      }
+    } catch (error) {
+      console.error("Error fetching update types:", error);
+      // Fallback to defaults on error
+      setUpdateTypes([
+        "Surveillance",
+        "Case Update",
+        "Accounting",
+        "Client Contact",
+        "3rd Party Contact",
+        "Review",
+        "Other"
+      ]);
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
@@ -138,13 +187,11 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Surveillance">Surveillance</SelectItem>
-                      <SelectItem value="Case Update">Case Update</SelectItem>
-                      <SelectItem value="Accounting">Accounting</SelectItem>
-                      <SelectItem value="Client Contact">Client Contact</SelectItem>
-                      <SelectItem value="3rd Party Contact">3rd Party Contact</SelectItem>
-                      <SelectItem value="Review">Review</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      {updateTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
