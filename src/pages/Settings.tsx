@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { z } from "zod";
 import { TemplateList } from "@/components/templates/TemplateList";
+import { EmailTestForm } from "@/components/EmailTestForm";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -890,13 +891,17 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-7">
           <TabsTrigger value="preferences" className="text-xs sm:text-sm">Preferences</TabsTrigger>
           <TabsTrigger value="organization" className="text-xs sm:text-sm">Organization</TabsTrigger>
           <TabsTrigger value="permissions" className="text-xs sm:text-sm">Permissions</TabsTrigger>
           <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()} className="text-xs sm:text-sm">Users</TabsTrigger>
           <TabsTrigger value="picklists" className="text-xs sm:text-sm">Picklists</TabsTrigger>
           <TabsTrigger value="templates" className="text-xs sm:text-sm">Templates</TabsTrigger>
+          <TabsTrigger value="email" className="text-xs sm:text-sm">
+            <Mail className="w-3 h-3 mr-1" />
+            Email
+          </TabsTrigger>
         </TabsList>
 
         {/* User Preferences Tab */}
@@ -1896,6 +1901,10 @@ const Settings = () => {
 
         <TabsContent value="templates" className="space-y-6">
           <TemplateList />
+        </TabsContent>
+
+        <TabsContent value="email" className="space-y-6">
+          <EmailTestForm />
         </TabsContent>
       </Tabs>
     </div>
