@@ -148,7 +148,17 @@ export function AppSidebar() {
 
         {/* User Profile Section */}
         {userProfile && (
-          <div className="flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/50">
+          <div 
+            className="flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/50 cursor-pointer hover:bg-sidebar-accent transition-colors"
+            onClick={() => navigate("/profile")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                navigate("/profile");
+              }
+            }}
+          >
             <Avatar className="h-10 w-10">
               <AvatarImage src="" alt={userProfile.full_name || userProfile.email} />
               <AvatarFallback className="bg-primary text-primary-foreground">
