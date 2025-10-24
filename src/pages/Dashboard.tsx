@@ -287,7 +287,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
         {statCards.map(stat => {
         const Icon = stat.icon;
-        return <Card key={stat.title} className="rounded bg-gray-700">
+        return <Card key={stat.title} className="rounded bg-transparent">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.title}
@@ -306,7 +306,7 @@ const Dashboard = () => {
       {/* Main Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
         {/* Due Tasks */}
-        <Card className="bg-gray-500">
+        <Card className="rounded bg-transparent">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -317,7 +317,7 @@ const Dashboard = () => {
             {dueTasks.length === 0 ? <p className="text-sm text-muted-foreground">No pending tasks</p> : dueTasks.map(task => {
             const taskDate = parseISO(task.dueDate);
             const isOverdue = isPast(taskDate) && !isToday(taskDate);
-            return <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+            return <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border transition-colors bg-gray-300">
                     <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-0.5" />
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
@@ -347,7 +347,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Calendar Events */}
-        <Card className="bg-gray-500">
+        <Card className="bg-transparent">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -355,7 +355,7 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
-            {relevantEvents.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming events</p> : relevantEvents.map(event => <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedEvent(event)}>
+            {relevantEvents.length === 0 ? <p className="text-sm text-muted-foreground bg-gray-300">No upcoming events</p> : relevantEvents.map(event => <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedEvent(event)}>
                   <div className="flex-1 space-y-1">
                     <p className="font-medium text-sm">{event.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -371,7 +371,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Updates */}
-        <Card className="bg-gray-500">
+        <Card className="bg-transparent">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -380,7 +380,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
             {updates.length === 0 ? <p className="text-sm text-muted-foreground">No recent updates</p> : updates.map(update => <div key={update.id} className="rounded-lg border bg-card">
-                  <div className="flex items-start gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)}>
+                  <div onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)} className="flex items-start gap-3 p-3 transition-colors cursor-pointer bg-zinc-300">
                     <div className="mt-0.5">
                       {getUpdateIcon(update.type)}
                     </div>
@@ -407,7 +407,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Expenses */}
-        <Card className="bg-gray-500">
+        <Card className="bg-transparent">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -417,7 +417,7 @@ const Dashboard = () => {
           <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
             {expenses.length === 0 ? <p className="text-sm text-muted-foreground">No recent expenses</p> : <>
                 {expenses.map(expense => <div key={expense.id} className="rounded-lg border bg-card">
-                    <div className="flex items-start justify-between gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)}>
+                    <div onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)} className="flex items-start justify-between gap-3 p-3 transition-colors cursor-pointer bg-gray-300">
                       <div className="flex-1 space-y-1">
                         <p className="font-medium text-sm">{expense.description}</p>
                         <div className="flex items-center gap-2">
