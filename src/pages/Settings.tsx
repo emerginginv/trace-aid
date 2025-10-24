@@ -556,8 +556,20 @@ const Settings = () => {
         return;
       }
 
-      if (!organization?.id) {
-        toast.error("No organization selected");
+      if (!currentUserId) {
+        toast.error("Not authenticated");
+        return;
+      }
+
+      // Get the organization ID from the current user's organization membership
+      const { data: orgMember, error: orgError } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+
+      if (orgError || !orgMember) {
+        toast.error("Could not find organization");
         return;
       }
 
@@ -565,7 +577,7 @@ const Settings = () => {
       const { error } = await supabase.rpc('update_user_role', {
         _user_id: userId,
         _new_role: newRole,
-        _org_id: organization.id
+        _org_id: orgMember.organization_id
       });
 
       if (error) throw error;
