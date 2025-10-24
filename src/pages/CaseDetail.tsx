@@ -16,7 +16,6 @@ import { CaseFinances } from "@/components/case-detail/CaseFinances";
 import { CaseAttachments } from "@/components/case-detail/CaseAttachments";
 import { RetainerFundsWidget } from "@/components/case-detail/RetainerFundsWidget";
 import { CaseCalendar } from "@/components/case-detail/CaseCalendar";
-
 interface Case {
   id: string;
   case_number: string;
@@ -30,20 +29,19 @@ interface Case {
   due_date: string | null;
   created_at: string;
 }
-
 interface Account {
   id: string;
   name: string;
 }
-
 interface Contact {
   id: string;
   first_name: string;
   last_name: string;
 }
-
 const CaseDetail = () => {
-  const { id } = useParams();
+  const {
+    id
+  } = useParams();
   const navigate = useNavigate();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
@@ -51,43 +49,37 @@ const CaseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
   useEffect(() => {
     fetchCaseData();
   }, [id]);
-
   const fetchCaseData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data, error } = await supabase
-        .from("cases")
-        .select("*")
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from("cases").select("*").eq("id", id).eq("user_id", user.id).single();
       if (error) throw error;
       setCaseData(data);
 
       // Fetch account if exists
       if (data.account_id) {
-        const { data: accountData } = await supabase
-          .from("accounts")
-          .select("id, name")
-          .eq("id", data.account_id)
-          .single();
+        const {
+          data: accountData
+        } = await supabase.from("accounts").select("id, name").eq("id", data.account_id).single();
         if (accountData) setAccount(accountData);
       }
 
       // Fetch contact if exists
       if (data.contact_id) {
-        const { data: contactData } = await supabase
-          .from("contacts")
-          .select("id, first_name, last_name")
-          .eq("id", data.contact_id)
-          .single();
+        const {
+          data: contactData
+        } = await supabase.from("contacts").select("id, first_name, last_name").eq("id", data.contact_id).single();
         if (contactData) setContact(contactData);
       }
     } catch (error) {
@@ -95,55 +87,49 @@ const CaseDetail = () => {
       toast({
         title: "Error",
         description: "Failed to load case details",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       open: "bg-blue-500/10 text-blue-500 border-blue-500/20",
       in_progress: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-      closed: "bg-green-500/10 text-green-500 border-green-500/20",
+      closed: "bg-green-500/10 text-green-500 border-green-500/20"
     };
     return colors[status] || "bg-muted";
   };
-
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
       low: "bg-gray-500/10 text-gray-500 border-gray-500/20",
       medium: "bg-blue-500/10 text-blue-500 border-blue-500/20",
       high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-      critical: "bg-red-500/10 text-red-500 border-red-500/20",
+      critical: "bg-red-500/10 text-red-500 border-red-500/20"
     };
     return colors[priority] || "bg-muted";
   };
-
   const handleDelete = async () => {
     if (!caseData) return;
-    
     if (!confirm(`Are you sure you want to delete case "${caseData.title}"? This action cannot be undone.`)) {
       return;
     }
-
     setDeleting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-
-      const { error } = await supabase
-        .from("cases")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
-
+      const {
+        error
+      } = await supabase.from("cases").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
-
       toast({
         title: "Success",
-        description: "Case deleted successfully",
+        description: "Case deleted successfully"
       });
       navigate("/cases");
     } catch (error) {
@@ -151,35 +137,27 @@ const CaseDetail = () => {
       toast({
         title: "Error",
         description: "Failed to delete case",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setDeleting(false);
     }
   };
-
   if (loading) {
-    return (
-      <div className="space-y-6">
+    return <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-64 w-full" />
-      </div>
-    );
+      </div>;
   }
-
   if (!caseData) {
-    return (
-      <div className="text-center py-12">
+    return <div className="text-center py-12">
         <p className="text-muted-foreground">Case not found</p>
         <Button asChild className="mt-4">
           <Link to="/cases">Back to Cases</Link>
         </Button>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/cases">
@@ -192,11 +170,9 @@ const CaseDetail = () => {
             <Badge className={getStatusColor(caseData.status)}>
               {caseData.status.replace("_", " ")}
             </Badge>
-            {caseData.priority && (
-              <Badge className={getPriorityColor(caseData.priority)}>
+            {caseData.priority && <Badge className={getPriorityColor(caseData.priority)}>
                 {caseData.priority}
-              </Badge>
-            )}
+              </Badge>}
           </div>
           <p className="text-muted-foreground">Case #{caseData.case_number}</p>
         </div>
@@ -205,11 +181,7 @@ const CaseDetail = () => {
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleDelete}
-            disabled={deleting}
-          >
+          <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200">
             <Trash2 className="h-4 w-4 mr-2" />
             {deleting ? "Deleting..." : "Delete"}
           </Button>
@@ -222,37 +194,27 @@ const CaseDetail = () => {
             <CardTitle>Case Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {caseData.description && (
-              <div>
+            {caseData.description && <div>
                 <p className="text-sm font-medium mb-1">Description</p>
                 <p className="text-muted-foreground">{caseData.description}</p>
-              </div>
-            )}
+              </div>}
             <div className="grid grid-cols-2 gap-4">
-              {account && (
-                <div>
+              {account && <div>
                   <p className="text-sm font-medium mb-1">Account</p>
                   <p className="text-muted-foreground">{account.name}</p>
-                </div>
-              )}
-              {contact && (
-                <div>
+                </div>}
+              {contact && <div>
                   <p className="text-sm font-medium mb-1">Contact</p>
                   <p className="text-muted-foreground">{contact.first_name} {contact.last_name}</p>
-                </div>
-              )}
-              {caseData.start_date && (
-                <div>
+                </div>}
+              {caseData.start_date && <div>
                   <p className="text-sm font-medium mb-1">Start Date</p>
                   <p className="text-muted-foreground">{new Date(caseData.start_date).toLocaleDateString()}</p>
-                </div>
-              )}
-              {caseData.due_date && (
-                <div>
+                </div>}
+              {caseData.due_date && <div>
                   <p className="text-sm font-medium mb-1">Due Date</p>
                   <p className="text-muted-foreground">{new Date(caseData.due_date).toLocaleDateString()}</p>
-                </div>
-              )}
+                </div>}
             </div>
           </CardContent>
         </Card>
@@ -295,14 +257,7 @@ const CaseDetail = () => {
         </TabsContent>
       </Tabs>
 
-      <CaseForm 
-        open={editFormOpen} 
-        onOpenChange={setEditFormOpen} 
-        onSuccess={fetchCaseData}
-        editingCase={caseData || undefined}
-      />
-    </div>
-  );
+      <CaseForm open={editFormOpen} onOpenChange={setEditFormOpen} onSuccess={fetchCaseData} editingCase={caseData || undefined} />
+    </div>;
 };
-
 export default CaseDetail;
