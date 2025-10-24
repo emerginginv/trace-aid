@@ -1,19 +1,143 @@
-# Premium Design System Documentation
+# Premium Design System - PI Case Manager
 
 ## 🎨 Overview
 
-This is a comprehensive, production-ready design system built with enterprise-grade polish, accessibility, and premium user experiences in mind.
+This is a comprehensive, production-ready design system built for enterprise-grade applications. It combines modern aesthetics with accessibility, performance, and scalability.
 
 ---
 
-## 🌟 Core Philosophy
+## 🌈 Visual Effects
 
-### Design Principles
-1. **Accessibility First**: WCAG AA compliant with 4.5:1 contrast ratios minimum
-2. **Performance Optimized**: <100ms interactions, skeleton loading states
-3. **Mobile-First**: 44px minimum touch targets, responsive layouts
-4. **Brand Consistency**: Cohesive visual language across all components
-5. **User Delight**: Micro-interactions and celebratory moments
+### Glassmorphism
+Modern frosted glass effects for premium UI elements:
+
+```tsx
+// Light glassmorphism
+<div className="glass rounded-lg p-6">
+  <p>Frosted glass effect</p>
+</div>
+
+// Heavy glassmorphism with saturation
+<div className="glass-heavy rounded-lg p-6">
+  <p>Enhanced frosted glass</p>
+</div>
+
+// Glass navigation bar
+<nav className="glass-nav">
+  {/* Navigation content */}
+</nav>
+```
+
+**CSS Variables:**
+- `--glass-bg`: Background with 70% opacity
+- `--glass-border`: Border with 20% opacity
+- `--backdrop-blur`: 12px blur
+- `--backdrop-blur-heavy`: 24px blur with saturation
+
+### Premium Shadow System
+
+Multi-layered shadows for depth and hierarchy:
+
+**Elevation Levels:**
+```css
+--shadow-xs:   Minimal lift (1px)
+--shadow-sm:   Small elevation (3px)
+--shadow:      Base elevation (6px)
+--shadow-md:   Medium elevation (15px)
+--shadow-lg:   Large elevation (25px)
+--shadow-xl:   Extra large (50px)
+--shadow-2xl:  Maximum elevation (80px)
+```
+
+**Premium Card Shadows:**
+```tsx
+// Standard card with subtle shadow
+<div className="shadow-card">Card content</div>
+
+// Card with hover elevation
+<div className="shadow-card hover:shadow-card-hover">
+  Interactive card
+</div>
+```
+
+**Colored Shadows (Brand Emphasis):**
+```tsx
+// Primary colored glow
+<button className="shadow-primary">Primary Action</button>
+
+// Success state glow
+<div className="shadow-success-glow">Success notification</div>
+
+// Warning state glow
+<div className="shadow-warning-glow">Warning alert</div>
+
+// Destructive state glow
+<div className="shadow-destructive-glow">Delete action</div>
+```
+
+### Gradient Overlays
+
+Subtle gradient effects for visual interest:
+
+```tsx
+// Primary gradient overlay (10-15% opacity)
+<div className="gradient-overlay-primary rounded-lg p-6">
+  <h2>Featured Content</h2>
+</div>
+
+// Subtle background gradient
+<div className="gradient-overlay-subtle">
+  <p>Content with gentle gradient fade</p>
+</div>
+
+// Direct gradient backgrounds
+<div className="gradient-primary text-white p-6 rounded-lg">
+  Primary gradient background
+</div>
+
+<div className="gradient-accent text-white p-6 rounded-lg">
+  Accent gradient background
+</div>
+```
+
+---
+
+## 🎯 Card Variants
+
+### Standard Cards
+```tsx
+// Flat card (no shadow)
+<div className="card-flat">Basic card</div>
+
+// Elevated card with shadow
+<div className="card-elevated">Floating card</div>
+
+// Ghost card (transparent, hover effect)
+<div className="card-ghost">Minimal card</div>
+
+// Interactive card (clickable)
+<div className="card-interactive" onClick={handleClick}>
+  Clickable card with hover effects
+</div>
+```
+
+### Premium Card Styles
+
+**Card with Gradient Border:**
+```tsx
+<div className="card-premium">
+  <h3>Premium Feature</h3>
+  <p>Card with gradient border effect</p>
+</div>
+```
+
+**Glass Card:**
+```tsx
+<div className="glass-card">
+  <h3>Glassmorphism Card</h3>
+  <p>Frosted glass effect with blur</p>
+</div>
+```
 
 ---
 
