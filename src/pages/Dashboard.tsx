@@ -421,7 +421,7 @@ const Dashboard = () => {
                       <div className="flex-1 space-y-1">
                         <p className="font-medium text-sm text-gray-800">{expense.description}</p>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs bg-green-600">
                             {expense.category}
                           </Badge>
                           <span className="text-xs text-blue-700">
