@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
 import Auth from "./pages/Auth";
 import { Onboarding } from "./components/Onboarding";
@@ -44,11 +45,17 @@ const queryClient = new QueryClient({
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <OrganizationProvider>
-        <BrowserRouter>
-          <Toaster />
-          <Sonner />
-          <Routes>
+      <ThemeProvider 
+        attribute="class" 
+        defaultTheme="system" 
+        enableSystem
+        disableTransitionOnChange
+      >
+        <OrganizationProvider>
+          <BrowserRouter>
+            <Toaster />
+            <Sonner />
+            <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
             <Route
@@ -258,9 +265,10 @@ const App = () => {
         <Route path="/style-guide" element={<StyleGuide />} />
         <Route path="/premium-showcase" element={<PremiumShowcase />} />
         <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </OrganizationProvider>
+            </Routes>
+          </BrowserRouter>
+        </OrganizationProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };
