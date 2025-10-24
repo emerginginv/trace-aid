@@ -62,6 +62,15 @@ export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: Temp
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Get user's organization_id
+      const { data: orgData } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!orgData) throw new Error("User not part of an organization");
+
       if (template) {
         const { error } = await supabase
           .from("case_update_templates")
@@ -73,7 +82,12 @@ export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: Temp
       } else {
         const { error } = await supabase
           .from("case_update_templates")
-          .insert({ user_id: user.id, name, body });
+          .insert({ 
+            user_id: user.id, 
+            organization_id: orgData.organization_id,
+            name, 
+            body 
+          });
 
         if (error) throw error;
       }
