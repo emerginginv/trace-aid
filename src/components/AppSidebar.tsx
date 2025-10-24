@@ -10,6 +10,7 @@ import {
   UserCog,
   Settings,
   Calendar,
+  Bell,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,7 @@ const menuItems = [
   { title: "Finance", icon: DollarSign, url: "/finance" },
   { title: "Accounts", icon: Building2, url: "/accounts" },
   { title: "Contacts", icon: Users, url: "/contacts" },
+  { title: "Notifications", icon: Bell, url: "/notifications" },
   { title: "Settings", icon: Settings, url: "/settings" },
 ];
 
