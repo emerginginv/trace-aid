@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { UpdateForm } from "./UpdateForm";
 import { Input } from "@/components/ui/input";
@@ -75,7 +74,6 @@ const MOCK_USER_PROFILES: Record<string, UserProfile> = {
 };
 
 export const CaseUpdates = ({ caseId }: { caseId: string }) => {
-  const navigate = useNavigate();
   const [updates, setUpdates] = useState<Update[]>(MOCK_UPDATES);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -200,9 +198,6 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
                       <TableCell>{format(new Date(update.created_at), "MMM dd, yyyy")}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/updates/${update.id}`)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(update)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
