@@ -37,6 +37,8 @@ interface Case {
   created_at: string;
   case_manager_id: string | null;
   investigator_ids: string[];
+  closed_by_user_id: string | null;
+  closed_at: string | null;
 }
 interface Account {
   id: string;
@@ -52,7 +54,7 @@ const CaseDetail = () => {
     id
   } = useParams();
   const navigate = useNavigate();
-  const { isVendor } = useUserRole();
+  const { isVendor, isAdmin, isManager } = useUserRole();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
@@ -184,23 +186,43 @@ const CaseDetail = () => {
       } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
 
+      // Check if the new status is a "closed" type
+      const newStatusItem = caseStatuses.find(s => s.value === newStatus);
+      const isClosing = newStatusItem?.status_type === 'closed';
+      const oldStatusItem = caseStatuses.find(s => s.value === oldStatus);
+      const wasOpen = oldStatusItem?.status_type === 'open';
+
+      // Prepare update data
+      const updateData: any = {
+        status: newStatus
+      };
+
+      // If transitioning from open to closed, record who closed it and when
+      if (isClosing && wasOpen) {
+        updateData.closed_by_user_id = user.id;
+        updateData.closed_at = new Date().toISOString();
+      }
+
       // Update case status
       const {
         error
-      } = await supabase.from("cases").update({
-        status: newStatus
-      }).eq("id", id).eq("user_id", user.id);
+      } = await supabase.from("cases").update(updateData).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
 
       // Create activity log entry
+      let activityDescription = `Status changed from "${oldStatus}" to "${newStatus}" by ${userName}`;
+      if (isClosing && wasOpen) {
+        activityDescription = `Case closed by ${userName}`;
+      }
+
       const {
         error: activityError
       } = await supabase.from("case_activities").insert({
         case_id: id,
         user_id: user.id,
         activity_type: "Status Change",
-        title: "Status Changed",
-        description: `Status changed from "${oldStatus}" to "${newStatus}" by ${userName}`,
+        title: isClosing && wasOpen ? "Case Closed" : "Status Changed",
+        description: activityDescription,
         status: "completed"
       });
       if (activityError) {
@@ -209,13 +231,17 @@ const CaseDetail = () => {
 
       // Create notification
       await NotificationHelpers.caseStatusChanged(caseData.case_number, newStatus, id!);
+      
+      // Update local state
       setCaseData({
         ...caseData,
-        status: newStatus
+        status: newStatus,
+        ...(isClosing && wasOpen ? { closed_by_user_id: user.id, closed_at: new Date().toISOString() } : {})
       });
+      
       toast({
         title: "Success",
-        description: "Case status updated successfully"
+        description: isClosing && wasOpen ? "Case closed successfully" : "Case status updated successfully"
       });
     } catch (error) {
       console.error("Error updating status:", error);
@@ -226,6 +252,80 @@ const CaseDetail = () => {
       });
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const handleReopenCase = async () => {
+    if (!caseData) return;
+    
+    // Show confirmation dialog
+    if (!confirm("Are you sure you want to reopen this case?")) {
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Get user profile for activity log
+      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      const userName = profile?.full_name || user.email || "Unknown User";
+
+      // Find a default "open" status
+      const openStatus = caseStatuses.find(s => s.status_type === 'open');
+      if (!openStatus) {
+        toast({
+          title: "Error",
+          description: "No open status available. Please configure an open status first.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update case to reopen it
+      const { error } = await supabase
+        .from("cases")
+        .update({
+          status: openStatus.value
+          // Keep closed_by_user_id and closed_at for history
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Create activity log entry
+      const { error: activityError } = await supabase
+        .from("case_activities")
+        .insert({
+          case_id: id,
+          user_id: user.id,
+          activity_type: "Status Change",
+          title: "Case Reopened",
+          description: `Case reopened by ${userName}`,
+          status: "completed"
+        });
+
+      if (activityError) {
+        console.error("Error creating activity log:", activityError);
+      }
+
+      // Update local state
+      setCaseData({
+        ...caseData,
+        status: openStatus.value
+      });
+
+      toast({
+        title: "Success",
+        description: "Case reopened successfully"
+      });
+    } catch (error) {
+      console.error("Error reopening case:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reopen case",
+        variant: "destructive"
+      });
     }
   };
   const handleDelete = async () => {
@@ -290,9 +390,27 @@ const CaseDetail = () => {
       {isClosed && (
         <Alert className="bg-muted/50 border-muted">
           <Info className="h-4 w-4" />
-          <AlertDescription className="flex items-center gap-2">
-            <span className="font-semibold">This case is closed.</span>
-            {!isVendor && <span className="text-sm">Change the status to reopen it.</span>}
+          <AlertDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold">This case is closed.</span>
+                {caseData.closed_by_user_id && caseData.closed_at && (
+                  <span className="text-sm text-muted-foreground">
+                    Closed on {new Date(caseData.closed_at).toLocaleDateString()} at {new Date(caseData.closed_at).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+              {(isAdmin || isManager) && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleReopenCase}
+                  className="self-start sm:self-auto"
+                >
+                  Reopen Case
+                </Button>
+              )}
+            </div>
           </AlertDescription>
         </Alert>
       )}

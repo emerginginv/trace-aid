@@ -443,6 +443,8 @@ export type Database = {
           account_id: string | null
           case_manager_id: string | null
           case_number: string
+          closed_at: string | null
+          closed_by_user_id: string | null
           contact_id: string | null
           created_at: string | null
           description: string | null
@@ -461,6 +463,8 @@ export type Database = {
           account_id?: string | null
           case_manager_id?: string | null
           case_number: string
+          closed_at?: string | null
+          closed_by_user_id?: string | null
           contact_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -479,6 +483,8 @@ export type Database = {
           account_id?: string | null
           case_manager_id?: string | null
           case_number?: string
+          closed_at?: string | null
+          closed_by_user_id?: string | null
           contact_id?: string | null
           created_at?: string | null
           description?: string | null
