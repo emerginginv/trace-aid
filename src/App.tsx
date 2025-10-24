@@ -18,6 +18,7 @@ import ContactEdit from "./pages/ContactEdit";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import UserProfile from "./pages/UserProfile";
+import UserProfileDetail from "./pages/UserProfileDetail";
 import Notifications from "./pages/Notifications";
 import StyleGuide from "./pages/StyleGuide";
 import PremiumShowcase from "./pages/PremiumShowcase";
@@ -162,6 +163,14 @@ const App = () => (
                 <DashboardLayout>
                   <Users />
                 </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users/:id"
+            element={
+              <ProtectedRoute>
+                <UserProfileDetail />
               </ProtectedRoute>
             }
           />

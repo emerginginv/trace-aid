@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, UserPlus, Search, Users as UsersIcon } from "lucide-react";
+import { Loader2, UserPlus, Search, Users as UsersIcon, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { z } from "zod";
@@ -66,6 +67,7 @@ const MOCK_USERS: User[] = [
 ];
 
 const Users = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>("admin");
@@ -255,6 +257,7 @@ const Users = () => {
                   <TableHead>Email Address</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Joined Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -292,6 +295,16 @@ const Users = () => {
                     </TableCell>
                     <TableCell>
                       {format(new Date(user.created_at), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/users/${user.id}`)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
