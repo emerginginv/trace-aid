@@ -35,90 +35,8 @@ interface CaseActivitiesProps {
   caseId: string;
 }
 
-// Mock Activities Data
-const MOCK_ACTIVITIES: Activity[] = [
-  {
-    id: "1",
-    activity_type: "task",
-    title: "Review case documents",
-    description: "Review all submitted evidence and witness statements",
-    due_date: "2025-03-15T17:00:00Z",
-    completed: false,
-    completed_at: null,
-    created_at: "2025-01-10T10:00:00Z",
-    updated_at: "2025-01-10T10:00:00Z",
-    assigned_user_id: "user1",
-    status: "in_progress",
-  },
-  {
-    id: "2",
-    activity_type: "task",
-    title: "Prepare deposition questions",
-    description: "Draft comprehensive questions for expert witness deposition",
-    due_date: "2025-03-10T15:00:00Z",
-    completed: false,
-    completed_at: null,
-    created_at: "2025-01-12T14:30:00Z",
-    updated_at: "2025-01-12T14:30:00Z",
-    assigned_user_id: "user2",
-    status: "to_do",
-  },
-  {
-    id: "3",
-    activity_type: "task",
-    title: "File motion for summary judgment",
-    description: null,
-    due_date: "2025-03-20T23:59:00Z",
-    completed: true,
-    completed_at: "2025-02-15T16:20:00Z",
-    created_at: "2025-01-05T09:00:00Z",
-    updated_at: "2025-02-15T16:20:00Z",
-    assigned_user_id: "user1",
-    status: "done",
-  },
-  {
-    id: "4",
-    activity_type: "event",
-    title: "Client consultation",
-    description: "Initial strategy meeting with client",
-    due_date: "2025-03-12T10:00:00Z",
-    completed: false,
-    completed_at: null,
-    created_at: "2025-01-08T11:00:00Z",
-    updated_at: "2025-01-08T11:00:00Z",
-    assigned_user_id: "user1",
-    status: "scheduled",
-  },
-  {
-    id: "5",
-    activity_type: "event",
-    title: "Expert witness deposition",
-    description: "Deposition with Dr. Anderson at courthouse",
-    due_date: "2025-03-15T14:00:00Z",
-    completed: false,
-    completed_at: null,
-    created_at: "2025-01-20T13:00:00Z",
-    updated_at: "2025-01-20T13:00:00Z",
-    assigned_user_id: "user2",
-    status: "scheduled",
-  },
-  {
-    id: "6",
-    activity_type: "task",
-    title: "Research case precedents",
-    description: "Find similar cases in jurisdiction for reference",
-    due_date: "2025-03-08T17:00:00Z",
-    completed: false,
-    completed_at: null,
-    created_at: "2025-02-01T10:00:00Z",
-    updated_at: "2025-02-01T10:00:00Z",
-    assigned_user_id: null,
-    status: "blocked",
-  },
-];
-
 export function CaseActivities({ caseId }: CaseActivitiesProps) {
-  const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -129,7 +47,8 @@ export function CaseActivities({ caseId }: CaseActivitiesProps) {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+    fetchActivities();
+  }, [caseId]);
 
   const fetchUsers = async () => {
     try {
@@ -150,18 +69,62 @@ export function CaseActivities({ caseId }: CaseActivitiesProps) {
     }
   };
 
+  const fetchActivities = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('case_activities')
+        .select('*')
+        .eq('case_id', caseId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setActivities(data || []);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load activities",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEdit = (activity: Activity) => {
     setEditingActivity(activity);
     setFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("Delete this activity?")) return;
-    setActivities(activities.filter(a => a.id !== id));
-    toast({
-      title: "Success",
-      description: "Activity deleted successfully",
-    });
+    
+    try {
+      const { error } = await supabase
+        .from('case_activities')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setActivities(activities.filter(a => a.id !== id));
+      toast({
+        title: "Success",
+        description: "Activity deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting activity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete activity",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -369,6 +332,7 @@ export function CaseActivities({ caseId }: CaseActivitiesProps) {
           if (!open) setEditingActivity(null);
         }}
         onSuccess={() => {
+          fetchActivities();
           setFormOpen(false);
           setEditingActivity(null);
         }}
