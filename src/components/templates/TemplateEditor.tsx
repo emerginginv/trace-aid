@@ -4,10 +4,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface Template {
   id: string;
@@ -22,21 +22,15 @@ interface TemplateEditorProps {
   template?: Template;
 }
 
-const DEFAULT_TEMPLATE = `# Case Update Report: {{case_title}}
-
-**Case Number:** {{case_number}}
-**Case Manager:** {{case_manager}}
-**Generated:** {{current_date}}
-
----
-
-## Updates
-
-{{update_list}}
-
----
-
-*This report was generated from case update templates.*`;
+const DEFAULT_TEMPLATE = `<h1>Case Update Report: {{case_title}}</h1>
+<p><strong>Case Number:</strong> {{case_number}}</p>
+<p><strong>Case Manager:</strong> {{case_manager}}</p>
+<p><strong>Generated:</strong> {{current_date}}</p>
+<hr>
+<h2>Updates</h2>
+<p>{{update_list}}</p>
+<hr>
+<p><em>This report was generated from case update templates.</em></p>`;
 
 export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: TemplateEditorProps) => {
   const [name, setName] = useState("");
@@ -107,14 +101,12 @@ export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: Temp
     .replace(/\{\{case_manager\}\}/g, "John Doe")
     .replace(/\{\{current_date\}\}/g, new Date().toLocaleDateString())
     .replace(/\{\{update_list\}\}/g, 
-      `**2024-01-15** - Initial Contact (John Doe)
-Subject contacted and provided initial information.
-
-**2024-01-18** - Evidence Collection (Jane Smith)
-Collected relevant documents and photographs.
-
-**2024-01-22** - Progress Update (John Doe)
-Case is progressing well. Waiting for additional information.`
+      `<p><strong>2024-01-15</strong> - Initial Contact (John Doe)<br>
+Subject contacted and provided initial information.</p>
+<p><strong>2024-01-18</strong> - Evidence Collection (Jane Smith)<br>
+Collected relevant documents and photographs.</p>
+<p><strong>2024-01-22</strong> - Progress Update (John Doe)<br>
+Case is progressing well. Waiting for additional information.</p>`
     );
 
   return (
@@ -147,12 +139,11 @@ Case is progressing well. Waiting for additional information.`
             <TabsContent value="edit" className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="body">Template Body</Label>
-                <Textarea
-                  id="body"
+                <RichTextEditor
                   value={body}
-                  onChange={(e) => setBody(e.target.value)}
+                  onChange={setBody}
                   placeholder="Enter your template here..."
-                  className="font-mono text-sm min-h-[400px]"
+                  className="min-h-[400px]"
                 />
               </div>
 
@@ -175,11 +166,10 @@ Case is progressing well. Waiting for additional information.`
             <TabsContent value="preview">
               <Card>
                 <CardContent className="p-6">
-                  <div className="prose prose-sm max-w-none">
-                    <pre className="whitespace-pre-wrap break-words text-sm">
-                      {mockPreview}
-                    </pre>
-                  </div>
+                  <div 
+                    className="prose prose-sm max-w-none" 
+                    dangerouslySetInnerHTML={{ __html: mockPreview }}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

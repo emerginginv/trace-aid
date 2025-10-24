@@ -1091,3 +1091,53 @@
   box-shadow: 0 0 10px hsl(var(--primary) / 0.2);
 }
 
+/* ===== RICH TEXT EDITOR STYLES ===== */
+.rich-text-editor .ql-container {
+  @apply min-h-[400px] border-input rounded-b-md bg-card;
+}
+
+.rich-text-editor .ql-toolbar {
+  @apply border-input rounded-t-md bg-muted/50;
+}
+
+.rich-text-editor .ql-editor {
+  @apply min-h-[400px] text-foreground;
+}
+
+.rich-text-editor .ql-editor.ql-blank::before {
+  @apply text-muted-foreground italic;
+}
+
+.rich-text-editor .ql-stroke {
+  @apply stroke-foreground;
+}
+
+.rich-text-editor .ql-fill {
+  @apply fill-foreground;
+}
+
+.rich-text-editor .ql-picker-label {
+  @apply text-foreground;
+}
+
+.rich-text-editor .ql-snow .ql-picker-options {
+  @apply bg-popover border-border;
+}
+
+.rich-text-editor .ql-snow .ql-picker-item:hover {
+  @apply text-primary;
+}
+
+/* Dark mode adjustments */
+.dark .rich-text-editor .ql-toolbar {
+  @apply bg-muted;
+}
+
+.dark .rich-text-editor .ql-container {
+  @apply bg-card;
+}
+
+.dark .rich-text-editor .ql-editor {
+  @apply bg-card;
+}
+
