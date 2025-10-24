@@ -116,34 +116,20 @@ const Users = () => {
     if (!organization?.id) return;
 
     try {
-      // Update in organization_members
-      const { error: memberError } = await supabase
-        .from("organization_members")
-        .update({ role: newRole })
-        .eq("user_id", userId)
-        .eq("organization_id", organization.id);
+      // Use secure database function to update role
+      const { error } = await supabase.rpc('update_user_role', {
+        _user_id: userId,
+        _new_role: newRole,
+        _org_id: organization.id
+      });
 
-      if (memberError) throw memberError;
-
-      // Update in user_roles
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId);
-
-      if (roleError) throw roleError;
-
-      const { error: insertError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId, role: newRole });
-
-      if (insertError) throw insertError;
+      if (error) throw error;
 
       toast.success("User role updated successfully");
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating role:", error);
-      toast.error("Failed to update user role");
+      toast.error(error.message || "Failed to update user role");
     }
   };
 
