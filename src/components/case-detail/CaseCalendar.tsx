@@ -48,9 +48,10 @@ interface CaseCalendarProps {
   filterUser?: string;
   filterStatus?: string;
   onNeedCaseSelection?: (callback: (selectedCaseId: string) => void) => void;
+  isClosedCase?: boolean;
 }
 
-export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: externalFilterStatus, onNeedCaseSelection }: CaseCalendarProps) {
+export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false }: CaseCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [users, setUsers] = useState<User[]>([]);

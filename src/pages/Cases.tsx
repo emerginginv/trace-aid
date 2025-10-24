@@ -130,6 +130,11 @@ const Cases = () => {
     return {};
   };
 
+  const isClosedCase = (status: string) => {
+    const statusItem = statusPicklists.find(s => s.value === status);
+    return statusItem?.status_type === 'closed';
+  };
+
   const handleDeleteClick = (caseId: string) => {
     setCaseToDelete(caseId);
     setDeleteDialogOpen(true);
@@ -310,11 +315,20 @@ const Cases = () => {
         </div> : <>
           {/* Mobile Card View */}
           <div className="block sm:hidden space-y-4">
-            {filteredCases.map(caseItem => <Card key={caseItem.id} className="p-4">
+            {filteredCases.map(caseItem => {
+              const isClosed = isClosedCase(caseItem.status);
+              return <Card key={caseItem.id} className={`p-4 ${isClosed ? 'opacity-60' : ''}`}>
                 <div className="space-y-3">
                   <div>
                     <div className="font-semibold text-sm">{caseItem.case_number}</div>
-                    <div className="text-foreground font-medium mt-1">{caseItem.title}</div>
+                    <div className={`font-medium mt-1 flex items-center gap-2 ${isClosed ? 'text-muted-foreground' : 'text-foreground'}`}>
+                      {caseItem.title}
+                      {isClosed && (
+                        <Badge variant="secondary" className="text-xs">
+                          Closed
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="flex gap-2">
@@ -351,7 +365,8 @@ const Cases = () => {
                     )}
                   </div>
                 </div>
-              </Card>)}
+              </Card>;
+            })}
           </div>
 
           {/* Desktop Table View */}
@@ -369,9 +384,22 @@ const Cases = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCases.map(caseItem => <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell className="font-medium">{caseItem.case_number}</TableCell>
-                    <TableCell>{caseItem.title}</TableCell>
+                {filteredCases.map(caseItem => {
+                  const isClosed = isClosedCase(caseItem.status);
+                  return <TableRow key={caseItem.id} className={`cursor-pointer hover:bg-muted/50 ${isClosed ? 'opacity-60' : ''}`}>
+                    <TableCell className={`font-medium ${isClosed ? 'text-muted-foreground' : ''}`}>
+                      {caseItem.case_number}
+                    </TableCell>
+                    <TableCell className={isClosed ? 'text-muted-foreground' : ''}>
+                      <div className="flex items-center gap-2">
+                        {caseItem.title}
+                        {isClosed && (
+                          <Badge variant="secondary" className="text-xs">
+                            Closed
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge className="border" style={getStatusStyle(caseItem.status)}>
                         {caseItem.status}
@@ -382,8 +410,10 @@ const Cases = () => {
                         {caseItem.priority}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(caseItem.start_date).toLocaleDateString()}</TableCell>
-                    <TableCell>
+                    <TableCell className={isClosed ? 'text-muted-foreground' : ''}>
+                      {new Date(caseItem.start_date).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className={isClosed ? 'text-muted-foreground' : ''}>
                       {caseItem.due_date ? new Date(caseItem.due_date).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell className="text-right">
@@ -404,7 +434,8 @@ const Cases = () => {
                         )}
                       </div>
                     </TableCell>
-                  </TableRow>)}
+                  </TableRow>;
+                })}
               </TableBody>
             </Table>
           </Card>

@@ -35,9 +35,10 @@ interface UploadingFile {
 
 interface CaseAttachmentsProps {
   caseId: string;
+  isClosedCase?: boolean;
 }
 
-export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
+export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachmentsProps) => {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);

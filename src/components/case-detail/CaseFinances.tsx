@@ -37,7 +37,7 @@ interface Finance {
   hourly_rate?: number;
 }
 
-export const CaseFinances = ({ caseId }: { caseId: string }) => {
+export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
   const [finances, setFinances] = useState<Finance[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

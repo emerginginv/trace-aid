@@ -25,7 +25,7 @@ interface UserProfile {
   email: string;
 }
 
-export const CaseUpdates = ({ caseId }: { caseId: string }) => {
+export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
   const [updates, setUpdates] = useState<Update[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -156,11 +156,11 @@ export const CaseUpdates = ({ caseId }: { caseId: string }) => {
           <p className="text-muted-foreground">Activity log and progress notes</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={() => setReportDialogOpen(true)} variant="outline" className="w-full sm:w-auto">
+          <Button onClick={() => setReportDialogOpen(true)} variant="outline" className="w-full sm:w-auto" disabled={isClosedCase}>
             <FileText className="h-4 w-4 mr-2" />
             Generate Report
           </Button>
-          <Button onClick={() => setFormOpen(true)} className="w-full sm:w-auto">
+          <Button onClick={() => setFormOpen(true)} className="w-full sm:w-auto" disabled={isClosedCase}>
             <Plus className="h-4 w-4 mr-2" />
             Add Update
           </Button>

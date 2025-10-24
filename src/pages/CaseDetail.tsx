@@ -157,6 +157,12 @@ const CaseDetail = () => {
     };
     return colors[priority] || "bg-muted";
   };
+
+  const isClosedCase = () => {
+    if (!caseData) return false;
+    const statusItem = caseStatuses.find(s => s.value === caseData.status);
+    return statusItem?.status_type === 'closed';
+  };
   const handleStatusChange = async (newStatus: string) => {
     if (!caseData) return;
 
@@ -269,12 +275,24 @@ const CaseDetail = () => {
         </Button>
       </div>;
   }
+  const isClosed = isClosedCase();
+  
   return <div className="space-y-4 sm:space-y-6">
       {isVendor && (
         <Alert className="bg-muted/50 border-primary/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
             Vendor Access - You can view case details and submit updates. Contact and account information is restricted.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isClosed && (
+        <Alert className="bg-muted/50 border-muted">
+          <Info className="h-4 w-4" />
+          <AlertDescription className="flex items-center gap-2">
+            <span className="font-semibold">This case is closed.</span>
+            {!isVendor && <span className="text-sm">Change the status to reopen it.</span>}
           </AlertDescription>
         </Alert>
       )}
@@ -287,7 +305,9 @@ const CaseDetail = () => {
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">{caseData.title}</h1>
+            <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold break-words ${isClosed ? 'text-muted-foreground' : ''}`}>
+              {caseData.title}
+            </h1>
             {!isVendor && (
               <div className="flex items-center gap-2">
                 <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
@@ -323,15 +343,27 @@ const CaseDetail = () => {
                 {caseData.priority}
               </Badge>}
           </div>
-          <p className="text-slate-500 text-sm sm:text-base">Case #{caseData.case_number}</p>
+          <p className={`text-sm sm:text-base ${isClosed ? 'text-muted-foreground' : 'text-slate-500'}`}>
+            Case #{caseData.case_number}
+          </p>
         </div>
         {!isVendor && (
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={() => setEmailComposerOpen(true)} className="w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              onClick={() => setEmailComposerOpen(true)} 
+              className="w-full sm:w-auto"
+              disabled={isClosed}
+            >
               <Mail className="h-4 w-4 mr-2" />
               <span className="sm:inline">Send Email</span>
             </Button>
-            <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100 w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              onClick={() => setEditFormOpen(true)} 
+              className="bg-zinc-200 hover:bg-zinc-100 w-full sm:w-auto"
+              disabled={isClosed}
+            >
               <Edit className="h-4 w-4 mr-2" />
               <span className="sm:inline">Edit</span>
             </Button>
@@ -394,32 +426,32 @@ const CaseDetail = () => {
 
         {!isVendor && (
           <TabsContent value="subjects" className="mt-4 sm:mt-6">
-            <CaseSubjects caseId={id!} />
+            <CaseSubjects caseId={id!} isClosedCase={isClosed} />
           </TabsContent>
         )}
 
         <TabsContent value="updates" className="mt-4 sm:mt-6">
-          <CaseUpdates caseId={id!} />
+          <CaseUpdates caseId={id!} isClosedCase={isClosed} />
         </TabsContent>
 
         {!isVendor && (
           <>
             <TabsContent value="activities" className="mt-4 sm:mt-6">
-              <CaseActivities caseId={id!} />
+              <CaseActivities caseId={id!} isClosedCase={isClosed} />
             </TabsContent>
 
             <TabsContent value="calendar" className="mt-4 sm:mt-6">
-          <CaseCalendar caseId={id!} />
+          <CaseCalendar caseId={id!} isClosedCase={isClosed} />
         </TabsContent>
 
         <TabsContent value="finances" className="mt-4 sm:mt-6">
-          <CaseFinances caseId={id!} />
+          <CaseFinances caseId={id!} isClosedCase={isClosed} />
         </TabsContent>
           </>
         )}
 
         <TabsContent value="attachments" className="mt-4 sm:mt-6">
-          <CaseAttachments caseId={id!} />
+          <CaseAttachments caseId={id!} isClosedCase={isClosed} />
         </TabsContent>
       </Tabs>
 

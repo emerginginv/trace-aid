@@ -33,9 +33,10 @@ interface User {
 
 interface CaseActivitiesProps {
   caseId: string;
+  isClosedCase?: boolean;
 }
 
-export function CaseActivities({ caseId }: CaseActivitiesProps) {
+export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);

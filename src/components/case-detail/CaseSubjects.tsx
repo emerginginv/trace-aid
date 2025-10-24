@@ -21,7 +21,7 @@ interface Subject {
   profile_image_url: string | null;
 }
 
-export const CaseSubjects = ({ caseId }: { caseId: string }) => {
+export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
