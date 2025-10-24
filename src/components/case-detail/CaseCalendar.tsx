@@ -58,6 +58,7 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
   const [createDate, setCreateDate] = useState<Date | null>(null);
   const [activityFormOpen, setActivityFormOpen] = useState(false);
   const [activityType, setActivityType] = useState<"task" | "event">("task");
+  const [editingActivity, setEditingActivity] = useState<any>(null);
 
   const filterStatus = externalFilterStatus || internalFilterStatus;
 
@@ -195,18 +196,68 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
       : "bg-green-50 text-green-700 border-green-200";
   };
 
-  const handleDayClick = (day: Date) => {
+  const handleDayClick = (day: Date, event: React.MouseEvent) => {
+    // Only allow creating activities if caseId is provided
+    if (!caseId) {
+      toast({
+        title: "Cannot create activity",
+        description: "Please select a specific case to create activities",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setCreateDate(day);
     setCreateDialogOpen(true);
   };
 
+  const handleActivityClick = async (activity: CalendarActivity, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent day click handler
+    
+    // Only allow viewing/editing if caseId is provided (we need it for the form)
+    if (!caseId) {
+      toast({
+        title: "Cannot edit activity",
+        description: "Please navigate to the specific case to edit this activity",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Fetch full activity details
+      const { data, error } = await supabase
+        .from("case_activities")
+        .select("*")
+        .eq("id", activity.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setEditingActivity(data);
+        setActivityType(data.activity_type as "task" | "event");
+        setActivityFormOpen(true);
+      }
+    } catch (error) {
+      console.error("Error fetching activity details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load activity details",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCreateTask = () => {
+    setEditingActivity(null);
     setActivityType("task");
     setCreateDialogOpen(false);
     setActivityFormOpen(true);
   };
 
   const handleCreateEvent = () => {
+    setEditingActivity(null);
     setActivityType("event");
     setCreateDialogOpen(false);
     setActivityFormOpen(true);
@@ -285,7 +336,7 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
             return (
               <div
                 key={idx}
-                onClick={() => handleDayClick(day)}
+                onClick={(e) => handleDayClick(day, e)}
                 className={`min-h-[120px] border-b border-r p-2 cursor-pointer hover:bg-muted/50 transition-colors relative group ${
                   !isCurrentMonth ? "bg-muted/20 text-muted-foreground" : ""
                 } ${isToday ? "bg-primary/5" : ""}`}
@@ -301,8 +352,9 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
                   {dayActivities.slice(0, 3).map(activity => (
                     <div
                       key={activity.id}
-                      className={`text-xs rounded px-1.5 py-0.5 truncate ${getActivityColor(activity)}`}
-                      title={activity.title}
+                      onClick={(e) => handleActivityClick(activity, e)}
+                      className={`text-xs rounded px-1.5 py-0.5 truncate cursor-pointer hover:opacity-80 transition-opacity ${getActivityColor(activity)}`}
+                      title={`Click to view details: ${activity.title}`}
                     >
                       <div className="flex items-center gap-1">
                         <span className="truncate flex-1">{activity.title}</span>
@@ -382,12 +434,20 @@ export function CaseCalendar({ caseId, filterStatus: externalFilterStatus }: Cas
           activityType={activityType}
           users={users}
           open={activityFormOpen}
-          onOpenChange={setActivityFormOpen}
+          onOpenChange={(open) => {
+            setActivityFormOpen(open);
+            if (!open) {
+              setEditingActivity(null);
+              setCreateDate(null);
+            }
+          }}
           onSuccess={() => {
             fetchData();
             setActivityFormOpen(false);
+            setEditingActivity(null);
             setCreateDate(null);
           }}
+          editingActivity={editingActivity}
           prefilledDate={createDate || undefined}
         />
       )}
