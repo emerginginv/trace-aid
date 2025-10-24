@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { z } from "zod";
+import { TemplateList } from "@/components/templates/TemplateList";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -889,12 +890,13 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="preferences">User Preferences</TabsTrigger>
-          <TabsTrigger value="organization">Organization</TabsTrigger>
-          <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()}>Users</TabsTrigger>
-          <TabsTrigger value="picklists">Picklists</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
+          <TabsTrigger value="preferences" className="text-xs sm:text-sm">Preferences</TabsTrigger>
+          <TabsTrigger value="organization" className="text-xs sm:text-sm">Organization</TabsTrigger>
+          <TabsTrigger value="permissions" className="text-xs sm:text-sm">Permissions</TabsTrigger>
+          <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()} className="text-xs sm:text-sm">Users</TabsTrigger>
+          <TabsTrigger value="picklists" className="text-xs sm:text-sm">Picklists</TabsTrigger>
+          <TabsTrigger value="templates" className="text-xs sm:text-sm">Templates</TabsTrigger>
         </TabsList>
 
         {/* User Preferences Tab */}
@@ -1890,6 +1892,10 @@ const Settings = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        </TabsContent>
+
+        <TabsContent value="templates" className="space-y-6">
+          <TemplateList />
         </TabsContent>
       </Tabs>
     </div>
