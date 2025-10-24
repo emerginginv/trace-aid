@@ -41,6 +41,26 @@ export async function createNotification(params: CreateNotificationParams) {
       return { error };
     }
 
+    // Check if user has email notifications enabled and send email
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('notification_email, email, full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.notification_email) {
+      // Send email notification asynchronously (don't wait for it)
+      supabase.functions.invoke('send-notification-email', {
+        body: {
+          to: profile.email,
+          userName: profile.full_name || 'User',
+          notificationTitle: params.title,
+          notificationMessage: params.message,
+          link: params.link ? `${window.location.origin}${params.link}` : undefined,
+        },
+      }).catch(err => console.error('Failed to send notification email:', err));
+    }
+
     return { error: null };
   } catch (error) {
     console.error('Unexpected error creating notification:', error);
@@ -71,6 +91,26 @@ export async function createNotificationForUser(
     if (error) {
       console.error('Error creating notification for user:', error);
       return { error };
+    }
+
+    // Check if user has email notifications enabled and send email
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('notification_email, email, full_name')
+      .eq('id', userId)
+      .single();
+
+    if (profile?.notification_email) {
+      // Send email notification asynchronously (don't wait for it)
+      supabase.functions.invoke('send-notification-email', {
+        body: {
+          to: profile.email,
+          userName: profile.full_name || 'User',
+          notificationTitle: params.title,
+          notificationMessage: params.message,
+          link: params.link ? `${window.location.origin}${params.link}` : undefined,
+        },
+      }).catch(err => console.error('Failed to send notification email:', err));
     }
 
     return { error: null };

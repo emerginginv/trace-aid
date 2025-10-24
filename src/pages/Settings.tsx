@@ -67,7 +67,6 @@ const Settings = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [notificationEmail, setNotificationEmail] = useState(true);
-  const [notificationSms, setNotificationSms] = useState(false);
   const [notificationPush, setNotificationPush] = useState(true);
 
   // Organization Settings State
@@ -132,7 +131,6 @@ const Settings = () => {
       if (profile) {
         setFullName(profile.full_name || "");
         setNotificationEmail(profile.notification_email ?? true);
-        setNotificationSms(profile.notification_sms ?? false);
         setNotificationPush(profile.notification_push ?? true);
       }
 
@@ -256,7 +254,6 @@ const Settings = () => {
         .update({
           full_name: fullName,
           notification_email: notificationEmail,
-          notification_sms: notificationSms,
           notification_push: notificationPush,
         })
         .eq("id", currentUserId);
@@ -947,7 +944,7 @@ const Settings = () => {
                   <div className="space-y-0.5">
                     <Label htmlFor="emailNotif">Email Notifications</Label>
                     <p className="text-sm text-muted-foreground">
-                      Receive updates via email
+                      Receive email reminders for tasks and updates
                     </p>
                   </div>
                   <Switch
@@ -959,23 +956,9 @@ const Settings = () => {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="smsNotif">SMS Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive updates via text message
-                    </p>
-                  </div>
-                  <Switch
-                    id="smsNotif"
-                    checked={notificationSms}
-                    onCheckedChange={setNotificationSms}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
                     <Label htmlFor="pushNotif">Push Notifications</Label>
                     <p className="text-sm text-muted-foreground">
-                      Receive updates in your browser
+                      Receive in-app notifications for tasks and updates
                     </p>
                   </div>
                   <Switch
