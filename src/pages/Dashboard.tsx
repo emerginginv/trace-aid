@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatDistanceToNow, format, isToday, isYesterday, isTomorrow, isPast, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
+import VendorDashboard from "./VendorDashboard";
 interface Task {
   id: string;
   title: string;
@@ -36,9 +38,17 @@ interface Expense {
   category: string;
 }
 const Dashboard = () => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const { isVendor, loading: roleLoading } = useUserRole();
+
+  // Show vendor dashboard if user is a vendor
+  if (roleLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (isVendor) {
+    return <VendorDashboard />;
+  }
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
