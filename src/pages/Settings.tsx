@@ -391,6 +391,19 @@ const Settings = () => {
 
       setInviting(true);
 
+      // Check if user already exists in profiles
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", inviteEmail)
+        .single();
+
+      if (existingProfile) {
+        toast.error(`A user with email ${inviteEmail} already exists in the system`);
+        setInviting(false);
+        return;
+      }
+
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: inviteEmail,
@@ -403,7 +416,16 @@ const Settings = () => {
         },
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        // Handle specific error messages
+        if (authError.message.includes("already registered") || authError.message.includes("already exists")) {
+          toast.error(`User with email ${inviteEmail} is already registered`);
+        } else {
+          toast.error("Failed to create user: " + authError.message);
+        }
+        setInviting(false);
+        return;
+      }
 
       if (authData.user) {
         // Add role to user_roles table
@@ -414,7 +436,11 @@ const Settings = () => {
             role: inviteRole as any, // Type assertion needed due to Supabase enum mismatch
           });
 
-        if (roleError) throw roleError;
+        if (roleError) {
+          toast.error("User created but failed to assign role: " + roleError.message);
+          setInviting(false);
+          return;
+        }
 
         toast.success(`User ${inviteEmail} has been added successfully`);
         setInviteDialogOpen(false);
@@ -426,7 +452,7 @@ const Settings = () => {
       }
     } catch (error: any) {
       console.error("Error inviting user:", error);
-      toast.error("Failed to invite user: " + error.message);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setInviting(false);
     }
