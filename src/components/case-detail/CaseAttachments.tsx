@@ -43,6 +43,7 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
@@ -440,6 +441,15 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
     );
   };
 
+  // Get unique tags from all attachments
+  const allTags = Array.from(
+    new Set(
+      attachments
+        .flatMap((attachment) => attachment.tags || [])
+        .filter(Boolean)
+    )
+  ).sort();
+
   const filteredAttachments = attachments.filter((attachment) => {
     const displayName = attachment.name || attachment.file_name;
     const matchesSearch = searchQuery === "" || 
@@ -449,7 +459,9 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
     
     const matchesType = typeFilter === "all" || getFileTypeCategory(attachment.file_type) === typeFilter;
     
-    return matchesSearch && matchesType;
+    const matchesTag = tagFilter === "all" || attachment.tags?.includes(tagFilter);
+    
+    return matchesSearch && matchesType && matchesTag;
   });
 
   if (loading) {
@@ -533,13 +545,30 @@ export const CaseAttachments = ({ caseId }: CaseAttachmentsProps) => {
           <SelectTrigger className="w-40">
             <SelectValue placeholder="File Type" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-background z-50">
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="image">Images</SelectItem>
             <SelectItem value="video">Videos</SelectItem>
             <SelectItem value="audio">Audio</SelectItem>
             <SelectItem value="document">Documents</SelectItem>
             <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={tagFilter} onValueChange={setTagFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Filter by Tag" />
+          </SelectTrigger>
+          <SelectContent className="bg-background z-50">
+            <SelectItem value="all">All Tags</SelectItem>
+            {allTags.length === 0 ? (
+              <SelectItem value="none" disabled>No tags available</SelectItem>
+            ) : (
+              allTags.map((tag) => (
+                <SelectItem key={tag} value={tag}>
+                  {tag}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         <div className="flex gap-1 border rounded-md p-0.5">
