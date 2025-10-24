@@ -124,11 +124,11 @@ export function AppSidebar() {
         </div>
 
         {/* User Profile Section */}
-        {userProfile && <div className="flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/50 cursor-pointer hover:bg-sidebar-accent transition-colors" onClick={() => navigate("/profile")} role="button" tabIndex={0} onKeyDown={e => {
+        {userProfile && <div onClick={() => navigate("/profile")} role="button" tabIndex={0} onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           navigate("/profile");
         }
-      }}>
+      }} className="flex items-center gap-3 p-2 cursor-pointer transition-colors bg-slate-600 rounded-md">
             <Avatar className="h-10 w-10">
               <AvatarImage src={userProfile.avatar_url || ""} alt={userProfile.full_name || userProfile.email} />
               <AvatarFallback className="bg-primary text-primary-foreground">
