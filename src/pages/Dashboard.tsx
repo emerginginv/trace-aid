@@ -38,8 +38,13 @@ interface Expense {
   category: string;
 }
 const Dashboard = () => {
-  const { toast } = useToast();
-  const { isVendor, loading: roleLoading } = useUserRole();
+  const {
+    toast
+  } = useToast();
+  const {
+    isVendor,
+    loading: roleLoading
+  } = useUserRole();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -258,21 +263,18 @@ const Dashboard = () => {
   }];
   // Show loading state while checking role
   if (roleLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // Show vendor dashboard if user is a vendor
   if (isVendor) {
     return <VendorDashboard />;
   }
-
   return <div className="space-y-4 sm:space-y-6 md:space-y-8">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
@@ -304,7 +306,7 @@ const Dashboard = () => {
       {/* Main Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
         {/* Due Tasks */}
-        <Card className="bg-sky-200">
+        <Card className="bg-gray-500">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -345,7 +347,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Calendar Events */}
-        <Card className="bg-purple-200">
+        <Card className="bg-gray-500">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -369,7 +371,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Updates */}
-        <Card className="bg-rose-200">
+        <Card className="bg-gray-500">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -405,7 +407,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Expenses */}
-        <Card className="bg-teal-100">
+        <Card className="bg-gray-500">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
