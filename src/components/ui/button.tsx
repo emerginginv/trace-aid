@@ -19,10 +19,10 @@ const buttonVariants = cva(
         warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm hover:shadow-md rounded-md",
       },
       size: {
-        sm: "h-8 px-2.5 text-xs [&_svg]:size-4",      // 32px height - Compact
-        default: "h-10 px-4 text-sm [&_svg]:size-4",   // 40px height - Standard  
-        lg: "h-12 px-6 text-base [&_svg]:size-5",      // 48px height - Prominent
-        icon: "h-10 w-10 [&_svg]:size-5",              // 40px square - Icon only
+        sm: "h-7 px-2 text-xs [&_svg]:size-3.5",       // 28px height - Compact
+        default: "h-9 px-3 text-sm [&_svg]:size-4",    // 36px height - Standard  
+        lg: "h-11 px-4 text-sm [&_svg]:size-4",        // 44px height - Prominent
+        icon: "h-9 w-9 [&_svg]:size-4",                // 36px square - Icon only
       },
     },
     defaultVariants: {

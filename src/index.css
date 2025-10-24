@@ -7,14 +7,14 @@
 @layer base {
   :root {
     /* ===== TYPOGRAPHY SYSTEM ===== */
-    /* Type Scale (1.25 ratio): 12px → 15px → 18px → 24px → 30px → 37px → 46px */
-    --font-size-xs: 0.75rem;      /* 12px - Small labels, captions */
-    --font-size-sm: 0.9375rem;    /* 15px - Secondary text */
-    --font-size-base: 1.125rem;   /* 18px - Body text */
-    --font-size-lg: 1.5rem;       /* 24px - H4, large UI */
-    --font-size-xl: 1.875rem;     /* 30px - H3 */
-    --font-size-2xl: 2.3125rem;   /* 37px - H2 */
-    --font-size-3xl: 2.875rem;    /* 46px - H1 */
+    /* Type Scale (1.2 ratio - Compact): 11px → 13px → 16px → 19px → 23px → 28px → 34px */
+    --font-size-xs: 0.6875rem;    /* 11px - Small labels, captions */
+    --font-size-sm: 0.8125rem;    /* 13px - Secondary text */
+    --font-size-base: 1rem;       /* 16px - Body text */
+    --font-size-lg: 1.1875rem;    /* 19px - H4, large UI */
+    --font-size-xl: 1.4375rem;    /* 23px - H3 */
+    --font-size-2xl: 1.75rem;     /* 28px - H2 */
+    --font-size-3xl: 2.125rem;    /* 34px - H1 */
 
     /* Font Weights */
     --font-weight-light: 300;
@@ -122,16 +122,16 @@
     --input: var(--neutral-200);
     --ring: var(--primary-500);
 
-    /* ===== SPACING SYSTEM (4px/8px base) ===== */
+    /* ===== SPACING SYSTEM (Compact - 4px base) ===== */
     --space-1: 0.25rem;   /* 4px */
     --space-2: 0.5rem;    /* 8px */
     --space-3: 0.75rem;   /* 12px */
     --space-4: 1rem;      /* 16px */
-    --space-5: 1.5rem;    /* 24px */
-    --space-6: 2rem;      /* 32px */
-    --space-8: 3rem;      /* 48px */
-    --space-10: 4rem;     /* 64px */
-    --space-12: 6rem;     /* 96px */
+    --space-5: 1.25rem;   /* 20px - reduced from 24px */
+    --space-6: 1.5rem;    /* 24px - reduced from 32px */
+    --space-8: 2rem;      /* 32px - reduced from 48px */
+    --space-10: 2.5rem;   /* 40px - reduced from 64px */
+    --space-12: 3rem;     /* 48px - reduced from 96px */
 
     /* Border Radius Scale */
     --radius-xs: 0.125rem;   /* 2px */
@@ -176,10 +176,10 @@
     --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 
     /* ===== COMPONENT STANDARDS ===== */
-    /* Button Heights */
-    --button-height-sm: 2rem;      /* 32px */
-    --button-height-md: 2.5rem;    /* 40px */
-    --button-height-lg: 3rem;      /* 48px */
+    /* Button Heights - Compact */
+    --button-height-sm: 1.75rem;   /* 28px - reduced from 32px */
+    --button-height-md: 2.25rem;   /* 36px - reduced from 40px */
+    --button-height-lg: 2.75rem;   /* 44px - reduced from 48px */
 
     /* Input Heights */
     --input-height-sm: 2rem;       /* 32px */
