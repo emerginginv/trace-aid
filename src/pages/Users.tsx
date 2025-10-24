@@ -30,14 +30,14 @@ interface OrgUser {
   id: string;
   email: string;
   full_name: string | null;
-  role: 'admin' | 'manager' | 'investigator';
+  role: 'admin' | 'manager' | 'investigator' | 'vendor';
   status: 'active' | 'pending';
   created_at: string;
 }
 
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
-  role: z.enum(["admin", "manager", "investigator"]),
+  role: z.enum(["admin", "manager", "investigator", "vendor"]),
 });
 
 const Users = () => {
@@ -77,7 +77,7 @@ const Users = () => {
       if (error) throw error;
       // Filter out any invalid roles
       const validUsers = (data || []).filter((u: any) => 
-        ['admin', 'manager', 'investigator'].includes(u.role)
+        ['admin', 'manager', 'investigator', 'vendor'].includes(u.role)
       );
       setUsers(validUsers as OrgUser[]);
     } catch (error) {
@@ -112,7 +112,7 @@ const Users = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'admin' | 'manager' | 'investigator') => {
+  const handleRoleChange = async (userId: string, newRole: 'admin' | 'manager' | 'investigator' | 'vendor') => {
     if (!organization?.id) return;
 
     try {
@@ -259,6 +259,7 @@ const Users = () => {
                             <SelectItem value="admin">Admin - Full access to all settings and billing</SelectItem>
                             <SelectItem value="manager">Case Manager - Can create and manage cases</SelectItem>
                             <SelectItem value="investigator">Investigator - Can view and update assigned cases</SelectItem>
+                            <SelectItem value="vendor">Vendor - External collaborator with limited access</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -297,12 +298,13 @@ const Users = () => {
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by role" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="manager">Case Manager</SelectItem>
-              <SelectItem value="investigator">Investigator</SelectItem>
-            </SelectContent>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="manager">Case Manager</SelectItem>
+                <SelectItem value="investigator">Investigator</SelectItem>
+                <SelectItem value="vendor">Vendor</SelectItem>
+              </SelectContent>
           </Select>
         </div>
 
@@ -343,7 +345,7 @@ const Users = () => {
                       {isAdmin && user.status === 'active' ? (
                         <Select
                           value={user.role}
-                          onValueChange={(value) => handleRoleChange(user.id, value as 'admin' | 'manager' | 'investigator')}
+                          onValueChange={(value) => handleRoleChange(user.id, value as 'admin' | 'manager' | 'investigator' | 'vendor')}
                         >
                           <SelectTrigger className="w-[140px]">
                             <SelectValue />
@@ -352,6 +354,7 @@ const Users = () => {
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="manager">Case Manager</SelectItem>
                             <SelectItem value="investigator">Investigator</SelectItem>
+                            <SelectItem value="vendor">Vendor</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (

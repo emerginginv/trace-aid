@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
-import { Shield, UserCog, Search } from "lucide-react";
+import { Shield, UserCog, Search, Briefcase } from "lucide-react";
 
-type AppRole = 'admin' | 'manager' | 'investigator';
+type AppRole = 'admin' | 'manager' | 'investigator' | 'vendor';
 
 interface RoleBadgeProps {
   role: AppRole;
@@ -23,6 +23,11 @@ export function RoleBadge({ role, className }: RoleBadgeProps) {
     investigator: {
       label: 'Investigator',
       icon: Search,
+      variant: 'outline' as const,
+    },
+    vendor: {
+      label: 'Vendor',
+      icon: Briefcase,
       variant: 'outline' as const,
     },
   };

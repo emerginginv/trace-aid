@@ -11,6 +11,9 @@ import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 interface Case {
   id: string;
   case_number: string;
@@ -23,6 +26,7 @@ interface Case {
   created_at: string;
 }
 const Cases = () => {
+  const { isVendor } = useUserRole();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -82,12 +86,16 @@ const Cases = () => {
         }
       } = await supabase.auth.getUser();
       if (!user) return;
+      
+      // Vendors see only cases they have access to through RLS
+      // RLS will automatically filter based on is_vendor_case_accessible function
       const {
         data,
         error
-      } = await supabase.from("cases").select("*").eq("user_id", user.id).order("created_at", {
+      } = await supabase.from("cases").select("*").order("created_at", {
         ascending: false
       });
+      
       if (error) throw error;
       setCases(data || []);
     } catch (error) {
@@ -158,17 +166,28 @@ const Cases = () => {
       </div>;
   }
   return <div className="space-y-6">
+      {isVendor && (
+        <Alert className="bg-muted/50 border-primary/20">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            You are viewing cases assigned to you. You can only see and update your assigned work.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Cases</h1>
+          <h1 className="text-3xl font-bold">{isVendor ? 'My Cases' : 'Cases'}</h1>
           <p className="text-muted-foreground mt-2">
-            Manage and track your investigation cases
+            {isVendor ? 'View and update your assigned cases' : 'Manage and track your investigation cases'}
           </p>
         </div>
-        <Button className="gap-2" onClick={() => setFormOpen(true)}>
-          <Plus className="w-4 h-4" />
-          New Case
-        </Button>
+        {!isVendor && (
+          <Button className="gap-2" onClick={() => setFormOpen(true)}>
+            <Plus className="w-4 h-4" />
+            New Case
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -260,13 +279,15 @@ const Cases = () => {
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => handleDeleteClick(caseItem.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!isVendor && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleDeleteClick(caseItem.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>)}
@@ -301,15 +322,17 @@ const Cases = () => {
                         View
                       </Link>
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleDeleteClick(caseItem.id)}
-                      className="flex-1"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
+                    {!isVendor && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDeleteClick(caseItem.id)}
+                        className="flex-1"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>)}
@@ -354,13 +377,15 @@ const Cases = () => {
                             <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleDeleteClick(caseItem.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!isVendor && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleDeleteClick(caseItem.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>)}

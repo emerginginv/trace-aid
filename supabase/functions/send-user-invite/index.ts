@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface InviteRequest {
   email: string;
-  role: 'admin' | 'manager' | 'investigator';
+  role: 'admin' | 'manager' | 'investigator' | 'vendor';
   organizationId: string;
 }
 

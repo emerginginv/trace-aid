@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Edit, Trash2 } from "lucide-react";
+import { ChevronLeft, Edit, Trash2, Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { CaseForm } from "@/components/CaseForm";
@@ -21,6 +21,8 @@ import { NotificationHelpers } from "@/lib/notifications";
 import { CaseTeamManager } from "@/components/case-detail/CaseTeamManager";
 import { EmailComposer } from "@/components/EmailComposer";
 import { Mail } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 interface Case {
   id: string;
   case_number: string;
@@ -50,6 +52,7 @@ const CaseDetail = () => {
     id
   } = useParams();
   const navigate = useNavigate();
+  const { isVendor } = useUserRole();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
@@ -266,6 +269,15 @@ const CaseDetail = () => {
       </div>;
   }
   return <div className="space-y-4 sm:space-y-6">
+      {isVendor && (
+        <Alert className="bg-muted/50 border-primary/20">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Vendor Access - You can view case details and submit updates. Contact and account information is restricted.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <Button variant="ghost" size="icon" asChild className="self-start sm:self-auto">
           <Link to="/cases">
@@ -275,36 +287,45 @@ const CaseDetail = () => {
         <div className="flex-1 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">{caseData.title}</h1>
-            <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-              <SelectTrigger className={`w-full sm:w-[140px] h-8 sm:h-7 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {caseStatuses.map(status => <SelectItem key={status.id} value={status.value}>
-                    {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
-                  </SelectItem>)}
-              </SelectContent>
-            </Select>
+            {!isVendor && (
+              <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
+                <SelectTrigger className={`w-full sm:w-[140px] h-8 sm:h-7 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {caseStatuses.map(status => <SelectItem key={status.id} value={status.value}>
+                      {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                    </SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            {isVendor && (
+              <Badge className="border" style={getStatusStyle(caseData.status)}>
+                {caseData.status}
+              </Badge>
+            )}
             {caseData.priority && <Badge className={getPriorityColor(caseData.priority)}>
                 {caseData.priority}
               </Badge>}
           </div>
           <p className="text-slate-500 text-sm sm:text-base">Case #{caseData.case_number}</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => setEmailComposerOpen(true)} className="w-full sm:w-auto">
-            <Mail className="h-4 w-4 mr-2" />
-            <span className="sm:inline">Send Email</span>
-          </Button>
-          <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100 w-full sm:w-auto">
-            <Edit className="h-4 w-4 mr-2" />
-            <span className="sm:inline">Edit</span>
-          </Button>
-          <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
-            <Trash2 className="h-4 w-4 mr-2" />
-            <span className="sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
-          </Button>
-        </div>
+        {!isVendor && (
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => setEmailComposerOpen(true)} className="w-full sm:w-auto">
+              <Mail className="h-4 w-4 mr-2" />
+              <span className="sm:inline">Send Email</span>
+            </Button>
+            <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100 w-full sm:w-auto">
+              <Edit className="h-4 w-4 mr-2" />
+              <span className="sm:inline">Edit</span>
+            </Button>
+            <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
+              <Trash2 className="h-4 w-4 mr-2" />
+              <span className="sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -318,11 +339,11 @@ const CaseDetail = () => {
                 <p className="text-muted-foreground">{caseData.description}</p>
               </div>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              {account && <div>
+              {!isVendor && account && <div>
                   <p className="text-sm font-medium mb-1">Account</p>
                   <p className="text-muted-foreground">{account.name}</p>
                 </div>}
-              {contact && <div>
+              {!isVendor && contact && <div>
                   <p className="text-sm font-medium mb-1">Contact</p>
                   <p className="text-muted-foreground">{contact.first_name} {contact.last_name}</p>
                 </div>}
@@ -338,41 +359,49 @@ const CaseDetail = () => {
           </CardContent>
         </Card>
 
-        <div className="space-y-4 sm:space-y-6">
-          <RetainerFundsWidget caseId={id!} />
-          <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} investigatorIds={caseData.investigator_ids || []} onUpdate={fetchCaseData} />
-        </div>
+        {!isVendor && (
+          <div className="space-y-4 sm:space-y-6">
+            <RetainerFundsWidget caseId={id!} />
+            <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} investigatorIds={caseData.investigator_ids || []} onUpdate={fetchCaseData} />
+          </div>
+        )}
       </div>
 
-      <Tabs defaultValue="subjects" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
-          <TabsTrigger value="subjects" className="text-xs sm:text-sm px-2 sm:px-3">Subjects</TabsTrigger>
+      <Tabs defaultValue={isVendor ? "updates" : "subjects"} className="w-full">
+        <TabsList className="grid w-full gap-1" style={{ gridTemplateColumns: isVendor ? 'repeat(2, 1fr)' : 'repeat(3, 1fr) repeat(3, 1fr)' }}>
+          {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-2 sm:px-3">Subjects</TabsTrigger>}
           <TabsTrigger value="updates" className="text-xs sm:text-sm px-2 sm:px-3">Updates</TabsTrigger>
-          <TabsTrigger value="activities" className="text-xs sm:text-sm px-2 sm:px-3">Activities</TabsTrigger>
-          <TabsTrigger value="calendar" className="text-xs sm:text-sm px-2 sm:px-3">Calendar</TabsTrigger>
-          <TabsTrigger value="finances" className="text-xs sm:text-sm px-2 sm:px-3">Finances</TabsTrigger>
+          {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-2 sm:px-3">Activities</TabsTrigger>}
+          {!isVendor && <TabsTrigger value="calendar" className="text-xs sm:text-sm px-2 sm:px-3">Calendar</TabsTrigger>}
+          {!isVendor && <TabsTrigger value="finances" className="text-xs sm:text-sm px-2 sm:px-3">Finances</TabsTrigger>}
           <TabsTrigger value="attachments" className="text-xs sm:text-sm px-2 sm:px-3">Attachments</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="subjects" className="mt-4 sm:mt-6">
-          <CaseSubjects caseId={id!} />
-        </TabsContent>
+        {!isVendor && (
+          <TabsContent value="subjects" className="mt-4 sm:mt-6">
+            <CaseSubjects caseId={id!} />
+          </TabsContent>
+        )}
 
         <TabsContent value="updates" className="mt-4 sm:mt-6">
           <CaseUpdates caseId={id!} />
         </TabsContent>
 
-        <TabsContent value="activities" className="mt-4 sm:mt-6">
-          <CaseActivities caseId={id!} />
-        </TabsContent>
+        {!isVendor && (
+          <>
+            <TabsContent value="activities" className="mt-4 sm:mt-6">
+              <CaseActivities caseId={id!} />
+            </TabsContent>
 
-        <TabsContent value="calendar" className="mt-4 sm:mt-6">
+            <TabsContent value="calendar" className="mt-4 sm:mt-6">
           <CaseCalendar caseId={id!} />
         </TabsContent>
 
         <TabsContent value="finances" className="mt-4 sm:mt-6">
           <CaseFinances caseId={id!} />
         </TabsContent>
+          </>
+        )}
 
         <TabsContent value="attachments" className="mt-4 sm:mt-6">
           <CaseAttachments caseId={id!} />

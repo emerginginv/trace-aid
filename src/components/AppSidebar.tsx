@@ -1,49 +1,70 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar, CreditCard } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar, CreditCard, FileText } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import { HelpFeedback } from "@/components/HelpFeedback";
-const menuItems = [{
+import { useUserRole } from "@/hooks/useUserRole";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
+const allMenuItems = [{
   title: "Dashboard",
   icon: LayoutDashboard,
-  url: "/dashboard"
+  url: "/dashboard",
+  roles: ['admin', 'manager', 'investigator', 'vendor']
+}, {
+  title: "My Cases",
+  icon: FileText,
+  url: "/cases",
+  roles: ['vendor']
 }, {
   title: "Cases",
   icon: Briefcase,
-  url: "/cases"
+  url: "/cases",
+  roles: ['admin', 'manager', 'investigator']
 }, {
   title: "Calendar",
   icon: Calendar,
-  url: "/calendar"
+  url: "/calendar",
+  roles: ['admin', 'manager', 'investigator']
 }, {
   title: "Finance",
   icon: DollarSign,
-  url: "/finance"
+  url: "/finance",
+  roles: ['admin', 'manager']
 }, {
   title: "Accounts",
   icon: Building2,
-  url: "/accounts"
+  url: "/accounts",
+  roles: ['admin', 'manager', 'investigator']
 }, {
   title: "Contacts",
   icon: Users,
-  url: "/contacts"
+  url: "/contacts",
+  roles: ['admin', 'manager', 'investigator']
 }, {
   title: "Billing",
   icon: CreditCard,
-  url: "/billing"
+  url: "/billing",
+  roles: ['admin']
 }];
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { role, isVendor } = useUserRole();
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null;
     email: string;
     role: string;
     avatar_url: string | null;
   } | null>(null);
+
+  // Filter menu items based on user role
+  const menuItems = allMenuItems.filter(item => 
+    !role || item.roles.includes(role)
+  );
   useEffect(() => {
     const fetchUserProfile = async () => {
       const {
@@ -100,6 +121,17 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {isVendor && (
+          <div className="px-4 pt-2 pb-4">
+            <Alert className="bg-muted/50 border-primary/20">
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Limited Access - Vendor Account
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+        
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
