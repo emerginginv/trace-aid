@@ -29,19 +29,26 @@ const UserProfileDetail = () => {
       }
 
       try {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("full_name, email, created_at")
           .eq("id", id)
-          .single();
+          .maybeSingle();
 
-        const { data: userRole } = await supabase
+        const { data: userRole, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", id)
-          .single();
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+          navigate("/users");
+          return;
+        }
 
         if (!profile) {
+          console.error("Profile not found for user:", id);
           navigate("/users");
           return;
         }
@@ -49,7 +56,7 @@ const UserProfileDetail = () => {
         setUserProfile({
           full_name: profile.full_name || null,
           email: profile.email || "",
-          role: userRole?.role || "user",
+          role: userRole?.role || "member",
           created_at: profile.created_at || new Date().toISOString(),
         });
       } catch (error) {
