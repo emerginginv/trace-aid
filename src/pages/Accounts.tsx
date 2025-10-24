@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Building2, Search, LayoutGrid, List, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Building2, Search, LayoutGrid, List, Eye, Edit, Trash2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { AccountForm } from "@/components/AccountForm";
+import { EmailComposer } from "@/components/EmailComposer";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,6 +41,9 @@ const Accounts = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [selectedAccountEmail, setSelectedAccountEmail] = useState<string>("");
+  const [emailSubject, setEmailSubject] = useState<string>("");
 
   useEffect(() => {
     fetchAccounts();
@@ -214,6 +218,21 @@ const Accounts = () => {
                   )}
                 </div>
                 <div className="flex gap-2 pt-2">
+                  {account.email && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedAccountEmail(account.email);
+                        setEmailSubject(`Message for ${account.name}`);
+                        setEmailComposerOpen(true);
+                      }}
+                      className="flex-1"
+                    >
+                      <Mail className="w-4 h-4 mr-1" />
+                      Email
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -279,6 +298,20 @@ const Accounts = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      {account.email && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedAccountEmail(account.email);
+                            setEmailSubject(`Message for ${account.name}`);
+                            setEmailComposerOpen(true);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -338,6 +371,13 @@ const Accounts = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EmailComposer 
+        open={emailComposerOpen} 
+        onOpenChange={setEmailComposerOpen}
+        defaultTo={selectedAccountEmail}
+        defaultSubject={emailSubject}
+      />
     </div>
   );
 };

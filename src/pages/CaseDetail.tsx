@@ -19,6 +19,8 @@ import { RetainerFundsWidget } from "@/components/case-detail/RetainerFundsWidge
 import { CaseCalendar } from "@/components/case-detail/CaseCalendar";
 import { NotificationHelpers } from "@/lib/notifications";
 import { CaseTeamManager } from "@/components/case-detail/CaseTeamManager";
+import { EmailComposer } from "@/components/EmailComposer";
+import { Mail } from "lucide-react";
 interface Case {
   id: string;
   case_number: string;
@@ -60,6 +62,7 @@ const CaseDetail = () => {
     value: string;
     color: string;
   }>>([]);
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   useEffect(() => {
     fetchCaseData();
     fetchCaseStatuses();
@@ -289,6 +292,10 @@ const CaseDetail = () => {
           <p className="text-slate-500 text-sm sm:text-base">Case #{caseData.case_number}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setEmailComposerOpen(true)} className="w-full sm:w-auto">
+            <Mail className="h-4 w-4 mr-2" />
+            <span className="sm:inline">Send Email</span>
+          </Button>
           <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100 w-full sm:w-auto">
             <Edit className="h-4 w-4 mr-2" />
             <span className="sm:inline">Edit</span>
@@ -373,6 +380,14 @@ const CaseDetail = () => {
       </Tabs>
 
       <CaseForm open={editFormOpen} onOpenChange={setEditFormOpen} onSuccess={fetchCaseData} editingCase={caseData || undefined} />
+      
+      <EmailComposer 
+        open={emailComposerOpen} 
+        onOpenChange={setEmailComposerOpen}
+        defaultTo={contact?.first_name && contact?.last_name ? `${contact.first_name} ${contact.last_name}` : undefined}
+        defaultSubject={`Update on Case: ${caseData?.title}`}
+        caseId={id}
+      />
     </div>;
 };
 export default CaseDetail;

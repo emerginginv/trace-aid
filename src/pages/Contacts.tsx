@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, User, Search, LayoutGrid, List, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, User, Search, LayoutGrid, List, Eye, Edit, Trash2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { ContactForm } from "@/components/ContactForm";
+import { EmailComposer } from "@/components/EmailComposer";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -39,6 +40,9 @@ const Contacts = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<string | null>(null);
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [selectedContactEmail, setSelectedContactEmail] = useState<string>("");
+  const [emailSubject, setEmailSubject] = useState<string>("");
 
   useEffect(() => {
     fetchContacts();
@@ -204,6 +208,21 @@ const Contacts = () => {
                   )}
                 </div>
                 <div className="flex gap-2 pt-2">
+                  {contact.email && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedContactEmail(contact.email);
+                        setEmailSubject(`Message for ${contact.first_name} ${contact.last_name}`);
+                        setEmailComposerOpen(true);
+                      }}
+                      className="flex-1"
+                    >
+                      <Mail className="w-4 h-4 mr-1" />
+                      Email
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -270,6 +289,20 @@ const Contacts = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      {contact.email && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedContactEmail(contact.email);
+                            setEmailSubject(`Message for ${contact.first_name} ${contact.last_name}`);
+                            setEmailComposerOpen(true);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -328,6 +361,13 @@ const Contacts = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EmailComposer 
+        open={emailComposerOpen} 
+        onOpenChange={setEmailComposerOpen}
+        defaultTo={selectedContactEmail}
+        defaultSubject={emailSubject}
+      />
     </div>
   );
 };
