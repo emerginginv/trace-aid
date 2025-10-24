@@ -88,7 +88,7 @@ export function AppSidebar() {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold text-sky-300">PI Case Manager</h2>
+            <h2 className="font-bold text-sky-300 text-lg">PI Case Manager</h2>
             <p className="text-xs text-sidebar-foreground/60">Professional Tools</p>
           </div>
         </div>
