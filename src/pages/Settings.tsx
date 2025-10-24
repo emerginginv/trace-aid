@@ -93,13 +93,14 @@ const Settings = () => {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Picklists State
-  const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string, isActive: boolean}>>([]);
-  const [updateTypes, setUpdateTypes] = useState<Array<{id: string, value: string, isActive: boolean}>>([]);
-  const [expenseCategories, setExpenseCategories] = useState<Array<{id: string, value: string, isActive: boolean}>>([]);
+  const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string, isActive: boolean, color: string}>>([]);
+  const [updateTypes, setUpdateTypes] = useState<Array<{id: string, value: string, isActive: boolean, color: string}>>([]);
+  const [expenseCategories, setExpenseCategories] = useState<Array<{id: string, value: string, isActive: boolean, color: string}>>([]);
   const [picklistDialogOpen, setPicklistDialogOpen] = useState(false);
   const [picklistType, setPicklistType] = useState<"status" | "updateType" | "expenseCategory">("status");
-  const [editingPicklistItem, setEditingPicklistItem] = useState<{ id: string; value: string } | null>(null);
+  const [editingPicklistItem, setEditingPicklistItem] = useState<{ id: string; value: string; color: string } | null>(null);
   const [picklistValue, setPicklistValue] = useState("");
+  const [picklistColor, setPicklistColor] = useState("#6366f1");
 
   useEffect(() => {
     loadSettings();
@@ -168,13 +169,13 @@ const Settings = () => {
       if (picklists) {
         const statuses = picklists
           .filter(p => p.type === 'case_status')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active }));
+          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
         const updates = picklists
           .filter(p => p.type === 'update_type')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active }));
+          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
         const categories = picklists
           .filter(p => p.type === 'expense_category')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active }));
+          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
         
         setCaseStatuses(statuses);
         setUpdateTypes(updates);
@@ -219,7 +220,7 @@ const Settings = () => {
         .order("display_order");
 
       if (picklists) {
-        setExpenseCategories(picklists.map(p => ({ id: p.id, value: p.value, isActive: p.is_active })));
+        setExpenseCategories(picklists.map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' })));
       }
     } catch (error) {
       console.error("Error initializing expense categories:", error);
@@ -715,13 +716,14 @@ const Settings = () => {
           value: picklistValue.trim(),
           is_active: true,
           display_order: currentLength,
+          color: picklistColor,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      const newItem = { id: data.id, value: data.value, isActive: data.is_active };
+      const newItem = { id: data.id, value: data.value, isActive: data.is_active, color: data.color || '#6366f1' };
       
       if (picklistType === "status") {
         setCaseStatuses([...caseStatuses, newItem]);
@@ -732,6 +734,7 @@ const Settings = () => {
       }
 
       setPicklistValue("");
+      setPicklistColor("#6366f1");
       setPicklistDialogOpen(false);
       setEditingPicklistItem(null);
       toast.success(`${picklistValue} added successfully`);
@@ -750,7 +753,10 @@ const Settings = () => {
     try {
       const { error } = await supabase
         .from("picklists")
-        .update({ value: picklistValue.trim() })
+        .update({ 
+          value: picklistValue.trim(),
+          color: picklistColor 
+        })
         .eq("id", editingPicklistItem.id);
 
       if (error) throw error;
@@ -758,29 +764,65 @@ const Settings = () => {
       if (picklistType === "status") {
         setCaseStatuses(
           caseStatuses.map((item) =>
-            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
+            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim(), color: picklistColor } : item
           )
         );
       } else if (picklistType === "updateType") {
         setUpdateTypes(
           updateTypes.map((item) =>
-            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
+            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim(), color: picklistColor } : item
           )
         );
       } else {
         setExpenseCategories(
           expenseCategories.map((item) =>
-            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim() } : item
+            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim(), color: picklistColor } : item
           )
         );
       }
 
       setPicklistValue("");
+      setPicklistColor("#6366f1");
       setPicklistDialogOpen(false);
       setEditingPicklistItem(null);
       toast.success("Value updated successfully");
     } catch (error) {
       console.error("Error updating picklist item:", error);
+      toast.error("Failed to update picklist item");
+    }
+  };
+
+  const handleTogglePicklistActive = async (id: string, isActive: boolean, type: "status" | "updateType" | "expenseCategory") => {
+    try {
+      const { error } = await supabase
+        .from("picklists")
+        .update({ is_active: !isActive })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      if (type === "status") {
+        setCaseStatuses(
+          caseStatuses.map((item) =>
+            item.id === id ? { ...item, isActive: !isActive } : item
+          )
+        );
+      } else if (type === "updateType") {
+        setUpdateTypes(
+          updateTypes.map((item) =>
+            item.id === id ? { ...item, isActive: !isActive } : item
+          )
+        );
+      } else {
+        setExpenseCategories(
+          expenseCategories.map((item) =>
+            item.id === id ? { ...item, isActive: !isActive } : item
+          )
+        );
+      }
+      toast.success(`Value ${!isActive ? 'activated' : 'deactivated'} successfully`);
+    } catch (error) {
+      console.error("Error toggling picklist item:", error);
       toast.error("Failed to update picklist item");
     }
   };
@@ -812,13 +854,15 @@ const Settings = () => {
     setPicklistType(type);
     setEditingPicklistItem(null);
     setPicklistValue("");
+    setPicklistColor("#6366f1");
     setPicklistDialogOpen(true);
   };
 
-  const openEditPicklistDialog = (item: { id: string; value: string }, type: "status" | "updateType" | "expenseCategory") => {
+  const openEditPicklistDialog = (item: { id: string; value: string; color: string }, type: "status" | "updateType" | "expenseCategory") => {
     setPicklistType(type);
     setEditingPicklistItem(item);
     setPicklistValue(item.value);
+    setPicklistColor(item.color);
     setPicklistDialogOpen(true);
   };
 
@@ -1538,14 +1582,15 @@ const Settings = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Status Value</TableHead>
+                        <TableHead className="w-[100px]">Color</TableHead>
                         <TableHead className="w-[100px]">Active</TableHead>
-                        <TableHead className="text-right w-[100px]">Actions</TableHead>
+                        <TableHead className="text-right w-[150px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {caseStatuses.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                             No status values configured
                           </TableCell>
                         </TableRow>
@@ -1554,12 +1599,27 @@ const Settings = () => {
                           <TableRow key={status.id}>
                             <TableCell className="font-medium">{status.value}</TableCell>
                             <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-6 h-6 rounded border"
+                                  style={{ backgroundColor: status.color }}
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell>
                               <Badge variant={status.isActive ? "default" : "secondary"}>
                                 {status.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleTogglePicklistActive(status.id, status.isActive, "status")}
+                                >
+                                  {status.isActive ? "Deactivate" : "Activate"}
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1607,14 +1667,15 @@ const Settings = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Type Value</TableHead>
+                        <TableHead className="w-[100px]">Color</TableHead>
                         <TableHead className="w-[100px]">Active</TableHead>
-                        <TableHead className="text-right w-[100px]">Actions</TableHead>
+                        <TableHead className="text-right w-[150px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {updateTypes.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                             No update types configured
                           </TableCell>
                         </TableRow>
@@ -1623,12 +1684,27 @@ const Settings = () => {
                           <TableRow key={type.id}>
                             <TableCell className="font-medium">{type.value}</TableCell>
                             <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-6 h-6 rounded border"
+                                  style={{ backgroundColor: type.color }}
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell>
                               <Badge variant={type.isActive ? "default" : "secondary"}>
                                 {type.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleTogglePicklistActive(type.id, type.isActive, "updateType")}
+                                >
+                                  {type.isActive ? "Deactivate" : "Activate"}
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1676,14 +1752,15 @@ const Settings = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Category Value</TableHead>
+                        <TableHead className="w-[100px]">Color</TableHead>
                         <TableHead className="w-[100px]">Active</TableHead>
-                        <TableHead className="text-right w-[100px]">Actions</TableHead>
+                        <TableHead className="text-right w-[150px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {expenseCategories.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                             No expense categories configured
                           </TableCell>
                         </TableRow>
@@ -1692,12 +1769,27 @@ const Settings = () => {
                           <TableRow key={category.id}>
                             <TableCell className="font-medium">{category.value}</TableCell>
                             <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-6 h-6 rounded border"
+                                  style={{ backgroundColor: category.color }}
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell>
                               <Badge variant={category.isActive ? "default" : "secondary"}>
                                 {category.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleTogglePicklistActive(category.id, category.isActive, "expenseCategory")}
+                                >
+                                  {category.isActive ? "Deactivate" : "Activate"}
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1745,13 +1837,32 @@ const Settings = () => {
                     id="picklistValue"
                     value={picklistValue}
                     onChange={(e) => setPicklistValue(e.target.value)}
-                    placeholder={`Enter ${picklistType === "status" ? "status" : "type"} value`}
+                    placeholder={`Enter ${picklistType === "status" ? "status" : picklistType === "updateType" ? "type" : "category"} value`}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         editingPicklistItem ? handleEditPicklistItem() : handleAddPicklistItem();
                       }
                     }}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="picklistColor">Color</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="picklistColor"
+                      type="color"
+                      value={picklistColor}
+                      onChange={(e) => setPicklistColor(e.target.value)}
+                      className="w-20 h-10 cursor-pointer"
+                    />
+                    <Input
+                      type="text"
+                      value={picklistColor}
+                      onChange={(e) => setPicklistColor(e.target.value)}
+                      placeholder="#6366f1"
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -1760,6 +1871,7 @@ const Settings = () => {
                   onClick={() => {
                     setPicklistDialogOpen(false);
                     setPicklistValue("");
+                    setPicklistColor("#6366f1");
                     setEditingPicklistItem(null);
                   }}
                 >
