@@ -325,7 +325,7 @@ const CaseDetail = () => {
                 </div>}
               {caseData.due_date && <div>
                   <p className="text-sm font-medium mb-1">Due Date</p>
-                  <p className="text-muted-foreground">{new Date(caseData.due_date).toLocaleDateString()}</p>
+                  <p className="text-red-500 font-normal">{new Date(caseData.due_date).toLocaleDateString()}</p>
                 </div>}
             </div>
           </CardContent>
