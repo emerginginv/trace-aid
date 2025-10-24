@@ -317,11 +317,11 @@ const Dashboard = () => {
             {dueTasks.length === 0 ? <p className="text-sm text-muted-foreground">No pending tasks</p> : dueTasks.map(task => {
             const taskDate = parseISO(task.dueDate);
             const isOverdue = isPast(taskDate) && !isToday(taskDate);
-            return <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border transition-colors bg-gray-300">
+            return <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border transition-colors bg-slate-600">
                     <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-0.5" />
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm text-gray-800">{task.title}</p>
+                        <p className="font-medium text-sm text-slate-50">{task.title}</p>
                         <Badge variant={getPriorityColor(task.priority) as any} className="text-xs">
                           {task.priority}
                         </Badge>
