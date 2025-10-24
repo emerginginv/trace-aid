@@ -32,9 +32,48 @@ const Cases = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
+  const [statusPicklists, setStatusPicklists] = useState<Array<{ id: string; value: string; color: string }>>([]);
+  const [priorityPicklists, setPriorityPicklists] = useState<Array<{ id: string; value: string; color: string }>>([]);
+
   useEffect(() => {
     fetchCases();
+    fetchPicklists();
   }, []);
+  const fetchPicklists = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch status picklists
+      const { data: statusData } = await supabase
+        .from("picklists")
+        .select("id, value, color")
+        .eq("user_id", user.id)
+        .eq("type", "case_status")
+        .eq("is_active", true)
+        .order("display_order");
+      
+      if (statusData) {
+        setStatusPicklists(statusData);
+      }
+
+      // Fetch priority picklists
+      const { data: priorityData } = await supabase
+        .from("picklists")
+        .select("id, value, color")
+        .eq("user_id", user.id)
+        .eq("type", "case_priority")
+        .eq("is_active", true)
+        .order("display_order");
+      
+      if (priorityData) {
+        setPriorityPicklists(priorityData);
+      }
+    } catch (error) {
+      console.error("Error fetching picklists:", error);
+    }
+  };
+
   const fetchCases = async () => {
     try {
       const {
@@ -57,21 +96,29 @@ const Cases = () => {
       setLoading(false);
     }
   };
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      open: "bg-success",
-      closed: "bg-muted",
-      pending: "bg-warning"
-    };
-    return colors[status] || "bg-muted";
+
+  const getStatusStyle = (status: string) => {
+    const statusItem = statusPicklists.find(s => s.value === status);
+    if (statusItem?.color) {
+      return {
+        backgroundColor: `${statusItem.color}20`,
+        color: statusItem.color,
+        borderColor: `${statusItem.color}40`
+      };
+    }
+    return {};
   };
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      high: "bg-destructive",
-      medium: "bg-accent",
-      low: "bg-secondary"
-    };
-    return colors[priority] || "bg-muted";
+
+  const getPriorityStyle = (priority: string) => {
+    const priorityItem = priorityPicklists.find(p => p.value === priority);
+    if (priorityItem?.color) {
+      return {
+        backgroundColor: `${priorityItem.color}20`,
+        color: priorityItem.color,
+        borderColor: `${priorityItem.color}40`
+      };
+    }
+    return {};
   };
 
   const handleDeleteClick = (caseId: string) => {
@@ -190,10 +237,10 @@ const Cases = () => {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Badge className={getStatusColor(caseItem.status)}>
+                    <Badge className="border" style={getStatusStyle(caseItem.status)}>
                       {caseItem.status}
                     </Badge>
-                    <Badge className={getPriorityColor(caseItem.priority)}>
+                    <Badge className="border" style={getPriorityStyle(caseItem.priority)}>
                       {caseItem.priority}
                     </Badge>
                   </div>
@@ -234,10 +281,10 @@ const Cases = () => {
                   </div>
                   
                   <div className="flex gap-2">
-                    <Badge className={getStatusColor(caseItem.status)}>
+                    <Badge className="border" style={getStatusStyle(caseItem.status)}>
                       {caseItem.status}
                     </Badge>
-                    <Badge className={getPriorityColor(caseItem.priority)}>
+                    <Badge className="border" style={getPriorityStyle(caseItem.priority)}>
                       {caseItem.priority}
                     </Badge>
                   </div>
@@ -287,12 +334,12 @@ const Cases = () => {
                     <TableCell className="font-medium">{caseItem.case_number}</TableCell>
                     <TableCell>{caseItem.title}</TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(caseItem.status)}>
+                      <Badge className="border" style={getStatusStyle(caseItem.status)}>
                         {caseItem.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getPriorityColor(caseItem.priority)}>
+                      <Badge className="border" style={getPriorityStyle(caseItem.priority)}>
                         {caseItem.priority}
                       </Badge>
                     </TableCell>
