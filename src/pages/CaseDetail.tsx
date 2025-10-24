@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Edit, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -49,6 +50,7 @@ const CaseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   useEffect(() => {
     fetchCaseData();
   }, [id]);
@@ -110,6 +112,43 @@ const CaseDetail = () => {
     };
     return colors[priority] || "bg-muted";
   };
+  const handleStatusChange = async (newStatus: string) => {
+    if (!caseData) return;
+    
+    setUpdatingStatus(true);
+    try {
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase
+        .from("cases")
+        .update({ status: newStatus })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setCaseData({ ...caseData, status: newStatus });
+      toast({
+        title: "Success",
+        description: "Case status updated successfully"
+      });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update case status",
+        variant: "destructive"
+      });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!caseData) return;
     if (!confirm(`Are you sure you want to delete case "${caseData.title}"? This action cannot be undone.`)) {
@@ -167,9 +206,17 @@ const CaseDetail = () => {
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold">{caseData.title}</h1>
-            <Badge className={getStatusColor(caseData.status)}>
-              {caseData.status.replace("_", " ")}
-            </Badge>
+            <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
+              <SelectTrigger className={`w-[140px] h-7 ${getStatusColor(caseData.status)}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="on_hold">On Hold</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
             {caseData.priority && <Badge className={getPriorityColor(caseData.priority)}>
                 {caseData.priority}
               </Badge>}
