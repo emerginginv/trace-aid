@@ -40,15 +40,6 @@ interface Expense {
 const Dashboard = () => {
   const { toast } = useToast();
   const { isVendor, loading: roleLoading } = useUserRole();
-
-  // Show vendor dashboard if user is a vendor
-  if (roleLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (isVendor) {
-    return <VendorDashboard />;
-  }
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -265,6 +256,23 @@ const Dashboard = () => {
     color: "text-success",
     bgColor: "bg-success/10"
   }];
+  // Show loading state while checking role
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show vendor dashboard if user is a vendor
+  if (isVendor) {
+    return <VendorDashboard />;
+  }
+
   return <div className="space-y-4 sm:space-y-6 md:space-y-8">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
