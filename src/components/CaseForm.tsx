@@ -32,12 +32,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 const caseSchema = z.object({
   title: z.string().min(1, "Case title is required").max(200),
@@ -86,6 +87,9 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string}>>([]);
+  const [profiles, setProfiles] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
+  const [caseManagerId, setCaseManagerId] = useState<string>("");
+  const [investigators, setInvestigators] = useState<string[]>([]);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
@@ -105,6 +109,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     if (open) {
       fetchAccountsAndContacts();
       fetchCaseStatuses();
+      fetchProfiles();
       if (editingCase) {
         form.reset({
           title: editingCase.title,
@@ -117,6 +122,10 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           start_date: new Date(editingCase.start_date),
           due_date: editingCase.due_date ? new Date(editingCase.due_date) : undefined,
         });
+        // @ts-ignore - case_manager_id and investigator_ids exist on editingCase
+        setCaseManagerId(editingCase.case_manager_id || "");
+        // @ts-ignore
+        setInvestigators(editingCase.investigator_ids || []);
       } else {
         generateCaseNumber();
         form.reset({
@@ -129,6 +138,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           contact_id: "",
           start_date: new Date(),
         });
+        setCaseManagerId("");
+        setInvestigators([]);
       }
     }
   }, [open, editingCase]);
@@ -151,6 +162,21 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       }
     } catch (error) {
       console.error("Error fetching case statuses:", error);
+    }
+  };
+
+  const fetchProfiles = async () => {
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .order("full_name");
+
+      if (data) {
+        setProfiles(data);
+      }
+    } catch (error) {
+      console.error("Error fetching profiles:", error);
     }
   };
 
@@ -211,6 +237,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         contact_id: data.contact_id || null,
         start_date: data.start_date.toISOString().split('T')[0],
         due_date: data.due_date ? data.due_date.toISOString().split('T')[0] : null,
+        case_manager_id: caseManagerId || null,
+        investigator_ids: investigators,
       };
 
       if (editingCase) {
@@ -233,12 +261,24 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       }
 
       form.reset();
+      setCaseManagerId("");
+      setInvestigators([]);
       onOpenChange(false);
       onSuccess();
     } catch (error) {
       toast.error(editingCase ? "Failed to update case" : "Failed to create case");
       console.error(error);
     }
+  };
+
+  const handleAddInvestigator = (investigatorId: string) => {
+    if (investigatorId && !investigators.includes(investigatorId)) {
+      setInvestigators([...investigators, investigatorId]);
+    }
+  };
+
+  const handleRemoveInvestigator = (investigatorId: string) => {
+    setInvestigators(investigators.filter(id => id !== investigatorId));
   };
 
   return (
@@ -480,6 +520,74 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Case Manager and Investigators */}
+            <div className="border-t pt-4 space-y-4">
+              <h3 className="text-sm font-semibold">Team Assignment</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Case Manager</label>
+                  <Select value={caseManagerId} onValueChange={setCaseManagerId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select case manager..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.map(profile => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.full_name || profile.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Add Investigator</label>
+                  <Select value="" onValueChange={handleAddInvestigator}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select investigator..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles
+                        .filter(p => p.id !== caseManagerId && !investigators.includes(p.id))
+                        .map(profile => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.full_name || profile.email}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {investigators.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Assigned Investigators</label>
+                  <div className="flex flex-wrap gap-2">
+                    {investigators.map(invId => {
+                      const inv = profiles.find(p => p.id === invId);
+                      if (!inv) return null;
+                      return (
+                        <div
+                          key={invId}
+                          className="flex items-center gap-2 bg-secondary text-secondary-foreground px-3 py-1.5 rounded-md text-sm"
+                        >
+                          <span>{inv.full_name || inv.email}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveInvestigator(invId)}
+                            className="hover:bg-destructive/20 rounded-full p-0.5"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

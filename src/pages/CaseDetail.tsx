@@ -18,6 +18,7 @@ import { CaseAttachments } from "@/components/case-detail/CaseAttachments";
 import { RetainerFundsWidget } from "@/components/case-detail/RetainerFundsWidget";
 import { CaseCalendar } from "@/components/case-detail/CaseCalendar";
 import { NotificationHelpers } from "@/lib/notifications";
+import { CaseTeamManager } from "@/components/case-detail/CaseTeamManager";
 interface Case {
   id: string;
   case_number: string;
@@ -30,6 +31,8 @@ interface Case {
   start_date: string | null;
   due_date: string | null;
   created_at: string;
+  case_manager_id: string | null;
+  investigator_ids: string[];
 }
 interface Account {
   id: string;
@@ -317,7 +320,15 @@ const CaseDetail = () => {
           </CardContent>
         </Card>
 
-        <RetainerFundsWidget caseId={id!} />
+        <div className="space-y-6">
+          <RetainerFundsWidget caseId={id!} />
+          <CaseTeamManager 
+            caseId={id!}
+            caseManagerId={caseData.case_manager_id}
+            investigatorIds={caseData.investigator_ids || []}
+            onUpdate={fetchCaseData}
+          />
+        </div>
       </div>
 
       <Tabs defaultValue="subjects" className="w-full">

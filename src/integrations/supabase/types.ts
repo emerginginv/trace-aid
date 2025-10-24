@@ -340,12 +340,14 @@ export type Database = {
       cases: {
         Row: {
           account_id: string | null
+          case_manager_id: string | null
           case_number: string
           contact_id: string | null
           created_at: string | null
           description: string | null
           due_date: string | null
           id: string
+          investigator_ids: string[] | null
           priority: string | null
           start_date: string | null
           status: string
@@ -355,12 +357,14 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          case_manager_id?: string | null
           case_number: string
           contact_id?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          investigator_ids?: string[] | null
           priority?: string | null
           start_date?: string | null
           status?: string
@@ -370,12 +374,14 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          case_manager_id?: string | null
           case_number?: string
           contact_id?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          investigator_ids?: string[] | null
           priority?: string | null
           start_date?: string | null
           status?: string
@@ -389,6 +395,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_case_manager_id_fkey"
+            columns: ["case_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
