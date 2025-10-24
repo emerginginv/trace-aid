@@ -30,183 +30,183 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <Toaster />
-    <Sonner />
     <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Dashboard />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/cases"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Cases />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/cases/:id"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <CaseDetail />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/calendar"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Calendar />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/finance"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Finance />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/invoices/:id"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <InvoiceDetail />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/accounts"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Accounts />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/accounts/:id"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <AccountDetail />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/accounts/:id/edit"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <AccountEdit />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/contacts"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Contacts />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/contacts/:id"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <ContactDetail />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/contacts/:id/edit"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <ContactEdit />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/users"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Users />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/users/:id"
-            element={
-              <ProtectedRoute>
-                <UserProfileDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Settings />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <UserProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Notifications />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/style-guide" element={<StyleGuide />} />
-          <Route path="/premium-showcase" element={<PremiumShowcase />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <Toaster />
+      <Sonner />
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Dashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Cases />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <CaseDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Calendar />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/finance"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Finance />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <InvoiceDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Accounts />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accounts/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <AccountDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accounts/:id/edit"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <AccountEdit />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contacts"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Contacts />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contacts/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <ContactDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contacts/:id/edit"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <ContactEdit />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Users />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/:id"
+          element={
+            <ProtectedRoute>
+              <UserProfileDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Settings />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <UserProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Notifications />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/style-guide" element={<StyleGuide />} />
+        <Route path="/premium-showcase" element={<PremiumShowcase />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
