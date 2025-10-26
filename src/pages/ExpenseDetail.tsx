@@ -23,6 +23,7 @@ interface Expense {
   invoiced: boolean;
   invoice_id: string | null;
   created_at: string;
+  quantity: number | null;
 }
 
 interface UserProfile {
@@ -158,6 +159,13 @@ const ExpenseDetail = () => {
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Tag className="h-4 w-4" />
                 <span>Category: {expense.category}</span>
+              </div>
+            )}
+
+            {expense.quantity && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <DollarSign className="h-4 w-4" />
+                <span>Quantity: {expense.quantity.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
               </div>
             )}
 

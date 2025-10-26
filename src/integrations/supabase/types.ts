@@ -213,6 +213,7 @@ export type Database = {
           invoiced: boolean | null
           notes: string | null
           organization_id: string | null
+          quantity: number | null
           start_date: string | null
           status: string | null
           subject_id: string | null
@@ -239,6 +240,7 @@ export type Database = {
           invoiced?: boolean | null
           notes?: string | null
           organization_id?: string | null
+          quantity?: number | null
           start_date?: string | null
           status?: string | null
           subject_id?: string | null
@@ -265,6 +267,7 @@ export type Database = {
           invoiced?: boolean | null
           notes?: string | null
           organization_id?: string | null
+          quantity?: number | null
           start_date?: string | null
           status?: string | null
           subject_id?: string | null

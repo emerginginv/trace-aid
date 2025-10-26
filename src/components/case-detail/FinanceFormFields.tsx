@@ -125,6 +125,27 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
         )}
       />
 
+      {financeType === "expense" && (
+        <FormField
+          control={form.control}
+          name="quantity"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Quantity (Optional)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  placeholder="e.g., mileage, hours, units" 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
       {financeType !== "time" ? (
         <FormField
           control={form.control}

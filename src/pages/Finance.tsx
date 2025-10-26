@@ -29,6 +29,7 @@ interface Expense {
   amount: number;
   status: string | null;
   invoiced: boolean;
+  quantity: number | null;
 }
 
 interface Invoice {
@@ -151,7 +152,7 @@ const Finance = () => {
       // Fetch all expenses
       const { data: expenseData, error: expenseError } = await supabase
         .from("case_finances")
-        .select("id, case_id, date, amount, category, status, invoiced")
+        .select("id, case_id, date, amount, category, status, invoiced, quantity")
         .eq("organization_id", memberData.organization_id)
         .eq("finance_type", "expense")
         .order("date", { ascending: false });
@@ -169,6 +170,7 @@ const Finance = () => {
           amount: parseFloat(exp.amount),
           status: exp.status,
           invoiced: exp.invoiced,
+          quantity: exp.quantity ? parseFloat(exp.quantity) : null,
         };
       }) || [];
 
@@ -538,12 +540,13 @@ const Finance = () => {
               No matching expenses found
             </p>
           ) : (
-            <Table>
+             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Case</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Quantity</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -564,6 +567,11 @@ const Finance = () => {
                       </div>
                     </TableCell>
                     <TableCell>{expense.category || "N/A"}</TableCell>
+                    <TableCell>
+                      {expense.quantity ? 
+                        expense.quantity.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) 
+                        : '–'}
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       ${expense.amount.toFixed(2)}
                     </TableCell>
