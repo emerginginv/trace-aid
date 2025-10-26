@@ -19,7 +19,7 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Search, Trash2, Mail, Loader2 } from "lucide-react";
+import { UserPlus, Search, Trash2, Mail, Loader2, Palette } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -33,6 +33,7 @@ interface OrgUser {
   role: 'admin' | 'manager' | 'investigator' | 'vendor';
   status: 'active' | 'pending';
   created_at: string;
+  color: string | null;
 }
 
 const inviteSchema = z.object({
@@ -47,9 +48,18 @@ const Users = () => {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<OrgUser | null>(null);
+  const [colorDialogOpen, setColorDialogOpen] = useState(false);
+  const [selectedUserForColor, setSelectedUserForColor] = useState<OrgUser | null>(null);
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { isAdmin } = useUserRole();
+
+  const colorPalette = [
+    "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", 
+    "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
+    "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
+    "#ec4899", "#f43f5e", "#64748b", "#71717a", "#78716c"
+  ];
 
   const form = useForm<z.infer<typeof inviteSchema>>({
     resolver: zodResolver(inviteSchema),
@@ -75,10 +85,24 @@ const Users = () => {
       });
 
       if (error) throw error;
-      // Filter out any invalid roles
+      
+      // Get user colors from profiles
+      const userIds = (data || []).filter((u: any) => u.status === 'active').map((u: any) => u.id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, color')
+        .in('id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p.color]) || []);
+      
+      // Filter out any invalid roles and add colors
       const validUsers = (data || []).filter((u: any) => 
         ['admin', 'manager', 'investigator', 'vendor'].includes(u.role)
-      );
+      ).map((u: any) => ({
+        ...u,
+        color: profileMap.get(u.id) || null
+      }));
+      
       setUsers(validUsers as OrgUser[]);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -130,6 +154,25 @@ const Users = () => {
     } catch (error: any) {
       console.error("Error updating role:", error);
       toast.error(error.message || "Failed to update user role");
+    }
+  };
+
+  const handleColorChange = async (userId: string, color: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ color })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      toast.success("User color updated");
+      setColorDialogOpen(false);
+      setSelectedUserForColor(null);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error updating color:", error);
+      toast.error(error.message || "Failed to update user color");
     }
   };
 
@@ -298,6 +341,7 @@ const Users = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Color</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
@@ -309,13 +353,38 @@ const Users = () => {
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     No users found
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => (
                   <TableRow key={user.id}>
+                    <TableCell>
+                      {user.status === 'active' && isAdmin ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => {
+                            setSelectedUserForColor(user);
+                            setColorDialogOpen(true);
+                          }}
+                        >
+                          <div 
+                            className="w-6 h-6 rounded-full border-2 border-border"
+                            style={{ backgroundColor: user.color || "#6366f1" }}
+                          />
+                        </Button>
+                      ) : user.status === 'active' ? (
+                        <div 
+                          className="w-6 h-6 rounded-full border-2 border-border ml-2"
+                          style={{ backgroundColor: user.color || "#6366f1" }}
+                        />
+                      ) : (
+                        <div className="w-6 h-6" />
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">
                       {user.full_name || "—"}
                     </TableCell>
@@ -402,6 +471,31 @@ const Users = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={colorDialogOpen} onOpenChange={setColorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose Calendar Color</DialogTitle>
+            <DialogDescription>
+              Select a color for {selectedUserForColor?.full_name || selectedUserForColor?.email} to display in the calendar
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-5 gap-3 py-4">
+            {colorPalette.map((color) => (
+              <button
+                key={color}
+                onClick={() => selectedUserForColor && handleColorChange(selectedUserForColor.id, color)}
+                className="w-12 h-12 rounded-lg border-2 hover:scale-110 transition-transform"
+                style={{ 
+                  backgroundColor: color,
+                  borderColor: selectedUserForColor?.color === color ? "#000" : "transparent"
+                }}
+                title={color}
+              />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
