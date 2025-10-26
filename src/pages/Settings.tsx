@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OrgIsolationAudit } from "@/components/OrgIsolationAudit";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -1019,7 +1020,7 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-9">
           <TabsTrigger value="preferences" className="text-xs sm:text-sm">Preferences</TabsTrigger>
           <TabsTrigger value="organization" className="text-xs sm:text-sm">Organization</TabsTrigger>
           <TabsTrigger value="permissions" className="text-xs sm:text-sm">Permissions</TabsTrigger>
@@ -1034,6 +1035,11 @@ const Settings = () => {
             <TabsTrigger value="billing" className="text-xs sm:text-sm">
               <CreditCard className="w-3 h-3 mr-1" />
               Billing
+            </TabsTrigger>
+          )}
+          {currentUserRole === 'admin' && (
+            <TabsTrigger value="audit" className="text-xs sm:text-sm">
+              Audit
             </TabsTrigger>
           )}
         </TabsList>
@@ -2258,6 +2264,13 @@ const Settings = () => {
                 );
               })}
             </div>
+          </TabsContent>
+        )}
+
+        {/* Audit Tab */}
+        {currentUserRole === 'admin' && (
+          <TabsContent value="audit" className="space-y-6">
+            <OrgIsolationAudit />
           </TabsContent>
         )}
       </Tabs>

@@ -142,24 +142,34 @@ export function ActivityForm({
 
       // Create notification for assigned user (only for new tasks)
       if (!editingActivity && insertedActivity && values.assigned_user_id && values.assigned_user_id !== 'unassigned') {
-        const notificationData = {
-          user_id: values.assigned_user_id,
-          type: 'task',
-          title: values.activity_type === 'task' ? 'New Task Assigned' : 'New Event Scheduled',
-          message: `You have been assigned: ${values.title}`,
-          related_id: insertedActivity.id,
-          related_type: 'case_activity',
-          link: `/cases/${caseId}`,
-          priority: values.due_date && new Date(values.due_date) < new Date(Date.now() + 86400000 * 3) ? 'high' : 'medium',
-          read: false,
-        };
+        // Get assigned user's organization_id
+        const { data: assignedUserOrg } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', values.assigned_user_id)
+          .single();
 
-        const { error: notifError } = await supabase
-          .from('notifications')
-          .insert(notificationData);
+        if (assignedUserOrg) {
+          const notificationData = {
+            user_id: values.assigned_user_id,
+            organization_id: assignedUserOrg.organization_id,
+            type: 'task',
+            title: values.activity_type === 'task' ? 'New Task Assigned' : 'New Event Scheduled',
+            message: `You have been assigned: ${values.title}`,
+            related_id: insertedActivity.id,
+            related_type: 'case_activity',
+            link: `/cases/${caseId}`,
+            priority: values.due_date && new Date(values.due_date) < new Date(Date.now() + 86400000 * 3) ? 'high' : 'medium',
+            read: false,
+          };
 
-        if (notifError) {
-          console.error('Error creating notification:', notifError);
+          const { error: notifError } = await supabase
+            .from('notifications')
+            .insert(notificationData);
+
+          if (notifError) {
+            console.error('Error creating notification:', notifError);
+          }
         }
       }
 
