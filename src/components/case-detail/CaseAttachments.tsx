@@ -627,9 +627,8 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
       {attachments.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Upload className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="font-semibold text-lg mb-2">No attachments yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
+            <p className="text-muted-foreground text-center">
               Upload files to get started
             </p>
           </CardContent>
