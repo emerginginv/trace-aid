@@ -74,9 +74,13 @@ serve(async (req) => {
       const subscription = subscriptions.data[0];
       subscriptionId = subscription.id;
       status = subscription.status;
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
       
-      if (subscription.trial_end) {
+      // Safely handle date conversion
+      if (subscription.current_period_end && typeof subscription.current_period_end === 'number') {
+        subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      }
+      
+      if (subscription.trial_end && typeof subscription.trial_end === 'number') {
         trialEnd = new Date(subscription.trial_end * 1000).toISOString();
       }
       
@@ -87,8 +91,10 @@ serve(async (req) => {
         trialEnd 
       });
       
-      productId = subscription.items.data[0].price.product as string;
-      logStep("Determined subscription product", { productId });
+      if (subscription.items?.data?.[0]?.price?.product) {
+        productId = subscription.items.data[0].price.product as string;
+        logStep("Determined subscription product", { productId });
+      }
     } else {
       logStep("No active subscription found");
     }

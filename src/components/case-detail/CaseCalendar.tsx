@@ -103,7 +103,7 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
       const [tasksResult, eventsResult, usersResult] = await Promise.all([
         tasksQuery,
         eventsQuery,
-        supabase.from("profiles").select("id, email, full_name"),
+        supabase.from("profiles").select("id, email, full_name, color"),
       ]);
 
       if (tasksResult.error) throw tasksResult.error;
