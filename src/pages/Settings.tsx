@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive, Palette } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { getPlanLimits, isTrialActive, getTrialDaysRemaining } from "@/lib/planLimits";
@@ -60,6 +60,7 @@ interface User {
   created_at: string;
   roles: string[];
   disabled?: boolean;
+  color?: string | null;
 }
 
 const Settings = () => {
@@ -102,6 +103,15 @@ const Settings = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [colorDialogOpen, setColorDialogOpen] = useState(false);
+  const [selectedUserForColor, setSelectedUserForColor] = useState<User | null>(null);
+
+  const colorPalette = [
+    "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", 
+    "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
+    "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
+    "#ec4899", "#f43f5e", "#64748b", "#71717a", "#78716c"
+  ];
 
   // Picklists State
   const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string, isActive: boolean, color: string, statusType?: string}>>([]);
@@ -472,7 +482,7 @@ const Settings = () => {
       // Fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, email, full_name, created_at")
+        .select("id, email, full_name, created_at, color")
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -500,7 +510,8 @@ const Settings = () => {
         full_name: profile.full_name,
         created_at: profile.created_at,
         roles: rolesMap.get(profile.id) || [],
-        disabled: false, // TODO: Add disabled field to profiles table if needed
+        color: profile.color,
+        disabled: false,
       })) || [];
 
       setUsers(usersData);
@@ -660,6 +671,25 @@ const Settings = () => {
     } catch (error: any) {
       console.error("Error updating role:", error);
       toast.error(error.message || "Failed to update role");
+    }
+  };
+
+  const handleColorChange = async (userId: string, color: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ color })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      toast.success("User color updated");
+      setColorDialogOpen(false);
+      setSelectedUserForColor(null);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error updating color:", error);
+      toast.error(error.message || "Failed to update user color");
     }
   };
 
@@ -1497,6 +1527,7 @@ const Settings = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[60px]">Color</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Email Address</TableHead>
                         <TableHead>Role</TableHead>
@@ -1507,6 +1538,29 @@ const Settings = () => {
                     <TableBody>
                       {filteredUsers.map((user) => (
                         <TableRow key={user.id}>
+                          <TableCell>
+                            {isAdmin ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  setSelectedUserForColor(user);
+                                  setColorDialogOpen(true);
+                                }}
+                              >
+                                <div 
+                                  className="w-6 h-6 rounded-full border-2 border-border"
+                                  style={{ backgroundColor: user.color || "#6366f1" }}
+                                />
+                              </Button>
+                            ) : (
+                              <div 
+                                className="w-6 h-6 rounded-full border-2 border-border ml-2"
+                                style={{ backgroundColor: user.color || "#6366f1" }}
+                              />
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">
                             {user.full_name || "N/A"}
                           </TableCell>
@@ -1659,6 +1713,32 @@ const Settings = () => {
                   Delete User
                 </Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Color Picker Dialog */}
+          <Dialog open={colorDialogOpen} onOpenChange={setColorDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Choose Calendar Color</DialogTitle>
+                <DialogDescription>
+                  Select a color for {selectedUserForColor?.full_name || selectedUserForColor?.email} to display in the calendar
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-5 gap-3 py-4">
+                {colorPalette.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => selectedUserForColor && handleColorChange(selectedUserForColor.id, color)}
+                    className="w-12 h-12 rounded-lg border-2 hover:scale-110 transition-transform"
+                    style={{ 
+                      backgroundColor: color,
+                      borderColor: selectedUserForColor?.color === color ? "#000" : "transparent"
+                    }}
+                    title={color}
+                  />
+                ))}
+              </div>
             </DialogContent>
           </Dialog>
         </TabsContent>
