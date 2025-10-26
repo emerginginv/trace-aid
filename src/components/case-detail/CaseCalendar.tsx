@@ -277,7 +277,7 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
     setActivityFormOpen(true);
   };
 
-  // Filter tasks for the sidebar
+  // Filter tasks for the sidebar (only tasks, not events)
   const getFilteredTasks = () => {
     const now = new Date();
     const todayStart = startOfDay(now);
@@ -286,6 +286,9 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
     const weekEnd = getWeekEnd(now);
 
     return activities.filter(activity => {
+      // Only show tasks, not events
+      if (activity.type !== "task") return false;
+      
       const activityDate = activity.date ? new Date(activity.date) : null;
       
       // Apply time-based filter
@@ -488,7 +491,7 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
       {/* Task List - Right Side */}
       <div className="w-full lg:w-96 border rounded-lg bg-card">
         <div className="p-4 border-b">
-          <h3 className="font-semibold text-lg mb-3">Tasks & Events</h3>
+          <h3 className="font-semibold text-lg mb-3">Tasks</h3>
           
           {/* Task List Filters */}
           <Select value={taskListFilter} onValueChange={setTaskListFilter}>
@@ -507,7 +510,7 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
         <div className="p-4 space-y-2 max-h-[600px] overflow-y-auto">
           {getFilteredTasks().length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No tasks or events found
+              No tasks found
             </p>
           ) : (
             getFilteredTasks().map(activity => {
@@ -528,9 +531,6 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="text-sm font-medium truncate flex-1">{activity.title}</p>
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-muted shrink-0">
-                          {activity.type === "task" ? "Task" : "Event"}
-                        </span>
                       </div>
                       
                       {activityDate && (
