@@ -309,70 +309,95 @@ const Dashboard = () => {
   if (isVendor) {
     return <VendorDashboard />;
   }
-  return <div className="space-y-4 sm:space-y-6 md:space-y-8">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">
-          Welcome back! Here's an overview of your day.
-        </p>
+  return <div className="space-y-6">
+      {/* Header Section with Gradient Background */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 p-8 border border-border/50">
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Welcome back! Here's an overview of your day.
+          </p>
+        </div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-0" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/5 rounded-full blur-3xl -z-0" />
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+      {/* Stats Overview with Modern Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(stat => {
         const Icon = stat.icon;
-        return <Card key={stat.title} className="rounded bg-transparent">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+        return <Card key={stat.title} className="group hover-lift border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.title}
                 </CardTitle>
-                <div className={`${stat.bgColor} p-2 rounded-lg`}>
-                  <Icon className={`w-4 h-4 ${stat.color}`} />
+                <div className={`${stat.bgColor} p-2.5 rounded-lg transition-transform group-hover:scale-110`}>
+                  <Icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
               </CardHeader>
-              <CardContent className="bg-transparent">
-                <div className="text-3xl font-bold bg-transparent">{stat.value}</div>
+              <CardContent className="relative z-10">
+                <div className="text-3xl font-bold">{stat.value}</div>
               </CardContent>
             </Card>;
       })}
       </div>
 
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+      {/* Main Dashboard Grid with Enhanced Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Due Tasks */}
-        <Card className="rounded bg-transparent">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              Due Tasks
+        <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
+          <CardHeader className="pb-4 border-b border-border/50">
+            <CardTitle className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <CheckCircle2 className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-lg font-semibold">Due Tasks</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
-            {dueTasks.length === 0 ? <p className="text-sm text-muted-foreground">No pending tasks</p> : dueTasks.map(task => {
+          <CardContent className="space-y-3 pt-6">
+            {dueTasks.length === 0 ? 
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="p-4 rounded-full bg-muted mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No pending tasks</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">You're all caught up!</p>
+              </div>
+            : dueTasks.map(task => {
             const taskDate = parseISO(task.dueDate);
             const isOverdue = isPast(taskDate) && !isToday(taskDate);
-            return <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                    <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-0.5" />
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm">{task.title}</p>
-                        <Badge variant={getPriorityColor(task.priority) as any} className="text-xs">
+            return <div key={task.id} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-primary/20 transition-all hover:shadow-md">
+                    <Checkbox 
+                      checked={task.status === "completed"} 
+                      onCheckedChange={() => handleTaskToggle(task.id)} 
+                      className="mt-1" 
+                    />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-sm leading-tight">{task.title}</p>
+                        <Badge variant={getPriorityColor(task.priority) as any} className="text-xs shrink-0">
                           {task.priority}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {isOverdue ? <span className="flex items-center gap-1 text-destructive font-medium">
-                            <AlertCircle className="w-3 h-3" />
+                      <div className="flex items-center gap-2 text-xs">
+                        {isOverdue ? 
+                          <span className="flex items-center gap-1.5 text-destructive font-medium bg-destructive/10 px-2 py-1 rounded-md">
+                            <AlertCircle className="w-3.5 h-3.5" />
                             Overdue by {formatDistanceToNow(taskDate)}
-                          </span> : isToday(taskDate) ? <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
+                          </span> 
+                        : isToday(taskDate) ? 
+                          <span className="flex items-center gap-1.5 text-warning bg-warning/10 px-2 py-1 rounded-md">
+                            <Clock className="w-3.5 h-3.5" />
                             Due today
-                          </span> : <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Due {formatDistanceToNow(taskDate, {
-                      addSuffix: true
-                    })}
-                          </span>}
+                          </span> 
+                        : <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <Clock className="w-3.5 h-3.5" />
+                            Due {formatDistanceToNow(taskDate, { addSuffix: true })}
+                          </span>
+                        }
                       </div>
                     </div>
                   </div>;
@@ -381,116 +406,192 @@ const Dashboard = () => {
         </Card>
 
         {/* Calendar Events */}
-        <Card className="bg-transparent">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              Upcoming Events
+        <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
+          <CardHeader className="pb-4 border-b border-border/50">
+            <CardTitle className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-secondary/10">
+                <Calendar className="w-5 h-5 text-secondary" />
+              </div>
+              <span className="text-lg font-semibold">Upcoming Events</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
-            {relevantEvents.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming events</p> : relevantEvents.map(event => <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedEvent(event)}>
-                  <div className="flex-1 space-y-1">
-                    <p className="font-medium text-sm">{event.title}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="text-xs">
-                        {getEventDateLabel(event.date)}
-                      </Badge>
-                      <span>{event.time}</span>
-                    </div>
+          <CardContent className="space-y-3 pt-6">
+            {relevantEvents.length === 0 ? 
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="p-4 rounded-full bg-muted mb-4">
+                  <Calendar className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No upcoming events</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Your calendar is clear</p>
+              </div>
+            : relevantEvents.map(event => 
+              <div 
+                key={event.id} 
+                className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-secondary/20 transition-all cursor-pointer hover:shadow-md" 
+                onClick={() => setSelectedEvent(event)}
+              >
+                <div className="flex-1 space-y-2">
+                  <p className="font-medium text-sm leading-tight group-hover:text-primary transition-colors">
+                    {event.title}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <Badge variant="outline" className="bg-secondary/10 border-secondary/20 text-secondary">
+                      {getEventDateLabel(event.date)}
+                    </Badge>
+                    <span className="text-muted-foreground">{event.time}</span>
                   </div>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </div>)}
+                </div>
+                <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Recent Updates */}
-        <Card className="bg-transparent">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              Recent Updates
+        <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
+          <CardHeader className="pb-4 border-b border-border/50">
+            <CardTitle className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-info-50">
+                <Bell className="w-5 h-5 text-info-500" />
+              </div>
+              <span className="text-lg font-semibold">Recent Updates</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
-            {updates.length === 0 ? <p className="text-sm text-muted-foreground">No recent updates</p> : updates.map(update => <div key={update.id} className="rounded-lg border bg-card">
-                  <div onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)} className="flex items-start gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer">
-                    <div className="mt-0.5">
-                      {getUpdateIcon(update.type)}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm">{update.message}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(parseISO(update.timestamp), {
-                    addSuffix: true
-                  })}
-                      </p>
-                    </div>
-                    {expandedUpdate === update.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          <CardContent className="space-y-3 pt-6">
+            {updates.length === 0 ? 
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="p-4 rounded-full bg-muted mb-4">
+                  <Bell className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No recent updates</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Updates will appear here</p>
+              </div>
+            : updates.map(update => 
+              <div key={update.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
+                <div 
+                  onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)} 
+                  className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer"
+                >
+                  <div className="mt-0.5 p-1.5 rounded-lg bg-background">
+                    {getUpdateIcon(update.type)}
                   </div>
-                  {expandedUpdate === update.id && <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
-                      <p className="font-medium mb-2">Update Details:</p>
-                      <div className="space-y-1">
-                        <p>Type: <Badge variant="outline">{update.type}</Badge></p>
-                        <p>Time: {format(parseISO(update.timestamp), "PPpp")}</p>
-                        <p>Status: Active</p>
+                  <div className="flex-1 space-y-1.5">
+                    <p className="text-sm font-medium leading-tight">{update.message}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(parseISO(update.timestamp), { addSuffix: true })}
+                    </p>
+                  </div>
+                  {expandedUpdate === update.id ? 
+                    <ChevronUp className="w-4 h-4 text-muted-foreground mt-1" /> : 
+                    <ChevronDown className="w-4 h-4 text-muted-foreground mt-1" />
+                  }
+                </div>
+                {expandedUpdate === update.id && 
+                  <div className="px-4 pb-4 text-sm border-t border-border/50 pt-4 bg-muted/30">
+                    <p className="font-semibold mb-3 text-foreground">Update Details</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Type:</span>
+                        <Badge variant="outline" className="capitalize">{update.type}</Badge>
                       </div>
-                    </div>}
-                </div>)}
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Time:</span>
+                        <span className="text-xs">{format(parseISO(update.timestamp), "PPpp")}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Status:</span>
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">Active</Badge>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Recent Expenses */}
-        <Card className="bg-transparent">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              Recent Expenses
+        <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
+          <CardHeader className="pb-4 border-b border-border/50">
+            <CardTitle className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-warning/10">
+                <DollarSign className="w-5 h-5 text-warning" />
+              </div>
+              <span className="text-lg font-semibold">Recent Expenses</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
-            {expenses.length === 0 ? <p className="text-sm text-muted-foreground">No recent expenses</p> : <>
-                {expenses.map(expense => <div key={expense.id} className="rounded-lg border bg-card">
-                    <div onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)} className="flex items-start justify-between gap-3 p-3 transition-colors cursor-pointer bg-gray-300 rounded-sm">
-                      <div className="flex-1 space-y-1">
-                        <p className="font-medium text-sm text-gray-800">{expense.description}</p>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs bg-green-600">
+          <CardContent className="space-y-3 pt-6">
+            {expenses.length === 0 ? 
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="p-4 rounded-full bg-muted mb-4">
+                  <DollarSign className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No recent expenses</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Expenses will appear here</p>
+              </div>
+            : <>
+                {expenses.map(expense => 
+                  <div key={expense.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
+                    <div 
+                      onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)} 
+                      className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer"
+                    >
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="font-medium text-sm leading-tight flex-1">{expense.description}</p>
+                          <p className="font-bold text-base text-warning shrink-0">
+                            ${expense.amount.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <Badge variant="outline" className="bg-primary/5 border-primary/20">
                             {expense.category}
                           </Badge>
-                          <span className="text-xs text-blue-700">
-                            {formatDistanceToNow(parseISO(expense.date), {
-                        addSuffix: true
-                      })}
+                          <span className="text-muted-foreground">
+                            {format(parseISO(expense.date), "MMM dd, yyyy")}
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="font-semibold text-sm bg-transparent">
-                          ${expense.amount.toFixed(2)}
-                        </div>
-                        {expandedExpense === expense.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                      </div>
+                      {expandedExpense === expense.id ? 
+                        <ChevronUp className="w-4 h-4 text-muted-foreground mt-1" /> : 
+                        <ChevronDown className="w-4 h-4 text-muted-foreground mt-1" />
+                      }
                     </div>
-                    {expandedExpense === expense.id && <div className="px-3 pb-3 text-sm text-muted-foreground border-t pt-3 mt-2">
-                        <p className="font-medium mb-2">Expense Details:</p>
-                        <div className="space-y-1">
-                          <p>Amount: <span className="font-semibold text-foreground">${expense.amount.toFixed(2)}</span></p>
-                          <p>Category: <Badge variant="outline">{expense.category}</Badge></p>
-                          <p>Date: {format(parseISO(expense.date), "PPP")}</p>
-                          <p>Status: Recorded</p>
+                    {expandedExpense === expense.id && 
+                      <div className="px-4 pb-4 text-sm border-t border-border/50 pt-4 bg-muted/30">
+                        <p className="font-semibold mb-3 text-foreground">Expense Details</p>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Amount:</span>
+                            <span className="font-bold text-warning">${expense.amount.toFixed(2)}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Category:</span>
+                            <Badge variant="outline" className="capitalize">{expense.category}</Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Date:</span>
+                            <span className="text-xs">{format(parseISO(expense.date), "PPP")}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Status:</span>
+                            <Badge variant="outline" className="bg-success/10 text-success border-success/20">Recorded</Badge>
+                          </div>
                         </div>
-                      </div>}
-                  </div>)}
-                <div className="pt-2 border-t">
+                      </div>
+                    }
+                  </div>
+                )}
+                <div className="pt-3 mt-3 border-t border-border/50 bg-muted/20 rounded-lg p-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Total</span>
-                    <span className="text-lg font-bold">
+                    <span className="text-sm font-semibold text-foreground">Total Expenses</span>
+                    <span className="text-xl font-bold text-warning">
                       ${expenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
-              </>}
+              </>
+            }
           </CardContent>
         </Card>
       </div>
