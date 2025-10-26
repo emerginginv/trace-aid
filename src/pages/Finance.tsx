@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Loader2, DollarSign, Receipt, Wallet, Search, Eye, Pencil, Trash2, CircleDollarSign } from "lucide-react";
+import { Loader2, DollarSign, Receipt, Wallet, Search, Eye, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -62,6 +62,14 @@ const Finance = () => {
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all");
   const [showPayModal, setShowPayModal] = useState<Invoice | null>(null);
   const [retainerMap, setRetainerMap] = useState<Record<string, number>>({});
+  
+  // Pagination states
+  const [retainerPage, setRetainerPage] = useState(1);
+  const [retainerPageSize, setRetainerPageSize] = useState(15);
+  const [expensePage, setExpensePage] = useState(1);
+  const [expensePageSize, setExpensePageSize] = useState(15);
+  const [invoicePage, setInvoicePage] = useState(1);
+  const [invoicePageSize, setInvoicePageSize] = useState(15);
 
   useEffect(() => {
     fetchFinanceData();
@@ -244,6 +252,25 @@ const Finance = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // Paginated data
+  const paginatedRetainerBalances = filteredRetainerBalances.slice(
+    (retainerPage - 1) * retainerPageSize,
+    retainerPage * retainerPageSize
+  );
+  const retainerTotalPages = Math.ceil(filteredRetainerBalances.length / retainerPageSize);
+
+  const paginatedExpenses = filteredExpenses.slice(
+    (expensePage - 1) * expensePageSize,
+    expensePage * expensePageSize
+  );
+  const expenseTotalPages = Math.ceil(filteredExpenses.length / expensePageSize);
+
+  const paginatedInvoices = filteredInvoices.slice(
+    (invoicePage - 1) * invoicePageSize,
+    invoicePage * invoicePageSize
+  );
+  const invoiceTotalPages = Math.ceil(filteredInvoices.length / invoicePageSize);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -324,16 +351,33 @@ const Finance = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <div className="relative">
+          <div className="mb-4 flex gap-4">
+            <div className="relative flex-1">
               <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by case name or number..."
                 value={retainerSearch}
-                onChange={(e) => setRetainerSearch(e.target.value)}
+                onChange={(e) => {
+                  setRetainerSearch(e.target.value);
+                  setRetainerPage(1);
+                }}
                 className="pl-8"
               />
             </div>
+            <Select value={retainerPageSize.toString()} onValueChange={(v) => {
+              setRetainerPageSize(parseInt(v));
+              setRetainerPage(1);
+            }}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15 per page</SelectItem>
+                <SelectItem value="25">25 per page</SelectItem>
+                <SelectItem value="50">50 per page</SelectItem>
+                <SelectItem value="100">100 per page</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           {filteredRetainerBalances.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
@@ -351,7 +395,7 @@ const Finance = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRetainerBalances.map((balance) => (
+                {paginatedRetainerBalances.map((balance) => (
                   <TableRow
                     key={balance.case_id}
                     className="hover:bg-muted/50"
@@ -383,6 +427,36 @@ const Finance = () => {
               </TableBody>
             </Table>
           )}
+          {filteredRetainerBalances.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {((retainerPage - 1) * retainerPageSize) + 1} to {Math.min(retainerPage * retainerPageSize, filteredRetainerBalances.length)} of {filteredRetainerBalances.length} entries
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRetainerPage(p => Math.max(1, p - 1))}
+                  disabled={retainerPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <div className="text-sm">
+                  Page {retainerPage} of {retainerTotalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRetainerPage(p => Math.min(retainerTotalPages, p + 1))}
+                  disabled={retainerPage === retainerTotalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -401,11 +475,17 @@ const Finance = () => {
               <Input
                 placeholder="Search by case, category..."
                 value={expenseSearch}
-                onChange={(e) => setExpenseSearch(e.target.value)}
+                onChange={(e) => {
+                  setExpenseSearch(e.target.value);
+                  setExpensePage(1);
+                }}
                 className="pl-8"
               />
             </div>
-            <Select value={expenseStatusFilter} onValueChange={setExpenseStatusFilter}>
+            <Select value={expenseStatusFilter} onValueChange={(v) => {
+              setExpenseStatusFilter(v);
+              setExpensePage(1);
+            }}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -414,6 +494,20 @@ const Finance = () => {
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="invoiced">Invoiced</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={expensePageSize.toString()} onValueChange={(v) => {
+              setExpensePageSize(parseInt(v));
+              setExpensePage(1);
+            }}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15 per page</SelectItem>
+                <SelectItem value="25">25 per page</SelectItem>
+                <SelectItem value="50">50 per page</SelectItem>
+                <SelectItem value="100">100 per page</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -434,7 +528,7 @@ const Finance = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredExpenses.map((expense) => (
+                {paginatedExpenses.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell>
                       {format(new Date(expense.date), "MMM d, yyyy")}
@@ -506,6 +600,36 @@ const Finance = () => {
               </TableBody>
             </Table>
           )}
+          {filteredExpenses.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {((expensePage - 1) * expensePageSize) + 1} to {Math.min(expensePage * expensePageSize, filteredExpenses.length)} of {filteredExpenses.length} entries
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExpensePage(p => Math.max(1, p - 1))}
+                  disabled={expensePage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <div className="text-sm">
+                  Page {expensePage} of {expenseTotalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExpensePage(p => Math.min(expenseTotalPages, p + 1))}
+                  disabled={expensePage === expenseTotalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -524,11 +648,17 @@ const Finance = () => {
               <Input
                 placeholder="Search by invoice #, case..."
                 value={invoiceSearch}
-                onChange={(e) => setInvoiceSearch(e.target.value)}
+                onChange={(e) => {
+                  setInvoiceSearch(e.target.value);
+                  setInvoicePage(1);
+                }}
                 className="pl-8"
               />
             </div>
-            <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+            <Select value={invoiceStatusFilter} onValueChange={(v) => {
+              setInvoiceStatusFilter(v);
+              setInvoicePage(1);
+            }}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -538,6 +668,20 @@ const Finance = () => {
                 <SelectItem value="sent">Sent</SelectItem>
                 <SelectItem value="partial">Partial</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={invoicePageSize.toString()} onValueChange={(v) => {
+              setInvoicePageSize(parseInt(v));
+              setInvoicePage(1);
+            }}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15 per page</SelectItem>
+                <SelectItem value="25">25 per page</SelectItem>
+                <SelectItem value="50">50 per page</SelectItem>
+                <SelectItem value="100">100 per page</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -559,7 +703,7 @@ const Finance = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvoices.map((invoice) => (
+                {paginatedInvoices.map((invoice) => (
                   <TableRow 
                     key={invoice.id}
                     className="hover:bg-muted/50"
@@ -662,6 +806,36 @@ const Finance = () => {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {filteredInvoices.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {((invoicePage - 1) * invoicePageSize) + 1} to {Math.min(invoicePage * invoicePageSize, filteredInvoices.length)} of {filteredInvoices.length} entries
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInvoicePage(p => Math.max(1, p - 1))}
+                  disabled={invoicePage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <div className="text-sm">
+                  Page {invoicePage} of {invoiceTotalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInvoicePage(p => Math.min(invoiceTotalPages, p + 1))}
+                  disabled={invoicePage === invoiceTotalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
