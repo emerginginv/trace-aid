@@ -24,8 +24,21 @@ export async function createNotification(params: CreateNotificationParams) {
       return { error: 'User not authenticated' };
     }
 
+    // Get user's organization_id
+    const { data: orgMember } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!orgMember?.organization_id) {
+      console.error('Cannot create notification: User not in organization');
+      return { error: 'User not in organization' };
+    }
+
     const { error } = await supabase.from('notifications').insert({
       user_id: user.id,
+      organization_id: orgMember.organization_id,
       type: params.type,
       title: params.title,
       message: params.message,
@@ -76,8 +89,21 @@ export async function createNotificationForUser(
   params: Omit<CreateNotificationParams, 'userId'>
 ) {
   try {
+    // Get user's organization_id
+    const { data: orgMember } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (!orgMember?.organization_id) {
+      console.error('Cannot create notification: User not in organization');
+      return { error: 'User not in organization' };
+    }
+
     const { error } = await supabase.from('notifications').insert({
       user_id: userId,
+      organization_id: orgMember.organization_id,
       type: params.type,
       title: params.title,
       message: params.message,

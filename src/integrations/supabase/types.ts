@@ -735,6 +735,7 @@ export type Database = {
           id: string
           link: string | null
           message: string
+          organization_id: string | null
           priority: string | null
           read: boolean
           related_id: string | null
@@ -749,6 +750,7 @@ export type Database = {
           id?: string
           link?: string | null
           message: string
+          organization_id?: string | null
           priority?: string | null
           read?: boolean
           related_id?: string | null
@@ -763,6 +765,7 @@ export type Database = {
           id?: string
           link?: string | null
           message?: string
+          organization_id?: string | null
           priority?: string | null
           read?: boolean
           related_id?: string | null
@@ -772,7 +775,15 @@ export type Database = {
           type?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organization_invites: {
         Row: {

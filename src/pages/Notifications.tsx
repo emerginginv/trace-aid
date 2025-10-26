@@ -67,10 +67,23 @@ const Notifications = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization_id
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!orgMember?.organization_id) {
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
+        .eq('organization_id', orgMember.organization_id)
         .order('timestamp', { ascending: false });
 
       if (error) throw error;
