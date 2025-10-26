@@ -48,7 +48,10 @@ const allMenuItems = [{
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { role, isVendor } = useUserRole();
+  const {
+    role,
+    isVendor
+  } = useUserRole();
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null;
     email: string;
@@ -57,9 +60,7 @@ export function AppSidebar() {
   } | null>(null);
 
   // Filter menu items based on user role
-  const menuItems = allMenuItems.filter(item => 
-    !role || item.roles.includes(role)
-  );
+  const menuItems = allMenuItems.filter(item => !role || item.roles.includes(role));
   useEffect(() => {
     const fetchUserProfile = async () => {
       const {
@@ -116,16 +117,14 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {isVendor && (
-          <div className="px-4 pt-2 pb-4">
+        {isVendor && <div className="px-4 pt-2 pb-4">
             <Alert className="bg-muted/50 border-primary/20">
               <Info className="h-4 w-4" />
               <AlertDescription className="text-xs">
                 Limited Access - Vendor Account
               </AlertDescription>
             </Alert>
-          </div>
-        )}
+          </div>}
         
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
@@ -147,13 +146,11 @@ export function AppSidebar() {
         <HelpFeedback />
         
         {/* Settings and Sign Out buttons - hide Settings for vendors */}
-        <div className="flex gap-2 bg-slate-600 rounded">
-          {!isVendor && (
-            <SidebarMenuButton onClick={() => navigate("/settings")} className="flex-1 justify-center">
+        <div className="flex gap-2 rounded bg-transparent">
+          {!isVendor && <SidebarMenuButton onClick={() => navigate("/settings")} className="flex-1 justify-center">
               <Settings className="w-4 h-4" />
               <span className="sr-only">Settings</span>
-            </SidebarMenuButton>
-          )}
+            </SidebarMenuButton>}
           <SidebarMenuButton onClick={handleSignOut} className={`${isVendor ? 'w-full' : 'flex-1'} justify-center`}>
             <LogOut className="w-4 h-4" />
             <span className="sr-only">Sign Out</span>
@@ -165,7 +162,7 @@ export function AppSidebar() {
         if (e.key === 'Enter' || e.key === ' ') {
           navigate("/profile");
         }
-      }} className="flex items-center gap-3 p-2 cursor-pointer transition-colors bg-slate-600 rounded-md">
+      }} className="flex items-center gap-3 p-2 cursor-pointer transition-colors rounded-md bg-transparent">
             <Avatar className="h-10 w-10">
               <AvatarImage src={userProfile.avatar_url || ""} alt={userProfile.full_name || userProfile.email} />
               <AvatarFallback className="bg-primary text-primary-foreground">
