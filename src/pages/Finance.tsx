@@ -351,19 +351,17 @@ const Finance = () => {
       {/* Retainer Funds List */}
       <Collapsible open={retainerOpen} onOpenChange={setRetainerOpen}>
         <Card>
-          <CardHeader>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-0 hover:bg-transparent">
-                <div className="text-left">
-                  <CardTitle>Retainer Funds by Case</CardTitle>
-                  <CardDescription>
-                    Current retainer balance for each case
-                  </CardDescription>
-                </div>
-                <ChevronDown className={`h-5 w-5 transition-transform ${retainerOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-          </CardHeader>
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="text-left">
+                <CardTitle>Retainer Funds by Case</CardTitle>
+                <CardDescription>
+                  Current retainer balance for each case
+                </CardDescription>
+              </div>
+              <ChevronDown className={`h-5 w-5 transition-transform ${retainerOpen ? 'rotate-180' : ''}`} />
+            </CardHeader>
+          </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent>
           <div className="mb-4 flex gap-4">
@@ -480,19 +478,17 @@ const Finance = () => {
       {/* Expenses List */}
       <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
         <Card>
-          <CardHeader>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-0 hover:bg-transparent">
-                <div className="text-left">
-                  <CardTitle>All Expenses</CardTitle>
-                  <CardDescription>
-                    Expenses across all cases
-                  </CardDescription>
-                </div>
-                <ChevronDown className={`h-5 w-5 transition-transform ${expensesOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-          </CardHeader>
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="text-left">
+                <CardTitle>All Expenses</CardTitle>
+                <CardDescription>
+                  Expenses across all cases
+                </CardDescription>
+              </div>
+              <ChevronDown className={`h-5 w-5 transition-transform ${expensesOpen ? 'rotate-180' : ''}`} />
+            </CardHeader>
+          </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent>
           <div className="mb-4 flex gap-4">
@@ -664,19 +660,17 @@ const Finance = () => {
       {/* Invoices List */}
       <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
         <Card>
-          <CardHeader>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-0 hover:bg-transparent">
-                <div className="text-left">
-                  <CardTitle>All Invoices</CardTitle>
-                  <CardDescription>
-                    System-wide invoice overview
-                  </CardDescription>
-                </div>
-                <ChevronDown className={`h-5 w-5 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-          </CardHeader>
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="text-left">
+                <CardTitle>All Invoices</CardTitle>
+                <CardDescription>
+                  System-wide invoice overview
+                </CardDescription>
+              </div>
+              <ChevronDown className={`h-5 w-5 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} />
+            </CardHeader>
+          </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent>
           <div className="mb-4 flex gap-4">
