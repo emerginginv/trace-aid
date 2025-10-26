@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   startOfMonth,
@@ -14,15 +14,20 @@ import {
   isSameDay,
   addMonths,
   subMonths,
+  isToday,
+  startOfDay,
+  endOfDay,
+  startOfWeek as getWeekStart,
+  endOfWeek as getWeekEnd,
+  isBefore,
+  isAfter,
 } from "date-fns";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ActivityForm } from "./ActivityForm";
 
@@ -34,6 +39,7 @@ interface CalendarActivity {
   case_id: string;
   status: string;
   assigned_user_id: string | null;
+  due_date: string | null;
 }
 
 interface User {
@@ -56,21 +62,22 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [createDate, setCreateDate] = useState<Date | null>(null);
   const [internalFilterStatus, setInternalFilterStatus] = useState<string>("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [createDate, setCreateDate] = useState<Date | null>(null);
   const [activityFormOpen, setActivityFormOpen] = useState(false);
   const [activityType, setActivityType] = useState<"task" | "event">("task");
   const [editingActivity, setEditingActivity] = useState<any>(null);
   const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>(caseId);
+  const [taskListFilter, setTaskListFilter] = useState<string>("all");
 
   const filterStatus = externalFilterStatus || internalFilterStatus;
 
   useEffect(() => {
     fetchData();
-  }, [caseId]);
+  }, [caseId, filterCase, filterUser, filterStatus]);
 
   const fetchData = async () => {
     try {
@@ -100,6 +107,18 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
         eventsQuery = eventsQuery.eq("case_id", activeCaseFilter);
       }
 
+      // Apply user filter
+      if (filterUser && filterUser !== "all") {
+        tasksQuery = tasksQuery.eq("assigned_user_id", filterUser);
+        eventsQuery = eventsQuery.eq("assigned_user_id", filterUser);
+      }
+
+      // Apply status filter
+      if (filterStatus && filterStatus !== "all") {
+        tasksQuery = tasksQuery.eq("status", filterStatus);
+        eventsQuery = eventsQuery.eq("status", filterStatus);
+      }
+
       const [tasksResult, eventsResult, usersResult] = await Promise.all([
         tasksQuery,
         eventsQuery,
@@ -111,6 +130,8 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
       if (usersResult.error) throw usersResult.error;
 
       setUsers(usersResult.data || []);
+      const currentUserData = usersResult.data?.find(u => u.id === user.id);
+      setCurrentUser(currentUserData || null);
 
       // Combine tasks and events
       const allActivities: CalendarActivity[] = [
@@ -122,6 +143,7 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
           case_id: task.case_id,
           status: task.status,
           assigned_user_id: task.assigned_user_id,
+          due_date: task.due_date,
         })),
         ...(eventsResult.data || []).map(event => ({
           id: event.id,
@@ -131,6 +153,7 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
           case_id: event.case_id,
           status: event.status,
           assigned_user_id: event.assigned_user_id,
+          due_date: event.due_date,
         })),
       ];
 
@@ -164,47 +187,41 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
     return days;
   };
 
-  const getActivitiesForDay = (date: Date) => {
+  // Only show EVENTS in calendar grid
+  const getEventsForDay = (date: Date) => {
     return activities.filter(activity => {
       const activityDate = new Date(activity.date);
-      const matchesDate = isSameDay(activityDate, date);
-      const matchesStatus = filterStatus === "all" || activity.status === filterStatus;
-      const matchesUser = !filterUser || filterUser === "all" || activity.assigned_user_id === filterUser;
-      
-      return matchesDate && matchesStatus && matchesUser;
+      return activity.type === "event" && isSameDay(activityDate, date);
     });
   };
 
-  const getUserName = (userId: string | null) => {
-    if (!userId) return null;
+  const getUserColor = (userId: string | null) => {
+    if (!userId) return "#6366f1";
     const user = users.find(u => u.id === userId);
-    return user?.full_name || user?.email || null;
+    return user?.color || "#6366f1";
+  };
+
+  const getUserName = (userId: string | null) => {
+    if (!userId) return "Unassigned";
+    const user = users.find(u => u.id === userId);
+    return user?.full_name || user?.email || "Unknown";
   };
 
   const getUserInitials = (userId: string | null) => {
     const name = getUserName(userId);
-    if (!name) return null;
+    if (!name || name === "Unassigned" || name === "Unknown") return null;
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const getActivityColor = (activity: CalendarActivity) => {
-    // Cancelled/blocked tasks - red
-    if (activity.status === "cancelled" || activity.status === "blocked") {
-      return "bg-red-50 text-red-700 border-red-200 line-through";
-    }
-    // Completed/done - faded
-    if (activity.status === "done" || activity.status === "completed") {
-      return activity.type === "task"
-        ? "bg-blue-50/50 text-blue-600/60 border-blue-200/50 line-through"
-        : "bg-green-50/50 text-green-600/60 border-green-200/50 line-through";
-    }
-    // Active items - normal colors
-    return activity.type === "task"
-      ? "bg-blue-50 text-blue-700 border-blue-200"
-      : "bg-green-50 text-green-700 border-green-200";
+  const getStatusIcon = (status: string, isPast: boolean) => {
+    if (status === "completed" || status === "done") return "✅";
+    if (isPast && status !== "completed" && status !== "done") return "🕒";
+    if (status === "blocked") return "🚫";
+    if (status === "cancelled") return "❌";
+    return "🔜";
   };
 
-  const handleDayClick = (day: Date, event: React.MouseEvent) => {
+  const handleDayClick = (day: Date) => {
     setCreateDate(day);
     
     // If no caseId, we need to ask user to select a case
@@ -219,9 +236,7 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
     }
   };
 
-  const handleActivityClick = async (activity: CalendarActivity, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent day click handler
-    
+  const handleActivityClick = async (activity: CalendarActivity) => {
     try {
       // Fetch full activity details
       const { data, error } = await supabase
@@ -234,7 +249,7 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
 
       if (data) {
         setEditingActivity(data);
-        setSelectedCaseId(data.case_id); // Use the case_id from the activity
+        setSelectedCaseId(data.case_id);
         setActivityType(data.activity_type as "task" | "event");
         setActivityFormOpen(true);
       }
@@ -262,6 +277,39 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
     setActivityFormOpen(true);
   };
 
+  // Filter tasks for the sidebar
+  const getFilteredTasks = () => {
+    const now = new Date();
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
+    const weekStart = getWeekStart(now);
+    const weekEnd = getWeekEnd(now);
+
+    return activities.filter(activity => {
+      const activityDate = activity.date ? new Date(activity.date) : null;
+      
+      // Apply time-based filter
+      switch (taskListFilter) {
+        case "today":
+          if (!activityDate || !isSameDay(activityDate, now)) return false;
+          break;
+        case "week":
+          if (!activityDate || isBefore(activityDate, weekStart) || isAfter(activityDate, weekEnd)) return false;
+          break;
+        case "me":
+          if (activity.assigned_user_id !== currentUser?.id) return false;
+          break;
+        // "all" - no additional filter
+      }
+      
+      return true;
+    }).sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateA - dateB;
+    });
+  };
+
   const calendarDays = getCalendarDays();
 
   if (loading) {
@@ -269,113 +317,17 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filter by Status - only show when caseId is provided and no external filter */}
-      {caseId && !externalFilterStatus && (
-        <div className="flex gap-3">
-          <Select value={internalFilterStatus} onValueChange={setInternalFilterStatus}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="to_do">To Do</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-              <SelectItem value="blocked">Blocked</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between bg-card border rounded-lg p-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        
-        <h2 className="text-xl font-semibold">
-          {format(currentDate, "MMMM yyyy")}
-        </h2>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="border rounded-lg overflow-hidden bg-card">
-        {/* Weekday Headers */}
-        <div className="grid grid-cols-7 border-b bg-muted/50">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-            <div key={day} className="p-2 text-center text-sm font-medium">
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Calendar Days */}
-        <div className="grid grid-cols-7">
-          {calendarDays.map((day, idx) => {
-            const dayActivities = getActivitiesForDay(day);
-            const isCurrentMonth = isSameMonth(day, currentDate);
-            const isToday = isSameDay(day, new Date());
-
-            return (
-              <div
-                key={idx}
-                onClick={(e) => handleDayClick(day, e)}
-                className={`min-h-[120px] border-b border-r p-2 cursor-pointer hover:bg-muted/50 transition-colors relative group ${
-                  !isCurrentMonth ? "bg-muted/20 text-muted-foreground" : ""
-                } ${isToday ? "bg-primary/5" : ""}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className={`text-sm font-medium ${isToday ? "text-primary" : ""}`}>
-                    {format(day, "d")}
-                  </div>
-                  <Plus className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
-                </div>
-
-                <div className="space-y-1">
-                  {dayActivities.slice(0, 3).map(activity => (
-                    <div
-                      key={activity.id}
-                      onClick={(e) => handleActivityClick(activity, e)}
-                      className={`text-xs rounded px-1.5 py-0.5 truncate cursor-pointer hover:opacity-80 transition-opacity ${getActivityColor(activity)}`}
-                      title={`Click to view details: ${activity.title}`}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span className="truncate flex-1">{activity.title}</span>
-                        {activity.assigned_user_id && (
-                          <span className="text-[10px] font-medium bg-white/50 px-1 rounded shrink-0">
-                            {getUserInitials(activity.assigned_user_id)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {dayActivities.length > 3 && (
-                    <div className="text-xs text-muted-foreground px-1.5">
-                      +{dayActivities.length - 3} more
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+    <div className="flex flex-col lg:flex-row gap-4">
+      <ActivityForm
+        open={activityFormOpen}
+        onOpenChange={setActivityFormOpen}
+        caseId={selectedCaseId || ""}
+        editingActivity={editingActivity}
+        onSuccess={fetchData}
+        activityType={activityType}
+        users={users}
+        prefilledDate={createDate || undefined}
+      />
 
       {/* Create Activity Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -426,32 +378,181 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
         </DialogContent>
       </Dialog>
 
-      {/* Activity Form */}
-      {selectedCaseId && (
-        <ActivityForm
-          caseId={selectedCaseId}
-          activityType={activityType}
-          users={users}
-          open={activityFormOpen}
-          onOpenChange={(open) => {
-            setActivityFormOpen(open);
-            if (!open) {
-              setEditingActivity(null);
-              setCreateDate(null);
-              setSelectedCaseId(caseId); // Reset to prop caseId
-            }
-          }}
-          onSuccess={() => {
-            fetchData();
-            setActivityFormOpen(false);
-            setEditingActivity(null);
-            setCreateDate(null);
-            setSelectedCaseId(caseId); // Reset to prop caseId
-          }}
-          editingActivity={editingActivity}
-          prefilledDate={createDate || undefined}
-        />
-      )}
+      {/* Calendar View - Left Side */}
+      <div className="flex-1 space-y-4">
+        {/* Calendar Header */}
+        <div className="flex items-center justify-between bg-card border rounded-lg p-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <h2 className="text-xl font-semibold">
+            {format(currentDate, "MMMM yyyy")}
+          </h2>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Calendar Grid - EVENTS ONLY */}
+        <div className="border rounded-lg overflow-hidden bg-card">
+          {/* Weekday Headers */}
+          <div className="grid grid-cols-7 border-b bg-muted/50">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+              <div key={day} className="p-2 text-center text-sm font-medium">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Days */}
+          <div className="grid grid-cols-7">
+            {calendarDays.map((day, idx) => {
+              const dayEvents = getEventsForDay(day);
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const isDayToday = isToday(day);
+
+              return (
+                <div
+                  key={idx}
+                  onClick={() => handleDayClick(day)}
+                  className={`min-h-[100px] border-b border-r p-2 cursor-pointer hover:bg-muted/50 transition-colors relative group ${
+                    !isCurrentMonth ? "bg-muted/20 text-muted-foreground" : ""
+                  } ${isDayToday ? "bg-primary/5 ring-1 ring-primary/20" : ""}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`text-sm font-medium ${isDayToday ? "text-primary font-bold" : ""}`}>
+                      {format(day, "d")}
+                    </div>
+                    <Plus className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                  </div>
+
+                  <div className="space-y-1">
+                    {dayEvents.slice(0, 3).map(event => {
+                      const userColor = getUserColor(event.assigned_user_id);
+                      return (
+                        <div
+                          key={event.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActivityClick(event);
+                          }}
+                          className="text-xs rounded px-2 py-1 truncate cursor-pointer hover:opacity-80 transition-opacity border-l-2"
+                          style={{
+                            backgroundColor: `${userColor}20`,
+                            borderLeftColor: userColor,
+                            color: userColor
+                          }}
+                          title={`${event.title} - ${getUserName(event.assigned_user_id)}`}
+                        >
+                          📅 {event.title}
+                        </div>
+                      );
+                    })}
+                    {dayEvents.length > 3 && (
+                      <div className="text-xs text-muted-foreground px-1.5">
+                        +{dayEvents.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* User Legend */}
+        <div className="flex flex-wrap gap-2 p-4 bg-card border rounded-lg">
+          <div className="text-sm font-medium mr-2">Team:</div>
+          {users.map(user => (
+            <div key={user.id} className="flex items-center gap-2 text-xs bg-muted/50 px-2 py-1 rounded">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: user.color || "#6366f1" }}
+              />
+              <span>{user.full_name || user.email}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Task List - Right Side */}
+      <div className="w-full lg:w-96 border rounded-lg bg-card">
+        <div className="p-4 border-b">
+          <h3 className="font-semibold text-lg mb-3">Tasks & Events</h3>
+          
+          {/* Task List Filters */}
+          <Select value={taskListFilter} onValueChange={setTaskListFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Filter tasks" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="me">Assigned to Me</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="p-4 space-y-2 max-h-[600px] overflow-y-auto">
+          {getFilteredTasks().length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No tasks or events found
+            </p>
+          ) : (
+            getFilteredTasks().map(activity => {
+              const userColor = getUserColor(activity.assigned_user_id);
+              const activityDate = activity.date ? new Date(activity.date) : null;
+              const isPast = activityDate && isBefore(activityDate, new Date());
+              const statusIcon = getStatusIcon(activity.status, isPast);
+              
+              return (
+                <div
+                  key={activity.id}
+                  onClick={() => handleActivityClick(activity)}
+                  className="p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors"
+                  style={{ borderLeftWidth: '3px', borderLeftColor: userColor }}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-base mt-0.5">{statusIcon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium truncate flex-1">{activity.title}</p>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-muted shrink-0">
+                          {activity.type === "task" ? "Task" : "Event"}
+                        </span>
+                      </div>
+                      
+                      {activityDate && (
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {format(activityDate, "MMM d, yyyy")}
+                          {isPast && activity.status !== "completed" && activity.status !== "done" && (
+                            <span className="text-red-500 ml-2">⚠️ Overdue</span>
+                          )}
+                        </p>
+                      )}
+                      
+                      <p className="text-xs font-medium" style={{ color: userColor }}>
+                        {getUserName(activity.assigned_user_id)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
     </div>
   );
 }
