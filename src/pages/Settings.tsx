@@ -456,11 +456,22 @@ const Settings = () => {
 
         if (error) throw error;
       } else {
-        // Insert new
+        // Insert new - Get organization_id first
+        const { data: orgMember } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', currentUserId)
+          .single();
+
+        if (!orgMember?.organization_id) {
+          throw new Error("User not in organization");
+        }
+
         const { error } = await supabase
           .from("organization_settings")
           .insert({
             user_id: currentUserId,
+            organization_id: orgMember.organization_id,
             ...updateData,
           });
 

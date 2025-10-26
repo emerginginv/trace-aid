@@ -91,12 +91,24 @@ export const RetainerPaymentForm = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Get organization_id
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!orgMember?.organization_id) {
+        throw new Error("User not in organization");
+      }
+
       // Create payment record
       const { error: paymentError } = await supabase
         .from("invoice_payments")
         .insert({
           invoice_id: invoiceId,
           user_id: user.id,
+          organization_id: orgMember.organization_id,
           amount: amountNum,
           payment_date: new Date().toISOString().split('T')[0],
           notes: "Payment from retainer funds",
@@ -110,6 +122,7 @@ export const RetainerPaymentForm = ({
         .insert({
           case_id: caseId,
           user_id: user.id,
+          organization_id: orgMember.organization_id,
           amount: -amountNum,
           note: `Applied to Invoice #${invoiceNumber}`,
           invoice_id: invoiceId,

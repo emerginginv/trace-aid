@@ -100,10 +100,22 @@ export default function RecordPaymentModal({
       if (manualAmount > 0) paymentNotes.push(`Manual payment: $${manualAmount.toFixed(2)}`);
       if (retainerAmount > 0) paymentNotes.push(`Retainer applied: $${retainerAmount.toFixed(2)}`);
 
+      // Get organization_id
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!orgMember?.organization_id) {
+        throw new Error("User not in organization");
+      }
+
       const { error: payError } = await supabase.from("invoice_payments").insert({
         invoice_id: invoice.id,
         amount: totalPaidNow,
         user_id: user.id,
+        organization_id: orgMember.organization_id,
         payment_date: new Date().toISOString(),
         notes: paymentNotes.join(', '),
       });
@@ -116,6 +128,7 @@ export default function RecordPaymentModal({
           case_id: invoice.case_id,
           amount: -retainerAmount,
           user_id: user.id,
+          organization_id: orgMember.organization_id,
           note: `Applied to invoice ${invoice.invoice_number}`,
           invoice_id: invoice.id,
         });

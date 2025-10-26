@@ -60,11 +60,23 @@ export const PaymentForm = ({ open, onOpenChange, invoiceId, remainingBalance, o
       }
 
       // Insert payment record
+      // Get organization_id
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!orgMember?.organization_id) {
+        throw new Error("User not in organization");
+      }
+
       const { error: paymentError } = await supabase
         .from("invoice_payments")
         .insert({
           invoice_id: invoiceId,
           user_id: user.id,
+          organization_id: orgMember.organization_id,
           amount: amount,
           payment_date: values.payment_date,
           notes: values.notes || null,

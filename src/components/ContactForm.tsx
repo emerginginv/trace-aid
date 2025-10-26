@@ -104,6 +104,17 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Get user's organization_id
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!orgMember?.organization_id) {
+        throw new Error("User not in organization");
+      }
+
       const { error } = await supabase.from("contacts").insert([{
         first_name: data.first_name,
         last_name: data.last_name,
@@ -116,6 +127,7 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
         account_id: data.account_id || null,
         notes: data.notes,
         user_id: user.id,
+        organization_id: orgMember.organization_id,
       }]);
 
       if (error) throw error;

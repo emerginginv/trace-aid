@@ -63,6 +63,17 @@ export function AccountForm({ open, onOpenChange, onSuccess }: AccountFormProps)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Get user's organization_id
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!orgMember?.organization_id) {
+        throw new Error("User not in organization");
+      }
+
       const { error } = await supabase.from("accounts").insert([{
         name: data.name,
         industry: data.industry,
@@ -74,6 +85,7 @@ export function AccountForm({ open, onOpenChange, onSuccess }: AccountFormProps)
         zip_code: data.zip_code,
         notes: data.notes,
         user_id: user.id,
+        organization_id: orgMember.organization_id,
       }]);
 
       if (error) throw error;
