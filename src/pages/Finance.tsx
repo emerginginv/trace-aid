@@ -5,11 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Loader2, DollarSign, Receipt, Wallet, Search, Eye, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, DollarSign, Receipt, Wallet, Search, Eye, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface RetainerBalance {
   case_id: string;
@@ -70,6 +71,11 @@ const Finance = () => {
   const [expensePageSize, setExpensePageSize] = useState(15);
   const [invoicePage, setInvoicePage] = useState(1);
   const [invoicePageSize, setInvoicePageSize] = useState(15);
+  
+  // Collapsible states
+  const [retainerOpen, setRetainerOpen] = useState(true);
+  const [expensesOpen, setExpensesOpen] = useState(true);
+  const [invoicesOpen, setInvoicesOpen] = useState(true);
 
   useEffect(() => {
     fetchFinanceData();
@@ -343,14 +349,23 @@ const Finance = () => {
       </div>
 
       {/* Retainer Funds List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Retainer Funds by Case</CardTitle>
-          <CardDescription>
-            Current retainer balance for each case
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Collapsible open={retainerOpen} onOpenChange={setRetainerOpen}>
+        <Card>
+          <CardHeader>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between p-0 hover:bg-transparent">
+                <div className="text-left">
+                  <CardTitle>Retainer Funds by Case</CardTitle>
+                  <CardDescription>
+                    Current retainer balance for each case
+                  </CardDescription>
+                </div>
+                <ChevronDown className={`h-5 w-5 transition-transform ${retainerOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent>
           <div className="mb-4 flex gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
@@ -457,18 +472,29 @@ const Finance = () => {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Expenses List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Expenses</CardTitle>
-          <CardDescription>
-            Expenses across all cases
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
+        <Card>
+          <CardHeader>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between p-0 hover:bg-transparent">
+                <div className="text-left">
+                  <CardTitle>All Expenses</CardTitle>
+                  <CardDescription>
+                    Expenses across all cases
+                  </CardDescription>
+                </div>
+                <ChevronDown className={`h-5 w-5 transition-transform ${expensesOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent>
           <div className="mb-4 flex gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
@@ -630,18 +656,29 @@ const Finance = () => {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Invoices List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Invoices</CardTitle>
-          <CardDescription>
-            System-wide invoice overview
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
+        <Card>
+          <CardHeader>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between p-0 hover:bg-transparent">
+                <div className="text-left">
+                  <CardTitle>All Invoices</CardTitle>
+                  <CardDescription>
+                    System-wide invoice overview
+                  </CardDescription>
+                </div>
+                <ChevronDown className={`h-5 w-5 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent>
           <div className="mb-4 flex gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
@@ -837,8 +874,10 @@ const Finance = () => {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Record Payment Modal */}
       {showPayModal && (
