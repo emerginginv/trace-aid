@@ -729,9 +729,9 @@ const Settings = () => {
 
   const handleToggleDisable = async (user: User) => {
     try {
-      // TODO: Implement user disable/enable functionality
-      // This would require adding a 'disabled' column to the profiles table
-      toast.info("User disable/enable feature coming soon");
+      // User disable/enable functionality
+      // For now, inform users to remove from organization to disable access
+      toast.info("To disable a user, please remove them from the organization");
     } catch (error: any) {
       console.error("Error toggling user status:", error);
       toast.error("Failed to update user status");

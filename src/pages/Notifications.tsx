@@ -51,8 +51,7 @@ const Notifications = () => {
           schema: 'public',
           table: 'notifications'
         },
-        (payload) => {
-          console.log('Notification change:', payload);
+        () => {
           fetchNotifications();
         }
       )

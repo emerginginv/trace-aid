@@ -351,11 +351,11 @@ const Dashboard = () => {
             {dueTasks.length === 0 ? <p className="text-sm text-muted-foreground">No pending tasks</p> : dueTasks.map(task => {
             const taskDate = parseISO(task.dueDate);
             const isOverdue = isPast(taskDate) && !isToday(taskDate);
-            return <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border transition-colors bg-slate-600">
+            return <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
                     <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-0.5" />
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm text-slate-50">{task.title}</p>
+                        <p className="font-medium text-sm">{task.title}</p>
                         <Badge variant={getPriorityColor(task.priority) as any} className="text-xs">
                           {task.priority}
                         </Badge>
@@ -389,14 +389,14 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
-            {relevantEvents.length === 0 ? <p className="text-sm text-muted-foreground bg-gray-300">No upcoming events</p> : relevantEvents.map(event => <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedEvent(event)}>
+            {relevantEvents.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming events</p> : relevantEvents.map(event => <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedEvent(event)}>
                   <div className="flex-1 space-y-1">
-                    <p className="font-medium text-sm text-gray-800">{event.title}</p>
+                    <p className="font-medium text-sm">{event.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="text-xs bg-blue-700">
+                      <Badge variant="outline" className="text-xs">
                         {getEventDateLabel(event.date)}
                       </Badge>
-                      <span className="text-gray-800">{event.time}</span>
+                      <span>{event.time}</span>
                     </div>
                   </div>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -414,12 +414,12 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
             {updates.length === 0 ? <p className="text-sm text-muted-foreground">No recent updates</p> : updates.map(update => <div key={update.id} className="rounded-lg border bg-card">
-                  <div onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)} className="flex items-start gap-3 p-3 transition-colors cursor-pointer bg-zinc-300 rounded-sm">
+                  <div onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)} className="flex items-start gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="mt-0.5">
                       {getUpdateIcon(update.type)}
                     </div>
                     <div className="flex-1 space-y-1">
-                      <p className="text-sm text-gray-800">{update.message}</p>
+                      <p className="text-sm">{update.message}</p>
                       <p className="text-xs text-muted-foreground">
                         {formatDistanceToNow(parseISO(update.timestamp), {
                     addSuffix: true
