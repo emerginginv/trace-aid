@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive, Palette } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive, Palette, GripVertical } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { getPlanLimits, isTrialActive, getTrialDaysRemaining } from "@/lib/planLimits";
@@ -24,6 +24,23 @@ import { TemplateList } from "@/components/templates/TemplateList";
 import { EmailTestForm } from "@/components/EmailTestForm";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSearchParams } from "react-router-dom";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -124,6 +141,14 @@ const Settings = () => {
   const [picklistValue, setPicklistValue] = useState("");
   const [picklistColor, setPicklistColor] = useState("#6366f1");
   const [picklistStatusType, setPicklistStatusType] = useState<"open" | "closed">("open");
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Billing State
   const { organization, subscriptionStatus, checkSubscription } = useOrganization();
@@ -810,6 +835,38 @@ const Settings = () => {
 
   const isAdmin = currentUserRole === "admin";
 
+  // Sortable row component
+  interface SortableRowProps {
+    id: string;
+    children: React.ReactNode;
+  }
+
+  const SortableRow = ({ id, children }: SortableRowProps) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <TableRow ref={setNodeRef} style={style}>
+        <TableCell className="w-[40px] cursor-grab active:cursor-grabbing" {...attributes} {...listeners}>
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </TableCell>
+        {children}
+      </TableRow>
+    );
+  };
+
   // Picklist handlers
   const handleAddPicklistItem = async () => {
     if (!picklistValue.trim()) {
@@ -1011,6 +1068,55 @@ const Settings = () => {
     setPicklistColor(item.color);
     setPicklistStatusType((item.statusType as "open" | "closed") || "open");
     setPicklistDialogOpen(true);
+  };
+
+  // Drag and drop handlers
+  const handleDragEnd = async (event: DragEndEvent, type: "status" | "updateType" | "expenseCategory") => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const items = type === "status" 
+      ? caseStatuses 
+      : type === "updateType" 
+      ? updateTypes 
+      : expenseCategories;
+
+    const oldIndex = items.findIndex((item) => item.id === active.id);
+    const newIndex = items.findIndex((item) => item.id === over.id);
+
+    const newItems = arrayMove(items, oldIndex, newIndex);
+
+    // Update local state
+    if (type === "status") {
+      setCaseStatuses(newItems);
+    } else if (type === "updateType") {
+      setUpdateTypes(newItems);
+    } else {
+      setExpenseCategories(newItems);
+    }
+
+    // Update database with new order
+    try {
+      const updates = newItems.map((item, index) => ({
+        id: item.id,
+        display_order: index,
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from("picklists")
+          .update({ display_order: update.display_order })
+          .eq("id", update.id);
+      }
+
+      toast.success("Order updated successfully");
+    } catch (error) {
+      console.error("Error updating order:", error);
+      toast.error("Failed to update order");
+      // Revert on error
+      loadSettings();
+    }
   };
 
   if (loading) {
@@ -1787,75 +1893,84 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Status Value</TableHead>
-                        <TableHead className="w-[100px]">Color</TableHead>
-                        <TableHead className="w-[120px]">Status Type</TableHead>
-                        <TableHead className="w-[100px]">Active</TableHead>
-                        <TableHead className="text-right w-[150px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {caseStatuses.length === 0 ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) => handleDragEnd(event, "status")}
+                  >
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                            No status values configured
-                          </TableCell>
+                          <TableHead className="w-[40px]"></TableHead>
+                          <TableHead>Status Value</TableHead>
+                          <TableHead className="w-[100px]">Color</TableHead>
+                          <TableHead className="w-[120px]">Status Type</TableHead>
+                          <TableHead className="w-[100px]">Active</TableHead>
+                          <TableHead className="text-right w-[150px]">Actions</TableHead>
                         </TableRow>
-                      ) : (
-                        caseStatuses.map((status) => (
-                          <TableRow key={status.id}>
-                            <TableCell className="font-medium">{status.value}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-6 h-6 rounded border"
-                                  style={{ backgroundColor: status.color }}
-                                />
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={status.statusType === "open" ? "default" : "secondary"}>
-                                {status.statusType === "open" ? "🟢 Open" : "⚪ Closed"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={status.isActive ? "default" : "secondary"}>
-                                {status.isActive ? "Active" : "Inactive"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleTogglePicklistActive(status.id, status.isActive, "status")}
-                                >
-                                  {status.isActive ? "Deactivate" : "Activate"}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openEditPicklistDialog(status, "status")}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeletePicklistItem(status.id, "status")}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {caseStatuses.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                              No status values configured
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                        ) : (
+                          <SortableContext items={caseStatuses.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                            {caseStatuses.map((status) => (
+                              <SortableRow key={status.id} id={status.id}>
+                                <TableCell className="font-medium">{status.value}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-6 h-6 rounded border"
+                                      style={{ backgroundColor: status.color }}
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={status.statusType === "open" ? "default" : "secondary"}>
+                                    {status.statusType === "open" ? "🟢 Open" : "⚪ Closed"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={status.isActive ? "default" : "secondary"}>
+                                    {status.isActive ? "Active" : "Inactive"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleTogglePicklistActive(status.id, status.isActive, "status")}
+                                    >
+                                      {status.isActive ? "Deactivate" : "Activate"}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openEditPicklistDialog(status, "status")}
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDeletePicklistItem(status.id, "status")}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </SortableRow>
+                            ))}
+                          </SortableContext>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </DndContext>
                 </div>
               </CardContent>
             </Card>
@@ -1878,69 +1993,78 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Type Value</TableHead>
-                        <TableHead className="w-[100px]">Color</TableHead>
-                        <TableHead className="w-[100px]">Active</TableHead>
-                        <TableHead className="text-right w-[150px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {updateTypes.length === 0 ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) => handleDragEnd(event, "updateType")}
+                  >
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                            No update types configured
-                          </TableCell>
+                          <TableHead className="w-[40px]"></TableHead>
+                          <TableHead>Type Value</TableHead>
+                          <TableHead className="w-[100px]">Color</TableHead>
+                          <TableHead className="w-[100px]">Active</TableHead>
+                          <TableHead className="text-right w-[150px]">Actions</TableHead>
                         </TableRow>
-                      ) : (
-                        updateTypes.map((type) => (
-                          <TableRow key={type.id}>
-                            <TableCell className="font-medium">{type.value}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-6 h-6 rounded border"
-                                  style={{ backgroundColor: type.color }}
-                                />
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={type.isActive ? "default" : "secondary"}>
-                                {type.isActive ? "Active" : "Inactive"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleTogglePicklistActive(type.id, type.isActive, "updateType")}
-                                >
-                                  {type.isActive ? "Deactivate" : "Activate"}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openEditPicklistDialog(type, "updateType")}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeletePicklistItem(type.id, "updateType")}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {updateTypes.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                              No update types configured
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                        ) : (
+                          <SortableContext items={updateTypes.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                            {updateTypes.map((type) => (
+                              <SortableRow key={type.id} id={type.id}>
+                                <TableCell className="font-medium">{type.value}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-6 h-6 rounded border"
+                                      style={{ backgroundColor: type.color }}
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={type.isActive ? "default" : "secondary"}>
+                                    {type.isActive ? "Active" : "Inactive"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleTogglePicklistActive(type.id, type.isActive, "updateType")}
+                                    >
+                                      {type.isActive ? "Deactivate" : "Activate"}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openEditPicklistDialog(type, "updateType")}
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDeletePicklistItem(type.id, "updateType")}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </SortableRow>
+                            ))}
+                          </SortableContext>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </DndContext>
                 </div>
               </CardContent>
             </Card>
@@ -1963,69 +2087,78 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Category Value</TableHead>
-                        <TableHead className="w-[100px]">Color</TableHead>
-                        <TableHead className="w-[100px]">Active</TableHead>
-                        <TableHead className="text-right w-[150px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {expenseCategories.length === 0 ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) => handleDragEnd(event, "expenseCategory")}
+                  >
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                            No expense categories configured
-                          </TableCell>
+                          <TableHead className="w-[40px]"></TableHead>
+                          <TableHead>Category Value</TableHead>
+                          <TableHead className="w-[100px]">Color</TableHead>
+                          <TableHead className="w-[100px]">Active</TableHead>
+                          <TableHead className="text-right w-[150px]">Actions</TableHead>
                         </TableRow>
-                      ) : (
-                        expenseCategories.map((category) => (
-                          <TableRow key={category.id}>
-                            <TableCell className="font-medium">{category.value}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-6 h-6 rounded border"
-                                  style={{ backgroundColor: category.color }}
-                                />
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={category.isActive ? "default" : "secondary"}>
-                                {category.isActive ? "Active" : "Inactive"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleTogglePicklistActive(category.id, category.isActive, "expenseCategory")}
-                                >
-                                  {category.isActive ? "Deactivate" : "Activate"}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openEditPicklistDialog(category, "expenseCategory")}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeletePicklistItem(category.id, "expenseCategory")}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {expenseCategories.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                              No expense categories configured
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                        ) : (
+                          <SortableContext items={expenseCategories.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                            {expenseCategories.map((category) => (
+                              <SortableRow key={category.id} id={category.id}>
+                                <TableCell className="font-medium">{category.value}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-6 h-6 rounded border"
+                                      style={{ backgroundColor: category.color }}
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={category.isActive ? "default" : "secondary"}>
+                                    {category.isActive ? "Active" : "Inactive"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleTogglePicklistActive(category.id, category.isActive, "expenseCategory")}
+                                    >
+                                      {category.isActive ? "Deactivate" : "Activate"}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openEditPicklistDialog(category, "expenseCategory")}
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDeletePicklistItem(category.id, "expenseCategory")}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </SortableRow>
+                            ))}
+                          </SortableContext>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </DndContext>
                 </div>
               </CardContent>
             </Card>
