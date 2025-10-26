@@ -24,7 +24,7 @@ export type Database = {
           industry: string | null
           name: string
           notes: string | null
-          organization_id: string | null
+          organization_id: string
           phone: string | null
           state: string | null
           updated_at: string | null
@@ -40,7 +40,7 @@ export type Database = {
           industry?: string | null
           name: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id: string
           phone?: string | null
           state?: string | null
           updated_at?: string | null
@@ -56,7 +56,7 @@ export type Database = {
           industry?: string | null
           name?: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id?: string
           phone?: string | null
           state?: string | null
           updated_at?: string | null
@@ -306,7 +306,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
-          organization_id: string | null
+          organization_id: string
           profile_image_url: string | null
           subject_type: string
           updated_at: string
@@ -319,7 +319,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id: string
           profile_image_url?: string | null
           subject_type: string
           updated_at?: string
@@ -332,7 +332,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id?: string
           profile_image_url?: string | null
           subject_type?: string
           updated_at?: string
@@ -551,7 +551,7 @@ export type Database = {
           id: string
           last_name: string
           notes: string | null
-          organization_id: string | null
+          organization_id: string
           phone: string | null
           state: string | null
           updated_at: string | null
@@ -568,7 +568,7 @@ export type Database = {
           id?: string
           last_name: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id: string
           phone?: string | null
           state?: string | null
           updated_at?: string | null
@@ -585,7 +585,7 @@ export type Database = {
           id?: string
           last_name?: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id?: string
           phone?: string | null
           state?: string | null
           updated_at?: string | null
@@ -623,7 +623,7 @@ export type Database = {
           id: string
           invoice_id: string
           notes: string | null
-          organization_id: string | null
+          organization_id: string
           payment_date: string
           updated_at: string
           user_id: string
@@ -634,7 +634,7 @@ export type Database = {
           id?: string
           invoice_id: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id: string
           payment_date?: string
           updated_at?: string
           user_id: string
@@ -645,7 +645,7 @@ export type Database = {
           id?: string
           invoice_id?: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id?: string
           payment_date?: string
           updated_at?: string
           user_id?: string
@@ -872,7 +872,7 @@ export type Database = {
           fein_number: string | null
           id: string
           logo_url: string | null
-          organization_id: string | null
+          organization_id: string
           phone: string | null
           terms: string | null
           timezone: string | null
@@ -889,7 +889,7 @@ export type Database = {
           fein_number?: string | null
           id?: string
           logo_url?: string | null
-          organization_id?: string | null
+          organization_id: string
           phone?: string | null
           terms?: string | null
           timezone?: string | null
@@ -906,7 +906,7 @@ export type Database = {
           fein_number?: string | null
           id?: string
           logo_url?: string | null
-          organization_id?: string | null
+          organization_id?: string
           phone?: string | null
           terms?: string | null
           timezone?: string | null
@@ -1080,7 +1080,7 @@ export type Database = {
           id: string
           invoice_id: string | null
           note: string | null
-          organization_id: string | null
+          organization_id: string
           user_id: string
         }
         Insert: {
@@ -1090,7 +1090,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           note?: string | null
-          organization_id?: string | null
+          organization_id: string
           user_id: string
         }
         Update: {
@@ -1100,7 +1100,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           note?: string | null
-          organization_id?: string | null
+          organization_id?: string
           user_id?: string
         }
         Relationships: [
@@ -1130,7 +1130,7 @@ export type Database = {
           file_type: string
           id: string
           name: string | null
-          organization_id: string | null
+          organization_id: string
           subject_id: string
           tags: string[] | null
           user_id: string
@@ -1144,7 +1144,7 @@ export type Database = {
           file_type: string
           id?: string
           name?: string | null
-          organization_id?: string | null
+          organization_id: string
           subject_id: string
           tags?: string[] | null
           user_id: string
@@ -1158,7 +1158,7 @@ export type Database = {
           file_type?: string
           id?: string
           name?: string | null
-          organization_id?: string | null
+          organization_id?: string
           subject_id?: string
           tags?: string[] | null
           user_id?: string
