@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PermissionsManager } from "@/components/PermissionsManager";
 import { OrgIsolationAudit } from "@/components/OrgIsolationAudit";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1427,89 +1428,7 @@ const Settings = () => {
 
         {/* Permissions Tab */}
         <TabsContent value="permissions">
-          <Card>
-            <CardHeader>
-              <CardTitle>Permissions & Roles</CardTitle>
-              <CardDescription>
-                View your current role and permissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <Label>Your Current Role</Label>
-                  <div className="mt-2">
-                    <Badge variant={currentUserRole === "admin" ? "default" : "secondary"} className="text-sm">
-                      {currentUserRole || "Member"}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <h3 className="text-lg font-medium mb-3">Role Permissions</h3>
-                  
-                  {currentUserRole === "admin" ? (
-                    <div className="space-y-2">
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-                        <div>
-                          <p className="font-medium">Full System Access</p>
-                          <p className="text-sm text-muted-foreground">
-                            Manage all cases, contacts, accounts, and finances
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-                        <div>
-                          <p className="font-medium">User Management</p>
-                          <p className="text-sm text-muted-foreground">
-                            Invite users and assign roles
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-                        <div>
-                          <p className="font-medium">Settings Access</p>
-                          <p className="text-sm text-muted-foreground">
-                            Configure organization-wide settings
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-secondary mt-2" />
-                        <div>
-                          <p className="font-medium">Standard Access</p>
-                          <p className="text-sm text-muted-foreground">
-                            View and manage assigned cases
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-secondary mt-2" />
-                        <div>
-                          <p className="font-medium">Personal Settings</p>
-                          <p className="text-sm text-muted-foreground">
-                            Update your profile and preferences
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    To request role changes, contact your system administrator.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <PermissionsManager />
         </TabsContent>
 
         {/* Users Tab */}
