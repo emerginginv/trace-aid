@@ -208,13 +208,7 @@ const App = () => {
         />
         <Route
           path="/users"
-          element={
-            <ProtectedRoute blockVendors={true}>
-              <DashboardLayout>
-                <Users />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
+          element={<Navigate to="/settings" replace />}
         />
         <Route
           path="/users/:id"

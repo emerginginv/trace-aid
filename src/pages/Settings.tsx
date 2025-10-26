@@ -1531,6 +1531,7 @@ const Settings = () => {
                         <TableHead>Name</TableHead>
                         <TableHead>Email Address</TableHead>
                         <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Joined Date</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -1596,6 +1597,11 @@ const Settings = () => {
                                 {(!user.roles[0] || user.roles[0] === "user") && <Badge variant="secondary">User</Badge>}
                               </>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="default" className="capitalize">
+                              Active
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             {format(new Date(user.created_at), "MMM d, yyyy")}
