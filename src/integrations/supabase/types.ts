@@ -735,7 +735,7 @@ export type Database = {
           id: string
           link: string | null
           message: string
-          organization_id: string | null
+          organization_id: string
           priority: string | null
           read: boolean
           related_id: string | null
@@ -750,7 +750,7 @@ export type Database = {
           id?: string
           link?: string | null
           message: string
-          organization_id?: string | null
+          organization_id: string
           priority?: string | null
           read?: boolean
           related_id?: string | null
@@ -765,7 +765,7 @@ export type Database = {
           id?: string
           link?: string | null
           message?: string
-          organization_id?: string | null
+          organization_id?: string
           priority?: string | null
           read?: boolean
           related_id?: string | null
