@@ -13,7 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { ProfileImageUpload } from "./ProfileImageUpload";
 
 const formSchema = z.object({
-  subject_type: z.enum(["person", "business", "vehicle", "asset", "other"]),
+  subject_type: z.enum(["person", "business", "vehicle", "asset", "location", "other"]),
   name: z.string().min(1, "Name is required"),
   notes: z.string().optional(),
   // Person fields
@@ -38,6 +38,10 @@ const formSchema = z.object({
   asset_type: z.string().optional(),
   serial_number: z.string().optional(),
   description: z.string().optional(),
+  // Location fields
+  location_address: z.string().optional(),
+  location_phone: z.string().optional(),
+  location_contact_name: z.string().optional(),
 });
 
 interface SubjectFormProps {
@@ -76,6 +80,9 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
       asset_type: "",
       serial_number: "",
       description: "",
+      location_address: "",
+      location_phone: "",
+      location_contact_name: "",
     },
   });
 
@@ -114,6 +121,9 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         asset_type: "",
         serial_number: "",
         description: "",
+        location_address: "",
+        location_phone: "",
+        location_contact_name: "",
       });
       setProfileImageUrl(null);
     }
@@ -228,6 +238,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
                       <SelectItem value="business">Business</SelectItem>
                       <SelectItem value="vehicle">Vehicle</SelectItem>
                       <SelectItem value="asset">Asset</SelectItem>
+                      <SelectItem value="location">Location</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -536,6 +547,54 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
                     </FormItem>
                   )}
                 />
+              </div>
+            )}
+
+            {/* Location-specific fields */}
+            {selectedType === "location" && (
+              <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
+                <h3 className="text-sm font-semibold">Location Details</h3>
+                <FormField
+                  control={form.control}
+                  name="location_address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Full address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="location_phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telephone Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Phone number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="location_contact_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Contact person" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             )}
 
