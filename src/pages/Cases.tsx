@@ -63,18 +63,41 @@ const Cases = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch status picklists
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) return;
+
+      // Fetch status picklists (org-level or global)
       const {
         data: statusData
-      } = await supabase.from("picklists").select("id, value, color, status_type").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true).order("display_order");
+      } = await supabase
+        .from("picklists")
+        .select("id, value, color, status_type")
+        .eq("type", "case_status")
+        .eq("is_active", true)
+        .or(`organization_id.eq.${orgMember.organization_id},organization_id.is.null`)
+        .order("display_order");
+      
       if (statusData) {
         setStatusPicklists(statusData);
       }
 
-      // Fetch priority picklists
+      // Fetch priority picklists (org-level or global)
       const {
         data: priorityData
-      } = await supabase.from("picklists").select("id, value, color").eq("user_id", user.id).eq("type", "case_priority").eq("is_active", true).order("display_order");
+      } = await supabase
+        .from("picklists")
+        .select("id, value, color")
+        .eq("type", "case_priority")
+        .eq("is_active", true)
+        .or(`organization_id.eq.${orgMember.organization_id},organization_id.is.null`)
+        .order("display_order");
+      
       if (priorityData) {
         setPriorityPicklists(priorityData);
       }
