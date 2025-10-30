@@ -10,12 +10,17 @@ import { formatDistanceToNow, format, isToday, isYesterday, isTomorrow, isPast, 
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import VendorDashboard from "./VendorDashboard";
+import { ActivityForm } from "@/components/case-detail/ActivityForm";
+import { UpdateForm } from "@/components/case-detail/UpdateForm";
+import { FinanceForm } from "@/components/case-detail/FinanceForm";
 interface Task {
   id: string;
   title: string;
   dueDate: string;
   priority: "high" | "medium" | "low";
   status: "pending" | "completed";
+  caseId: string;
+  activityData: any;
 }
 interface CalendarEvent {
   id: string;
@@ -23,12 +28,16 @@ interface CalendarEvent {
   date: string;
   time: string;
   type: string;
+  caseId: string;
+  activityData: any;
 }
 interface Update {
   id: string;
   message: string;
   timestamp: string;
   type: "info" | "success" | "warning";
+  caseId: string;
+  updateData: any;
 }
 interface Expense {
   id: string;
@@ -36,6 +45,8 @@ interface Expense {
   amount: number;
   date: string;
   category: string;
+  caseId: string;
+  financeData: any;
 }
 const Dashboard = () => {
   const {
@@ -52,6 +63,11 @@ const Dashboard = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [expandedUpdate, setExpandedUpdate] = useState<string | null>(null);
   const [expandedExpense, setExpandedExpense] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [editingUpdate, setEditingUpdate] = useState<Update | null>(null);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
   const [stats, setStats] = useState({
     totalCases: 0,
     activeCases: 0,
@@ -126,7 +142,7 @@ const Dashboard = () => {
       // Fetch tasks from case_activities
       const {
         data: activitiesData
-      } = await supabase.from("case_activities").select("id, title, due_date, status, completed, description").eq("user_id", user.id).not("due_date", "is", null).order("due_date", {
+      } = await supabase.from("case_activities").select("*, cases!inner(id)").eq("user_id", user.id).not("due_date", "is", null).order("due_date", {
         ascending: true
       }).limit(10);
       if (activitiesData) {
@@ -135,7 +151,9 @@ const Dashboard = () => {
           title: activity.title,
           dueDate: activity.due_date,
           priority: activity.status === "urgent" ? "high" : activity.status === "in_progress" ? "medium" : "low",
-          status: activity.completed ? "completed" : "pending"
+          status: activity.completed ? "completed" : "pending",
+          caseId: activity.case_id,
+          activityData: activity
         }));
         setTasks(tasksData);
       }
@@ -147,7 +165,7 @@ const Dashboard = () => {
       yesterday.setDate(yesterday.getDate() - 1);
       const {
         data: eventsData
-      } = await supabase.from("case_activities").select("id, title, due_date, activity_type").eq("user_id", user.id).not("due_date", "is", null).gte("due_date", yesterday.toISOString().split('T')[0]).lte("due_date", tomorrow.toISOString().split('T')[0]).order("due_date", {
+      } = await supabase.from("case_activities").select("*, cases!inner(id)").eq("user_id", user.id).not("due_date", "is", null).gte("due_date", yesterday.toISOString().split('T')[0]).lte("due_date", tomorrow.toISOString().split('T')[0]).order("due_date", {
         ascending: true
       });
       if (eventsData) {
@@ -156,7 +174,9 @@ const Dashboard = () => {
           title: event.title,
           date: event.due_date,
           time: "All Day",
-          type: event.activity_type || "task"
+          type: event.activity_type || "task",
+          caseId: event.case_id,
+          activityData: event
         }));
         setEvents(calendarEvents);
       }
@@ -164,7 +184,7 @@ const Dashboard = () => {
       // Fetch recent updates from case_updates
       const {
         data: updatesData
-      } = await supabase.from("case_updates").select("id, title, description, created_at, update_type").eq("user_id", user.id).order("created_at", {
+      } = await supabase.from("case_updates").select("*").eq("user_id", user.id).order("created_at", {
         ascending: false
       }).limit(5);
       if (updatesData) {
@@ -172,7 +192,9 @@ const Dashboard = () => {
           id: update.id,
           message: update.title || update.description || "Update",
           timestamp: update.created_at,
-          type: update.update_type === "status_change" ? "warning" : "info"
+          type: update.update_type === "status_change" ? "warning" : "info",
+          caseId: update.case_id,
+          updateData: update
         }));
         setUpdates(recentUpdates);
       }
@@ -180,7 +202,7 @@ const Dashboard = () => {
       // Fetch recent expenses from case_finances
       const {
         data: expensesData
-      } = await supabase.from("case_finances").select("id, description, amount, date, category").eq("user_id", user.id).eq("finance_type", "expense").order("date", {
+      } = await supabase.from("case_finances").select("*").eq("user_id", user.id).eq("finance_type", "expense").order("date", {
         ascending: false
       }).limit(5);
       if (expensesData) {
@@ -189,9 +211,39 @@ const Dashboard = () => {
           description: expense.description,
           amount: typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount || '0'),
           date: expense.date,
-          category: expense.category || "General"
+          category: expense.category || "General",
+          caseId: expense.case_id,
+          financeData: expense
         }));
         setExpenses(recentExpenses);
+      }
+
+      // Fetch users for assignments
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (orgMember) {
+        const { data: orgUsers } = await supabase
+          .from('profiles')
+          .select('id, email, full_name')
+          .in('id', 
+            (await supabase
+              .from('organization_members')
+              .select('user_id')
+              .eq('organization_id', orgMember.organization_id)
+            ).data?.map(m => m.user_id) || []
+          );
+
+        if (orgUsers) {
+          setUsers(orgUsers.map(u => ({
+            id: u.id,
+            email: u.email,
+            full_name: u.full_name
+          })));
+        }
       }
     };
     fetchDashboardData();
@@ -369,11 +421,16 @@ const Dashboard = () => {
             : dueTasks.map(task => {
             const taskDate = parseISO(task.dueDate);
             const isOverdue = isPast(taskDate) && !isToday(taskDate);
-            return <div key={task.id} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-primary/20 transition-all hover:shadow-md">
+            return <div 
+                    key={task.id} 
+                    className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-primary/20 transition-all hover:shadow-md cursor-pointer"
+                    onClick={() => setEditingTask(task)}
+                  >
                     <Checkbox 
                       checked={task.status === "completed"} 
                       onCheckedChange={() => handleTaskToggle(task.id)} 
                       className="mt-1" 
+                      onClick={(e) => e.stopPropagation()}
                     />
                     <div className="flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -428,7 +485,7 @@ const Dashboard = () => {
               <div 
                 key={event.id} 
                 className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-secondary/20 transition-all cursor-pointer hover:shadow-md" 
-                onClick={() => setSelectedEvent(event)}
+                onClick={() => setEditingEvent(event)}
               >
                 <div className="flex-1 space-y-2">
                   <p className="font-medium text-sm leading-tight group-hover:text-primary transition-colors">
@@ -469,7 +526,7 @@ const Dashboard = () => {
             : updates.map(update => 
               <div key={update.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
                 <div 
-                  onClick={() => setExpandedUpdate(expandedUpdate === update.id ? null : update.id)} 
+                  onClick={() => setEditingUpdate(update)} 
                   className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer"
                 >
                   <div className="mt-0.5 p-1.5 rounded-lg bg-background">
@@ -533,7 +590,7 @@ const Dashboard = () => {
                 {expenses.map(expense => 
                   <div key={expense.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
                     <div 
-                      onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)} 
+                      onClick={() => setEditingExpense(expense)} 
                       className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer"
                     >
                       <div className="flex-1 space-y-2">
@@ -595,6 +652,63 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Forms */}
+      {editingTask && (
+        <ActivityForm
+          caseId={editingTask.caseId}
+          activityType="task"
+          users={users}
+          open={!!editingTask}
+          onOpenChange={(open) => !open && setEditingTask(null)}
+          onSuccess={() => {
+            setEditingTask(null);
+            window.location.reload();
+          }}
+          editingActivity={editingTask.activityData}
+        />
+      )}
+
+      {editingEvent && (
+        <ActivityForm
+          caseId={editingEvent.caseId}
+          activityType="event"
+          users={users}
+          open={!!editingEvent}
+          onOpenChange={(open) => !open && setEditingEvent(null)}
+          onSuccess={() => {
+            setEditingEvent(null);
+            window.location.reload();
+          }}
+          editingActivity={editingEvent.activityData}
+        />
+      )}
+
+      {editingUpdate && (
+        <UpdateForm
+          caseId={editingUpdate.caseId}
+          open={!!editingUpdate}
+          onOpenChange={(open) => !open && setEditingUpdate(null)}
+          onSuccess={() => {
+            setEditingUpdate(null);
+            window.location.reload();
+          }}
+          editingUpdate={editingUpdate.updateData}
+        />
+      )}
+
+      {editingExpense && (
+        <FinanceForm
+          caseId={editingExpense.caseId}
+          open={!!editingExpense}
+          onOpenChange={(open) => !open && setEditingExpense(null)}
+          onSuccess={() => {
+            setEditingExpense(null);
+            window.location.reload();
+          }}
+          editingFinance={editingExpense.financeData}
+        />
+      )}
 
       {/* Event Details Dialog */}
       <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>
