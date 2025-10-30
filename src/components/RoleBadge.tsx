@@ -33,5 +33,11 @@ export function RoleBadge({
   };
   const config = roleConfig[role];
   const Icon = config.icon;
-  return;
+  
+  return (
+    <Badge variant={config.variant} className={className}>
+      <Icon className="w-3 h-3 mr-1" />
+      {config.label}
+    </Badge>
+  );
 }
