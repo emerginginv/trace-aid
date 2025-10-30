@@ -197,16 +197,29 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const fetchAccountsAndContacts = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log("No authenticated user");
+        return;
+      }
 
       // Get user's organization
-      const { data: orgMember } = await supabase
+      const { data: orgMember, error: orgError } = await supabase
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (!orgMember) return;
+      if (orgError) {
+        console.error("Error fetching organization:", orgError);
+        return;
+      }
+
+      if (!orgMember) {
+        console.log("User has no organization");
+        return;
+      }
+
+      console.log("Fetching accounts and contacts for org:", orgMember.organization_id);
 
       const [accountsData, contactsData] = await Promise.all([
         supabase
@@ -223,13 +236,17 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
       if (accountsData.error) {
         console.error("Error fetching accounts:", accountsData.error);
-      }
-      if (contactsData.error) {
-        console.error("Error fetching contacts:", contactsData.error);
+      } else {
+        console.log("Accounts fetched:", accountsData.data?.length || 0);
+        setAccounts(accountsData.data || []);
       }
 
-      if (accountsData.data) setAccounts(accountsData.data);
-      if (contactsData.data) setContacts(contactsData.data);
+      if (contactsData.error) {
+        console.error("Error fetching contacts:", contactsData.error);
+      } else {
+        console.log("Contacts fetched:", contactsData.data?.length || 0);
+        setContacts(contactsData.data || []);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     }
