@@ -7,49 +7,46 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, UserPlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 interface Profile {
   id: string;
   full_name: string;
   email: string;
 }
-
 interface CaseTeamManagerProps {
   caseId: string;
   caseManagerId: string | null;
   investigatorIds: string[];
   onUpdate: () => void;
 }
-
-export const CaseTeamManager = ({ caseId, caseManagerId, investigatorIds, onUpdate }: CaseTeamManagerProps) => {
+export const CaseTeamManager = ({
+  caseId,
+  caseManagerId,
+  investigatorIds,
+  onUpdate
+}: CaseTeamManagerProps) => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [caseManager, setCaseManager] = useState<Profile | null>(null);
   const [investigators, setInvestigators] = useState<Profile[]>([]);
   const [showAddInvestigator, setShowAddInvestigator] = useState(false);
   const [selectedInvestigator, setSelectedInvestigator] = useState<string>("");
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     fetchProfiles();
   }, [caseManagerId, investigatorIds]);
-
   const fetchProfiles = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Fetch all profiles for selection
-      const { data: allProfiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .order("full_name");
-
+      const {
+        data: allProfiles
+      } = await supabase.from("profiles").select("id, full_name, email").order("full_name");
       if (allProfiles) {
         setProfiles(allProfiles);
 
@@ -75,58 +72,54 @@ export const CaseTeamManager = ({ caseId, caseManagerId, investigatorIds, onUpda
       setLoading(false);
     }
   };
-
   const handleUpdateCaseManager = async (managerId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { error } = await supabase
-        .from("cases")
-        .update({ case_manager_id: managerId })
-        .eq("id", caseId)
-        .eq("user_id", user.id);
-
+      const {
+        error
+      } = await supabase.from("cases").update({
+        case_manager_id: managerId
+      }).eq("id", caseId).eq("user_id", user.id);
       if (error) throw error;
-
       toast({
         title: "Success",
-        description: "Case manager updated successfully",
+        description: "Case manager updated successfully"
       });
-
       onUpdate();
     } catch (error) {
       console.error("Error updating case manager:", error);
       toast({
         title: "Error",
         description: "Failed to update case manager",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleAddInvestigator = async () => {
     if (!selectedInvestigator) return;
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
       const newInvestigatorIds = [...(investigatorIds || []), selectedInvestigator];
-
-      const { error } = await supabase
-        .from("cases")
-        .update({ investigator_ids: newInvestigatorIds })
-        .eq("id", caseId)
-        .eq("user_id", user.id);
-
+      const {
+        error
+      } = await supabase.from("cases").update({
+        investigator_ids: newInvestigatorIds
+      }).eq("id", caseId).eq("user_id", user.id);
       if (error) throw error;
-
       toast({
         title: "Success",
-        description: "Investigator added successfully",
+        description: "Investigator added successfully"
       });
-
       setShowAddInvestigator(false);
       setSelectedInvestigator("");
       onUpdate();
@@ -135,55 +128,43 @@ export const CaseTeamManager = ({ caseId, caseManagerId, investigatorIds, onUpda
       toast({
         title: "Error",
         description: "Failed to add investigator",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleRemoveInvestigator = async (investigatorId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
       const newInvestigatorIds = (investigatorIds || []).filter(id => id !== investigatorId);
-
-      const { error } = await supabase
-        .from("cases")
-        .update({ investigator_ids: newInvestigatorIds })
-        .eq("id", caseId)
-        .eq("user_id", user.id);
-
+      const {
+        error
+      } = await supabase.from("cases").update({
+        investigator_ids: newInvestigatorIds
+      }).eq("id", caseId).eq("user_id", user.id);
       if (error) throw error;
-
       toast({
         title: "Success",
-        description: "Investigator removed successfully",
+        description: "Investigator removed successfully"
       });
-
       onUpdate();
     } catch (error) {
       console.error("Error removing investigator:", error);
       toast({
         title: "Error",
         description: "Failed to remove investigator",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
-
-  const availableInvestigators = profiles.filter(
-    p => p.id !== caseManagerId && !(investigatorIds || []).includes(p.id)
-  );
-
+  const availableInvestigators = profiles.filter(p => p.id !== caseManagerId && !(investigatorIds || []).includes(p.id));
   if (loading) {
     return <Card>
       <CardHeader>
@@ -194,9 +175,7 @@ export const CaseTeamManager = ({ caseId, caseManagerId, investigatorIds, onUpda
       </CardContent>
     </Card>;
   }
-
-  return (
-    <Card>
+  return <Card>
       <CardHeader>
         <CardTitle>Team</CardTitle>
       </CardHeader>
@@ -204,19 +183,14 @@ export const CaseTeamManager = ({ caseId, caseManagerId, investigatorIds, onUpda
         {/* Case Manager */}
         <div>
           <p className="text-sm font-medium mb-2">Case Manager</p>
-          <Select
-            value={caseManagerId || ""}
-            onValueChange={handleUpdateCaseManager}
-          >
+          <Select value={caseManagerId || ""} onValueChange={handleUpdateCaseManager}>
             <SelectTrigger>
               <SelectValue placeholder="Select case manager..." />
             </SelectTrigger>
             <SelectContent>
-              {profiles.map(profile => (
-                <SelectItem key={profile.id} value={profile.id}>
+              {profiles.map(profile => <SelectItem key={profile.id} value={profile.id}>
                   {profile.full_name || profile.email}
-                </SelectItem>
-              ))}
+                </SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -225,67 +199,41 @@ export const CaseTeamManager = ({ caseId, caseManagerId, investigatorIds, onUpda
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium">Investigators</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAddInvestigator(!showAddInvestigator)}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setShowAddInvestigator(!showAddInvestigator)}>
               <UserPlus className="h-4 w-4 mr-1" />
               Add
             </Button>
           </div>
 
           {/* Add Investigator Form */}
-          {showAddInvestigator && (
-            <div className="flex gap-2 mb-3">
-              <Select
-                value={selectedInvestigator}
-                onValueChange={setSelectedInvestigator}
-              >
+          {showAddInvestigator && <div className="flex gap-2 mb-3">
+              <Select value={selectedInvestigator} onValueChange={setSelectedInvestigator}>
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Select investigator..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableInvestigators.map(profile => (
-                    <SelectItem key={profile.id} value={profile.id}>
+                  {availableInvestigators.map(profile => <SelectItem key={profile.id} value={profile.id}>
                       {profile.full_name || profile.email}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
-              <Button
-                size="sm"
-                onClick={handleAddInvestigator}
-                disabled={!selectedInvestigator}
-              >
+              <Button size="sm" onClick={handleAddInvestigator} disabled={!selectedInvestigator}>
                 Add
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setShowAddInvestigator(false);
-                  setSelectedInvestigator("");
-                }}
-              >
+              <Button size="sm" variant="ghost" onClick={() => {
+            setShowAddInvestigator(false);
+            setSelectedInvestigator("");
+          }}>
                 Cancel
               </Button>
-            </div>
-          )}
+            </div>}
 
           {/* Investigators List */}
           <div className="flex flex-wrap gap-2">
-            {investigators.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No investigators assigned</p>
-            ) : (
-              investigators.map(investigator => (
-                <TooltipProvider key={investigator.id}>
+            {investigators.length === 0 ? <p className="text-sm text-muted-foreground">No investigators assigned</p> : investigators.map(investigator => <TooltipProvider key={investigator.id}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Badge
-                        variant="secondary"
-                        className="flex items-center gap-2 px-3 py-1.5 cursor-pointer"
-                      >
+                      <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1.5 cursor-pointer bg-blue-300">
                         <Avatar className="h-6 w-6">
                           <AvatarFallback className="text-xs">
                             {getInitials(investigator.full_name || investigator.email)}
@@ -294,10 +242,7 @@ export const CaseTeamManager = ({ caseId, caseManagerId, investigatorIds, onUpda
                         <span className="text-sm">
                           {investigator.full_name || investigator.email}
                         </span>
-                        <button
-                          onClick={() => handleRemoveInvestigator(investigator.id)}
-                          className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
-                        >
+                        <button onClick={() => handleRemoveInvestigator(investigator.id)} className="ml-1 hover:bg-destructive/20 rounded-full p-0.5">
                           <X className="h-3 w-3" />
                         </button>
                       </Badge>
@@ -307,12 +252,9 @@ export const CaseTeamManager = ({ caseId, caseManagerId, investigatorIds, onUpda
                       <p className="text-xs text-muted-foreground">{investigator.email}</p>
                     </TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
-              ))
-            )}
+                </TooltipProvider>)}
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
