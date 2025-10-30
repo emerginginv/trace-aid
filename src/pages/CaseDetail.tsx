@@ -54,7 +54,11 @@ const CaseDetail = () => {
     id
   } = useParams();
   const navigate = useNavigate();
-  const { isVendor, isAdmin, isManager } = useUserRole();
+  const {
+    isVendor,
+    isAdmin,
+    isManager
+  } = useUserRole();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
@@ -159,7 +163,6 @@ const CaseDetail = () => {
     };
     return colors[priority] || "bg-muted";
   };
-
   const isClosedCase = () => {
     if (!caseData) return false;
     const statusItem = caseStatuses.find(s => s.value === caseData.status);
@@ -214,7 +217,6 @@ const CaseDetail = () => {
       if (isClosing && wasOpen) {
         activityDescription = `Case closed by ${userName}`;
       }
-
       const {
         error: activityError
       } = await supabase.from("case_activities").insert({
@@ -231,14 +233,16 @@ const CaseDetail = () => {
 
       // Create notification
       await NotificationHelpers.caseStatusChanged(caseData.case_number, newStatus, id!);
-      
+
       // Update local state
       setCaseData({
         ...caseData,
         status: newStatus,
-        ...(isClosing && wasOpen ? { closed_by_user_id: user.id, closed_at: new Date().toISOString() } : {})
+        ...(isClosing && wasOpen ? {
+          closed_by_user_id: user.id,
+          closed_at: new Date().toISOString()
+        } : {})
       });
-      
       toast({
         title: "Success",
         description: isClosing && wasOpen ? "Case closed successfully" : "Case status updated successfully"
@@ -254,21 +258,25 @@ const CaseDetail = () => {
       setUpdatingStatus(false);
     }
   };
-
   const handleReopenCase = async () => {
     if (!caseData) return;
-    
+
     // Show confirmation dialog
     if (!confirm("Are you sure you want to reopen this case?")) {
       return;
     }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
       // Get user profile for activity log
-      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      const {
+        data: profile
+      } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
 
       // Find a default "open" status
@@ -283,28 +291,25 @@ const CaseDetail = () => {
       }
 
       // Update case to reopen it
-      const { error } = await supabase
-        .from("cases")
-        .update({
-          status: openStatus.value
-          // Keep closed_by_user_id and closed_at for history
-        })
-        .eq("id", id);
-
+      const {
+        error
+      } = await supabase.from("cases").update({
+        status: openStatus.value
+        // Keep closed_by_user_id and closed_at for history
+      }).eq("id", id);
       if (error) throw error;
 
       // Create activity log entry
-      const { error: activityError } = await supabase
-        .from("case_activities")
-        .insert({
-          case_id: id,
-          user_id: user.id,
-          activity_type: "Status Change",
-          title: "Case Reopened",
-          description: `Case reopened by ${userName}`,
-          status: "completed"
-        });
-
+      const {
+        error: activityError
+      } = await supabase.from("case_activities").insert({
+        case_id: id,
+        user_id: user.id,
+        activity_type: "Status Change",
+        title: "Case Reopened",
+        description: `Case reopened by ${userName}`,
+        status: "completed"
+      });
       if (activityError) {
         console.error("Error creating activity log:", activityError);
       }
@@ -314,7 +319,6 @@ const CaseDetail = () => {
         ...caseData,
         status: openStatus.value
       });
-
       toast({
         title: "Success",
         description: "Case reopened successfully"
@@ -376,44 +380,30 @@ const CaseDetail = () => {
       </div>;
   }
   const isClosed = isClosedCase();
-  
   return <div className="space-y-4 sm:space-y-6">
-      {isVendor && (
-        <Alert className="bg-muted/50 border-primary/20">
+      {isVendor && <Alert className="bg-muted/50 border-primary/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
             Vendor Access - You can view case details and submit updates. Contact and account information is restricted.
           </AlertDescription>
-        </Alert>
-      )}
+        </Alert>}
 
-      {isClosed && (
-        <Alert className="bg-muted/50 border-muted">
+      {isClosed && <Alert className="bg-muted/50 border-muted">
           <Info className="h-4 w-4" />
           <AlertDescription>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex flex-col gap-1">
                 <span className="font-semibold">This case is closed.</span>
-                {caseData.closed_by_user_id && caseData.closed_at && (
-                  <span className="text-sm text-muted-foreground">
+                {caseData.closed_by_user_id && caseData.closed_at && <span className="text-sm text-muted-foreground">
                     Closed on {new Date(caseData.closed_at).toLocaleDateString()} at {new Date(caseData.closed_at).toLocaleTimeString()}
-                  </span>
-                )}
+                  </span>}
               </div>
-              {(isAdmin || isManager) && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleReopenCase}
-                  className="self-start sm:self-auto"
-                >
+              {(isAdmin || isManager) && <Button variant="outline" size="sm" onClick={handleReopenCase} className="self-start sm:self-auto">
                   Reopen Case
-                </Button>
-              )}
+                </Button>}
             </div>
           </AlertDescription>
-        </Alert>
-      )}
+        </Alert>}
       
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <Button variant="ghost" size="icon" asChild className="self-start sm:self-auto">
@@ -426,8 +416,7 @@ const CaseDetail = () => {
             <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold break-words ${isClosed ? 'text-muted-foreground' : ''}`}>
               {caseData.title}
             </h1>
-            {!isVendor && (
-              <div className="flex items-center gap-2">
+            {!isVendor && <div className="flex items-center gap-2">
                 <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
                   <SelectTrigger className={`w-full sm:w-[140px] h-8 sm:h-7 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
                     <SelectValue />
@@ -438,25 +427,18 @@ const CaseDetail = () => {
                       </SelectItem>)}
                   </SelectContent>
                 </Select>
-                {caseStatuses.find(s => s.value === caseData.status)?.status_type && (
-                  <span className="text-xs">
+                {caseStatuses.find(s => s.value === caseData.status)?.status_type && <span className="text-xs">
                     {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
-                  </span>
-                )}
-              </div>
-            )}
-            {isVendor && (
-              <div className="flex items-center gap-2">
+                  </span>}
+              </div>}
+            {isVendor && <div className="flex items-center gap-2">
                 <Badge className="border" style={getStatusStyle(caseData.status)}>
                   {caseData.status}
                 </Badge>
-                {caseStatuses.find(s => s.value === caseData.status)?.status_type && (
-                  <span className="text-xs">
+                {caseStatuses.find(s => s.value === caseData.status)?.status_type && <span className="text-xs">
                     {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
-                  </span>
-                )}
-              </div>
-            )}
+                  </span>}
+              </div>}
             {caseData.priority && <Badge className={getPriorityColor(caseData.priority)}>
                 {caseData.priority}
               </Badge>}
@@ -465,32 +447,20 @@ const CaseDetail = () => {
             Case #{caseData.case_number}
           </p>
         </div>
-        {!isVendor && (
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button 
-              variant="outline" 
-              onClick={() => setEmailComposerOpen(true)} 
-              className="w-full sm:w-auto"
-              disabled={isClosed}
-            >
+        {!isVendor && <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => setEmailComposerOpen(true)} className="w-full sm:w-auto" disabled={isClosed}>
               <Mail className="h-4 w-4 mr-2" />
               <span className="sm:inline">Send Email</span>
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setEditFormOpen(true)} 
-              className="bg-zinc-200 hover:bg-zinc-100 w-full sm:w-auto"
-              disabled={isClosed}
-            >
+            <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100 w-full sm:w-auto" disabled={isClosed}>
               <Edit className="h-4 w-4 mr-2" />
-              <span className="sm:inline">Edit</span>
+              <span className="sm:inline text-slate-950">Edit</span>
             </Button>
             <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
               <Trash2 className="h-4 w-4 mr-2" />
               <span className="sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
             </Button>
-          </div>
-        )}
+          </div>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -524,16 +494,16 @@ const CaseDetail = () => {
           </CardContent>
         </Card>
 
-        {!isVendor && (
-          <div className="space-y-4 sm:space-y-6">
+        {!isVendor && <div className="space-y-4 sm:space-y-6">
             <RetainerFundsWidget caseId={id!} />
             <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} investigatorIds={caseData.investigator_ids || []} onUpdate={fetchCaseData} />
-          </div>
-        )}
+          </div>}
       </div>
 
       <Tabs defaultValue={isVendor ? "updates" : "subjects"} className="w-full">
-        <TabsList className="grid w-full gap-1" style={{ gridTemplateColumns: isVendor ? 'repeat(2, 1fr)' : 'repeat(3, 1fr) repeat(3, 1fr)' }}>
+        <TabsList className="grid w-full gap-1" style={{
+        gridTemplateColumns: isVendor ? 'repeat(2, 1fr)' : 'repeat(3, 1fr) repeat(3, 1fr)'
+      }}>
           {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-2 sm:px-3">Subjects</TabsTrigger>}
           <TabsTrigger value="updates" className="text-xs sm:text-sm px-2 sm:px-3">Updates</TabsTrigger>
           {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-2 sm:px-3">Activities</TabsTrigger>}
@@ -542,18 +512,15 @@ const CaseDetail = () => {
           <TabsTrigger value="attachments" className="text-xs sm:text-sm px-2 sm:px-3">Attachments</TabsTrigger>
         </TabsList>
 
-        {!isVendor && (
-          <TabsContent value="subjects" className="mt-4 sm:mt-6">
+        {!isVendor && <TabsContent value="subjects" className="mt-4 sm:mt-6">
             <CaseSubjects caseId={id!} isClosedCase={isClosed} />
-          </TabsContent>
-        )}
+          </TabsContent>}
 
         <TabsContent value="updates" className="mt-4 sm:mt-6">
           <CaseUpdates caseId={id!} isClosedCase={isClosed} />
         </TabsContent>
 
-        {!isVendor && (
-          <>
+        {!isVendor && <>
             <TabsContent value="activities" className="mt-4 sm:mt-6">
               <CaseActivities caseId={id!} isClosedCase={isClosed} />
             </TabsContent>
@@ -565,8 +532,7 @@ const CaseDetail = () => {
         <TabsContent value="finances" className="mt-4 sm:mt-6">
           <CaseFinances caseId={id!} isClosedCase={isClosed} />
         </TabsContent>
-          </>
-        )}
+          </>}
 
         <TabsContent value="attachments" className="mt-4 sm:mt-6">
           <CaseAttachments caseId={id!} isClosedCase={isClosed} />
@@ -575,13 +541,7 @@ const CaseDetail = () => {
 
       <CaseForm open={editFormOpen} onOpenChange={setEditFormOpen} onSuccess={fetchCaseData} editingCase={caseData || undefined} />
       
-      <EmailComposer 
-        open={emailComposerOpen} 
-        onOpenChange={setEmailComposerOpen}
-        defaultTo={contact?.first_name && contact?.last_name ? `${contact.first_name} ${contact.last_name}` : undefined}
-        defaultSubject={`Update on Case: ${caseData?.title}`}
-        caseId={id}
-      />
+      <EmailComposer open={emailComposerOpen} onOpenChange={setEmailComposerOpen} defaultTo={contact?.first_name && contact?.last_name ? `${contact.first_name} ${contact.last_name}` : undefined} defaultSubject={`Update on Case: ${caseData?.title}`} caseId={id} />
     </div>;
 };
 export default CaseDetail;
