@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { FileText, DollarSign } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface BillableItem {
   id: string;
@@ -284,65 +285,92 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
         </Card>
       ) : (
         <>
-          <div className="space-y-3">
-            {billableItems.map((item) => {
-              const isTime = item.finance_type === 'time';
-              return (
-                <Card 
-                  key={item.id} 
-                  className="hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => toggleItem(item.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={selectedItems.has(item.id)}
-                        onCheckedChange={() => toggleItem(item.id)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant={isTime ? "default" : "secondary"} className="text-xs">
-                                {isTime ? 'TIME' : 'EXPENSE'}
-                              </Badge>
-                              <h4 className="font-medium">{item.description}</h4>
-                              {item.category && (
-                                <Badge variant="outline" className="text-xs">
-                                  {item.category}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                              <span>Date: {new Date(item.date).toLocaleDateString()}</span>
-                              {isTime && item.hours && item.hourly_rate && (
-                                <span>{item.hours} hrs @ ${item.hourly_rate}/hr</span>
-                              )}
-                              {item.subject_id && subjects[item.subject_id] && (
-                                <span>Subject: {subjects[item.subject_id].name}</span>
-                              )}
-                              {item.activity_id && activities[item.activity_id] && (
-                                <span>Activity: {activities[item.activity_id].title}</span>
-                              )}
-                            </div>
-                            {item.notes && (
-                              <p className="text-sm text-muted-foreground mt-1">{item.notes}</p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold">
-                              ${Number(item.amount).toFixed(2)}
-                            </div>
-                          </div>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedItems.size === billableItems.length && billableItems.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedItems(new Set(billableItems.map(item => item.id)));
+                        } else {
+                          setSelectedItems(new Set());
+                        }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Details</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {billableItems.map((item) => {
+                  const isTime = item.finance_type === 'time';
+                  return (
+                    <TableRow 
+                      key={item.id}
+                      className="cursor-pointer hover:bg-accent/50"
+                      onClick={() => toggleItem(item.id)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedItems.has(item.id)}
+                          onCheckedChange={() => toggleItem(item.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={isTime ? "default" : "secondary"}>
+                          {isTime ? 'Time' : 'Expense'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{item.description}</div>
+                          {item.notes && (
+                            <div className="text-xs text-muted-foreground mt-1">{item.notes}</div>
+                          )}
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {new Date(item.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 text-sm">
+                          {isTime && item.hours && item.hourly_rate && (
+                            <div>{item.hours} hrs @ ${item.hourly_rate}/hr</div>
+                          )}
+                          {item.subject_id && subjects[item.subject_id] && (
+                            <div className="text-muted-foreground">
+                              Subject: {subjects[item.subject_id].name}
+                            </div>
+                          )}
+                          {item.activity_id && activities[item.activity_id] && (
+                            <div className="text-muted-foreground">
+                              Activity: {activities[item.activity_id].title}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {item.category && (
+                          <Badge variant="outline">{item.category}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        ${Number(item.amount).toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Card>
 
           {selectedItems.size > 0 && (
             <Card className="border-primary">
