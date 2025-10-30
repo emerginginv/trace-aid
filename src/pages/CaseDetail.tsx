@@ -452,7 +452,7 @@ const CaseDetail = () => {
               <Mail className="h-4 w-4 mr-2" />
               <span className="sm:inline">Send Email</span>
             </Button>
-            <Button variant="outline" onClick={() => setEditFormOpen(true)} className="bg-zinc-200 hover:bg-zinc-100 w-full sm:w-auto" disabled={isClosed}>
+            <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed} className="bg-zinc-200  w-full sm:w-auto">
               <Edit className="h-4 w-4 mr-2" />
               <span className="sm:inline text-slate-950">Edit</span>
             </Button>
