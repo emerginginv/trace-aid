@@ -448,7 +448,7 @@ const CaseDetail = () => {
           </p>
         </div>
         {!isVendor && <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={() => setEmailComposerOpen(true)} className="w-full sm:w-auto" disabled={isClosed}>
+            <Button variant="outline" onClick={() => setEmailComposerOpen(true)} disabled={isClosed} className="w-full sm:w-auto text-gray-950 bg-gray-300 hover:bg-gray-200">
               <Mail className="h-4 w-4 mr-2" />
               <span className="sm:inline">Send Email</span>
             </Button>
