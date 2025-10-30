@@ -980,6 +980,33 @@ export type Database = {
         }
         Relationships: []
       }
+      permissions: {
+        Row: {
+          allowed: boolean
+          created_at: string
+          feature_key: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          allowed?: boolean
+          created_at?: string
+          feature_key: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          allowed?: boolean
+          created_at?: string
+          feature_key?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       picklists: {
         Row: {
           color: string | null
@@ -1225,6 +1252,10 @@ export type Database = {
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      has_permission: {
+        Args: { _feature_key: string; _user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {

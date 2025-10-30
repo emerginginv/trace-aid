@@ -210,19 +210,35 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get all existing case numbers to find the highest number
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!orgMember) return;
+
+      // Get the highest case number in this organization
       const { data: existingCases } = await supabase
         .from("cases")
         .select("case_number")
-        .order("case_number", { ascending: false })
-        .limit(1);
+        .eq("organization_id", orgMember.organization_id)
+        .order("created_at", { ascending: false })
+        .limit(100); // Get more cases to handle edge cases
 
       let nextNumber = 1;
       if (existingCases && existingCases.length > 0) {
-        // Extract the number from the case number format (e.g., "CASE-00001" -> 1)
-        const match = existingCases[0].case_number.match(/CASE-(\d+)/);
-        if (match) {
-          nextNumber = parseInt(match[1], 10) + 1;
+        // Extract all numbers and find the highest
+        const numbers = existingCases
+          .map(c => {
+            const match = c.case_number.match(/CASE-(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+          .filter(n => n > 0);
+        
+        if (numbers.length > 0) {
+          nextNumber = Math.max(...numbers) + 1;
         }
       }
 
