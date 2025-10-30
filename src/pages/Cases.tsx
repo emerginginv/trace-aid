@@ -26,7 +26,9 @@ interface Case {
   created_at: string;
 }
 const Cases = () => {
-  const { isVendor } = useUserRole();
+  const {
+    isVendor
+  } = useUserRole();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -36,41 +38,43 @@ const Cases = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
-  const [statusPicklists, setStatusPicklists] = useState<Array<{ id: string; value: string; color: string; status_type?: string }>>([]);
-  const [priorityPicklists, setPriorityPicklists] = useState<Array<{ id: string; value: string; color: string }>>([]);
+  const [statusPicklists, setStatusPicklists] = useState<Array<{
+    id: string;
+    value: string;
+    color: string;
+    status_type?: string;
+  }>>([]);
+  const [priorityPicklists, setPriorityPicklists] = useState<Array<{
+    id: string;
+    value: string;
+    color: string;
+  }>>([]);
   const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
-
   useEffect(() => {
     fetchCases();
     fetchPicklists();
   }, []);
   const fetchPicklists = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Fetch status picklists
-      const { data: statusData } = await supabase
-        .from("picklists")
-        .select("id, value, color, status_type")
-        .eq("user_id", user.id)
-        .eq("type", "case_status")
-        .eq("is_active", true)
-        .order("display_order");
-      
+      const {
+        data: statusData
+      } = await supabase.from("picklists").select("id, value, color, status_type").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true).order("display_order");
       if (statusData) {
         setStatusPicklists(statusData);
       }
 
       // Fetch priority picklists
-      const { data: priorityData } = await supabase
-        .from("picklists")
-        .select("id, value, color")
-        .eq("user_id", user.id)
-        .eq("type", "case_priority")
-        .eq("is_active", true)
-        .order("display_order");
-      
+      const {
+        data: priorityData
+      } = await supabase.from("picklists").select("id, value, color").eq("user_id", user.id).eq("type", "case_priority").eq("is_active", true).order("display_order");
       if (priorityData) {
         setPriorityPicklists(priorityData);
       }
@@ -78,7 +82,6 @@ const Cases = () => {
       console.error("Error fetching picklists:", error);
     }
   };
-
   const fetchCases = async () => {
     try {
       const {
@@ -87,7 +90,7 @@ const Cases = () => {
         }
       } = await supabase.auth.getUser();
       if (!user) return;
-      
+
       // Vendors see only cases they have access to through RLS
       // RLS will automatically filter based on is_vendor_case_accessible function
       const {
@@ -96,7 +99,6 @@ const Cases = () => {
       } = await supabase.from("cases").select("*").order("created_at", {
         ascending: false
       });
-      
       if (error) throw error;
       setCases(data || []);
     } catch (error) {
@@ -105,7 +107,6 @@ const Cases = () => {
       setLoading(false);
     }
   };
-
   const getStatusStyle = (status: string) => {
     const statusItem = statusPicklists.find(s => s.value === status);
     if (statusItem?.color) {
@@ -117,7 +118,6 @@ const Cases = () => {
     }
     return {};
   };
-
   const getPriorityStyle = (priority: string) => {
     const priorityItem = priorityPicklists.find(p => p.value === priority);
     if (priorityItem?.color) {
@@ -129,28 +129,21 @@ const Cases = () => {
     }
     return {};
   };
-
   const isClosedCase = (status: string) => {
     const statusItem = statusPicklists.find(s => s.value === status);
     return statusItem?.status_type === 'closed';
   };
-
   const handleDeleteClick = (caseId: string) => {
     setCaseToDelete(caseId);
     setDeleteDialogOpen(true);
   };
-
   const handleDeleteConfirm = async () => {
     if (!caseToDelete) return;
-    
     try {
-      const { error } = await supabase
-        .from("cases")
-        .delete()
-        .eq("id", caseToDelete);
-
+      const {
+        error
+      } = await supabase.from("cases").delete().eq("id", caseToDelete);
       if (error) throw error;
-
       toast.success("Case deleted successfully");
       fetchCases();
     } catch (error) {
@@ -164,11 +157,10 @@ const Cases = () => {
     const matchesSearch = searchQuery === '' || caseItem.title.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.case_number.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || caseItem.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || caseItem.priority === priorityFilter;
-    
+
     // Match status type (open/closed)
     const statusPicklist = statusPicklists.find(s => s.value === caseItem.status);
     const matchesStatusType = statusTypeFilter === 'all' || statusPicklist?.status_type === statusTypeFilter;
-    
     return matchesSearch && matchesStatus && matchesPriority && matchesStatusType;
   });
   if (loading) {
@@ -177,14 +169,12 @@ const Cases = () => {
       </div>;
   }
   return <div className="space-y-6">
-      {isVendor && (
-        <Alert className="bg-muted/50 border-primary/20">
+      {isVendor && <Alert className="bg-muted/50 border-primary/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
             You are viewing cases assigned to you. You can only see and update your assigned work.
           </AlertDescription>
-        </Alert>
-      )}
+        </Alert>}
       
       <div className="flex items-center justify-between">
         <div>
@@ -193,12 +183,10 @@ const Cases = () => {
             {isVendor ? 'View and update your assigned cases' : 'Manage and track your investigation cases'}
           </p>
         </div>
-        {!isVendor && (
-          <Button className="gap-2" onClick={() => setFormOpen(true)}>
+        {!isVendor && <Button className="gap-2" onClick={() => setFormOpen(true)}>
             <Plus className="w-4 h-4" />
             New Case
-          </Button>
-        )}
+          </Button>}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -222,9 +210,7 @@ const Cases = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            {statusPicklists.map(status => (
-              <SelectItem key={status.id} value={status.value}>{status.value}</SelectItem>
-            ))}
+            {statusPicklists.map(status => <SelectItem key={status.id} value={status.value}>{status.value}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
@@ -233,16 +219,14 @@ const Cases = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Priority</SelectItem>
-            {priorityPicklists.map(priority => (
-              <SelectItem key={priority.id} value={priority.value}>{priority.value}</SelectItem>
-            ))}
+            {priorityPicklists.map(priority => <SelectItem key={priority.id} value={priority.value}>{priority.value}</SelectItem>)}
           </SelectContent>
         </Select>
         <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-7 w-7 p-0">
             <LayoutGrid className="h-3.5 w-3.5" />
           </Button>
-          <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-7 w-7 p-0">
+          <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-7 w-7 p-0 bg-blue-500 hover:bg-blue-400">
             <List className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -300,15 +284,9 @@ const Cases = () => {
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
-                  {!isVendor && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleDeleteClick(caseItem.id)}
-                    >
+                  {!isVendor && <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
                       <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
               </CardContent>
             </Card>)}
@@ -316,18 +294,16 @@ const Cases = () => {
           {/* Mobile Card View */}
           <div className="block sm:hidden space-y-4">
             {filteredCases.map(caseItem => {
-              const isClosed = isClosedCase(caseItem.status);
-              return <Card key={caseItem.id} className={`p-4 ${isClosed ? 'opacity-60' : ''}`}>
+          const isClosed = isClosedCase(caseItem.status);
+          return <Card key={caseItem.id} className={`p-4 ${isClosed ? 'opacity-60' : ''}`}>
                 <div className="space-y-3">
                   <div>
                     <div className="font-semibold text-sm">{caseItem.case_number}</div>
                     <div className={`font-medium mt-1 flex items-center gap-2 ${isClosed ? 'text-muted-foreground' : 'text-foreground'}`}>
                       {caseItem.title}
-                      {isClosed && (
-                        <Badge variant="secondary" className="text-xs">
+                      {isClosed && <Badge variant="secondary" className="text-xs">
                           Closed
-                        </Badge>
-                      )}
+                        </Badge>}
                     </div>
                   </div>
                   
@@ -352,21 +328,14 @@ const Cases = () => {
                         View
                       </Link>
                     </Button>
-                    {!isVendor && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleDeleteClick(caseItem.id)}
-                        className="flex-1"
-                      >
+                    {!isVendor && <Button variant="outline" size="sm" onClick={() => handleDeleteClick(caseItem.id)} className="flex-1">
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
-                      </Button>
-                    )}
+                      </Button>}
                   </div>
                 </div>
               </Card>;
-            })}
+        })}
           </div>
 
           {/* Desktop Table View */}
@@ -385,19 +354,17 @@ const Cases = () => {
               </TableHeader>
               <TableBody>
                 {filteredCases.map(caseItem => {
-                  const isClosed = isClosedCase(caseItem.status);
-                  return <TableRow key={caseItem.id} className={`cursor-pointer hover:bg-muted/50 ${isClosed ? 'opacity-60' : ''}`}>
+              const isClosed = isClosedCase(caseItem.status);
+              return <TableRow key={caseItem.id} className={`cursor-pointer hover:bg-muted/50 ${isClosed ? 'opacity-60' : ''}`}>
                     <TableCell className={`font-medium ${isClosed ? 'text-muted-foreground' : ''}`}>
                       {caseItem.case_number}
                     </TableCell>
                     <TableCell className={isClosed ? 'text-muted-foreground' : ''}>
                       <div className="flex items-center gap-2">
                         {caseItem.title}
-                        {isClosed && (
-                          <Badge variant="secondary" className="text-xs">
+                        {isClosed && <Badge variant="secondary" className="text-xs">
                             Closed
-                          </Badge>
-                        )}
+                          </Badge>}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -423,19 +390,13 @@ const Cases = () => {
                             <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
-                        {!isVendor && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleDeleteClick(caseItem.id)}
-                          >
+                        {!isVendor && <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
                             <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                          </Button>}
                       </div>
                     </TableCell>
                   </TableRow>;
-                })}
+            })}
               </TableBody>
             </Table>
           </Card>
@@ -443,16 +404,7 @@ const Cases = () => {
 
       <CaseForm open={formOpen} onOpenChange={setFormOpen} onSuccess={fetchCases} />
       
-      <ConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        title="Delete Case"
-        description="Are you sure you want to delete this case? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        onConfirm={handleDeleteConfirm}
-        variant="destructive"
-      />
+      <ConfirmationDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete Case" description="Are you sure you want to delete this case? This action cannot be undone." confirmLabel="Delete" cancelLabel="Cancel" onConfirm={handleDeleteConfirm} variant="destructive" />
     </div>;
 };
 export default Cases;
