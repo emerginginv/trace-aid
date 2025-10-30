@@ -266,13 +266,16 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
       if (!orgMember) return;
 
-      // Get the highest case number in this organization
-      const { data: existingCases } = await supabase
+      // Get ALL case numbers in this organization to find the highest number
+      const { data: existingCases, error } = await supabase
         .from("cases")
         .select("case_number")
-        .eq("organization_id", orgMember.organization_id)
-        .order("created_at", { ascending: false })
-        .limit(100); // Get more cases to handle edge cases
+        .eq("organization_id", orgMember.organization_id);
+
+      if (error) {
+        console.error("Error fetching existing cases:", error);
+        return;
+      }
 
       let nextNumber = 1;
       if (existingCases && existingCases.length > 0) {
@@ -290,6 +293,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       }
 
       const caseNumber = `CASE-${String(nextNumber).padStart(5, "0")}`;
+      console.log(`Generated case number ${caseNumber} for organization ${orgMember.organization_id}`);
       form.setValue("case_number", caseNumber);
     } catch (error) {
       console.error("Error generating case number:", error);
