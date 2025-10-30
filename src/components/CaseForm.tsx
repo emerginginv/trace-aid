@@ -254,23 +254,10 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
   const generateCaseNumber = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!orgMember) return;
-
-      // Get ALL case numbers in this organization to find the highest number
+      // Get ALL case numbers across the entire database to ensure global uniqueness
       const { data: existingCases, error } = await supabase
         .from("cases")
-        .select("case_number")
-        .eq("organization_id", orgMember.organization_id);
+        .select("case_number");
 
       if (error) {
         console.error("Error fetching existing cases:", error);
@@ -293,7 +280,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       }
 
       const caseNumber = `CASE-${String(nextNumber).padStart(5, "0")}`;
-      console.log(`Generated case number ${caseNumber} for organization ${orgMember.organization_id}`);
+      console.log(`Generated globally unique case number: ${caseNumber}`);
       form.setValue("case_number", caseNumber);
     } catch (error) {
       console.error("Error generating case number:", error);
