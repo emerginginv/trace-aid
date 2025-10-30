@@ -149,13 +149,27 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) return;
+
+      const { data, error } = await supabase
         .from("picklists")
         .select("id, value")
-        .eq("user_id", user.id)
         .eq("type", "case_status")
         .eq("is_active", true)
+        .or(`organization_id.eq.${orgMember.organization_id},organization_id.is.null`)
         .order("display_order");
+
+      if (error) {
+        console.error("Error fetching case statuses:", error);
+        return;
+      }
 
       if (data) {
         setCaseStatuses(data);
@@ -185,18 +199,34 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) return;
+
       const [accountsData, contactsData] = await Promise.all([
         supabase
           .from("accounts")
           .select("id, name")
-          .eq("user_id", user.id)
+          .eq("organization_id", orgMember.organization_id)
           .order("name"),
         supabase
           .from("contacts")
           .select("id, first_name, last_name")
-          .eq("user_id", user.id)
+          .eq("organization_id", orgMember.organization_id)
           .order("first_name"),
       ]);
+
+      if (accountsData.error) {
+        console.error("Error fetching accounts:", accountsData.error);
+      }
+      if (contactsData.error) {
+        console.error("Error fetching contacts:", contactsData.error);
+      }
 
       if (accountsData.data) setAccounts(accountsData.data);
       if (contactsData.data) setContacts(contactsData.data);
