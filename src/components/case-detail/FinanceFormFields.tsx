@@ -101,7 +101,6 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="retainer">Retainer</SelectItem>
                 <SelectItem value="expense">Expense</SelectItem>
                 <SelectItem value="time">Time</SelectItem>
               </SelectContent>
