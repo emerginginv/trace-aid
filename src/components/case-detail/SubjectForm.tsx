@@ -205,15 +205,15 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>{editingSubject ? "Edit" : "Add"} Subject</DialogTitle>
           <DialogDescription>Add a person, vehicle, location, or item related to this case</DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[calc(85vh-180px)] px-6">
+        <div className="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <label className="text-sm font-medium mb-2 block">Profile Photo</label>
               <ProfileImageUpload
@@ -616,9 +616,9 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
 
             </form>
           </Form>
-        </ScrollArea>
+        </div>
         
-        <div className="flex justify-end gap-2 border-t px-6 py-4">
+        <div className="flex justify-end gap-2 border-t px-6 py-4 bg-background">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
