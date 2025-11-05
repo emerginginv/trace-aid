@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -114,7 +114,7 @@ export function ActivityForm({
         description: values.description || null,
         case_id: caseId,
         user_id: user.id,
-        due_date: values.due_date?.toISOString() || null,
+        due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
         status: values.status,
         assigned_user_id: values.assigned_user_id || null,
         completed: values.status === "done" || values.status === "completed",
