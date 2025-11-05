@@ -14,7 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { ProfileImageUpload } from "./ProfileImageUpload";
 
 const formSchema = z.object({
-  subject_type: z.enum(["person", "business", "vehicle", "asset", "location", "other"]),
+  subject_type: z.enum(["person", "vehicle", "location", "item"]),
   name: z.string().min(1, "Name is required"),
   notes: z.string().optional(),
   // Person fields
@@ -24,10 +24,9 @@ const formSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   address: z.string().optional(),
-  // Business fields
-  business_name: z.string().optional(),
-  registration_number: z.string().optional(),
-  contact_person: z.string().optional(),
+  // Item fields
+  item_type: z.string().optional(),
+  item_description: z.string().optional(),
   website: z.string().optional(),
   // Vehicle fields
   make: z.string().optional(),
@@ -35,10 +34,6 @@ const formSchema = z.object({
   year: z.string().optional(),
   vin: z.string().optional(),
   license_plate: z.string().optional(),
-  // Asset fields
-  asset_type: z.string().optional(),
-  serial_number: z.string().optional(),
-  description: z.string().optional(),
   // Location fields
   location_address: z.string().optional(),
   location_phone: z.string().optional(),
@@ -69,18 +64,13 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
       phone: "",
       email: "",
       address: "",
-      business_name: "",
-      registration_number: "",
-      contact_person: "",
-      website: "",
+      item_type: "",
+      item_description: "",
       make: "",
       model: "",
       year: "",
       vin: "",
       license_plate: "",
-      asset_type: "",
-      serial_number: "",
-      description: "",
       location_address: "",
       location_phone: "",
       location_contact_name: "",
@@ -110,18 +100,13 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         phone: "",
         email: "",
         address: "",
-        business_name: "",
-        registration_number: "",
-        contact_person: "",
-        website: "",
+        item_type: "",
+        item_description: "",
         make: "",
         model: "",
         year: "",
         vin: "",
         license_plate: "",
-        asset_type: "",
-        serial_number: "",
-        description: "",
         location_address: "",
         location_phone: "",
         location_contact_name: "",
@@ -237,11 +222,9 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="person">Person</SelectItem>
-                      <SelectItem value="business">Business</SelectItem>
                       <SelectItem value="vehicle">Vehicle</SelectItem>
-                      <SelectItem value="asset">Asset</SelectItem>
                       <SelectItem value="location">Location</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="item">Item</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -352,79 +335,36 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
               </div>
             )}
 
-            {/* Business-specific fields */}
-            {selectedType === "business" && (
+            {/* Item-specific fields */}
+            {selectedType === "item" && (
               <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
-                <h3 className="text-sm font-semibold">Business Details</h3>
+                <h3 className="text-sm font-semibold">Item Details</h3>
                 <FormField
                   control={form.control}
-                  name="business_name"
+                  name="item_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Business Name</FormLabel>
+                      <FormLabel>Item Type</FormLabel>
                       <FormControl>
-                        <Input placeholder="Business name" {...field} />
+                        <Input placeholder="Type of item" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="registration_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Registration Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Registration number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contact_person"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Person</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Contact person" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Phone number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="website"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Website</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Website URL" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="item_description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Item description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             )}
 
@@ -504,53 +444,6 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
               </div>
             )}
 
-            {/* Asset-specific fields */}
-            {selectedType === "asset" && (
-              <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
-                <h3 className="text-sm font-semibold">Asset Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="asset_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Asset Type</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Type of asset" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="serial_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Serial Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Serial number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Asset description" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
 
             {/* Location-specific fields */}
             {selectedType === "location" && (

@@ -66,8 +66,7 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
       person: User,
       vehicle: Car,
       location: MapPin,
-      asset: Package,
-      business: Package,
+      item: Package,
     };
     const Icon = icons[type as keyof typeof icons] || Package;
     return <Icon className="h-4 w-4" />;
@@ -78,8 +77,7 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
       person: "bg-blue-500/10 text-blue-500 border-blue-500/20",
       vehicle: "bg-purple-500/10 text-purple-500 border-purple-500/20",
       location: "bg-green-500/10 text-green-500 border-green-500/20",
-      asset: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-      business: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+      item: "bg-orange-500/10 text-orange-500 border-orange-500/20",
     };
     return colors[type] || "bg-muted";
   };
@@ -178,10 +176,9 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="person">Person</SelectItem>
-            <SelectItem value="business">Business</SelectItem>
             <SelectItem value="vehicle">Vehicle</SelectItem>
-            <SelectItem value="asset">Asset</SelectItem>
             <SelectItem value="location">Location</SelectItem>
+            <SelectItem value="item">Item</SelectItem>
           </SelectContent>
         </Select>
       </div>
