@@ -557,7 +557,7 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
         </div>
       )}
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -567,53 +567,55 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
             className="pl-9"
           />
         </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="File Type" />
-          </SelectTrigger>
-          <SelectContent className="bg-background z-50">
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="image">Images</SelectItem>
-            <SelectItem value="video">Videos</SelectItem>
-            <SelectItem value="audio">Audio</SelectItem>
-            <SelectItem value="document">Documents</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={tagFilter} onValueChange={setTagFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filter by Tag" />
-          </SelectTrigger>
-          <SelectContent className="bg-background z-50">
-            <SelectItem value="all">All Tags</SelectItem>
-            {allTags.length === 0 ? (
-              <SelectItem value="none" disabled>No tags available</SelectItem>
-            ) : (
-              allTags.map((tag) => (
-                <SelectItem key={tag} value={tag}>
-                  {tag}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        <div className="flex gap-1 border rounded-md p-0.5">
-          <Button 
-            variant={viewMode === "list" ? "secondary" : "ghost"} 
-            size="icon"
-            onClick={() => setViewMode("list")}
-            className="h-9 w-9"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant={viewMode === "card" ? "secondary" : "ghost"} 
-            size="icon"
-            onClick={() => setViewMode("card")}
-            className="h-9 w-9"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="flex-1 sm:w-32">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent className="bg-background z-50">
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="image">Images</SelectItem>
+              <SelectItem value="video">Videos</SelectItem>
+              <SelectItem value="audio">Audio</SelectItem>
+              <SelectItem value="document">Documents</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={tagFilter} onValueChange={setTagFilter}>
+            <SelectTrigger className="flex-1 sm:w-32">
+              <SelectValue placeholder="Tags" />
+            </SelectTrigger>
+            <SelectContent className="bg-background z-50">
+              <SelectItem value="all">All Tags</SelectItem>
+              {allTags.length === 0 ? (
+                <SelectItem value="none" disabled>No tags</SelectItem>
+              ) : (
+                allTags.map((tag) => (
+                  <SelectItem key={tag} value={tag}>
+                    {tag}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-1 border rounded-md p-0.5">
+            <Button 
+              variant={viewMode === "list" ? "secondary" : "ghost"} 
+              size="icon"
+              onClick={() => setViewMode("list")}
+              className="h-9 w-9"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={viewMode === "card" ? "secondary" : "ghost"} 
+              size="icon"
+              onClick={() => setViewMode("card")}
+              className="h-9 w-9"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <input
           id="file-upload"
@@ -640,7 +642,7 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
           </CardContent>
         </Card>
       ) : viewMode === "card" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {filteredAttachments.map((attachment) => {
             const signedUrl = previewUrls[attachment.id];
 
@@ -686,42 +688,42 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                   <div className="text-xs text-muted-foreground mt-1">
                     {formatFileSize(attachment.file_size)} • {new Date(attachment.created_at).toLocaleDateString()}
                   </div>
-                  <div className="flex justify-end gap-2 mt-3">
+                  <div className="flex flex-wrap justify-end gap-1 sm:gap-2 mt-3">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handlePreview(attachment)}
-                      className="h-8 text-xs"
+                      className="h-7 sm:h-8 text-xs px-2"
                     >
-                      <Eye className="h-3 w-3 mr-1" />
-                      View
+                      <Eye className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">View</span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEdit(attachment)}
-                      className="h-8 text-xs"
+                      className="h-7 sm:h-8 text-xs px-2"
                     >
-                      <Pencil className="h-3 w-3 mr-1" />
-                      Edit
+                      <Pencil className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Edit</span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDownload(attachment)}
-                      className="h-8 text-xs"
+                      className="h-7 sm:h-8 text-xs px-2"
                     >
-                      <Download className="h-3 w-3 mr-1" />
-                      Download
+                      <Download className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Download</span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(attachment)}
-                      className="h-8 text-xs text-destructive hover:text-destructive"
+                      className="h-7 sm:h-8 text-xs px-2 text-destructive hover:text-destructive"
                     >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Delete
+                      <Trash2 className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Delete</span>
                     </Button>
                   </div>
                 </CardContent>
@@ -730,15 +732,15 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
           })}
         </div>
       ) : (
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-16 py-2">Preview</TableHead>
-                <TableHead className="py-2">File Name</TableHead>
-                <TableHead className="py-2">Size</TableHead>
-                <TableHead className="py-2">Uploaded</TableHead>
-                <TableHead className="text-right py-2">Actions</TableHead>
+                <TableHead className="w-12 sm:w-16 py-2">Preview</TableHead>
+                <TableHead className="py-2 min-w-[150px]">File Name</TableHead>
+                <TableHead className="py-2 hidden sm:table-cell">Size</TableHead>
+                <TableHead className="py-2 hidden md:table-cell">Uploaded</TableHead>
+                <TableHead className="text-right py-2 min-w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -785,41 +787,45 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="py-1.5">{formatFileSize(attachment.file_size)}</TableCell>
-                  <TableCell className="py-1.5">{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="py-1.5 hidden sm:table-cell">{formatFileSize(attachment.file_size)}</TableCell>
+                  <TableCell className="py-1.5 hidden md:table-cell">{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right py-1.5">
                     <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handlePreview(attachment)}
-                        className="h-8 w-8"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        title="Preview"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEdit(attachment)}
-                        className="h-8 w-8"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        title="Edit"
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDownload(attachment)}
-                        className="h-8 w-8"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        title="Download"
                       >
-                        <Download className="h-4 w-4" />
+                        <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(attachment)}
-                        className="h-8 w-8"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        title="Delete"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </TableCell>

@@ -463,12 +463,12 @@ const CaseDetail = () => {
           </div>}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader className="p-4 sm:p-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+        <Card className="xl:col-span-2">
+          <CardHeader className="p-3 sm:p-4 md:p-6">
             <CardTitle className="text-base sm:text-lg">Case Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
+          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4 md:p-6 pt-0">
             {caseData.description && <div>
                 <p className="text-sm font-medium mb-1">Description</p>
                 <p className="text-muted-foreground">{caseData.description}</p>
