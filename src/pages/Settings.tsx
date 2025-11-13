@@ -106,6 +106,12 @@ const Settings = () => {
   const [feinNumber, setFeinNumber] = useState("");
   const [terms, setTerms] = useState("");
   const [uploading, setUploading] = useState(false);
+  
+  // Email Signature State
+  const [signatureName, setSignatureName] = useState("");
+  const [signatureTitle, setSignatureTitle] = useState("");
+  const [signaturePhone, setSignaturePhone] = useState("");
+  const [signatureEmail, setSignatureEmail] = useState("");
 
   // Users Management State
   const [users, setUsers] = useState<User[]>([]);
@@ -255,6 +261,10 @@ const Settings = () => {
         setAgencyLicenseNumber(orgSettings.agency_license_number || "");
         setFeinNumber(orgSettings.fein_number || "");
         setTerms(orgSettings.terms || "");
+        setSignatureName(orgSettings.signature_name || "");
+        setSignatureTitle(orgSettings.signature_title || "");
+        setSignaturePhone(orgSettings.signature_phone || "");
+        setSignatureEmail(orgSettings.signature_email || "");
       }
 
       // Get user's organization
@@ -498,6 +508,10 @@ const Settings = () => {
         agency_license_number: agencyLicenseNumber,
         fein_number: feinNumber,
         terms: terms,
+        signature_name: signatureName,
+        signature_title: signatureTitle,
+        signature_phone: signaturePhone,
+        signature_email: signatureEmail,
       };
 
       if (existing) {
@@ -2246,6 +2260,129 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="email" className="space-y-6">
+          {/* Email Signature Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Signature</CardTitle>
+              <CardDescription>
+                Configure your email signature with company logo and contact information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="signatureName">Name</Label>
+                  <Input
+                    id="signatureName"
+                    value={signatureName}
+                    onChange={(e) => setSignatureName(e.target.value)}
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="signatureTitle">Title</Label>
+                  <Input
+                    id="signatureTitle"
+                    value={signatureTitle}
+                    onChange={(e) => setSignatureTitle(e.target.value)}
+                    placeholder="Case Manager"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="signaturePhone">Phone</Label>
+                  <Input
+                    id="signaturePhone"
+                    value={signaturePhone}
+                    onChange={(e) => setSignaturePhone(e.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="signatureEmail">Email</Label>
+                  <Input
+                    id="signatureEmail"
+                    type="email"
+                    value={signatureEmail}
+                    onChange={(e) => setSignatureEmail(e.target.value)}
+                    placeholder="john@company.com"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t">
+                <Label className="text-sm font-medium mb-3 block">Preview</Label>
+                <div className="rounded-md border border-border bg-muted/30 p-4">
+                  <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '14px', color: '#333' }}>
+                    {logoUrl && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <img 
+                          src={logoUrl} 
+                          alt="Company logo" 
+                          style={{ height: '40px', width: 'auto' }}
+                        />
+                      </div>
+                    )}
+                    {signatureName && (
+                      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                        {signatureName}
+                      </div>
+                    )}
+                    {signatureTitle && (
+                      <div style={{ color: '#666', marginBottom: '8px' }}>
+                        {signatureTitle}
+                      </div>
+                    )}
+                    {companyName && (
+                      <div style={{ fontWeight: '500', marginBottom: '8px' }}>
+                        {companyName}
+                      </div>
+                    )}
+                    {(signaturePhone || signatureEmail) && (
+                      <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #ddd' }}>
+                        {signaturePhone && (
+                          <div style={{ marginBottom: '4px' }}>
+                            📞 {signaturePhone}
+                          </div>
+                        )}
+                        {signatureEmail && (
+                          <div>
+                            ✉️ {signatureEmail}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {address && (
+                      <div style={{ marginTop: '8px', color: '#666', fontSize: '12px' }}>
+                        {address}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  This signature will be automatically added to all outgoing emails
+                </p>
+              </div>
+
+              <Button onClick={saveOrganizationSettings} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Signature
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Email Test Form */}
           <EmailTestForm />
         </TabsContent>
 
