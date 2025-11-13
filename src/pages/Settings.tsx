@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -807,10 +808,11 @@ const Settings = () => {
     }
   };
 
+  const { startImpersonation } = useImpersonation();
+
   const handleViewAsUser = async (userId: string, userEmail: string) => {
-    toast.info(`"View as User" feature coming soon - will allow admin to impersonate ${userEmail}`);
-    // Note: Full impersonation requires custom JWT implementation
-    // This is a placeholder for future implementation
+    const userName = users.find(u => u.id === userId)?.full_name;
+    startImpersonation(userId, userEmail, userName || userEmail);
   };
 
   const handleToggleDisable = async (user: User) => {
