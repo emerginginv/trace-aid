@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { ActivityForm } from "./ActivityForm";
 import { Badge } from "@/components/ui/badge";
@@ -123,6 +124,48 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
       toast({
         title: "Error",
         description: "Failed to delete activity",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleComplete = async (activity: Activity) => {
+    try {
+      const newStatus = activeTab === "tasks" 
+        ? (activity.status === "done" ? "to_do" : "done")
+        : (activity.status === "completed" ? "scheduled" : "completed");
+      
+      const { error } = await supabase
+        .from('case_activities')
+        .update({ 
+          status: newStatus,
+          completed: newStatus === "done" || newStatus === "completed",
+          completed_at: (newStatus === "done" || newStatus === "completed") ? new Date().toISOString() : null
+        })
+        .eq('id', activity.id);
+
+      if (error) throw error;
+
+      setActivities(activities.map(a => 
+        a.id === activity.id 
+          ? { 
+              ...a, 
+              status: newStatus, 
+              completed: newStatus === "done" || newStatus === "completed",
+              completed_at: (newStatus === "done" || newStatus === "completed") ? new Date().toISOString() : null
+            }
+          : a
+      ));
+
+      toast({
+        title: "Success",
+        description: `${activeTab === "tasks" ? "Task" : "Event"} updated successfully`,
+      });
+    } catch (error) {
+      console.error('Error updating activity:', error);
+      toast({
+        title: "Error",
+        description: `Failed to update ${activeTab === "tasks" ? "task" : "event"}`,
         variant: "destructive",
       });
     }
@@ -263,6 +306,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]"></TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Assigned To</TableHead>
@@ -273,9 +317,18 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                 <TableBody>
                   {filteredActivities.map((activity) => (
                     <TableRow key={activity.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={activity.status === "done" || activity.status === "completed"}
+                          onCheckedChange={() => handleToggleComplete(activity)}
+                          disabled={isClosedCase}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
-                          <span>{activity.title}</span>
+                          <span className={activity.status === "done" || activity.status === "completed" ? "line-through text-muted-foreground" : ""}>
+                            {activity.title}
+                          </span>
                           {activity.description && (
                             <span className="text-sm text-muted-foreground mt-1">
                               {activity.description}
@@ -302,6 +355,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(activity)}
+                            disabled={isClosedCase}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -309,6 +363,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDelete(activity.id)}
+                            disabled={isClosedCase}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
