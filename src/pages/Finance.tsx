@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useNavigate } from "react-router-dom";
 import { Loader2, DollarSign, Receipt, Wallet, Search, Eye, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
+import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -63,6 +64,7 @@ const Finance = () => {
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all");
   const [showPayModal, setShowPayModal] = useState<Invoice | null>(null);
+  const [editingInvoice, setEditingInvoice] = useState<string | null>(null);
   const [retainerMap, setRetainerMap] = useState<Record<string, number>>({});
   
   // Pagination states
@@ -810,9 +812,7 @@ const Finance = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            toast.info("Edit invoice functionality coming soon");
-                          }}
+                          onClick={() => setEditingInvoice(invoice.id)}
                           title="Edit invoice"
                         >
                           <Pencil className="h-4 w-4" />
@@ -895,6 +895,16 @@ const Finance = () => {
           open={!!showPayModal}
           onClose={() => setShowPayModal(null)}
           onPaymentRecorded={fetchFinanceData}
+        />
+      )}
+
+      {/* Edit Invoice Dialog */}
+      {editingInvoice && (
+        <EditInvoiceDialog
+          invoiceId={editingInvoice}
+          open={!!editingInvoice}
+          onOpenChange={(open) => !open && setEditingInvoice(null)}
+          onSuccess={fetchFinanceData}
         />
       )}
     </div>
