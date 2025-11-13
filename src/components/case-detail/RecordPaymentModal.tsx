@@ -30,13 +30,39 @@ export default function RecordPaymentModal({
   const [retainerAmount, setRetainerAmount] = useState(0);
   const [manualAmount, setManualAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [currentBalanceDue, setCurrentBalanceDue] = useState(invoice?.balance_due ?? invoice?.total ?? 0);
+  const [retainerApplied, setRetainerApplied] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const totalDue = invoice?.balance_due ?? invoice?.total ?? 0;
+  const totalDue = currentBalanceDue;
 
   useEffect(() => {
-    setRetainerAmount(0);
-    setManualAmount(0);
-  }, [open]);
+    if (open && invoice?.id) {
+      fetchLatestInvoiceData();
+    }
+  }, [open, invoice?.id]);
+
+  const fetchLatestInvoiceData = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("balance_due, total_paid, retainer_applied, total")
+        .eq("id", invoice.id)
+        .single();
+
+      if (error) throw error;
+
+      setCurrentBalanceDue(data.balance_due ?? (data.total - (data.total_paid || 0)));
+      setRetainerApplied(data.retainer_applied || 0);
+      setRetainerAmount(0);
+      setManualAmount(0);
+    } catch (error) {
+      console.error("Error fetching invoice data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     try {
@@ -180,59 +206,73 @@ export default function RecordPaymentModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="rounded-lg bg-muted p-4 space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Invoice:</span>
-              <span className="font-medium">{invoice.invoice_number}</span>
+          {loading ? (
+            <div className="flex justify-center py-4">
+              <div className="text-sm text-muted-foreground">Loading invoice details...</div>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Due:</span>
-              <span className="font-semibold text-lg">${totalDue.toFixed(2)}</span>
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="rounded-lg bg-muted p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Invoice:</span>
+                  <span className="font-medium">{invoice.invoice_number}</span>
+                </div>
+                {retainerApplied > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Retainer Already Applied:</span>
+                    <span className="font-medium text-green-600">-${retainerApplied.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm pt-1 border-t border-border/50">
+                  <span className="text-muted-foreground">Remaining Balance:</span>
+                  <span className="font-semibold text-lg">${totalDue.toFixed(2)}</span>
+                </div>
+              </div>
 
-          {caseRetainerBalance > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="retainer-amount">
-                Apply from Retainer (Available: ${caseRetainerBalance.toFixed(2)})
-              </Label>
-              <Input
-                id="retainer-amount"
-                type="number"
-                placeholder="0.00"
-                value={retainerAmount || ""}
-                onChange={(e) => setRetainerAmount(Math.min(Number(e.target.value), maxRetainer))}
-                min={0}
-                max={maxRetainer}
-                step="0.01"
-              />
-            </div>
+              {caseRetainerBalance > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="retainer-amount">
+                    Apply from Retainer (Available: ${caseRetainerBalance.toFixed(2)})
+                  </Label>
+                  <Input
+                    id="retainer-amount"
+                    type="number"
+                    placeholder="0.00"
+                    value={retainerAmount || ""}
+                    onChange={(e) => setRetainerAmount(Math.min(Number(e.target.value), maxRetainer))}
+                    min={0}
+                    max={maxRetainer}
+                    step="0.01"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="manual-amount">Manual Payment</Label>
+                <Input
+                  id="manual-amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={manualAmount || ""}
+                  onChange={(e) => setManualAmount(Math.min(Number(e.target.value), maxManual))}
+                  min={0}
+                  max={maxManual}
+                  step="0.01"
+                />
+              </div>
+
+              <div className="rounded-lg bg-primary/5 p-4 space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Payment:</span>
+                  <span className="font-semibold text-primary">${totalPayment.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Remaining Balance:</span>
+                  <span className="font-medium">${Math.max(0, totalDue - totalPayment).toFixed(2)}</span>
+                </div>
+              </div>
+            </>
           )}
-
-          <div className="space-y-2">
-            <Label htmlFor="manual-amount">Manual Payment</Label>
-            <Input
-              id="manual-amount"
-              type="number"
-              placeholder="0.00"
-              value={manualAmount || ""}
-              onChange={(e) => setManualAmount(Math.min(Number(e.target.value), maxManual))}
-              min={0}
-              max={maxManual}
-              step="0.01"
-            />
-          </div>
-
-          <div className="rounded-lg bg-primary/5 p-4 space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Payment:</span>
-              <span className="font-semibold text-primary">${totalPayment.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Remaining Balance:</span>
-              <span className="font-medium">${Math.max(0, totalDue - totalPayment).toFixed(2)}</span>
-            </div>
-          </div>
         </div>
 
         <DialogFooter>

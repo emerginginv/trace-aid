@@ -889,7 +889,7 @@ const Finance = () => {
             invoice_number: showPayModal.invoice_number || "",
             case_id: showPayModal.case_id,
             total: showPayModal.amount,
-            balance_due: showPayModal.balance_due,
+            balance_due: showPayModal.balance_due ?? showPayModal.amount,
           }}
           caseRetainerBalance={retainerMap[showPayModal.case_id] || 0}
           open={!!showPayModal}
