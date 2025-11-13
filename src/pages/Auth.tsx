@@ -32,9 +32,25 @@ const signUpSchema = z.object({
 type SignInFormData = z.infer<typeof signInSchema>;
 type SignUpFormData = z.infer<typeof signUpSchema>;
 
+const resetPasswordSchema = z.object({
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must be less than 128 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
@@ -53,8 +69,31 @@ const Auth = () => {
     },
   });
 
+  const resetPasswordForm = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
   useEffect(() => {
     const checkSessionAndRedirect = async () => {
+      // Check if this is a password reset flow
+      const params = new URLSearchParams(window.location.search);
+      const isReset = params.get('reset') === 'true';
+      
+      // Check for hash parameters (password reset token)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const type = hashParams.get('type');
+      
+      if (isReset && accessToken && type === 'recovery') {
+        // This is a valid password reset link
+        setIsPasswordReset(true);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         // Check user role and redirect accordingly
@@ -113,6 +152,35 @@ const Auth = () => {
     }
   };
 
+  const handleResetPassword = async (data: ResetPasswordFormData) => {
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: data.password
+      });
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Password updated successfully!");
+        setIsPasswordReset(false);
+        
+        // Clear the hash from URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Redirect to dashboard
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1000);
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSignIn = async (data: SignInFormData) => {
     setLoading(true);
 
@@ -157,10 +225,57 @@ const Auth = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>Sign in to your account or create a new one</CardDescription>
+            <CardTitle>{isPasswordReset ? "Reset Password" : "Welcome"}</CardTitle>
+            <CardDescription>
+              {isPasswordReset 
+                ? "Enter your new password below" 
+                : "Sign in to your account or create a new one"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
+            {isPasswordReset ? (
+              <Form {...resetPasswordForm}>
+                <form onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)} className="space-y-4">
+                  <FormField
+                    control={resetPasswordForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="••••••••"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={resetPasswordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="••••••••"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Updating..." : "Update Password"}
+                  </Button>
+                </form>
+              </Form>
+            ) : (
             <Tabs defaultValue="signin">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -271,7 +386,8 @@ const Auth = () => {
                   </form>
                 </Form>
               </TabsContent>
-            </Tabs>
+             </Tabs>
+            )}
           </CardContent>
         </Card>
       </div>
