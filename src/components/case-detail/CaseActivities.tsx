@@ -303,60 +303,66 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
               </p>
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[50px]"></TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>{activeTab === "tasks" ? "Due Date" : "Date"}</TableHead>
+                    <TableHead className="min-w-[200px] max-w-[300px]">Title</TableHead>
+                    <TableHead className="w-[120px]">Status</TableHead>
+                    <TableHead className="w-[140px] hidden md:table-cell">Assigned To</TableHead>
+                    <TableHead className="w-[120px]">{activeTab === "tasks" ? "Due Date" : "Date"}</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredActivities.map((activity) => (
                     <TableRow key={activity.id}>
-                      <TableCell>
+                      <TableCell className="align-top">
                         <Checkbox
                           checked={activity.status === "done" || activity.status === "completed"}
                           onCheckedChange={() => handleToggleComplete(activity)}
                           disabled={isClosedCase}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span className={activity.status === "done" || activity.status === "completed" ? "line-through text-muted-foreground" : ""}>
+                      <TableCell className="font-medium align-top">
+                        <div className="flex flex-col gap-1">
+                          <span 
+                            className={`line-clamp-2 ${activity.status === "done" || activity.status === "completed" ? "line-through text-muted-foreground" : ""}`}
+                            title={activity.title}
+                          >
                             {activity.title}
                           </span>
                           {activity.description && (
-                            <span className="text-sm text-muted-foreground mt-1">
+                            <span className="text-sm text-muted-foreground line-clamp-1" title={activity.description}>
                               {activity.description}
                             </span>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getStatusColor(activity.status)}>
+                      <TableCell className="align-top">
+                        <Badge variant="outline" className={`${getStatusColor(activity.status)} whitespace-nowrap`}>
                           {getStatusLabel(activity.status)}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{getUserName(activity.assigned_user_id)}</span>
+                      <TableCell className="align-top hidden md:table-cell">
+                        <span className="text-sm truncate block" title={getUserName(activity.assigned_user_id)}>
+                          {getUserName(activity.assigned_user_id)}
+                        </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-top whitespace-nowrap">
                         {activity.due_date
                           ? format(new Date(activity.due_date), "MMM dd, yyyy")
                           : "-"}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
+                      <TableCell className="align-top">
+                        <div className="flex gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(activity)}
                             disabled={isClosedCase}
+                            className="h-8 w-8"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -365,6 +371,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                             size="icon"
                             onClick={() => handleDelete(activity.id)}
                             disabled={isClosedCase}
+                            className="h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
