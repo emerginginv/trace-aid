@@ -258,20 +258,36 @@ const Settings = () => {
       }
 
       // Get user's organization
-      const { data: orgMember } = await supabase
+      const { data: orgMember, error: orgError } = await supabase
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (!orgMember) return;
+      if (orgError) {
+        console.error("Error fetching organization:", orgError);
+        return;
+      }
+
+      if (!orgMember) {
+        console.error("No organization found for user");
+        return;
+      }
+
+      console.log("Loading picklists for org:", orgMember.organization_id);
 
       // Load picklists from database filtered by organization
-      const { data: picklists } = await supabase
+      const { data: picklists, error: picklistError } = await supabase
         .from("picklists")
         .select("*")
         .eq("organization_id", orgMember.organization_id)
         .order("display_order");
+
+      if (picklistError) {
+        console.error("Error loading picklists:", picklistError);
+      }
+
+      console.log("Loaded picklists:", picklists);
 
       if (picklists) {
         const statuses = picklists
@@ -283,6 +299,8 @@ const Settings = () => {
         const categories = picklists
           .filter(p => p.type === 'expense_category')
           .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
+
+        console.log("Update types found:", updates);
         
         setCaseStatuses(statuses);
         setUpdateTypes(updates);
