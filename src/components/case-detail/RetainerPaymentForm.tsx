@@ -130,38 +130,41 @@ export const RetainerPaymentForm = ({
 
       if (retainerError) throw retainerError;
 
-      // Fetch all payments to calculate new total
-      const { data: payments, error: paymentsError } = await supabase
-        .from("invoice_payments")
-        .select("amount")
-        .eq("invoice_id", invoiceId)
-        .eq("user_id", user.id);
-
-      if (paymentsError) throw paymentsError;
-
-      const totalPaid = (payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
-
-      // Fetch invoice to get total amount
+      // Fetch invoice from the invoices table (not case_finances)
       const { data: invoice, error: invoiceError } = await supabase
-        .from("case_finances")
-        .select("amount")
+        .from("invoices")
+        .select("total, total_paid, retainer_applied, status")
         .eq("id", invoiceId)
-        .eq("user_id", user.id)
         .single();
 
       if (invoiceError) throw invoiceError;
 
-      const invoiceTotal = Number(invoice.amount);
+      const invoiceTotal = Number(invoice.total || 0);
+      const currentTotalPaid = Number(invoice.total_paid || 0);
+      const currentRetainerApplied = Number(invoice.retainer_applied || 0);
 
-      // Update invoice status
-      let newStatus = "partial";
-      if (totalPaid >= invoiceTotal) {
+      // Calculate new totals
+      const newTotalPaid = currentTotalPaid + amountNum;
+      const newRetainerApplied = currentRetainerApplied + amountNum;
+      const newBalanceDue = invoiceTotal - newTotalPaid;
+
+      // Determine new status
+      let newStatus = invoice.status || "draft";
+      if (newBalanceDue <= 0) {
         newStatus = "paid";
+      } else if (newTotalPaid > 0) {
+        newStatus = "partial";
       }
 
+      // Update the invoice with new totals
       const { error: updateError } = await supabase
-        .from("case_finances")
-        .update({ status: newStatus })
+        .from("invoices")
+        .update({ 
+          total_paid: newTotalPaid,
+          retainer_applied: newRetainerApplied,
+          balance_due: newBalanceDue,
+          status: newStatus
+        })
         .eq("id", invoiceId);
 
       if (updateError) throw updateError;
