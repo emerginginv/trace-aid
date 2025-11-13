@@ -139,17 +139,22 @@ const Dashboard = () => {
         totalAccounts: accountsResult.count || 0
       });
 
-      // Fetch tasks from case_activities
+      // Fetch tasks from case_activities (pending tasks only)
       const {
         data: activitiesData
-      } = await supabase.from("case_activities").select("*, cases!inner(id)").eq("user_id", user.id).not("due_date", "is", null).order("due_date", {
-        ascending: true
-      }).limit(10);
+      } = await supabase.from("case_activities").select("*, cases!inner(id)")
+        .eq("user_id", user.id)
+        .eq("activity_type", "task")
+        .eq("completed", false)
+        .order("due_date", {
+          ascending: true,
+          nullsFirst: false
+        }).limit(10);
       if (activitiesData) {
         const tasksData: Task[] = activitiesData.map(activity => ({
           id: activity.id,
           title: activity.title,
-          dueDate: activity.due_date,
+          dueDate: activity.due_date || new Date().toISOString().split('T')[0],
           priority: activity.status === "urgent" ? "high" : activity.status === "in_progress" ? "medium" : "low",
           status: activity.completed ? "completed" : "pending",
           caseId: activity.case_id,
@@ -158,23 +163,30 @@ const Dashboard = () => {
         setTasks(tasksData);
       }
 
-      // Fetch calendar events from case_activities with future dates
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 2);
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
+      // Fetch calendar events from case_activities (upcoming events in next 30 days)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
       const {
         data: eventsData
-      } = await supabase.from("case_activities").select("*, cases!inner(id)").eq("user_id", user.id).not("due_date", "is", null).gte("due_date", yesterday.toISOString().split('T')[0]).lte("due_date", tomorrow.toISOString().split('T')[0]).order("due_date", {
-        ascending: true
-      });
+      } = await supabase.from("case_activities").select("*, cases!inner(id)")
+        .eq("user_id", user.id)
+        .eq("activity_type", "event")
+        .not("due_date", "is", null)
+        .gte("due_date", today.toISOString().split('T')[0])
+        .lte("due_date", futureDate.toISOString().split('T')[0])
+        .order("due_date", {
+          ascending: true
+        })
+        .limit(10);
       if (eventsData) {
         const calendarEvents: CalendarEvent[] = eventsData.map(event => ({
           id: event.id,
           title: event.title,
           date: event.due_date,
           time: "All Day",
-          type: event.activity_type || "task",
+          type: event.activity_type || "event",
           caseId: event.case_id,
           activityData: event
         }));
