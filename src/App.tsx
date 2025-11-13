@@ -24,6 +24,7 @@ import ContactDetail from "./pages/ContactDetail";
 import ContactEdit from "./pages/ContactEdit";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import Admin from "./pages/Admin";
 import UserProfile from "./pages/UserProfile";
 import UserProfileDetail from "./pages/UserProfileDetail";
 import Notifications from "./pages/Notifications";
@@ -224,6 +225,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Settings />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Admin />
               </DashboardLayout>
             </ProtectedRoute>
           }

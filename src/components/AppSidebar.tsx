@@ -44,6 +44,11 @@ const allMenuItems = [{
   icon: Users,
   url: "/contacts",
   roles: ['admin', 'manager', 'investigator']
+}, {
+  title: "Admin",
+  icon: Shield,
+  url: "/admin",
+  roles: ['admin']
 }];
 export function AppSidebar() {
   const navigate = useNavigate();
