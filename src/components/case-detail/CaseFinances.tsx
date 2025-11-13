@@ -47,6 +47,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [retainerTotal, setRetainerTotal] = useState<number>(0);
 
   useEffect(() => {
     fetchFinances();
@@ -125,6 +126,19 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
 
       if (invoicesError) throw invoicesError;
       setInvoices(invoicesData || []);
+
+      // Fetch retainer funds from retainer_funds table
+      const { data: retainerData, error: retainerError } = await supabase
+        .from("retainer_funds")
+        .select("*")
+        .eq("case_id", caseId)
+        .eq("organization_id", memberData.organization_id);
+
+      if (retainerError) throw retainerError;
+      
+      // Calculate retainer balance from retainer_funds table
+      const retainerBalance = (retainerData || []).reduce((sum, fund) => sum + Number(fund.amount), 0);
+      setRetainerTotal(retainerBalance);
     } catch (error) {
       console.error("Error fetching finances:", error);
       toast({
@@ -162,10 +176,6 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   };
 
   const calculateTotals = () => {
-    const retainerTotal = finances
-      .filter((f) => f.finance_type === "retainer" && f.status === "paid")
-      .reduce((sum, f) => sum + Number(f.amount), 0);
-    
     const expenseTotal = finances
       .filter((f) => f.finance_type === "expense")
       .reduce((sum, f) => sum + Number(f.amount), 0);
