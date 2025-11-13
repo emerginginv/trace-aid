@@ -180,15 +180,14 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
       .filter((f) => f.finance_type === "expense")
       .reduce((sum, f) => sum + Number(f.amount), 0);
     
-    const invoiceTotal = finances
-      .filter((f) => f.finance_type === "invoice")
-      .reduce((sum, f) => sum + Number(f.amount), 0);
+    // Calculate invoice total from the invoices array, not finances
+    const invoiceTotal = invoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
 
     return { retainerTotal, expenseTotal, invoiceTotal };
   };
 
   const calculateInvoiceMetrics = () => {
-    const invoices = finances.filter(f => f.finance_type === "invoice");
+    // Use the invoices array instead of filtering finances
     
     // Unpaid invoices (pending, sent, partial, overdue)
     const unpaidInvoices = invoices.filter(inv => 
@@ -196,12 +195,12 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
     );
     
     const unpaidCount = unpaidInvoices.length;
-    const unpaidTotal = unpaidInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+    const unpaidTotal = unpaidInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
     
     // Overdue invoices
     const overdueInvoices = invoices.filter(inv => inv.status === "overdue");
     const overdueCount = overdueInvoices.length;
-    const overdueTotal = overdueInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+    const overdueTotal = overdueInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
     
     // Upcoming invoices (due in next 7 days)
     const today = new Date();
@@ -551,7 +550,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                         </div>
                         <div className="text-right ml-2">
                           <div className="font-bold">
-                            ${Number(invoice.amount).toFixed(2)}
+                            ${Number(invoice.total || 0).toFixed(2)}
                           </div>
                         </div>
                       </div>
