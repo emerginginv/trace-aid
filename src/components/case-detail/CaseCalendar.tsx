@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -277,6 +278,38 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
     setActivityFormOpen(true);
   };
 
+  const handleToggleTaskComplete = async (activity: CalendarActivity) => {
+    try {
+      const newStatus = activity.status === "done" ? "to_do" : "done";
+      
+      const { error } = await supabase
+        .from('case_activities')
+        .update({ 
+          status: newStatus,
+          completed: newStatus === "done",
+          completed_at: newStatus === "done" ? new Date().toISOString() : null
+        })
+        .eq('id', activity.id);
+
+      if (error) throw error;
+
+      // Refresh the calendar data
+      fetchData();
+
+      toast({
+        title: "Success",
+        description: `Task ${newStatus === "done" ? "completed" : "reopened"}`,
+      });
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update task",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Filter tasks for the sidebar (only tasks, not events)
   const getFilteredTasks = () => {
     const now = new Date();
@@ -522,15 +555,26 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
               return (
                 <div
                   key={activity.id}
-                  onClick={() => handleActivityClick(activity)}
-                  className="p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="p-3 border rounded hover:bg-muted/50 transition-colors"
                   style={{ borderLeftWidth: '3px', borderLeftColor: userColor }}
                 >
-                  <div className="flex items-start gap-2">
-                    <span className="text-base mt-0.5">{statusIcon}</span>
-                    <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={activity.status === "done"}
+                      onCheckedChange={() => handleToggleTaskComplete(activity)}
+                      disabled={isClosedCase}
+                      className="mt-1"
+                    />
+                    <div 
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => handleActivityClick(activity)}
+                    >
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm font-medium truncate flex-1">{activity.title}</p>
+                        <p className={`text-sm font-medium truncate flex-1 ${
+                          activity.status === "done" ? "line-through text-muted-foreground" : ""
+                        }`}>
+                          {activity.title}
+                        </p>
                       </div>
                       
                       {activityDate && (
