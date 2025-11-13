@@ -10,17 +10,34 @@ export function useUserRole() {
   useEffect(() => {
     const fetchUserRole = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setRole(null);
-          setLoading(false);
-          return;
+        // Check if we're impersonating a user
+        const impersonationData = localStorage.getItem("impersonation");
+        let targetUserId: string | null = null;
+
+        if (impersonationData) {
+          try {
+            const { userId } = JSON.parse(impersonationData);
+            targetUserId = userId;
+          } catch (e) {
+            localStorage.removeItem("impersonation");
+          }
+        }
+
+        // If not impersonating, get the current user
+        if (!targetUserId) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            setRole(null);
+            setLoading(false);
+            return;
+          }
+          targetUserId = user.id;
         }
 
         const { data, error } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", user.id)
+          .eq("user_id", targetUserId)
           .maybeSingle();
 
         if (error) {
