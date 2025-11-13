@@ -5,13 +5,45 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrgIsolationAudit } from "@/components/OrgIsolationAudit";
-import { Shield, Database, CreditCard, Users } from "lucide-react";
+import { Shield, Database, CreditCard, Users, RefreshCw } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { format } from "date-fns";
+
+interface Organization {
+  id: string;
+  name: string;
+  billing_email: string | null;
+  subscription_tier: string | null;
+  subscription_status: string | null;
+  subscription_product_id: string | null;
+  current_users_count: number | null;
+  max_users: number | null;
+  trial_ends_at: string | null;
+  created_at: string;
+}
+
+interface SystemUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  created_at: string;
+  organization_name: string | null;
+  organization_id: string | null;
+  role: string | null;
+}
 
 const Admin = () => {
   const navigate = useNavigate();
   const { role, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   useEffect(() => {
     const checkAdminAccess = async () => {
@@ -28,6 +60,91 @@ const Admin = () => {
 
     checkAdminAccess();
   }, [role, roleLoading, navigate]);
+
+  const fetchOrganizations = async () => {
+    setLoadingOrgs(true);
+    try {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setOrganizations(data || []);
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+      toast.error('Failed to load organizations');
+    } finally {
+      setLoadingOrgs(false);
+    }
+  };
+
+  const fetchSystemUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, created_at');
+
+      if (profilesError) throw profilesError;
+
+      // Get organization memberships and roles for all users
+      const userIds = profiles?.map(p => p.id) || [];
+      
+      const { data: orgMembers, error: orgError } = await supabase
+        .from('organization_members')
+        .select('user_id, organization_id, role, organizations(name)')
+        .in('user_id', userIds);
+
+      if (orgError) throw orgError;
+
+      // Map the data together
+      const usersWithOrgs = profiles?.map(profile => {
+        const orgMember = orgMembers?.find(om => om.user_id === profile.id);
+        return {
+          ...profile,
+          organization_id: orgMember?.organization_id || null,
+          organization_name: orgMember?.organizations?.name || null,
+          role: orgMember?.role || null,
+        };
+      }) || [];
+
+      setSystemUsers(usersWithOrgs);
+    } catch (error) {
+      console.error('Error fetching system users:', error);
+      toast.error('Failed to load system users');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const getStatusBadge = (status: string | null) => {
+    if (!status) return <Badge variant="outline">Unknown</Badge>;
+    
+    const statusMap: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
+      active: { variant: "default", label: "Active" },
+      inactive: { variant: "outline", label: "Inactive" },
+      canceled: { variant: "destructive", label: "Canceled" },
+      trialing: { variant: "secondary", label: "Trial" },
+    };
+
+    const statusInfo = statusMap[status] || { variant: "outline" as const, label: status };
+    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+  };
+
+  const getTierBadge = (tier: string | null) => {
+    if (!tier) return <Badge variant="outline">Free</Badge>;
+    
+    const tierMap: Record<string, { variant: "default" | "secondary" | "outline", label: string }> = {
+      free: { variant: "outline", label: "Free" },
+      standard: { variant: "secondary", label: "Standard" },
+      pro: { variant: "default", label: "Pro" },
+      enterprise: { variant: "default", label: "Enterprise" },
+    };
+
+    const tierInfo = tierMap[tier.toLowerCase()] || { variant: "outline" as const, label: tier };
+    return <Badge variant={tierInfo.variant}>{tierInfo.label}</Badge>;
+  };
 
   if (loading || roleLoading) {
     return (
@@ -77,15 +194,68 @@ const Admin = () => {
         <TabsContent value="subscriptions" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Subscription Management</CardTitle>
-              <CardDescription>
-                View and manage all organization subscriptions across the platform
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Subscription Management</CardTitle>
+                  <CardDescription>
+                    View and manage all organization subscriptions across the platform
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchOrganizations}
+                  disabled={loadingOrgs}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingOrgs ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Subscription management features coming soon...
-              </p>
+              {loadingOrgs ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : organizations.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground">No organizations found</p>
+                  <Button onClick={fetchOrganizations} variant="outline" className="mt-4">
+                    Load Organizations
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Organization</TableHead>
+                        <TableHead>Billing Email</TableHead>
+                        <TableHead>Tier</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Users</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {organizations.map((org) => (
+                        <TableRow key={org.id}>
+                          <TableCell className="font-medium">{org.name}</TableCell>
+                          <TableCell>{org.billing_email || '-'}</TableCell>
+                          <TableCell>{getTierBadge(org.subscription_tier)}</TableCell>
+                          <TableCell>{getStatusBadge(org.subscription_status)}</TableCell>
+                          <TableCell>
+                            {org.current_users_count || 0} / {org.max_users || '-'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {format(new Date(org.created_at), 'MMM d, yyyy')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -94,15 +264,76 @@ const Admin = () => {
         <TabsContent value="system-users" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>System Users</CardTitle>
-              <CardDescription>
-                View all users across all organizations in the system
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>System Users</CardTitle>
+                  <CardDescription>
+                    View all users across all organizations in the system
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchSystemUsers}
+                  disabled={loadingUsers}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingUsers ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                System user management features coming soon...
-              </p>
+              {loadingUsers ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : systemUsers.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground">No users found</p>
+                  <Button onClick={fetchSystemUsers} variant="outline" className="mt-4">
+                    Load Users
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Organization</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Joined</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {systemUsers.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">
+                            {user.full_name || '-'}
+                          </TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            {user.organization_name || <span className="text-muted-foreground">No org</span>}
+                          </TableCell>
+                          <TableCell>
+                            {user.role ? (
+                              <Badge variant="outline" className="capitalize">
+                                {user.role}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {format(new Date(user.created_at), 'MMM d, yyyy')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
