@@ -63,10 +63,19 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) return;
+
       const { data, error } = await supabase
         .from("picklists")
         .select("value")
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .eq("type", "update_type")
         .eq("is_active", true)
         .order("display_order", { ascending: true });

@@ -257,11 +257,20 @@ const Settings = () => {
         setTerms(orgSettings.terms || "");
       }
 
-      // Load picklists from database
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) return;
+
+      // Load picklists from database filtered by organization
       const { data: picklists } = await supabase
         .from("picklists")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .order("display_order");
 
       if (picklists) {
