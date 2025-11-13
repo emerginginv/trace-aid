@@ -141,15 +141,18 @@ const Dashboard = () => {
 
       // Fetch tasks from case_activities (pending tasks only)
       const {
-        data: activitiesData
-      } = await supabase.from("case_activities").select("*, cases!inner(id)")
-        .eq("user_id", user.id)
+        data: activitiesData,
+        error: tasksError
+      } = await supabase.from("case_activities").select("*")
         .eq("activity_type", "task")
         .eq("completed", false)
         .order("due_date", {
           ascending: true,
           nullsFirst: false
         }).limit(10);
+      
+      console.log('Dashboard tasks query:', { activitiesData, tasksError });
+      
       if (activitiesData) {
         const tasksData: Task[] = activitiesData.map(activity => ({
           id: activity.id,
@@ -169,9 +172,9 @@ const Dashboard = () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
       const {
-        data: eventsData
-      } = await supabase.from("case_activities").select("*, cases!inner(id)")
-        .eq("user_id", user.id)
+        data: eventsData,
+        error: eventsError
+      } = await supabase.from("case_activities").select("*")
         .eq("activity_type", "event")
         .not("due_date", "is", null)
         .gte("due_date", today.toISOString().split('T')[0])
@@ -180,6 +183,9 @@ const Dashboard = () => {
           ascending: true
         })
         .limit(10);
+      
+      console.log('Dashboard events query:', { eventsData, eventsError, today: today.toISOString().split('T')[0], futureDate: futureDate.toISOString().split('T')[0] });
+      
       if (eventsData) {
         const calendarEvents: CalendarEvent[] = eventsData.map(event => ({
           id: event.id,
