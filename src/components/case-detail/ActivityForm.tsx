@@ -21,7 +21,7 @@ const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   due_date: z.date().optional(),
-  status: z.enum(["to_do", "in_progress", "blocked", "done"]),
+  status: z.enum(["to_do", "in_progress", "blocked", "done", "cancelled"]),
   assigned_user_id: z.string().optional(),
 });
 
@@ -252,6 +252,7 @@ export function ActivityForm({
                           <SelectItem value="in_progress">In Progress</SelectItem>
                           <SelectItem value="blocked">Blocked</SelectItem>
                           <SelectItem value="done">Done</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
                         </>
                       ) : (
                         <>

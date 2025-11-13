@@ -281,6 +281,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="blocked">Blocked</SelectItem>
                     <SelectItem value="done">Done</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </>
                 ) : (
                   <>
