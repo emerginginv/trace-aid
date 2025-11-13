@@ -792,6 +792,27 @@ const Settings = () => {
     }
   };
 
+  const handleResetPassword = async (userId: string, userEmail: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+
+      if (error) throw error;
+
+      toast.success(`Password reset email sent to ${userEmail}`);
+    } catch (error: any) {
+      console.error("Error sending password reset:", error);
+      toast.error("Failed to send password reset email");
+    }
+  };
+
+  const handleViewAsUser = async (userId: string, userEmail: string) => {
+    toast.info(`"View as User" feature coming soon - will allow admin to impersonate ${userEmail}`);
+    // Note: Full impersonation requires custom JWT implementation
+    // This is a placeholder for future implementation
+  };
+
   const handleToggleDisable = async (user: User) => {
     try {
       // User disable/enable functionality
@@ -1737,35 +1758,61 @@ const Settings = () => {
                       type="email"
                       value={editingUser.email}
                       onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                      disabled
                     />
                   </div>
                   <div>
                     <Label htmlFor="editRole">Role</Label>
                     <Select 
-                      value={editingUser.roles[0] || "user"}
-                      onValueChange={(value: "admin" | "user" | "moderator") => 
+                      value={editingUser.roles[0] || "investigator"}
+                      onValueChange={(value: string) => 
                         setEditingUser({...editingUser, roles: [value]})
                       }
                     >
                       <SelectTrigger id="editRole">
-                        <SelectValue />
+                        <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="moderator">Moderator</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="manager">Case Manager</SelectItem>
+                        <SelectItem value="investigator">Investigator</SelectItem>
+                        <SelectItem value="vendor">Vendor</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               )}
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveEditUser}>
-                  Save Changes
-                </Button>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <div className="flex gap-2 flex-1">
+                  {editingUser && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResetPassword(editingUser.id, editingUser.email)}
+                        className="flex-1"
+                      >
+                        Reset Password
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewAsUser(editingUser.id, editingUser.email)}
+                        className="flex-1"
+                      >
+                        View as User
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveEditUser}>
+                    Save Changes
+                  </Button>
+                </div>
               </DialogFooter>
             </DialogContent>
           </Dialog>
