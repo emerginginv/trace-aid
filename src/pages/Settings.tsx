@@ -1099,6 +1099,53 @@ const Settings = () => {
 
   const handleDeletePicklistItem = async (id: string, type: "status" | "updateType" | "expenseCategory") => {
     try {
+      // Get the picklist value to check for usage
+      const { data: picklistData } = await supabase
+        .from("picklists")
+        .select("value")
+        .eq("id", id)
+        .single();
+
+      if (!picklistData) {
+        toast.error("Picklist item not found");
+        return;
+      }
+
+      // Check if the item is being used
+      let isInUse = false;
+      let usageCount = 0;
+
+      if (type === "status") {
+        const { count } = await supabase
+          .from("cases")
+          .select("*", { count: "exact", head: true })
+          .eq("status", picklistData.value);
+        
+        usageCount = count || 0;
+        isInUse = usageCount > 0;
+      } else if (type === "updateType") {
+        const { count } = await supabase
+          .from("case_updates")
+          .select("*", { count: "exact", head: true })
+          .eq("update_type", picklistData.value);
+        
+        usageCount = count || 0;
+        isInUse = usageCount > 0;
+      } else if (type === "expenseCategory") {
+        const { count } = await supabase
+          .from("case_finances")
+          .select("*", { count: "exact", head: true })
+          .eq("category", picklistData.value);
+        
+        usageCount = count || 0;
+        isInUse = usageCount > 0;
+      }
+
+      if (isInUse) {
+        toast.error(`Cannot delete: This value is being used by ${usageCount} record${usageCount !== 1 ? 's' : ''}. Please deactivate it instead.`);
+        return;
+      }
+
       const { error } = await supabase
         .from("picklists")
         .delete()
