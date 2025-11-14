@@ -869,11 +869,17 @@ export type Database = {
           company_name: string | null
           created_at: string | null
           default_currency: string | null
+          email_signature: string | null
           fein_number: string | null
           id: string
           logo_url: string | null
           organization_id: string
           phone: string | null
+          sender_email: string | null
+          signature_email: string | null
+          signature_name: string | null
+          signature_phone: string | null
+          signature_title: string | null
           terms: string | null
           timezone: string | null
           updated_at: string | null
@@ -886,11 +892,17 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           default_currency?: string | null
+          email_signature?: string | null
           fein_number?: string | null
           id?: string
           logo_url?: string | null
           organization_id: string
           phone?: string | null
+          sender_email?: string | null
+          signature_email?: string | null
+          signature_name?: string | null
+          signature_phone?: string | null
+          signature_title?: string | null
           terms?: string | null
           timezone?: string | null
           updated_at?: string | null
@@ -903,11 +915,17 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           default_currency?: string | null
+          email_signature?: string | null
           fein_number?: string | null
           id?: string
           logo_url?: string | null
           organization_id?: string
           phone?: string | null
+          sender_email?: string | null
+          signature_email?: string | null
+          signature_name?: string | null
+          signature_phone?: string | null
+          signature_title?: string | null
           terms?: string | null
           timezone?: string | null
           updated_at?: string | null

@@ -81,8 +81,33 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Default from email - use a verified sender from your Mailjet account
-    const defaultFromEmail = fromEmail || "noreply@yourdomain.com";
+    // Default from email - use verified sender from organization settings or fallback
+    let defaultFromEmail = fromEmail || "noreply@yourdomain.com";
+    
+    // Get sender email from organization settings if available
+    if (authHeader) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user } } = await supabase.auth.getUser(token);
+        
+        if (user) {
+          const { data: orgSettings } = await supabase
+            .from('organization_settings')
+            .select('sender_email')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (orgSettings?.sender_email) {
+            defaultFromEmail = orgSettings.sender_email;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching sender email:', error);
+      }
+    }
 
     // Append signature to body if HTML mode
     const finalBody = isHtml ? body + emailSignature : body;
