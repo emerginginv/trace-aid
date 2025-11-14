@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive, Palette, GripVertical } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { getPlanLimits, isTrialActive, getTrialDaysRemaining } from "@/lib/planLimits";
@@ -112,6 +113,7 @@ const Settings = () => {
   const [signatureTitle, setSignatureTitle] = useState("");
   const [signaturePhone, setSignaturePhone] = useState("");
   const [signatureEmail, setSignatureEmail] = useState("");
+  const [senderEmail, setSenderEmail] = useState("");
 
   // Users Management State
   const [users, setUsers] = useState<User[]>([]);
@@ -265,6 +267,7 @@ const Settings = () => {
         setSignatureTitle(orgSettings.signature_title || "");
         setSignaturePhone(orgSettings.signature_phone || "");
         setSignatureEmail(orgSettings.signature_email || "");
+        setSenderEmail(orgSettings.sender_email || "");
       }
 
       // Get user's organization
@@ -512,6 +515,7 @@ const Settings = () => {
         signature_title: signatureTitle,
         signature_phone: signaturePhone,
         signature_email: signatureEmail,
+        sender_email: senderEmail,
       };
 
       if (existing) {
@@ -2260,15 +2264,45 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="email" className="space-y-6">
-          {/* Email Signature Settings */}
+          {/* Email Sender Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>Email Signature</CardTitle>
+              <CardTitle>Email Configuration</CardTitle>
               <CardDescription>
-                Configure your email signature with company logo and contact information
+                Configure email sender and signature settings
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Sender Settings</h4>
+                <div>
+                  <Label htmlFor="senderEmail">Verified Sender Email *</Label>
+                  <Input
+                    id="senderEmail"
+                    type="email"
+                    value={senderEmail}
+                    onChange={(e) => setSenderEmail(e.target.value)}
+                    placeholder="noreply@yourdomain.com"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Must be verified in Mailjet. Visit{" "}
+                    <a 
+                      href="https://app.mailjet.com/account/sender" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Mailjet Sender Settings
+                    </a>{" "}
+                    to verify your domain or email.
+                  </p>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Email Signature</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="signatureName">Name</Label>
@@ -2349,23 +2383,25 @@ const Settings = () => {
                         )}
                         {signatureEmail && (
                           <div>
-                            ✉️ {signatureEmail}
+                            ✉️ <a href={`mailto:${signatureEmail}`} style={{ color: '#2563eb', textDecoration: 'none' }}>
+                              {signatureEmail}
+                            </a>
                           </div>
                         )}
                       </div>
                     )}
                     {address && (
                       <div style={{ marginTop: '8px', color: '#666', fontSize: '12px' }}>
-                        {address}
+                        {address.split('\n').map((line, i) => (
+                          <div key={i}>{line}</div>
+                        ))}
                       </div>
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  This signature will be automatically added to all outgoing emails
-                </p>
               </div>
-
+             </div>
+              
               <Button onClick={saveOrganizationSettings} disabled={saving}>
                 {saving ? (
                   <>
