@@ -96,24 +96,18 @@ const Dashboard = () => {
         count: "exact",
         head: true
       }).eq("user_id", user.id)]);
-      
+
       // Fetch all cases to categorize by status_type
-      const { data: allCases } = await supabase
-        .from("cases")
-        .select("status")
-        .eq("user_id", user.id);
+      const {
+        data: allCases
+      } = await supabase.from("cases").select("status").eq("user_id", user.id);
 
       // Fetch status picklists to get status_type
-      const { data: statusPicklists } = await supabase
-        .from("picklists")
-        .select("value, status_type")
-        .eq("user_id", user.id)
-        .eq("type", "case_status")
-        .eq("is_active", true);
-
+      const {
+        data: statusPicklists
+      } = await supabase.from("picklists").select("value, status_type").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true);
       let openCasesCount = 0;
       let closedCasesCount = 0;
-
       if (allCases && statusPicklists) {
         allCases.forEach(caseItem => {
           const statusPicklist = statusPicklists.find(s => s.value === caseItem.status);
@@ -124,12 +118,10 @@ const Dashboard = () => {
           }
         });
       }
-
       const activeCasesResult = await supabase.from("cases").select("*", {
         count: "exact",
         head: true
       }).eq("user_id", user.id).eq("status", "open");
-      
       setStats({
         totalCases: casesResult.count || 0,
         activeCases: activeCasesResult.count || 0,
@@ -143,16 +135,14 @@ const Dashboard = () => {
       const {
         data: activitiesData,
         error: tasksError
-      } = await supabase.from("case_activities").select("*")
-        .eq("activity_type", "task")
-        .eq("completed", false)
-        .order("due_date", {
-          ascending: true,
-          nullsFirst: false
-        }).limit(10);
-      
-      console.log('Dashboard tasks query:', { activitiesData, tasksError });
-      
+      } = await supabase.from("case_activities").select("*").eq("activity_type", "task").eq("completed", false).order("due_date", {
+        ascending: true,
+        nullsFirst: false
+      }).limit(10);
+      console.log('Dashboard tasks query:', {
+        activitiesData,
+        tasksError
+      });
       if (activitiesData) {
         const tasksData: Task[] = activitiesData.map(activity => ({
           id: activity.id,
@@ -174,18 +164,15 @@ const Dashboard = () => {
       const {
         data: eventsData,
         error: eventsError
-      } = await supabase.from("case_activities").select("*")
-        .eq("activity_type", "event")
-        .not("due_date", "is", null)
-        .gte("due_date", today.toISOString().split('T')[0])
-        .lte("due_date", futureDate.toISOString().split('T')[0])
-        .order("due_date", {
-          ascending: true
-        })
-        .limit(10);
-      
-      console.log('Dashboard events query:', { eventsData, eventsError, today: today.toISOString().split('T')[0], futureDate: futureDate.toISOString().split('T')[0] });
-      
+      } = await supabase.from("case_activities").select("*").eq("activity_type", "event").not("due_date", "is", null).gte("due_date", today.toISOString().split('T')[0]).lte("due_date", futureDate.toISOString().split('T')[0]).order("due_date", {
+        ascending: true
+      }).limit(10);
+      console.log('Dashboard events query:', {
+        eventsData,
+        eventsError,
+        today: today.toISOString().split('T')[0],
+        futureDate: futureDate.toISOString().split('T')[0]
+      });
       if (eventsData) {
         const calendarEvents: CalendarEvent[] = eventsData.map(event => ({
           id: event.id,
@@ -237,24 +224,13 @@ const Dashboard = () => {
       }
 
       // Fetch users for assignments
-      const { data: orgMember } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-
+      const {
+        data: orgMember
+      } = await supabase.from('organization_members').select('organization_id').eq('user_id', user.id).single();
       if (orgMember) {
-        const { data: orgUsers } = await supabase
-          .from('profiles')
-          .select('id, email, full_name')
-          .in('id', 
-            (await supabase
-              .from('organization_members')
-              .select('user_id')
-              .eq('organization_id', orgMember.organization_id)
-            ).data?.map(m => m.user_id) || []
-          );
-
+        const {
+          data: orgUsers
+        } = await supabase.from('profiles').select('id, email, full_name').in('id', (await supabase.from('organization_members').select('user_id').eq('organization_id', orgMember.organization_id)).data?.map(m => m.user_id) || []);
         if (orgUsers) {
           setUsers(orgUsers.map(u => ({
             id: u.id,
@@ -421,35 +397,24 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="p-2 rounded-lg bg-gray-700">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
               </div>
               <span className="text-lg font-semibold">Due Tasks</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-6">
-            {dueTasks.length === 0 ? 
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+            {dueTasks.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No pending tasks</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">You're all caught up!</p>
-              </div>
-            : dueTasks.map(task => {
+              </div> : dueTasks.map(task => {
             const taskDate = parseISO(task.dueDate);
             const isOverdue = isPast(taskDate) && !isToday(taskDate);
-            return <div 
-                    key={task.id} 
-                    className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-primary/20 transition-all hover:shadow-md cursor-pointer"
-                    onClick={() => setEditingTask(task)}
-                  >
-                    <Checkbox 
-                      checked={task.status === "completed"} 
-                      onCheckedChange={() => handleTaskToggle(task.id)} 
-                      className="mt-1" 
-                      onClick={(e) => e.stopPropagation()}
-                    />
+            return <div key={task.id} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-primary/20 transition-all hover:shadow-md cursor-pointer" onClick={() => setEditingTask(task)}>
+                    <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-1" onClick={e => e.stopPropagation()} />
                     <div className="flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-medium text-sm leading-tight">{task.title}</p>
@@ -458,21 +423,18 @@ const Dashboard = () => {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        {isOverdue ? 
-                          <span className="flex items-center gap-1.5 text-destructive font-medium bg-destructive/10 px-2 py-1 rounded-md">
+                        {isOverdue ? <span className="flex items-center gap-1.5 text-destructive font-medium bg-destructive/10 px-2 py-1 rounded-md">
                             <AlertCircle className="w-3.5 h-3.5" />
                             Overdue by {formatDistanceToNow(taskDate)}
-                          </span> 
-                        : isToday(taskDate) ? 
-                          <span className="flex items-center gap-1.5 text-warning bg-warning/10 px-2 py-1 rounded-md">
+                          </span> : isToday(taskDate) ? <span className="flex items-center gap-1.5 text-warning bg-warning/10 px-2 py-1 rounded-md">
                             <Clock className="w-3.5 h-3.5" />
                             Due today
-                          </span> 
-                        : <span className="flex items-center gap-1.5 text-muted-foreground">
+                          </span> : <span className="flex items-center gap-1.5 text-muted-foreground">
                             <Clock className="w-3.5 h-3.5" />
-                            Due {formatDistanceToNow(taskDate, { addSuffix: true })}
-                          </span>
-                        }
+                            Due {formatDistanceToNow(taskDate, {
+                      addSuffix: true
+                    })}
+                          </span>}
                       </div>
                     </div>
                   </div>;
@@ -484,27 +446,20 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-secondary/10">
+              <div className="p-2 rounded-lg bg-gray-700">
                 <Calendar className="w-5 h-5 text-secondary" />
               </div>
               <span className="text-lg font-semibold">Upcoming Events</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-6">
-            {relevantEvents.length === 0 ? 
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+            {relevantEvents.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <Calendar className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No upcoming events</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Your calendar is clear</p>
-              </div>
-            : relevantEvents.map(event => 
-              <div 
-                key={event.id} 
-                className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-secondary/20 transition-all cursor-pointer hover:shadow-md" 
-                onClick={() => setEditingEvent(event)}
-              >
+              </div> : relevantEvents.map(event => <div key={event.id} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-secondary/20 transition-all cursor-pointer hover:shadow-md" onClick={() => setEditingEvent(event)}>
                 <div className="flex-1 space-y-2">
                   <p className="font-medium text-sm leading-tight group-hover:text-primary transition-colors">
                     {event.title}
@@ -517,8 +472,7 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
-              </div>
-            )}
+              </div>)}
           </CardContent>
         </Card>
 
@@ -526,43 +480,35 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-info-50">
+              <div className="p-2 rounded-lg bg-gray-700">
                 <Bell className="w-5 h-5 text-info-500" />
               </div>
               <span className="text-lg font-semibold">Recent Updates</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-6">
-            {updates.length === 0 ? 
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+            {updates.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <Bell className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No recent updates</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Updates will appear here</p>
-              </div>
-            : updates.map(update => 
-              <div key={update.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
-                <div 
-                  onClick={() => setEditingUpdate(update)} 
-                  className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer"
-                >
+              </div> : updates.map(update => <div key={update.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
+                <div onClick={() => setEditingUpdate(update)} className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer">
                   <div className="mt-0.5 p-1.5 rounded-lg bg-background">
                     {getUpdateIcon(update.type)}
                   </div>
                   <div className="flex-1 space-y-1.5">
                     <p className="text-sm font-medium leading-tight">{update.message}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(parseISO(update.timestamp), { addSuffix: true })}
+                      {formatDistanceToNow(parseISO(update.timestamp), {
+                    addSuffix: true
+                  })}
                     </p>
                   </div>
-                  {expandedUpdate === update.id ? 
-                    <ChevronUp className="w-4 h-4 text-muted-foreground mt-1" /> : 
-                    <ChevronDown className="w-4 h-4 text-muted-foreground mt-1" />
-                  }
+                  {expandedUpdate === update.id ? <ChevronUp className="w-4 h-4 text-muted-foreground mt-1" /> : <ChevronDown className="w-4 h-4 text-muted-foreground mt-1" />}
                 </div>
-                {expandedUpdate === update.id && 
-                  <div className="px-4 pb-4 text-sm border-t border-border/50 pt-4 bg-muted/30">
+                {expandedUpdate === update.id && <div className="px-4 pb-4 text-sm border-t border-border/50 pt-4 bg-muted/30">
                     <p className="font-semibold mb-3 text-foreground">Update Details</p>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -578,10 +524,8 @@ const Dashboard = () => {
                         <Badge variant="outline" className="bg-success/10 text-success border-success/20">Active</Badge>
                       </div>
                     </div>
-                  </div>
-                }
-              </div>
-            )}
+                  </div>}
+              </div>)}
           </CardContent>
         </Card>
 
@@ -589,28 +533,22 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-warning/10">
+              <div className="p-2 rounded-lg bg-gray-700">
                 <DollarSign className="w-5 h-5 text-warning" />
               </div>
               <span className="text-lg font-semibold">Recent Expenses</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-6">
-            {expenses.length === 0 ? 
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+            {expenses.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <DollarSign className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No recent expenses</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Expenses will appear here</p>
-              </div>
-            : <>
-                {expenses.map(expense => 
-                  <div key={expense.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
-                    <div 
-                      onClick={() => setEditingExpense(expense)} 
-                      className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer"
-                    >
+              </div> : <>
+                {expenses.map(expense => <div key={expense.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
+                    <div onClick={() => setEditingExpense(expense)} className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-start justify-between gap-3">
                           <p className="font-medium text-sm leading-tight flex-1">{expense.description}</p>
@@ -627,13 +565,9 @@ const Dashboard = () => {
                           </span>
                         </div>
                       </div>
-                      {expandedExpense === expense.id ? 
-                        <ChevronUp className="w-4 h-4 text-muted-foreground mt-1" /> : 
-                        <ChevronDown className="w-4 h-4 text-muted-foreground mt-1" />
-                      }
+                      {expandedExpense === expense.id ? <ChevronUp className="w-4 h-4 text-muted-foreground mt-1" /> : <ChevronDown className="w-4 h-4 text-muted-foreground mt-1" />}
                     </div>
-                    {expandedExpense === expense.id && 
-                      <div className="px-4 pb-4 text-sm border-t border-border/50 pt-4 bg-muted/30">
+                    {expandedExpense === expense.id && <div className="px-4 pb-4 text-sm border-t border-border/50 pt-4 bg-muted/30">
                         <p className="font-semibold mb-3 text-foreground">Expense Details</p>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
@@ -653,10 +587,8 @@ const Dashboard = () => {
                             <Badge variant="outline" className="bg-success/10 text-success border-success/20">Recorded</Badge>
                           </div>
                         </div>
-                      </div>
-                    }
-                  </div>
-                )}
+                      </div>}
+                  </div>)}
                 <div className="pt-3 mt-3 border-t border-border/50 bg-muted/20 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-semibold text-foreground">Total Expenses</span>
@@ -665,68 +597,31 @@ const Dashboard = () => {
                     </span>
                   </div>
                 </div>
-              </>
-            }
+              </>}
           </CardContent>
         </Card>
       </div>
 
       {/* Edit Forms */}
-      {editingTask && (
-        <ActivityForm
-          caseId={editingTask.caseId}
-          activityType="task"
-          users={users}
-          open={!!editingTask}
-          onOpenChange={(open) => !open && setEditingTask(null)}
-          onSuccess={() => {
-            setEditingTask(null);
-            window.location.reload();
-          }}
-          editingActivity={editingTask.activityData}
-        />
-      )}
+      {editingTask && <ActivityForm caseId={editingTask.caseId} activityType="task" users={users} open={!!editingTask} onOpenChange={open => !open && setEditingTask(null)} onSuccess={() => {
+      setEditingTask(null);
+      window.location.reload();
+    }} editingActivity={editingTask.activityData} />}
 
-      {editingEvent && (
-        <ActivityForm
-          caseId={editingEvent.caseId}
-          activityType="event"
-          users={users}
-          open={!!editingEvent}
-          onOpenChange={(open) => !open && setEditingEvent(null)}
-          onSuccess={() => {
-            setEditingEvent(null);
-            window.location.reload();
-          }}
-          editingActivity={editingEvent.activityData}
-        />
-      )}
+      {editingEvent && <ActivityForm caseId={editingEvent.caseId} activityType="event" users={users} open={!!editingEvent} onOpenChange={open => !open && setEditingEvent(null)} onSuccess={() => {
+      setEditingEvent(null);
+      window.location.reload();
+    }} editingActivity={editingEvent.activityData} />}
 
-      {editingUpdate && (
-        <UpdateForm
-          caseId={editingUpdate.caseId}
-          open={!!editingUpdate}
-          onOpenChange={(open) => !open && setEditingUpdate(null)}
-          onSuccess={() => {
-            setEditingUpdate(null);
-            window.location.reload();
-          }}
-          editingUpdate={editingUpdate.updateData}
-        />
-      )}
+      {editingUpdate && <UpdateForm caseId={editingUpdate.caseId} open={!!editingUpdate} onOpenChange={open => !open && setEditingUpdate(null)} onSuccess={() => {
+      setEditingUpdate(null);
+      window.location.reload();
+    }} editingUpdate={editingUpdate.updateData} />}
 
-      {editingExpense && (
-        <FinanceForm
-          caseId={editingExpense.caseId}
-          open={!!editingExpense}
-          onOpenChange={(open) => !open && setEditingExpense(null)}
-          onSuccess={() => {
-            setEditingExpense(null);
-            window.location.reload();
-          }}
-          editingFinance={editingExpense.financeData}
-        />
-      )}
+      {editingExpense && <FinanceForm caseId={editingExpense.caseId} open={!!editingExpense} onOpenChange={open => !open && setEditingExpense(null)} onSuccess={() => {
+      setEditingExpense(null);
+      window.location.reload();
+    }} editingFinance={editingExpense.financeData} />}
 
       {/* Event Details Dialog */}
       <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>
