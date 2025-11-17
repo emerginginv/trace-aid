@@ -57,9 +57,11 @@ export default function VendorDashboard() {
       if (!user) return;
 
       // Fetch cases accessible to vendor
+      // Fetch only cases where the vendor is assigned (in investigator_ids array)
       const { data: casesData, error: casesError } = await supabase
         .from("cases")
-        .select("id, case_number, title, status")
+        .select("id, case_number, title, status, investigator_ids")
+        .contains("investigator_ids", [user.id])
         .order("created_at", { ascending: false });
 
       if (casesError) throw casesError;
