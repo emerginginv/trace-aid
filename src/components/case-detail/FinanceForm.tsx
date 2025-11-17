@@ -32,6 +32,7 @@ const formSchema = z.object({
   activity_id: z.string().optional(),
   category: z.string().optional(),
   quantity: z.string().optional(),
+  unit_price: z.string().optional(),
   start_date: z.date().optional(),
   end_date: z.date().optional(),
   billing_frequency: z.string().optional(),
@@ -66,6 +67,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       activity_id: undefined,
       category: undefined,
       quantity: undefined,
+      unit_price: undefined,
       start_date: undefined,
       end_date: undefined,
       billing_frequency: undefined,
@@ -77,6 +79,9 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
 
   useEffect(() => {
     if (editingFinance) {
+      const quantity = editingFinance.quantity || 1;
+      const unitPrice = editingFinance.amount / quantity;
+      
       form.reset({
         finance_type: editingFinance.finance_type,
         amount: editingFinance.amount.toString(),
@@ -86,6 +91,8 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         subject_id: editingFinance.subject_id || undefined,
         activity_id: editingFinance.activity_id || undefined,
         category: editingFinance.category || undefined,
+        quantity: quantity.toString(),
+        unit_price: unitPrice.toString(),
         start_date: editingFinance.start_date ? new Date(editingFinance.start_date) : undefined,
         end_date: editingFinance.end_date ? new Date(editingFinance.end_date) : undefined,
         billing_frequency: editingFinance.billing_frequency || undefined,
@@ -106,6 +113,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         activity_id: undefined,
         category: undefined,
         quantity: undefined,
+        unit_price: undefined,
         start_date: undefined,
         end_date: undefined,
         billing_frequency: undefined,
@@ -151,10 +159,18 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       if (!orgMember) throw new Error("Organization not found");
 
       const isTimeEntry = values.finance_type === 'time';
+      const isExpense = values.finance_type === 'expense';
       
       const hours = Number(values.hours || 0);
       const hourlyRate = Number(values.hourly_rate || 0);
-      const amount = isTimeEntry ? hours * hourlyRate : Number(values.amount || 0);
+      const quantity = Number(values.quantity || 1);
+      const unitPrice = Number(values.unit_price || 0);
+      
+      const amount = isTimeEntry 
+        ? hours * hourlyRate 
+        : isExpense 
+          ? quantity * unitPrice 
+          : Number(values.amount || 0);
 
       const financeData = {
         case_id: caseId,

@@ -21,6 +21,16 @@ interface FinanceFormFieldsProps {
 export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFieldsProps) => {
   const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
   const financeType = form.watch("finance_type");
+  const quantity = form.watch("quantity");
+  const unitPrice = form.watch("unit_price");
+
+  // Auto-calculate amount for expenses
+  useEffect(() => {
+    if (financeType === "expense" && quantity && unitPrice) {
+      const calculatedAmount = (Number(quantity) * Number(unitPrice)).toString();
+      form.setValue("amount", calculatedAmount);
+    }
+  }, [quantity, unitPrice, financeType, form]);
 
   useEffect(() => {
     fetchExpenseCategories();
@@ -125,18 +135,61 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
       />
 
       {financeType === "expense" && (
+        <>
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantity</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="Enter quantity" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="unit_price"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Unit Price</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="Price per unit" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </>
+      )}
+
+      {financeType !== "time" && (
         <FormField
           control={form.control}
-          name="quantity"
+          name="amount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Quantity (Optional)</FormLabel>
+              <FormLabel>Total Amount {financeType === "expense" && "(Auto-calculated)"}</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
                   step="0.01" 
-                  placeholder="e.g., mileage, hours, units" 
+                  placeholder="0.00" 
                   {...field} 
+                  readOnly={financeType === "expense"}
+                  className={financeType === "expense" ? "bg-muted" : ""}
                 />
               </FormControl>
               <FormMessage />
@@ -145,21 +198,7 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
         />
       )}
 
-      {financeType !== "time" ? (
-        <FormField
-          control={form.control}
-          name="amount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Amount</FormLabel>
-              <FormControl>
-                <Input type="number" step="0.01" placeholder="0.00" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      ) : (
+      {financeType === "time" && (
         <>
           <FormField
             control={form.control}
@@ -488,13 +527,14 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
           render={({ field }) => (
             <FormItem>
               <FormLabel>Link to Subject (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || ""}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="">None</SelectItem>
                   {subjects.map((subject) => (
                     <SelectItem key={subject.id} value={subject.id}>
                       {subject.name} ({subject.subject_type})
@@ -515,13 +555,14 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
           render={({ field }) => (
             <FormItem>
               <FormLabel>Link to Activity (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || ""}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select activity" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="">None</SelectItem>
                   {activities.map((activity) => (
                     <SelectItem key={activity.id} value={activity.id}>
                       {activity.title} ({activity.activity_type})
