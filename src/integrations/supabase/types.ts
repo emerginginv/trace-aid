@@ -217,6 +217,7 @@ export type Database = {
           start_date: string | null
           status: string | null
           subject_id: string | null
+          unit_price: number | null
           updated_at: string
           user_id: string
         }
@@ -244,6 +245,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           subject_id?: string | null
+          unit_price?: number | null
           updated_at?: string
           user_id: string
         }
@@ -271,6 +273,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           subject_id?: string | null
+          unit_price?: number | null
           updated_at?: string
           user_id?: string
         }
