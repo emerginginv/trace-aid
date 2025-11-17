@@ -117,9 +117,19 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) throw new Error("Organization not found");
+
       const updateData = {
         case_id: caseId,
         user_id: user.id,
+        organization_id: orgMember.organization_id,
         title: values.title,
         description: values.description || null,
         update_type: values.update_type,
