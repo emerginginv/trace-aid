@@ -413,7 +413,7 @@ export default function InvoiceDetail() {
               </div>
               <div className="flex justify-between text-red-600 font-semibold">
                 <span>Balance Due:</span>
-                <span>${Number(invoice.balance_due || invoice.total).toFixed(2)}</span>
+                <span>${Number(invoice.balance_due ?? (invoice.total - (invoice.retainer_applied || 0))).toFixed(2)}</span>
               </div>
             </div>
           </div>

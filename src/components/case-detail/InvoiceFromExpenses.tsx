@@ -165,6 +165,9 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       const invoiceNumber = await generateInvoiceNumber();
       if (!invoiceNumber) throw new Error("Failed to generate invoice number");
 
+      // Calculate balance due
+      const balanceDue = totalAmount - retainerUsed;
+
       // 1. Create the invoice
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
@@ -174,6 +177,7 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
           invoice_number: invoiceNumber,
           total: totalAmount,
           retainer_applied: retainerUsed,
+          balance_due: balanceDue,
           date: new Date().toISOString().split('T')[0],
           status: "draft",
           notes: "",
@@ -233,7 +237,6 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       }
 
       // 4. Done!
-      const balanceDue = totalAmount - retainerUsed;
       toast({
         title: "Invoice created successfully!",
         description: `Invoice ${invoiceNumber} created with ${selectedItems.size} item(s). ${retainerUsed > 0 ? `$${retainerUsed.toFixed(2)} retainer applied. ` : ''}Balance due: $${balanceDue.toFixed(2)}`,
