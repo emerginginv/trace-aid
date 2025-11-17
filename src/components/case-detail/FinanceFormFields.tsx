@@ -527,14 +527,14 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
           render={({ field }) => (
             <FormItem>
               <FormLabel>Link to Subject (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""}>
+              <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="bg-background z-50">
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {subjects.map((subject) => (
                     <SelectItem key={subject.id} value={subject.id}>
                       {subject.name} ({subject.subject_type})
@@ -555,14 +555,14 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
           render={({ field }) => (
             <FormItem>
               <FormLabel>Link to Activity (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""}>
+              <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select activity" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="bg-background z-50">
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {activities.map((activity) => (
                     <SelectItem key={activity.id} value={activity.id}>
                       {activity.title} ({activity.activity_type})
