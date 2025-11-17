@@ -29,6 +29,17 @@ export const ProfileImageUpload = ({ currentImageUrl, onImageChange, subjectId }
       return;
     }
 
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Show preview immediately
     const objectUrl = URL.createObjectURL(file);
     setPreview(objectUrl);
@@ -73,12 +84,19 @@ export const ProfileImageUpload = ({ currentImageUrl, onImageChange, subjectId }
       });
     } catch (error) {
       console.error("Error uploading image:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload image";
       toast({
-        title: "Error",
-        description: "Failed to upload image",
+        title: "Upload Error",
+        description: errorMessage.includes("storage") 
+          ? "Storage upload failed. Please try again or use a different image."
+          : errorMessage,
         variant: "destructive",
       });
       setPreview(currentImageUrl || null);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } finally {
       setUploading(false);
     }
