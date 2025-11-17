@@ -34,12 +34,63 @@ export function NotificationCenter() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'notifications'
         },
-        () => {
-          fetchNotifications();
+        (payload) => {
+          const newNotification = payload.new as any;
+          
+          // Map database type to component type
+          let displayType: Notification['type'] = 'info';
+          if (newNotification.type === 'expense' || newNotification.type === 'task') displayType = 'success';
+          if (newNotification.priority === 'high') displayType = 'warning';
+          
+          const mappedNotification: Notification = {
+            id: newNotification.id,
+            title: newNotification.title,
+            message: newNotification.message,
+            type: displayType,
+            timestamp: new Date(newNotification.timestamp),
+            read: newNotification.read,
+            priority: (newNotification.priority || 'medium') as Notification['priority'],
+            link: newNotification.link,
+          };
+          
+          setNotifications((prev) => [mappedNotification, ...prev]);
+          toast.info(newNotification.title, {
+            description: newNotification.message,
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications'
+        },
+        (payload) => {
+          const updatedNotification = payload.new as any;
+          setNotifications((prev) =>
+            prev.map((n) => 
+              n.id === updatedNotification.id 
+                ? { ...n, read: updatedNotification.read }
+                : n
+            )
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications'
+        },
+        (payload) => {
+          const deletedId = (payload.old as any).id;
+          setNotifications((prev) => prev.filter((n) => n.id !== deletedId));
         }
       )
       .subscribe();
