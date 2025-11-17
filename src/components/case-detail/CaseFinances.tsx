@@ -35,6 +35,8 @@ interface Finance {
   notes?: string;
   hours?: number;
   hourly_rate?: number;
+  quantity?: number;
+  unit_price?: number;
 }
 
 export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
@@ -48,6 +50,8 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [retainerTotal, setRetainerTotal] = useState<number>(0);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
     fetchFinances();
@@ -139,6 +143,28 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
       // Calculate retainer balance from retainer_funds table
       const retainerBalance = (retainerData || []).reduce((sum, fund) => sum + Number(fund.amount), 0);
       setRetainerTotal(retainerBalance);
+
+      // Fetch subjects
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from("case_subjects")
+        .select("id, name, subject_type")
+        .eq("case_id", caseId)
+        .eq("organization_id", memberData.organization_id);
+
+      if (!subjectsError) {
+        setSubjects(subjectsData || []);
+      }
+
+      // Fetch activities
+      const { data: activitiesData, error: activitiesError } = await supabase
+        .from("case_activities")
+        .select("id, title, activity_type")
+        .eq("case_id", caseId)
+        .eq("organization_id", memberData.organization_id);
+
+      if (!activitiesError) {
+        setActivities(activitiesData || []);
+      }
     } catch (error) {
       console.error("Error fetching finances:", error);
       toast({
@@ -597,6 +623,9 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Activity</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -633,6 +662,27 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                       <TableCell>
                         {finance.category && (
                           <Badge variant="outline">{finance.category}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {finance.quantity || 1}
+                      </TableCell>
+                      <TableCell>
+                        {finance.subject_id ? (
+                          <div className="text-sm">
+                            {subjects.find(s => s.id === finance.subject_id)?.name || 'Unknown'}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {finance.activity_id ? (
+                          <div className="text-sm">
+                            {activities.find(a => a.id === finance.activity_id)?.title || 'Unknown'}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right font-bold">
