@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Check, X, AlertCircle, Info, CheckCircle } from "lucide-react";
 import { Button } from "./button";
 import { Badge } from "./badge";
 import { ScrollArea } from "./scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface Notification {
   id: string;
@@ -14,53 +17,146 @@ interface Notification {
   timestamp: Date;
   read: boolean;
   priority: "low" | "medium" | "high";
+  link?: string | null;
 }
 
 export function NotificationCenter() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: "1",
-      title: "New case assigned",
-      message: "You have been assigned to Case #2024-001",
-      type: "info",
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-      read: false,
-      priority: "high",
-    },
-    {
-      id: "2",
-      title: "Invoice paid",
-      message: "Invoice #INV-2024-042 has been fully paid",
-      type: "success",
-      timestamp: new Date(Date.now() - 1000 * 60 * 30),
-      read: false,
-      priority: "medium",
-    },
-    {
-      id: "3",
-      title: "Upcoming deadline",
-      message: "Case #2024-015 is due in 2 days",
-      type: "warning",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60),
-      read: true,
-      priority: "high",
-    },
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Set up realtime subscription for instant updates
+    const channel = supabase
+      .channel('notification-center-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user's organization_id
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!orgMember?.organization_id) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('organization_id', orgMember.organization_id)
+        .order('timestamp', { ascending: false })
+        .limit(10); // Only show 10 most recent in popup
+
+      if (error) throw error;
+
+      // Map database response to our notification type
+      const mappedData: Notification[] = (data || []).map(item => {
+        // Map database type to component type
+        let displayType: Notification['type'] = 'info';
+        if (item.type === 'expense' || item.type === 'task') displayType = 'success';
+        if (item.priority === 'high') displayType = 'warning';
+        
+        return {
+          id: item.id,
+          title: item.title,
+          message: item.message,
+          type: displayType,
+          timestamp: new Date(item.timestamp),
+          read: item.read,
+          priority: (item.priority || 'medium') as Notification['priority'],
+          link: item.link,
+        };
+      });
+
+      setNotifications(mappedData);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      toast.error('Failed to update notification');
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (error) throw error;
+      
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast.error('Failed to update notifications');
+    }
   };
 
-  const removeNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const removeNotification = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (error) {
+      console.error('Error removing notification:', error);
+      toast.error('Failed to remove notification');
+    }
   };
 
   const getIcon = (type: Notification["type"]) => {
@@ -111,7 +207,11 @@ export function NotificationCenter() {
         </div>
 
         <ScrollArea className="h-[400px]">
-          {notifications.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-sm text-muted-foreground">Loading notifications...</p>
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="empty-state py-12">
               <Bell className="w-12 h-12 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground">No notifications</p>
@@ -131,9 +231,17 @@ export function NotificationCenter() {
                   <div
                     key={notification.id}
                     className={cn(
-                      "p-4 transition-colors hover:bg-muted/50 relative",
+                      "p-4 transition-colors hover:bg-muted/50 relative cursor-pointer",
                       !notification.read && "bg-primary/5"
                     )}
+                    onClick={() => {
+                      if (notification.link) {
+                        navigate(notification.link);
+                      }
+                      if (!notification.read) {
+                        markAsRead(notification.id);
+                      }
+                    }}
                   >
                     {!notification.read && (
                       <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
