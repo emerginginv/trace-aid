@@ -572,9 +572,7 @@ const Finance = () => {
                     </TableCell>
                     <TableCell>{expense.category || "N/A"}</TableCell>
                     <TableCell>
-                      {expense.quantity ? 
-                        expense.quantity.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) 
-                        : '–'}
+                      {(expense.quantity || 1).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       ${expense.amount.toFixed(2)}

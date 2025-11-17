@@ -167,7 +167,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         subject_id: values.subject_id || null,
         activity_id: values.activity_id || null,
         category: values.category || null,
-        quantity: values.quantity ? Number(values.quantity) : null,
+        quantity: values.quantity ? Number(values.quantity) : 1,
         start_date: values.start_date ? format(values.start_date, "yyyy-MM-dd") : null,
         end_date: values.end_date ? format(values.end_date, "yyyy-MM-dd") : null,
         billing_frequency: values.billing_frequency || null,
