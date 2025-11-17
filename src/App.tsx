@@ -30,6 +30,7 @@ import UserProfileDetail from "./pages/UserProfileDetail";
 import Notifications from "./pages/Notifications";
 import StyleGuide from "./pages/StyleGuide";
 import PremiumShowcase from "./pages/PremiumShowcase";
+import TestNotifications from "./pages/TestNotifications";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -253,6 +254,16 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <Notifications />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/test-notifications"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <TestNotifications />
               </DashboardLayout>
             </ProtectedRoute>
           }
