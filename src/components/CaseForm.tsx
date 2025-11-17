@@ -39,6 +39,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { NotificationHelpers } from "@/lib/notificationHelpers";
 
 const caseSchema = z.object({
   title: z.string().min(1, "Case title is required").max(200),
@@ -305,6 +306,15 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) throw new Error("User not in organization");
+
       const caseData = {
         title: data.title,
         case_number: data.case_number,
@@ -327,14 +337,41 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           .eq("user_id", user.id);
 
         if (error) throw error;
+        
+        // Send notification if status changed
+        if (data.status !== editingCase.status) {
+          await NotificationHelpers.caseStatusChanged(
+            {
+              id: editingCase.id,
+              title: data.title,
+              case_number: data.case_number,
+              status: data.status,
+            },
+            user.id,
+            orgMember.organization_id
+          );
+        }
+        
         toast.success("Case updated successfully");
       } else {
-        const { error } = await supabase.from("cases").insert([{
+        const { data: newCase, error } = await supabase.from("cases").insert([{
           ...caseData,
           user_id: user.id,
-        }]);
+        }]).select().single();
 
         if (error) throw error;
+        
+        // Send notification to all org members
+        await NotificationHelpers.caseCreated(
+          {
+            id: newCase.id,
+            title: data.title,
+            case_number: data.case_number,
+          },
+          user.id,
+          orgMember.organization_id
+        );
+        
         toast.success("Case created successfully");
       }
 
