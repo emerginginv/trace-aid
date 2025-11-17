@@ -18,6 +18,12 @@ interface Case {
   case_number: string;
   title: string;
   status: string;
+  investigator_ids?: string[];
+  case_manager_id?: string;
+  case_manager?: {
+    full_name: string;
+    email: string;
+  } | null;
 }
 
 interface Update {
@@ -60,7 +66,15 @@ export default function VendorDashboard() {
       // Fetch only cases where the vendor is assigned (in investigator_ids array)
       const { data: casesData, error: casesError } = await supabase
         .from("cases")
-        .select("id, case_number, title, status, investigator_ids")
+        .select(`
+          id, 
+          case_number, 
+          title, 
+          status, 
+          investigator_ids,
+          case_manager_id,
+          case_manager:profiles!cases_case_manager_id_fkey(full_name, email)
+        `)
         .contains("investigator_ids", [user.id])
         .order("created_at", { ascending: false });
 
@@ -224,7 +238,7 @@ export default function VendorDashboard() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="font-mono text-sm text-muted-foreground">
                               {caseItem.case_number}
                             </span>
@@ -232,7 +246,12 @@ export default function VendorDashboard() {
                               {caseItem.status}
                             </Badge>
                           </div>
-                          <p className="font-medium truncate">{caseItem.title}</p>
+                          <p className="font-medium truncate mb-1">{caseItem.title}</p>
+                          {caseItem.case_manager && (
+                            <p className="text-xs text-muted-foreground">
+                              Case Manager: {caseItem.case_manager.full_name}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
