@@ -772,7 +772,7 @@ const Finance = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${(invoice.balance_due || 0).toFixed(2)}
+                      ${(invoice.balance_due !== undefined && invoice.balance_due !== null ? invoice.balance_due : (invoice.amount - (invoice.total_paid || 0))).toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <span
