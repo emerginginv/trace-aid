@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { NotificationHelpers } from "@/lib/notificationHelpers";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -136,6 +137,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       };
 
       let error;
+      let newUpdate;
       if (editingUpdate) {
         const result = await supabase
           .from("case_updates")
@@ -143,11 +145,29 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
           .eq("id", editingUpdate.id);
         error = result.error;
       } else {
-        const result = await supabase.from("case_updates").insert(updateData);
+        const result = await supabase
+          .from("case_updates")
+          .insert(updateData)
+          .select()
+          .single();
         error = result.error;
+        newUpdate = result.data;
       }
 
       if (error) throw error;
+
+      // Send notification for new updates
+      if (!editingUpdate && newUpdate) {
+        await NotificationHelpers.caseUpdateAdded(
+          {
+            id: newUpdate.id,
+            title: values.title,
+            case_id: caseId,
+          },
+          user.id,
+          orgMember.organization_id
+        );
+      }
 
       toast({
         title: "Success",

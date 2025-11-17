@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { FinanceFormFields } from "./FinanceFormFields";
+import { NotificationHelpers } from "@/lib/notificationHelpers";
 
 const formSchema = z.object({
   finance_type: z.enum(["retainer", "expense", "time"]),
@@ -137,6 +138,15 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) throw new Error("Organization not found");
+
       const isTimeEntry = values.finance_type === 'time';
       
       const hours = Number(values.hours || 0);
@@ -167,6 +177,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       };
 
       let error;
+      let newExpense;
       if (editingFinance) {
         const result = await supabase
           .from("case_finances")
@@ -174,11 +185,30 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
           .eq("id", editingFinance.id);
         error = result.error;
       } else {
-        const result = await supabase.from("case_finances").insert(financeData);
+        const result = await supabase
+          .from("case_finances")
+          .insert(financeData)
+          .select()
+          .single();
         error = result.error;
+        newExpense = result.data;
       }
 
       if (error) throw error;
+
+      // Send notification for new expenses
+      if (!editingFinance && newExpense && values.finance_type === 'expense') {
+        await NotificationHelpers.expenseSubmitted(
+          {
+            id: newExpense.id,
+            description: values.description,
+            amount: amount,
+            case_id: caseId,
+          },
+          user.id,
+          orgMember.organization_id
+        );
+      }
 
       toast({
         title: "Success",
