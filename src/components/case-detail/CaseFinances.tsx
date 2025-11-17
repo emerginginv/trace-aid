@@ -700,7 +700,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                               <Eye className="h-4 w-4" />
                             </Button>
                           )}
-                          {finance.finance_type === "expense" && finance.status === "pending" && (
+                          {finance.finance_type === "expense" && (
                             <>
                               <Button
                                 variant="ghost"
