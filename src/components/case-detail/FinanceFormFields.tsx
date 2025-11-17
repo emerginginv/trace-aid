@@ -26,8 +26,9 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
 
   // Auto-calculate amount for expenses
   useEffect(() => {
-    if (financeType === "expense" && quantity && unitPrice) {
-      const calculatedAmount = (Number(quantity) * Number(unitPrice)).toString();
+    if (financeType === "expense" && unitPrice) {
+      const qty = quantity || "1";
+      const calculatedAmount = (Number(qty) * Number(unitPrice)).toString();
       form.setValue("amount", calculatedAmount);
     }
   }, [quantity, unitPrice, financeType, form]);
@@ -141,12 +142,13 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Quantity</FormLabel>
+                <FormLabel>Quantity (default: 1)</FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
                     step="0.01" 
-                    placeholder="Enter quantity" 
+                    min="0.01"
+                    placeholder="1" 
                     {...field} 
                   />
                 </FormControl>
@@ -280,27 +282,6 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
               </FormItem>
             )}
           />
-          
-          {financeType === "expense" && (
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantity (Optional)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      placeholder="0" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
         </>
       )}
 
