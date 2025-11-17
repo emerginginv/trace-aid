@@ -23,6 +23,7 @@ interface RetainerBalance {
 
 interface Expense {
   id: string;
+  case_id: string;
   date: string;
   case_title: string;
   case_number: string;
@@ -165,6 +166,7 @@ const Finance = () => {
         const caseInfo = casesMap.get(exp.case_id);
         return {
           id: exp.id,
+          case_id: exp.case_id,
           date: exp.date,
           case_title: caseInfo?.title || "Unknown",
           case_number: caseInfo?.case_number || "N/A",
@@ -596,8 +598,7 @@ const Finance = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            // Navigate to case finance tab - you can adjust this logic
-                            toast.info("Edit expense functionality coming soon");
+                            navigate(`/cases/${expense.case_id}?tab=finances`);
                           }}
                           title="Edit expense"
                         >
