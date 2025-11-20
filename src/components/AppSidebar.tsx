@@ -33,7 +33,7 @@ const allMenuItems = [{
   title: "Finance",
   icon: DollarSign,
   url: "/finance",
-  roles: ['admin', 'manager']
+  roles: ['admin', 'manager', 'investigator']
 }, {
   title: "Accounts",
   icon: Building2,
