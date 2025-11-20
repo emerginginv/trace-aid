@@ -1252,22 +1252,26 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
+        <TabsList className={`grid w-full ${(currentUserRole === 'investigator' || currentUserRole === 'vendor') ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8'}`}>
           <TabsTrigger value="preferences" className="text-xs sm:text-sm">Preferences</TabsTrigger>
-          <TabsTrigger value="organization" className="text-xs sm:text-sm">Organization</TabsTrigger>
-          <TabsTrigger value="permissions" className="text-xs sm:text-sm">Permissions</TabsTrigger>
-          <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()} className="text-xs sm:text-sm">Users</TabsTrigger>
-          <TabsTrigger value="picklists" className="text-xs sm:text-sm">Picklists</TabsTrigger>
-          <TabsTrigger value="templates" className="text-xs sm:text-sm">Templates</TabsTrigger>
-          <TabsTrigger value="email" className="text-xs sm:text-sm">
-            <Mail className="w-3 h-3 mr-1" />
-            Email
-          </TabsTrigger>
-          {currentUserRole === 'admin' && (
-            <TabsTrigger value="billing" className="text-xs sm:text-sm">
-              <CreditCard className="w-3 h-3 mr-1" />
-              Billing
-            </TabsTrigger>
+          {currentUserRole !== 'investigator' && currentUserRole !== 'vendor' && (
+            <>
+              <TabsTrigger value="organization" className="text-xs sm:text-sm">Organization</TabsTrigger>
+              <TabsTrigger value="permissions" className="text-xs sm:text-sm">Permissions</TabsTrigger>
+              <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()} className="text-xs sm:text-sm">Users</TabsTrigger>
+              <TabsTrigger value="picklists" className="text-xs sm:text-sm">Picklists</TabsTrigger>
+              <TabsTrigger value="templates" className="text-xs sm:text-sm">Templates</TabsTrigger>
+              <TabsTrigger value="email" className="text-xs sm:text-sm">
+                <Mail className="w-3 h-3 mr-1" />
+                Email
+              </TabsTrigger>
+              {currentUserRole === 'admin' && (
+                <TabsTrigger value="billing" className="text-xs sm:text-sm">
+                  <CreditCard className="w-3 h-3 mr-1" />
+                  Billing
+                </TabsTrigger>
+              )}
+            </>
           )}
         </TabsList>
 
