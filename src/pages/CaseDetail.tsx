@@ -22,6 +22,7 @@ import { CaseTeamManager } from "@/components/case-detail/CaseTeamManager";
 import { EmailComposer } from "@/components/EmailComposer";
 import { Mail } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 interface Case {
   id: string;
@@ -59,6 +60,7 @@ const CaseDetail = () => {
     isAdmin,
     isManager
   } = useUserRole();
+  const { hasPermission } = usePermissions();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
@@ -462,14 +464,18 @@ const CaseDetail = () => {
               <Mail className="h-4 w-4 mr-2" />
               <span className="sm:inline">Send Email</span>
             </Button>
-            <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed} className="bg-zinc-200  w-full sm:w-auto">
-              <Edit className="h-4 w-4 mr-2" />
-              <span className="sm:inline text-slate-950">Edit</span>
-            </Button>
-            <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
-              <Trash2 className="h-4 w-4 mr-2" />
-              <span className="sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
-            </Button>
+            {hasPermission('edit_cases') && (
+              <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed} className="bg-zinc-200  w-full sm:w-auto">
+                <Edit className="h-4 w-4 mr-2" />
+                <span className="sm:inline text-slate-950">Edit</span>
+              </Button>
+            )}
+            {hasPermission('delete_cases') && (
+              <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
+                <Trash2 className="h-4 w-4 mr-2" />
+                <span className="sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
+              </Button>
+            )}
           </div>}
       </div>
 

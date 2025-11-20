@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUserRole } from "@/hooks/useUserRole";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 interface Case {
@@ -29,6 +30,7 @@ const Cases = () => {
   const {
     isVendor
   } = useUserRole();
+  const { hasPermission } = usePermissions();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -307,7 +309,7 @@ const Cases = () => {
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
-                  {!isVendor && <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
+                  {hasPermission('delete_cases') && <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>}
                 </div>
@@ -351,7 +353,7 @@ const Cases = () => {
                         View
                       </Link>
                     </Button>
-                    {!isVendor && <Button variant="outline" size="sm" onClick={() => handleDeleteClick(caseItem.id)} className="flex-1">
+                    {hasPermission('delete_cases') && <Button variant="outline" size="sm" onClick={() => handleDeleteClick(caseItem.id)} className="flex-1">
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
                       </Button>}
@@ -413,7 +415,7 @@ const Cases = () => {
                             <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
-                        {!isVendor && <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
+                        {hasPermission('delete_cases') && <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>}
                       </div>

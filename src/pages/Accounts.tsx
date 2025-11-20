@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Account {
   id: string;
@@ -32,6 +33,7 @@ interface Account {
 
 const Accounts = () => {
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -223,26 +225,30 @@ const Accounts = () => {
                     <Eye className="w-4 h-4 mr-1" />
                     View
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/accounts/${account.id}/edit`)}
-                    className="flex-1"
-                  >
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setAccountToDelete(account.id);
-                      setDeleteDialogOpen(true);
-                    }}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {hasPermission('edit_accounts') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/accounts/${account.id}/edit`)}
+                      className="flex-1"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                  )}
+                  {hasPermission('delete_accounts') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setAccountToDelete(account.id);
+                        setDeleteDialogOpen(true);
+                      }}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -287,25 +293,29 @@ const Accounts = () => {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/accounts/${account.id}/edit`)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setAccountToDelete(account.id);
-                          setDeleteDialogOpen(true);
-                        }}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {hasPermission('edit_accounts') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/accounts/${account.id}/edit`)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {hasPermission('delete_accounts') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setAccountToDelete(account.id);
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
