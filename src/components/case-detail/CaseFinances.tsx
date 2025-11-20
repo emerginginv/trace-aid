@@ -636,14 +636,14 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                       <TableCell className="font-medium">
                         {new Date(finance.date).toLocaleDateString()}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[200px]">
                         <div>
-                          <div className="font-medium">{finance.description}</div>
+                          <div className="font-medium truncate" title={finance.description}>{finance.description}</div>
                           {finance.notes && (
-                            <div className="text-sm text-muted-foreground">{finance.notes}</div>
+                            <div className="text-sm text-muted-foreground truncate" title={finance.notes}>{finance.notes}</div>
                           )}
                           {finance.invoice_number && (
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-muted-foreground truncate">
                               Invoice #: {finance.invoice_number}
                             </div>
                           )}
@@ -659,26 +659,26 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                           {finance.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[120px]">
                         {finance.category && (
-                          <Badge variant="outline">{finance.category}</Badge>
+                          <Badge variant="outline" className="truncate max-w-full" title={finance.category}>{finance.category}</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         {finance.quantity || 1}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[150px]">
                         {finance.subject_id ? (
-                          <div className="text-sm">
+                          <div className="text-sm truncate" title={subjects.find(s => s.id === finance.subject_id)?.name || 'Unknown'}>
                             {subjects.find(s => s.id === finance.subject_id)?.name || 'Unknown'}
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[200px]">
                         {finance.activity_id ? (
-                          <div className="text-sm">
+                          <div className="text-sm truncate" title={activities.find(a => a.id === finance.activity_id)?.title || 'Unknown'}>
                             {activities.find(a => a.id === finance.activity_id)?.title || 'Unknown'}
                           </div>
                         ) : (
