@@ -152,11 +152,11 @@ export function AppSidebar() {
         
         {/* Settings and Sign Out buttons - hide Settings for vendors */}
         <div className="flex gap-2 rounded bg-transparent">
-          {!isVendor && <SidebarMenuButton onClick={() => navigate("/settings")} className="flex-1 justify-center">
+          <SidebarMenuButton onClick={() => navigate("/settings")} className="flex-1 justify-center">
               <Settings className="w-4 h-4" />
               <span className="sr-only">Settings</span>
-            </SidebarMenuButton>}
-          <SidebarMenuButton onClick={handleSignOut} className={`${isVendor ? 'w-full' : 'flex-1'} justify-center`}>
+            </SidebarMenuButton>
+          <SidebarMenuButton onClick={handleSignOut} className="flex-1 justify-center">
             <LogOut className="w-4 h-4" />
             <span className="sr-only">Sign Out</span>
           </SidebarMenuButton>
