@@ -84,6 +84,7 @@ interface User {
 }
 
 const Settings = () => {
+  const { impersonatedUserId } = useImpersonation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -219,14 +220,17 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      setCurrentUserId(user.id);
+      // Use impersonated user ID if available, otherwise use actual user
+      const effectiveUserId = impersonatedUserId || user.id;
+      
+      setCurrentUserId(effectiveUserId);
       setEmail(user.email || "");
 
       // Load user profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user.id)
+        .eq("id", effectiveUserId)
         .single();
 
       if (profile) {
@@ -235,11 +239,11 @@ const Settings = () => {
         setNotificationPush(profile.notification_push ?? true);
       }
 
-      // Load user role
+      // Load user role - use impersonated user's role if impersonating
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id);
+        .eq("user_id", effectiveUserId);
 
       if (roles && roles.length > 0) {
         setCurrentUserRole(roles[0].role);
