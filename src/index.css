@@ -46,81 +46,87 @@
     --neutral-800: 215 25% 15%;
     --neutral-900: 215 30% 8%;
 
-    /* Primary Blue Scale */
+    /* Primary Blue Scale - Enhanced Saturation */
     --primary-50: 210 100% 97%;
     --primary-100: 210 95% 92%;
     --primary-200: 210 90% 85%;
     --primary-300: 210 85% 70%;
     --primary-400: 210 82% 60%;
-    --primary-500: 210 80% 55%;    /* Main brand color */
-    --primary-600: 210 85% 45%;
-    --primary-700: 210 90% 35%;
+    --primary-500: 210 85% 50%;    /* Brighter main brand */
+    --primary-600: 210 90% 42%;    /* Deeper for better contrast */
+    --primary-700: 210 95% 35%;
     --primary-800: 210 95% 25%;
     --primary-900: 210 100% 15%;
 
-    /* Secondary Teal Scale */
+    /* Secondary Teal Scale - Enhanced */
     --secondary-50: 174 80% 97%;
     --secondary-100: 174 75% 90%;
     --secondary-200: 174 70% 80%;
     --secondary-300: 174 65% 70%;
-    --secondary-400: 174 62% 60%;  /* Main secondary */
-    --secondary-500: 174 60% 50%;
-    --secondary-600: 174 65% 40%;
-    --secondary-700: 174 70% 30%;
-    --secondary-800: 174 75% 20%;
-    --secondary-900: 174 80% 12%;
+    --secondary-400: 174 70% 55%;  /* Brighter secondary */
+    --secondary-500: 174 75% 45%;
+    --secondary-600: 174 80% 38%;
+    --secondary-700: 174 85% 30%;
+    --secondary-800: 174 90% 20%;
+    --secondary-900: 174 95% 12%;
 
-    /* Semantic Colors */
+    /* Semantic Colors - Enhanced for Better Visibility */
     --success-50: 142 76% 95%;
+    --success-400: 142 76% 50%;
     --success-500: 142 76% 45%;
-    --success-700: 142 80% 30%;
+    --success-600: 142 80% 38%;
+    --success-700: 142 85% 30%;
 
     --warning-50: 45 93% 95%;
+    --warning-400: 45 93% 60%;
     --warning-500: 45 93% 55%;
-    --warning-700: 45 95% 40%;
+    --warning-600: 45 95% 48%;
+    --warning-700: 45 98% 40%;
 
     --destructive-50: 0 85% 97%;
+    --destructive-400: 0 85% 65%;
     --destructive-500: 0 85% 60%;
-    --destructive-700: 0 90% 45%;
+    --destructive-600: 0 90% 52%;
+    --destructive-700: 0 95% 45%;
 
     --info-50: 210 100% 97%;
     --info-500: 210 80% 55%;
     --info-700: 210 90% 35%;
 
-    /* Core Theme Colors */
-    --background: var(--neutral-50);
-    --foreground: var(--neutral-800);
+    /* Core Theme Colors - Enhanced Contrast */
+    --background: 210 20% 98%;
+    --foreground: var(--neutral-900);
 
     --card: 0 0% 100%;
-    --card-foreground: var(--neutral-800);
+    --card-foreground: var(--neutral-900);
 
     --popover: 0 0% 100%;
-    --popover-foreground: var(--neutral-800);
+    --popover-foreground: var(--neutral-900);
 
-    --primary: var(--primary-500);
+    --primary: var(--primary-600);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: var(--secondary-400);
-    --secondary-foreground: var(--neutral-800);
+    --secondary: var(--secondary-500);
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: var(--neutral-100);
-    --muted-foreground: var(--neutral-500);
+    --muted: var(--neutral-200);
+    --muted-foreground: var(--neutral-600);
 
-    --accent: var(--primary-300);
-    --accent-foreground: var(--neutral-800);
+    --accent: var(--primary-100);
+    --accent-foreground: var(--neutral-900);
 
-    --destructive: var(--destructive-500);
+    --destructive: var(--destructive-600);
     --destructive-foreground: 0 0% 100%;
 
-    --success: var(--success-500);
+    --success: var(--success-600);
     --success-foreground: 0 0% 100%;
 
-    --warning: var(--warning-500);
-    --warning-foreground: var(--neutral-800);
+    --warning: var(--warning-600);
+    --warning-foreground: 0 0% 100%;
 
-    --border: var(--neutral-200);
-    --input: var(--neutral-200);
-    --ring: var(--primary-500);
+    --border: var(--neutral-300);
+    --input: var(--neutral-300);
+    --ring: var(--primary-600);
 
     /* ===== SPACING SYSTEM (Compact - 4px base) ===== */
     --space-1: 0.25rem;   /* 4px */
@@ -150,25 +156,25 @@
     --backdrop-blur: 12px;
     --backdrop-blur-heavy: 24px;
 
-    /* Sophisticated Shadow System */
-    --shadow-xs: 0 1px 2px 0 hsl(var(--neutral-900) / 0.05);
-    --shadow-sm: 0 1px 3px 0 hsl(var(--neutral-900) / 0.1), 0 1px 2px -1px hsl(var(--neutral-900) / 0.1);
-    --shadow: 0 4px 6px -1px hsl(var(--neutral-900) / 0.1), 0 2px 4px -2px hsl(var(--neutral-900) / 0.1);
-    --shadow-md: 0 10px 15px -3px hsl(var(--neutral-900) / 0.1), 0 4px 6px -4px hsl(var(--neutral-900) / 0.1);
-    --shadow-lg: 0 20px 25px -5px hsl(var(--neutral-900) / 0.1), 0 8px 10px -6px hsl(var(--neutral-900) / 0.1);
-    --shadow-xl: 0 25px 50px -12px hsl(var(--neutral-900) / 0.25);
-    --shadow-2xl: 0 40px 80px -20px hsl(var(--neutral-900) / 0.3);
-    --shadow-inner: inset 0 2px 4px 0 hsl(var(--neutral-900) / 0.05);
+    /* Enhanced Shadow System for Better Depth */
+    --shadow-xs: 0 1px 2px 0 hsl(var(--neutral-900) / 0.08);
+    --shadow-sm: 0 1px 3px 0 hsl(var(--neutral-900) / 0.12), 0 1px 2px -1px hsl(var(--neutral-900) / 0.12);
+    --shadow: 0 4px 6px -1px hsl(var(--neutral-900) / 0.14), 0 2px 4px -2px hsl(var(--neutral-900) / 0.12);
+    --shadow-md: 0 10px 15px -3px hsl(var(--neutral-900) / 0.14), 0 4px 6px -4px hsl(var(--neutral-900) / 0.12);
+    --shadow-lg: 0 20px 25px -5px hsl(var(--neutral-900) / 0.16), 0 8px 10px -6px hsl(var(--neutral-900) / 0.12);
+    --shadow-xl: 0 25px 50px -12px hsl(var(--neutral-900) / 0.3);
+    --shadow-2xl: 0 40px 80px -20px hsl(var(--neutral-900) / 0.4);
+    --shadow-inner: inset 0 2px 4px 0 hsl(var(--neutral-900) / 0.08);
     
-    /* Premium Card Shadows */
-    --shadow-card: 0 2px 8px -2px hsl(var(--neutral-900) / 0.08), 0 4px 16px -4px hsl(var(--neutral-900) / 0.06);
-    --shadow-card-hover: 0 8px 24px -4px hsl(var(--neutral-900) / 0.12), 0 12px 32px -8px hsl(var(--neutral-900) / 0.1);
+    /* Premium Card Shadows - Stronger */
+    --shadow-card: 0 1px 3px 0 hsl(var(--neutral-900) / 0.12), 0 4px 8px -2px hsl(var(--neutral-900) / 0.1);
+    --shadow-card-hover: 0 8px 16px -4px hsl(var(--neutral-900) / 0.16), 0 12px 24px -8px hsl(var(--neutral-900) / 0.14);
     
     /* Colored Shadows for Brand Elements */
-    --shadow-primary: 0 8px 16px -4px hsl(var(--primary-500) / 0.3);
-    --shadow-success: 0 8px 16px -4px hsl(var(--success-500) / 0.3);
-    --shadow-warning: 0 8px 16px -4px hsl(var(--warning-500) / 0.3);
-    --shadow-destructive: 0 8px 16px -4px hsl(var(--destructive-500) / 0.3);
+    --shadow-primary: 0 4px 12px -2px hsl(var(--primary-600) / 0.4);
+    --shadow-success: 0 4px 12px -2px hsl(var(--success-600) / 0.4);
+    --shadow-warning: 0 4px 12px -2px hsl(var(--warning-600) / 0.4);
+    --shadow-destructive: 0 4px 12px -2px hsl(var(--destructive-600) / 0.4);
 
     /* ===== TRANSITIONS ===== */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -208,16 +214,16 @@
     --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
   }
 
-  /* ===== DARK MODE ===== */
+  /* ===== DARK MODE - Enhanced Contrast ===== */
   .dark {
-    --background: var(--neutral-900);
-    --foreground: var(--neutral-100);
+    --background: 215 30% 10%;
+    --foreground: var(--neutral-50);
 
-    --card: 215 25% 12%;
-    --card-foreground: var(--neutral-100);
+    --card: 215 25% 14%;
+    --card-foreground: var(--neutral-50);
 
-    --popover: 215 25% 12%;
-    --popover-foreground: var(--neutral-100);
+    --popover: 215 25% 14%;
+    --popover-foreground: var(--neutral-50);
 
     --primary: var(--primary-400);
     --primary-foreground: var(--neutral-900);
@@ -225,23 +231,23 @@
     --secondary: var(--secondary-400);
     --secondary-foreground: var(--neutral-900);
 
-    --muted: 215 25% 18%;
-    --muted-foreground: 215 16% 65%;
+    --muted: 215 25% 20%;
+    --muted-foreground: 215 16% 70%;
 
-    --accent: var(--primary-400);
+    --accent: var(--primary-300);
     --accent-foreground: var(--neutral-900);
 
-    --destructive: var(--destructive-500);
-    --destructive-foreground: 0 0% 100%;
+    --destructive: var(--destructive-400);
+    --destructive-foreground: var(--neutral-900);
 
-    --success: var(--success-500);
-    --success-foreground: 0 0% 100%;
+    --success: var(--success-400);
+    --success-foreground: var(--neutral-900);
 
-    --warning: var(--warning-500);
+    --warning: var(--warning-400);
     --warning-foreground: var(--neutral-900);
 
-    --border: 215 25% 20%;
-    --input: 215 25% 20%;
+    --border: 215 20% 28%;
+    --input: 215 20% 28%;
     --ring: var(--primary-400);
 
     --sidebar-background: 215 30% 10%;
