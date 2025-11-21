@@ -58,37 +58,35 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    // Send confirmation email to OLD email address
+    // Send confirmation email to OLD email address using Lovable's built-in system
     const confirmationUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/confirm-email-change?token=${token}`;
 
-    const { error: emailError } = await supabaseClient.functions.invoke(
-      "send-email",
-      {
-        body: {
-          to: user.email,
-          subject: "Confirm Email Address Change",
-          body: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2>Email Address Change Request</h2>
-              <p>You requested to change your email address from <strong>${user.email}</strong> to <strong>${newEmail}</strong>.</p>
-              <p>If you made this request, please click the button below to confirm:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${confirmationUrl}" 
-                   style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                  Confirm Email Change
-                </a>
-              </div>
-              <p style="color: #666; font-size: 14px;">This link will expire in 24 hours.</p>
-              <p style="color: #666; font-size: 14px;">If you didn't request this change, please ignore this email or contact support if you're concerned about your account security.</p>
-            </div>
-          `,
-          isHtml: true,
-        },
+    // Trigger email via Lovable's email webhook (same as password reset)
+    const emailHookUrl = `https://lovable-api.com/projects/${Deno.env.get("VITE_SUPABASE_PROJECT_ID")}/backend/email-hook`;
+    
+    const emailPayload = {
+      type: "email_change",
+      user: {
+        email: user.email,
+        id: user.id
+      },
+      data: {
+        confirmation_url: confirmationUrl,
+        new_email: newEmail,
+        old_email: user.email
       }
-    );
+    };
 
-    if (emailError) {
-      console.error("Error sending email:", emailError);
+    const emailResponse = await fetch(emailHookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(emailPayload),
+    });
+
+    if (!emailResponse.ok) {
+      console.error("Email hook error:", await emailResponse.text());
       throw new Error("Failed to send confirmation email");
     }
 
