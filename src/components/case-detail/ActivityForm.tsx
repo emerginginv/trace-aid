@@ -29,7 +29,10 @@ const eventSchema = z.object({
   activity_type: z.literal("event"),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  due_date: z.date(),
+  start_date: z.date(),
+  start_time: z.string().min(1, "Start time is required"),
+  end_date: z.date(),
+  end_time: z.string().min(1, "End time is required"),
   status: z.enum(["scheduled", "cancelled", "completed"]),
   assigned_user_id: z.string().optional(),
 });
@@ -68,7 +71,11 @@ export function ActivityForm({
       activity_type: activityType,
       title: "",
       description: "",
-      due_date: prefilledDate || undefined,
+      due_date: activityType === "task" ? prefilledDate || undefined : undefined,
+      start_date: activityType === "event" ? prefilledDate || new Date() : undefined,
+      start_time: activityType === "event" ? "09:00" : undefined,
+      end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
+      end_time: activityType === "event" ? "10:00" : undefined,
       status: activityType === "task" ? "to_do" : "scheduled",
       assigned_user_id: undefined,
     } as any,
@@ -76,11 +83,18 @@ export function ActivityForm({
 
   useEffect(() => {
     if (editingActivity) {
+      // Parse existing due_date for events that have start/end times stored
+      const dueDate = editingActivity.due_date ? new Date(editingActivity.due_date) : undefined;
+      
       form.reset({
         activity_type: editingActivity.activity_type,
         title: editingActivity.title,
         description: editingActivity.description || "",
-        due_date: editingActivity.due_date ? new Date(editingActivity.due_date) : undefined,
+        due_date: editingActivity.activity_type === "task" ? dueDate : undefined,
+        start_date: editingActivity.activity_type === "event" ? dueDate : undefined,
+        start_time: editingActivity.activity_type === "event" && dueDate ? format(dueDate, "HH:mm") : "09:00",
+        end_date: editingActivity.activity_type === "event" ? dueDate : undefined,
+        end_time: editingActivity.activity_type === "event" && dueDate ? format(new Date(dueDate.getTime() + 3600000), "HH:mm") : "10:00",
         status: editingActivity.status,
         assigned_user_id: editingActivity.assigned_user_id || undefined,
       } as any);
@@ -89,7 +103,11 @@ export function ActivityForm({
         activity_type: activityType,
         title: "",
         description: "",
-        due_date: prefilledDate || undefined,
+        due_date: activityType === "task" ? prefilledDate || undefined : undefined,
+        start_date: activityType === "event" ? prefilledDate || new Date() : undefined,
+        start_time: activityType === "event" ? "09:00" : undefined,
+        end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
+        end_time: activityType === "event" ? "10:00" : undefined,
         status: activityType === "task" ? "to_do" : "scheduled",
         assigned_user_id: undefined,
       } as any);
@@ -108,13 +126,24 @@ export function ActivityForm({
         return;
       }
 
+      // Combine date and time for events
+      let dueDate = null;
+      if (values.activity_type === "event") {
+        const [startHours, startMinutes] = values.start_time.split(':');
+        const startDateTime = new Date(values.start_date);
+        startDateTime.setHours(parseInt(startHours), parseInt(startMinutes));
+        dueDate = formatISO(startDateTime);
+      } else if (values.due_date) {
+        dueDate = format(values.due_date, "yyyy-MM-dd");
+      }
+
       const activityData = {
         activity_type: values.activity_type,
         title: values.title,
         description: values.description || null,
         case_id: caseId,
         user_id: user.id,
-        due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
+        due_date: dueDate,
         status: values.status,
         assigned_user_id: values.assigned_user_id || null,
         completed: values.status === "done" || values.status === "completed",
@@ -297,47 +326,170 @@ export function ActivityForm({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="due_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>{activityType === "task" ? "Due Date (Optional)" : "Date"}</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < new Date(new Date().setHours(0, 0, 0, 0))
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {activityType === "task" ? (
+              <FormField
+                control={form.control}
+                name="due_date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Due Date (Optional)</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="start_date"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Start Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="start_time"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="end_date"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>End Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="end_time"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex gap-2 justify-end">
               <Button
