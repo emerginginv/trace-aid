@@ -616,6 +616,39 @@ export type Database = {
           },
         ]
       }
+      email_change_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          new_email: string
+          old_email: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          new_email: string
+          old_email: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          new_email?: string
+          old_email?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invoice_payments: {
         Row: {
           amount: number
