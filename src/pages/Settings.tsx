@@ -93,6 +93,8 @@ const Settings = () => {
   // User Preferences State
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [changingEmail, setChangingEmail] = useState(false);
   const [notificationEmail, setNotificationEmail] = useState(true);
   const [notificationPush, setNotificationPush] = useState(true);
 
@@ -403,6 +405,39 @@ const Settings = () => {
       toast.error("Failed to save preferences");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEmailChange = async () => {
+    try {
+      // Validate new email
+      const emailValidation = z.string().email("Invalid email address").safeParse(newEmail);
+      if (!emailValidation.success) {
+        toast.error(emailValidation.error.errors[0].message);
+        return;
+      }
+
+      if (newEmail === email) {
+        toast.error("New email must be different from current email");
+        return;
+      }
+
+      setChangingEmail(true);
+
+      // Update user email - Supabase will send confirmation emails to both old and new
+      const { error } = await supabase.auth.updateUser({
+        email: newEmail
+      });
+
+      if (error) throw error;
+
+      toast.success("Confirmation email sent! Please check both your old and new email addresses to complete the change.");
+      setNewEmail("");
+    } catch (error: any) {
+      console.error("Error changing email:", error);
+      toast.error(error.message || "Failed to change email");
+    } finally {
+      setChangingEmail(false);
     }
   };
 
@@ -1308,7 +1343,7 @@ const Settings = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email">Current Email Address</Label>
                   <Input
                     id="email"
                     type="email"
@@ -1316,8 +1351,40 @@ const Settings = () => {
                     disabled
                     className="bg-muted"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Email cannot be changed here. Contact support to update.
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="newEmail">Change Email Address</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="newEmail"
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="Enter new email address"
+                      disabled={changingEmail}
+                    />
+                    <Button 
+                      onClick={handleEmailChange} 
+                      disabled={changingEmail || !newEmail}
+                      variant="outline"
+                    >
+                      {changingEmail ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="w-4 h-4 mr-2" />
+                          Change Email
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    A confirmation email will be sent to both your current and new email addresses. 
+                    You must verify the new email before the change takes effect.
                   </p>
                 </div>
               </div>
