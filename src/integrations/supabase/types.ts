@@ -458,7 +458,6 @@ export type Database = {
           id: string
           investigator_ids: string[] | null
           organization_id: string | null
-          priority: string | null
           start_date: string | null
           status: string
           title: string
@@ -478,7 +477,6 @@ export type Database = {
           id?: string
           investigator_ids?: string[] | null
           organization_id?: string | null
-          priority?: string | null
           start_date?: string | null
           status?: string
           title: string
@@ -498,7 +496,6 @@ export type Database = {
           id?: string
           investigator_ids?: string[] | null
           organization_id?: string | null
-          priority?: string | null
           start_date?: string | null
           status?: string
           title?: string
