@@ -397,7 +397,7 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-300">
+              <div className="p-2 rounded-lg bg-slate-200">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
               </div>
               <span className="text-lg font-semibold">Due Tasks</span>
@@ -446,7 +446,7 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-300">
+              <div className="p-2 rounded-lg bg-slate-200">
                 <Calendar className="w-5 h-5 text-secondary" />
               </div>
               <span className="text-lg font-semibold">Upcoming Events</span>
@@ -480,7 +480,7 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-300">
+              <div className="p-2 rounded-lg bg-slate-200">
                 <Bell className="w-5 h-5 text-info-500" />
               </div>
               <span className="text-lg font-semibold">Recent Updates</span>
@@ -533,7 +533,7 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-300">
+              <div className="p-2 rounded-lg bg-slate-200">
                 <DollarSign className="w-5 h-5 text-warning" />
               </div>
               <span className="text-lg font-semibold">Recent Expenses</span>
