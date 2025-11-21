@@ -56,27 +56,40 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       }
 
       // Get user's organization through organization_members
+      // Use maybeSingle to handle cases where user might not be in any org yet
       const { data: memberData, error: memberError } = await supabase
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (memberError || !memberData) {
+      if (memberError) {
         console.error("Error fetching organization membership:", memberError);
         setOrganization(null);
         return;
       }
 
-      // Get organization details
+      if (!memberData?.organization_id) {
+        console.warn("User not in any organization");
+        setOrganization(null);
+        return;
+      }
+
+      // Get organization details with explicit filter for this specific org only
       const { data: orgData, error: orgError } = await supabase
         .from("organizations")
         .select("*")
         .eq("id", memberData.organization_id)
-        .single();
+        .maybeSingle();
 
       if (orgError) {
         console.error("Error fetching organization:", orgError);
+        setOrganization(null);
+        return;
+      }
+
+      if (!orgData) {
+        console.warn("Organization not found");
         setOrganization(null);
         return;
       }
