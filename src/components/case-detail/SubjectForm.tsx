@@ -78,6 +78,18 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
   });
 
   const selectedType = form.watch("subject_type");
+  const firstName = form.watch("first_name");
+  const lastName = form.watch("last_name");
+
+  // Auto-populate name field for person type
+  useEffect(() => {
+    if (selectedType === "person" && (firstName || lastName)) {
+      const displayName = [firstName, lastName].filter(Boolean).join(" ").trim();
+      if (displayName) {
+        form.setValue("name", displayName);
+      }
+    }
+  }, [firstName, lastName, selectedType, form]);
 
   useEffect(() => {
     if (editingSubject) {
@@ -239,7 +251,12 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
                 <FormItem>
                   <FormLabel>Display Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter display name" {...field} />
+                    <Input 
+                      placeholder={selectedType === "person" ? "Auto-populated from first and last name" : "Enter display name"} 
+                      {...field}
+                      readOnly={selectedType === "person"}
+                      className={selectedType === "person" ? "bg-muted" : ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
