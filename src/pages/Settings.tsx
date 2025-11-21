@@ -1263,30 +1263,28 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className={`inline-flex w-auto min-w-full ${(currentUserRole === 'investigator' || currentUserRole === 'vendor') ? '' : 'sm:grid sm:w-full sm:grid-cols-4 lg:grid-cols-8'}`}>
-            <TabsTrigger value="preferences" className="text-xs sm:text-sm whitespace-nowrap">Preferences</TabsTrigger>
-            {currentUserRole !== 'investigator' && currentUserRole !== 'vendor' && (
-              <>
-                <TabsTrigger value="organization" className="text-xs sm:text-sm whitespace-nowrap">Organization</TabsTrigger>
-                <TabsTrigger value="permissions" className="text-xs sm:text-sm whitespace-nowrap">Permissions</TabsTrigger>
-                <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()} className="text-xs sm:text-sm whitespace-nowrap">Users</TabsTrigger>
-                <TabsTrigger value="picklists" className="text-xs sm:text-sm whitespace-nowrap">Picklists</TabsTrigger>
-                <TabsTrigger value="templates" className="text-xs sm:text-sm whitespace-nowrap">Templates</TabsTrigger>
-                <TabsTrigger value="email" className="text-xs sm:text-sm whitespace-nowrap">
-                  <Mail className="w-3 h-3 mr-1" />
-                  Email
+        <TabsList className={`grid w-full gap-1 p-1 ${(currentUserRole === 'investigator' || currentUserRole === 'vendor') ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8'} h-auto`}>
+          <TabsTrigger value="preferences" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Preferences</TabsTrigger>
+          {currentUserRole !== 'investigator' && currentUserRole !== 'vendor' && (
+            <>
+              <TabsTrigger value="organization" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Organization</TabsTrigger>
+              <TabsTrigger value="permissions" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Permissions</TabsTrigger>
+              <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()} className="text-xs sm:text-sm px-2 py-2 sm:px-3">Users</TabsTrigger>
+              <TabsTrigger value="picklists" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Picklists</TabsTrigger>
+              <TabsTrigger value="templates" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Templates</TabsTrigger>
+              <TabsTrigger value="email" className="text-xs sm:text-sm px-2 py-2 sm:px-3 flex items-center justify-center gap-1">
+                <Mail className="w-3 h-3" />
+                <span className="hidden sm:inline">Email</span>
+              </TabsTrigger>
+              {currentUserRole === 'admin' && (
+                <TabsTrigger value="billing" className="text-xs sm:text-sm px-2 py-2 sm:px-3 flex items-center justify-center gap-1">
+                  <CreditCard className="w-3 h-3" />
+                  <span className="hidden sm:inline">Billing</span>
                 </TabsTrigger>
-                {currentUserRole === 'admin' && (
-                  <TabsTrigger value="billing" className="text-xs sm:text-sm whitespace-nowrap">
-                    <CreditCard className="w-3 h-3 mr-1" />
-                    Billing
-                  </TabsTrigger>
-                )}
-              </>
-            )}
-          </TabsList>
-        </div>
+              )}
+            </>
+          )}
+        </TabsList>
 
         {/* User Preferences Tab */}
         <TabsContent value="preferences">
