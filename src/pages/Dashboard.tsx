@@ -499,7 +499,7 @@ const Dashboard = () => {
                     {getUpdateIcon(update.type)}
                   </div>
                   <div className="flex-1 space-y-1.5">
-                    <p className="text-sm font-medium leading-tight">{update.message}</p>
+                    <p className="text-sm font-medium leading-tight text-slate-600">{update.message}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(parseISO(update.timestamp), {
                     addSuffix: true
