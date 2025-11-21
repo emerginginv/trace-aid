@@ -563,44 +563,51 @@ const Settings = () => {
   };
 
   const fetchUsers = async () => {
+    if (!organization?.id) {
+      console.error("No organization ID available for fetching users");
+      return;
+    }
+
     try {
       setUsersLoading(true);
       
-      // Fetch all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, email, full_name, created_at, color")
-        .order("created_at", { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      // Fetch all roles
-      const { data: userRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
-
-      if (rolesError) throw rolesError;
-
-      // Map roles to users
-      const rolesMap = new Map<string, string[]>();
-      userRoles?.forEach((ur) => {
-        if (!rolesMap.has(ur.user_id)) {
-          rolesMap.set(ur.user_id, []);
-        }
-        rolesMap.get(ur.user_id)?.push(ur.role);
+      console.log("Settings: Fetching users for organization:", organization.id);
+      
+      // Use the secure RPC function that filters by organization
+      const { data, error } = await supabase.rpc('get_organization_users', {
+        org_id: organization.id
       });
 
-      // Combine data
-      const usersData: User[] = profiles?.map((profile) => ({
-        id: profile.id,
-        email: profile.email,
-        full_name: profile.full_name,
-        created_at: profile.created_at,
-        roles: rolesMap.get(profile.id) || [],
-        color: profile.color,
-        disabled: false,
-      })) || [];
+      console.log("Settings: RPC Response - Data:", data, "Error:", error);
+      if (error) throw error;
 
+      // Get user colors from profiles
+      const userIds = (data || []).filter((u: any) => u.status === 'active').map((u: any) => u.id);
+      let profileColors = new Map();
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, color')
+          .in('id', userIds);
+        
+        profileColors = new Map(profiles?.map(p => [p.id, p.color]) || []);
+      }
+
+      // Convert to User format - only include active users
+      const usersData: User[] = (data || [])
+        .filter((u: any) => u.status === 'active')
+        .map((u: any) => ({
+          id: u.id,
+          email: u.email,
+          full_name: u.full_name,
+          created_at: u.created_at,
+          roles: [u.role], // Single role from RPC
+          color: profileColors.get(u.id) || null,
+          disabled: false,
+        }));
+
+      console.log("Settings: Loaded users:", usersData.length);
       setUsers(usersData);
       
       // Update current user role if we're in the list
