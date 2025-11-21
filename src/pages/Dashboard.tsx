@@ -397,7 +397,7 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-200">
+              <div className="p-2 rounded-lg bg-primary/10">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
               </div>
               <span className="text-lg font-semibold">Due Tasks</span>
@@ -413,7 +413,7 @@ const Dashboard = () => {
               </div> : dueTasks.map(task => {
             const taskDate = parseISO(task.dueDate);
             const isOverdue = isPast(taskDate) && !isToday(taskDate);
-            return <div key={task.id} onClick={() => setEditingTask(task)} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 hover:border-primary/20 transition-all hover:shadow-md cursor-pointer bg-slate-100">
+            return <div key={task.id} onClick={() => setEditingTask(task)} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 hover:border-primary/20 transition-all hover:shadow-md cursor-pointer bg-muted/30 hover:bg-muted/50">
                     <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-1" onClick={e => e.stopPropagation()} />
                     <div className="flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -446,7 +446,7 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-200">
+              <div className="p-2 rounded-lg bg-secondary/10">
                 <Calendar className="w-5 h-5 text-secondary" />
               </div>
               <span className="text-lg font-semibold">Upcoming Events</span>
@@ -480,8 +480,8 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-200">
-                <Bell className="w-5 h-5 text-info-500" />
+              <div className="p-2 rounded-lg bg-accent/10">
+                <Bell className="w-5 h-5 text-accent" />
               </div>
               <span className="text-lg font-semibold">Recent Updates</span>
             </CardTitle>
@@ -494,12 +494,12 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground">No recent updates</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Updates will appear here</p>
               </div> : updates.map(update => <div key={update.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
-                <div onClick={() => setEditingUpdate(update)} className="flex items-start gap-3 p-4 transition-colors cursor-pointer bg-slate-100">
+                <div onClick={() => setEditingUpdate(update)} className="flex items-start gap-3 p-4 transition-colors cursor-pointer hover:bg-muted/50">
                   <div className="mt-0.5 p-1.5 rounded-lg bg-background">
                     {getUpdateIcon(update.type)}
                   </div>
                   <div className="flex-1 space-y-1.5">
-                    <p className="text-sm font-medium leading-tight text-slate-600">{update.message}</p>
+                    <p className="text-sm font-medium leading-tight">{update.message}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(parseISO(update.timestamp), {
                     addSuffix: true
@@ -533,7 +533,7 @@ const Dashboard = () => {
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
             <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-200">
+              <div className="p-2 rounded-lg bg-warning/10">
                 <DollarSign className="w-5 h-5 text-warning" />
               </div>
               <span className="text-lg font-semibold">Recent Expenses</span>
@@ -548,7 +548,7 @@ const Dashboard = () => {
                 <p className="text-xs text-muted-foreground/70 mt-1">Expenses will appear here</p>
               </div> : <>
                 {expenses.map(expense => <div key={expense.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
-                    <div onClick={() => setEditingExpense(expense)} className="flex items-start gap-3 p-4 transition-colors cursor-pointer bg-slate-100">
+                    <div onClick={() => setEditingExpense(expense)} className="flex items-start gap-3 p-4 transition-colors cursor-pointer hover:bg-muted/50">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-start justify-between gap-3">
                           <p className="font-medium text-sm leading-tight flex-1">{expense.description}</p>
