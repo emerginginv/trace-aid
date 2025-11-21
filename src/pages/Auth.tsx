@@ -94,17 +94,13 @@ const Auth = () => {
 
   useEffect(() => {
     const checkSessionAndRedirect = async () => {
-      // Check if this is a password reset flow
-      const params = new URLSearchParams(window.location.search);
-      const isReset = params.get('reset') === 'true';
-      
-      // Check for hash parameters (password reset token)
+      // Check for hash parameters (password reset token from email)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const type = hashParams.get('type');
       
-      if (isReset && accessToken && type === 'recovery') {
-        // This is a valid password reset link
+      // If we have a recovery token in the URL, show password reset form
+      if (accessToken && type === 'recovery') {
         setIsPasswordReset(true);
         return;
       }
