@@ -76,14 +76,19 @@ const Users = () => {
   }, [organization?.id]);
 
   const fetchUsers = async () => {
-    if (!organization?.id) return;
+    if (!organization?.id) {
+      console.error("No organization ID available");
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log("Fetching users for organization:", organization.id);
       const { data, error } = await supabase.rpc('get_organization_users', {
         org_id: organization.id
       });
 
+      console.log("RPC Response - Data:", data, "Error:", error);
       if (error) throw error;
       
       // Get user colors from profiles
