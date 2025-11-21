@@ -112,6 +112,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Append signature to body if HTML mode
     const finalBody = isHtml ? body + emailSignature : body;
 
+    console.log("Email parameters:", { to, subject, isHtml, bodyLength: body?.length, finalBodyLength: finalBody?.length });
+
     const mailjetPayload = {
       Messages: [
         {
@@ -125,10 +127,16 @@ const handler = async (req: Request): Promise<Response> => {
             },
           ],
           Subject: subject,
-          ...(isHtml ? { HTMLPart: finalBody } : { TextPart: finalBody }),
+          [isHtml ? "HTMLPart" : "TextPart"]: finalBody,
         },
       ],
     };
+
+    console.log("Mailjet payload structure:", {
+      hasHTMLPart: !!mailjetPayload.Messages[0]["HTMLPart"],
+      hasTextPart: !!mailjetPayload.Messages[0]["TextPart"],
+      isHtml
+    });
 
     // Mailjet uses Basic Auth with API Key as username and Secret Key as password
     const credentials = btoa(`${apiKey}:${secretKey}`);
