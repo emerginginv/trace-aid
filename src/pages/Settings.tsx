@@ -95,6 +95,7 @@ const Settings = () => {
   const [email, setEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [changingEmail, setChangingEmail] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [notificationEmail, setNotificationEmail] = useState(true);
   const [notificationPush, setNotificationPush] = useState(true);
 
@@ -438,6 +439,24 @@ const Settings = () => {
       toast.error(error.message || "Failed to change email");
     } finally {
       setChangingEmail(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    try {
+      setResettingPassword(true);
+
+      // Call edge function to request password reset
+      const { error } = await supabase.functions.invoke('request-password-reset');
+
+      if (error) throw error;
+
+      toast.success("Password reset confirmation email sent. Please check your inbox to complete the reset.");
+    } catch (error: any) {
+      console.error("Error requesting password reset:", error);
+      toast.error(error.message || "Failed to send password reset email");
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -1385,6 +1404,34 @@ const Settings = () => {
                   <p className="text-xs text-muted-foreground">
                     A confirmation email will be sent to your current email address. 
                     You must click the link in that email to complete the change.
+                  </p>
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="space-y-2">
+                  <Label>Reset Password</Label>
+                  <Button
+                    onClick={handlePasswordReset}
+                    disabled={resettingPassword}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {resettingPassword ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending Reset Email...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Send Password Reset Email
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    A confirmation email will be sent to your email address. 
+                    Click the link in that email to set a new password.
                   </p>
                 </div>
               </div>
