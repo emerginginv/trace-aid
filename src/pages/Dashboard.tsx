@@ -413,7 +413,7 @@ const Dashboard = () => {
               </div> : dueTasks.map(task => {
             const taskDate = parseISO(task.dueDate);
             const isOverdue = isPast(taskDate) && !isToday(taskDate);
-            return <div key={task.id} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-primary/20 transition-all hover:shadow-md cursor-pointer" onClick={() => setEditingTask(task)}>
+            return <div key={task.id} onClick={() => setEditingTask(task)} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 hover:border-primary/20 transition-all hover:shadow-md cursor-pointer bg-slate-100">
                     <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-1" onClick={e => e.stopPropagation()} />
                     <div className="flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -494,7 +494,7 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground">No recent updates</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Updates will appear here</p>
               </div> : updates.map(update => <div key={update.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
-                <div onClick={() => setEditingUpdate(update)} className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer">
+                <div onClick={() => setEditingUpdate(update)} className="flex items-start gap-3 p-4 transition-colors cursor-pointer bg-slate-100">
                   <div className="mt-0.5 p-1.5 rounded-lg bg-background">
                     {getUpdateIcon(update.type)}
                   </div>
@@ -548,7 +548,7 @@ const Dashboard = () => {
                 <p className="text-xs text-muted-foreground/70 mt-1">Expenses will appear here</p>
               </div> : <>
                 {expenses.map(expense => <div key={expense.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
-                    <div onClick={() => setEditingExpense(expense)} className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer">
+                    <div onClick={() => setEditingExpense(expense)} className="flex items-start gap-3 p-4 transition-colors cursor-pointer bg-slate-100">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-start justify-between gap-3">
                           <p className="font-medium text-sm leading-tight flex-1">{expense.description}</p>
