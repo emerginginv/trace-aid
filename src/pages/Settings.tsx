@@ -1689,17 +1689,17 @@ const Settings = () => {
                   No matching users found
                 </p>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[60px]">Color</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email Address</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Joined Date</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="min-w-[120px]">Name</TableHead>
+                        <TableHead className="min-w-[180px]">Email Address</TableHead>
+                        <TableHead className="min-w-[140px]">Role</TableHead>
+                        <TableHead className="min-w-[80px]">Status</TableHead>
+                        <TableHead className="min-w-[120px]">Joined Date</TableHead>
+                        <TableHead className="text-right min-w-[80px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
