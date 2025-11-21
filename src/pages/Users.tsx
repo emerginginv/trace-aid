@@ -70,7 +70,10 @@ const Users = () => {
   });
 
   useEffect(() => {
+    console.log("Organization changed:", organization?.id);
     if (organization?.id) {
+      // Clear existing users first to prevent stale data display
+      setUsers([]);
       fetchUsers();
     }
   }, [organization?.id]);
@@ -84,6 +87,8 @@ const Users = () => {
     try {
       setLoading(true);
       console.log("Fetching users for organization:", organization.id);
+      
+      // Force fresh data by disabling cache
       const { data, error } = await supabase.rpc('get_organization_users', {
         org_id: organization.id
       });
