@@ -46,7 +46,6 @@ const caseSchema = z.object({
   case_number: z.string().min(1, "Case number is required").max(50),
   description: z.string().max(1000).optional(),
   status: z.string().min(1, "Status is required"),
-  priority: z.enum(["low", "medium", "high"]),
   account_id: z.string().optional(),
   contact_id: z.string().optional(),
   start_date: z.date(),
@@ -65,7 +64,6 @@ interface CaseFormProps {
     case_number: string;
     description: string | null;
     status: string;
-    priority: string;
     account_id: string | null;
     contact_id: string | null;
     start_date: string;
@@ -99,7 +97,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       case_number: "",
       description: "",
       status: "open",
-      priority: "medium",
       account_id: "",
       contact_id: "",
       start_date: new Date(),
@@ -117,7 +114,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           case_number: editingCase.case_number,
           description: editingCase.description || "",
           status: editingCase.status,
-          priority: editingCase.priority as "low" | "medium" | "high",
           account_id: editingCase.account_id || "",
           contact_id: editingCase.contact_id || "",
           start_date: new Date(editingCase.start_date),
@@ -134,7 +130,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           case_number: "",
           description: "",
           status: "open",
-          priority: "medium",
           account_id: "",
           contact_id: "",
           start_date: new Date(),
@@ -320,7 +315,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         case_number: data.case_number,
         description: data.description,
         status: data.status,
-        priority: data.priority,
         account_id: data.account_id || null,
         contact_id: data.contact_id || null,
         start_date: data.start_date.toISOString().split('T')[0],
@@ -480,28 +474,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priority *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

@@ -30,7 +30,6 @@ interface Case {
   title: string;
   description: string | null;
   status: string;
-  priority: string | null;
   account_id: string | null;
   contact_id: string | null;
   start_date: string | null;
@@ -165,15 +164,6 @@ const CaseDetail = () => {
       };
     }
     return {};
-  };
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      low: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-      medium: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-      high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-      critical: "bg-red-500/10 text-red-500 border-red-500/20"
-    };
-    return colors[priority] || "bg-muted";
   };
   const isClosedCase = () => {
     if (!caseData) return false;
@@ -451,9 +441,6 @@ const CaseDetail = () => {
                     {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
                   </span>}
               </div>}
-            {caseData.priority && <Badge className={getPriorityColor(caseData.priority)}>
-                {caseData.priority}
-              </Badge>}
           </div>
           <p className={`text-sm sm:text-base ${isClosed ? 'text-muted-foreground' : 'text-slate-500'}`}>
             Case #{caseData.case_number}

@@ -21,7 +21,6 @@ interface Case {
   title: string;
   description: string;
   status: string;
-  priority: string;
   start_date: string;
   due_date: string;
   created_at: string;
@@ -36,7 +35,6 @@ const Cases = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
@@ -45,11 +43,6 @@ const Cases = () => {
     value: string;
     color: string;
     status_type?: string;
-  }>>([]);
-  const [priorityPicklists, setPriorityPicklists] = useState<Array<{
-    id: string;
-    value: string;
-    color: string;
   }>>([]);
   const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
   useEffect(() => {
@@ -87,21 +80,6 @@ const Cases = () => {
       
       if (statusData) {
         setStatusPicklists(statusData);
-      }
-
-      // Fetch priority picklists (org-level or global)
-      const {
-        data: priorityData
-      } = await supabase
-        .from("picklists")
-        .select("id, value, color")
-        .eq("type", "case_priority")
-        .eq("is_active", true)
-        .or(`organization_id.eq.${orgMember.organization_id},organization_id.is.null`)
-        .order("display_order");
-      
-      if (priorityData) {
-        setPriorityPicklists(priorityData);
       }
     } catch (error) {
       console.error("Error fetching picklists:", error);
@@ -143,17 +121,6 @@ const Cases = () => {
     }
     return {};
   };
-  const getPriorityStyle = (priority: string) => {
-    const priorityItem = priorityPicklists.find(p => p.value === priority);
-    if (priorityItem?.color) {
-      return {
-        backgroundColor: `${priorityItem.color}20`,
-        color: priorityItem.color,
-        borderColor: `${priorityItem.color}40`
-      };
-    }
-    return {};
-  };
   const isClosedCase = (status: string) => {
     const statusItem = statusPicklists.find(s => s.value === status);
     return statusItem?.status_type === 'closed';
@@ -181,12 +148,11 @@ const Cases = () => {
   const filteredCases = cases.filter(caseItem => {
     const matchesSearch = searchQuery === '' || caseItem.title.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.case_number.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || caseItem.status === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || caseItem.priority === priorityFilter;
 
     // Match status type (open/closed)
     const statusPicklist = statusPicklists.find(s => s.value === caseItem.status);
     const matchesStatusType = statusTypeFilter === 'all' || statusPicklist?.status_type === statusTypeFilter;
-    return matchesSearch && matchesStatus && matchesPriority && matchesStatusType;
+    return matchesSearch && matchesStatus && matchesStatusType;
   });
   if (loading) {
     return <div className="flex items-center justify-center py-12">
@@ -238,15 +204,6 @@ const Cases = () => {
             {statusPicklists.map(status => <SelectItem key={status.id} value={status.value}>{status.value}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Priority" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Priority</SelectItem>
-            {priorityPicklists.map(priority => <SelectItem key={priority.id} value={priority.value}>{priority.value}</SelectItem>)}
-          </SelectContent>
-        </Select>
         <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-7 w-7 p-0">
             <LayoutGrid className="h-3.5 w-3.5" />
@@ -288,9 +245,6 @@ const Cases = () => {
                   <div className="flex gap-2">
                     <Badge className="border" style={getStatusStyle(caseItem.status)}>
                       {caseItem.status}
-                    </Badge>
-                    <Badge className="border" style={getPriorityStyle(caseItem.priority)}>
-                      {caseItem.priority}
                     </Badge>
                   </div>
                 </div>
@@ -336,9 +290,6 @@ const Cases = () => {
                     <Badge className="border" style={getStatusStyle(caseItem.status)}>
                       {caseItem.status}
                     </Badge>
-                    <Badge className="border" style={getPriorityStyle(caseItem.priority)}>
-                      {caseItem.priority}
-                    </Badge>
                   </div>
 
                   <div className="text-xs text-muted-foreground space-y-1">
@@ -371,7 +322,6 @@ const Cases = () => {
                   <TableHead>Case Number</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
                   <TableHead>Start Date</TableHead>
                   <TableHead>Due Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -395,11 +345,6 @@ const Cases = () => {
                     <TableCell>
                       <Badge className="border" style={getStatusStyle(caseItem.status)}>
                         {caseItem.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="border" style={getPriorityStyle(caseItem.priority)}>
-                        {caseItem.priority}
                       </Badge>
                     </TableCell>
                     <TableCell className={isClosed ? 'text-muted-foreground' : ''}>
