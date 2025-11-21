@@ -371,12 +371,12 @@ export function ActivityForm({
               />
             ) : (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4">
                   <FormField
                     control={form.control}
                     name="start_date"
                     render={({ field }) => (
-                      <FormItem className="flex flex-col">
+                      <FormItem className="flex flex-col space-y-2">
                         <FormLabel>Start Date</FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
@@ -384,7 +384,7 @@ export function ActivityForm({
                               <Button
                                 variant="outline"
                                 className={cn(
-                                  "w-full pl-3 text-left font-normal",
+                                  "w-full pl-3 text-left font-normal h-9",
                                   !field.value && "text-muted-foreground"
                                 )}
                               >
@@ -419,10 +419,10 @@ export function ActivityForm({
                     control={form.control}
                     name="start_time"
                     render={({ field }) => (
-                      <FormItem className="sm:w-[140px]">
+                      <FormItem className="flex flex-col space-y-2">
                         <FormLabel>Start Time</FormLabel>
                         <FormControl>
-                          <Input type="time" className="w-full" {...field} />
+                          <Input type="time" className="w-full h-9" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -430,12 +430,12 @@ export function ActivityForm({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4">
                   <FormField
                     control={form.control}
                     name="end_date"
                     render={({ field }) => (
-                      <FormItem className="flex flex-col">
+                      <FormItem className="flex flex-col space-y-2">
                         <FormLabel>End Date</FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
@@ -443,7 +443,7 @@ export function ActivityForm({
                               <Button
                                 variant="outline"
                                 className={cn(
-                                  "w-full pl-3 text-left font-normal",
+                                  "w-full pl-3 text-left font-normal h-9",
                                   !field.value && "text-muted-foreground"
                                 )}
                               >
@@ -478,10 +478,10 @@ export function ActivityForm({
                     control={form.control}
                     name="end_time"
                     render={({ field }) => (
-                      <FormItem className="sm:w-[140px]">
+                      <FormItem className="flex flex-col space-y-2">
                         <FormLabel>End Time</FormLabel>
                         <FormControl>
-                          <Input type="time" className="w-full" {...field} />
+                          <Input type="time" className="w-full h-9" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -491,7 +491,7 @@ export function ActivityForm({
               </div>
             )}
 
-            <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-2">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end pt-4">
               <Button
                 type="button"
                 variant="outline"
