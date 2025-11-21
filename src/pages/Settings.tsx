@@ -424,14 +424,14 @@ const Settings = () => {
 
       setChangingEmail(true);
 
-      // Update user email - Supabase will send confirmation emails to both old and new
-      const { error } = await supabase.auth.updateUser({
-        email: newEmail
+      // Call edge function to request email change
+      const { error } = await supabase.functions.invoke('request-email-change', {
+        body: { newEmail }
       });
 
       if (error) throw error;
 
-      toast.success("Confirmation email sent! Please check both your old and new email addresses to complete the change.");
+      toast.success("Confirmation email sent to your current email address. Please check your inbox to complete the change.");
       setNewEmail("");
     } catch (error: any) {
       console.error("Error changing email:", error);
@@ -1383,8 +1383,8 @@ const Settings = () => {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    A confirmation email will be sent to both your current and new email addresses. 
-                    You must verify the new email before the change takes effect.
+                    A confirmation email will be sent to your current email address. 
+                    You must click the link in that email to complete the change.
                   </p>
                 </div>
               </div>
