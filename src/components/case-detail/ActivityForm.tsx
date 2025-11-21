@@ -370,8 +370,8 @@ export function ActivityForm({
                 )}
               />
             ) : (
-              <>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="start_date"
@@ -419,10 +419,10 @@ export function ActivityForm({
                     control={form.control}
                     name="start_time"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="sm:w-[140px]">
                         <FormLabel>Start Time</FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input type="time" className="w-full" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -430,7 +430,7 @@ export function ActivityForm({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="end_date"
@@ -478,28 +478,29 @@ export function ActivityForm({
                     control={form.control}
                     name="end_time"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="sm:w-[140px]">
                         <FormLabel>End Time</FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input type="time" className="w-full" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-              </>
+              </div>
             )}
 
-            <div className="flex gap-2 justify-end">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
                 {editingActivity ? `Update ${activityType === "task" ? "Task" : "Event"}` : `Add ${activityType === "task" ? "Task" : "Event"}`}
               </Button>
             </div>
