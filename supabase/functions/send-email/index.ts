@@ -1,8 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.1';
-import { Resend } from "https://esm.sh/resend@4.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,8 +26,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending email to:", to);
 
-    if (!Deno.env.get("RESEND_API_KEY")) {
-      throw new Error("Resend API key not configured");
+    const apiKey = Deno.env.get("MAILJET_API_KEY");
+    const secretKey = Deno.env.get("MAILJET_SECRET_KEY");
+
+    if (!apiKey || !secretKey) {
+      throw new Error("Mailjet API credentials not configured");
     }
 
     // Get auth header
@@ -81,34 +81,85 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Default from email - use verified sender from organization settings or fallback
+    let defaultFromEmail = fromEmail || "noreply@yourdomain.com";
+    
+    // Get sender email from organization settings if available
+    if (authHeader) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user } } = await supabase.auth.getUser(token);
+        
+        if (user) {
+          const { data: orgSettings } = await supabase
+            .from('organization_settings')
+            .select('sender_email')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (orgSettings?.sender_email) {
+            defaultFromEmail = orgSettings.sender_email;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching sender email:', error);
+      }
+    }
+
     // Append signature to body if HTML mode
     const finalBody = isHtml ? body + emailSignature : body;
 
     console.log("Email parameters:", { to, subject, isHtml, bodyLength: body?.length, finalBodyLength: finalBody?.length });
 
-    // Send email using Resend
-    const emailPayload: any = {
-      from: fromEmail || `${fromName} <onboarding@resend.dev>`,
-      to: [to],
-      subject: subject,
+    const mailjetPayload = {
+      Messages: [
+        {
+          From: {
+            Email: defaultFromEmail,
+            Name: fromName,
+          },
+          To: [
+            {
+              Email: to,
+            },
+          ],
+          Subject: subject,
+          [isHtml ? "HTMLPart" : "TextPart"]: finalBody,
+        },
+      ],
     };
 
-    if (isHtml) {
-      emailPayload.html = finalBody;
-    } else {
-      emailPayload.text = finalBody;
+    console.log("Mailjet payload structure:", {
+      hasHTMLPart: !!mailjetPayload.Messages[0]["HTMLPart"],
+      hasTextPart: !!mailjetPayload.Messages[0]["TextPart"],
+      isHtml
+    });
+
+    // Mailjet uses Basic Auth with API Key as username and Secret Key as password
+    const credentials = btoa(`${apiKey}:${secretKey}`);
+
+    const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${credentials}`,
+      },
+      body: JSON.stringify(mailjetPayload),
+    });
+
+    const responseData = await mailjetResponse.json();
+
+    if (!mailjetResponse.ok) {
+      console.error("Mailjet API error:", responseData);
+      throw new Error(responseData.ErrorMessage || "Failed to send email");
     }
 
-    const emailResponse = await resend.emails.send(emailPayload);
+    console.log("Email sent successfully:", responseData);
 
-    if (emailResponse.error) {
-      console.error("Resend API error:", emailResponse.error);
-      throw new Error(emailResponse.error.message || "Failed to send email");
-    }
-
-    console.log("Email sent successfully:", emailResponse);
-
-    return new Response(JSON.stringify({ success: true, data: emailResponse }), {
+    return new Response(JSON.stringify({ success: true, data: responseData }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
