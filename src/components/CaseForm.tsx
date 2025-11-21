@@ -461,7 +461,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Objective</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Brief description of the case..."
