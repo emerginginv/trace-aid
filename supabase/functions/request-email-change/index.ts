@@ -67,7 +67,7 @@ serve(async (req) => {
         body: {
           to: user.email,
           subject: "Confirm Email Address Change",
-          html: `
+          body: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Email Address Change Request</h2>
               <p>You requested to change your email address from <strong>${user.email}</strong> to <strong>${newEmail}</strong>.</p>
@@ -82,6 +82,7 @@ serve(async (req) => {
               <p style="color: #666; font-size: 14px;">If you didn't request this change, please ignore this email or contact support if you're concerned about your account security.</p>
             </div>
           `,
+          isHtml: true,
         },
       }
     );
