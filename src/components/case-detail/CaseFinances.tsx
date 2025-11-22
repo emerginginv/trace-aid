@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
 import { InvoiceDetail } from "./InvoiceDetail";
-import { FinanceReports } from "./FinanceReports";
+
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Input } from "@/components/ui/input";
@@ -410,7 +410,6 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
           <TabsTrigger value="time">Time</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="create-invoice">Create Invoice</TabsTrigger>
-          <TabsTrigger value="reports">Reports & Export</TabsTrigger>
         </TabsList>
 
         <TabsContent value="expenses" className="space-y-6">
@@ -997,10 +996,6 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
 
         <TabsContent value="create-invoice">
           <InvoiceFromExpenses caseId={caseId} />
-        </TabsContent>
-
-        <TabsContent value="reports">
-          <FinanceReports caseId={caseId} />
         </TabsContent>
       </Tabs>
 
