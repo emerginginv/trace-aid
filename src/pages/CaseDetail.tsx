@@ -59,7 +59,9 @@ const CaseDetail = () => {
     isAdmin,
     isManager
   } = useUserRole();
-  const { hasPermission } = usePermissions();
+  const {
+    hasPermission
+  } = usePermissions();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
@@ -104,21 +106,19 @@ const CaseDetail = () => {
         }
       } = await supabase.auth.getUser();
       if (!user) return;
-      
+
       // For vendors, we need to check if they're in the investigator_ids array
       // For other roles, check user_id ownership
       const {
         data,
         error
       } = await supabase.from("cases").select("*").eq("id", id).single();
-      
       if (error) throw error;
-      
+
       // Verify access: either user owns the case OR user is in investigator_ids
       if (data.user_id !== user.id && !data.investigator_ids?.includes(user.id)) {
         throw new Error("Access denied");
       }
-      
       setCaseData(data);
 
       // Fetch account if exists
@@ -451,18 +451,14 @@ const CaseDetail = () => {
               <Mail className="h-4 w-4 mr-2" />
               <span className="sm:inline">Send Email</span>
             </Button>
-            {hasPermission('edit_cases') && (
-              <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed} className="bg-zinc-200  w-full sm:w-auto">
+            {hasPermission('edit_cases') && <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed} className="bg-zinc-200  w-full sm:w-auto">
                 <Edit className="h-4 w-4 mr-2" />
                 <span className="sm:inline text-slate-950">Edit</span>
-              </Button>
-            )}
-            {hasPermission('delete_cases') && (
-              <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
+              </Button>}
+            {hasPermission('delete_cases') && <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
                 <Trash2 className="h-4 w-4 mr-2" />
                 <span className="sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
-              </Button>
-            )}
+              </Button>}
           </div>}
       </div>
 
@@ -473,7 +469,7 @@ const CaseDetail = () => {
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4 md:p-6 pt-0">
             {caseData.description && <div>
-                <p className="text-sm font-medium mb-1">Description</p>
+                <p className="text-sm font-medium mb-1">Case Objective   </p>
                 <p className="text-muted-foreground">{caseData.description}</p>
               </div>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
