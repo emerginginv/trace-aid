@@ -18,6 +18,11 @@ import { z } from "zod";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
+  username: z.string()
+    .trim()
+    .min(3, "Username must be at least 3 characters")
+    .max(30, "Username must be at most 30 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
 });
 
 interface EditProfileDialogProps {
@@ -27,6 +32,7 @@ interface EditProfileDialogProps {
   currentProfile: {
     full_name: string | null;
     email: string;
+    username: string;
     avatar_url?: string | null;
   };
 }
@@ -38,6 +44,7 @@ export function EditProfileDialog({
   currentProfile,
 }: EditProfileDialogProps) {
   const [fullName, setFullName] = useState(currentProfile.full_name || "");
+  const [username, setUsername] = useState(currentProfile.username || "");
   const [avatarUrl, setAvatarUrl] = useState(currentProfile.avatar_url || "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -53,6 +60,7 @@ export function EditProfileDialog({
 
   useEffect(() => {
     setFullName(currentProfile.full_name || "");
+    setUsername(currentProfile.username || "");
     setAvatarUrl(currentProfile.avatar_url || "");
   }, [currentProfile]);
 
@@ -149,6 +157,7 @@ export function EditProfileDialog({
       // Validate input
       const validation = profileSchema.safeParse({
         full_name: fullName,
+        username: username,
       });
 
       if (!validation.success) {
@@ -163,10 +172,25 @@ export function EditProfileDialog({
 
       setSaving(true);
 
+      // Check if username is already taken by another user
+      const { data: existingUser } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username.trim())
+        .neq("id", userId)
+        .maybeSingle();
+
+      if (existingUser) {
+        toast.error("This username is already taken. Please choose another.");
+        setSaving(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("profiles")
         .update({
           full_name: fullName.trim(),
+          username: username.trim(),
           avatar_url: avatarUrl || null,
         })
         .eq("id", userId);
@@ -253,6 +277,21 @@ export function EditProfileDialog({
               onChange={(e) => setFullName(e.target.value)}
               maxLength={100}
             />
+          </div>
+
+          {/* Username */}
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              maxLength={30}
+            />
+            <p className="text-xs text-muted-foreground">
+              Username can only contain letters, numbers, and underscores
+            </p>
           </div>
 
           {/* Email (read-only) */}

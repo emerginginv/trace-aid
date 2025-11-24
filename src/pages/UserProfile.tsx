@@ -15,6 +15,7 @@ const UserProfile = () => {
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null;
     email: string;
+    username: string;
     role: string;
     avatar_url?: string | null;
   } | null>(null);
@@ -35,7 +36,7 @@ const UserProfile = () => {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("full_name, email, avatar_url")
+        .select("full_name, email, username, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -53,6 +54,7 @@ const UserProfile = () => {
       setUserProfile({
         full_name: profile?.full_name || null,
         email: profile?.email || user.email || "",
+        username: profile?.username || "",
         role: userRole?.role || "member",
         avatar_url: profile?.avatar_url || null,
       });
@@ -173,6 +175,20 @@ const UserProfile = () => {
 
                 <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Username
+                    </p>
+                    <p className="text-base font-semibold truncate">
+                      @{userProfile.username}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
                     <Mail className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -227,6 +243,7 @@ const UserProfile = () => {
         currentProfile={{
           full_name: userProfile?.full_name || null,
           email: userProfile?.email || "",
+          username: userProfile?.username || "",
           avatar_url: userProfile?.avatar_url || null,
         }}
       />
