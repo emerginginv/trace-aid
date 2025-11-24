@@ -46,6 +46,11 @@ import { CSS } from '@dnd-kit/utilities';
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
+  username: z.string()
+    .trim()
+    .min(3, "Username must be at least 3 characters")
+    .max(30, "Username must be at most 30 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
   email: z.string().email("Invalid email address"),
 });
 
@@ -92,6 +97,7 @@ const Settings = () => {
 
   // User Preferences State
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [changingEmail, setChangingEmail] = useState(false);
@@ -237,6 +243,7 @@ const Settings = () => {
 
       if (profile) {
         setFullName(profile.full_name || "");
+        setUsername(profile.username || "");
         setNotificationEmail(profile.notification_email ?? true);
         setNotificationPush(profile.notification_push ?? true);
       }
@@ -376,6 +383,7 @@ const Settings = () => {
       // Validate input
       const validation = profileSchema.safeParse({
         full_name: fullName,
+        username: username,
         email: email,
       });
 
@@ -388,10 +396,25 @@ const Settings = () => {
 
       if (!currentUserId) return;
 
+      // Check if username is already taken by another user
+      const { data: existingUser } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username.trim())
+        .neq("id", currentUserId)
+        .maybeSingle();
+
+      if (existingUser) {
+        toast.error("This username is already taken. Please choose another.");
+        setSaving(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("profiles")
         .update({
           full_name: fullName,
+          username: username.trim(),
           notification_email: notificationEmail,
           notification_push: notificationPush,
         })
@@ -1340,6 +1363,20 @@ const Settings = () => {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter your full name"
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your username"
+                    maxLength={30}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Username can only contain letters, numbers, and underscores
+                  </p>
                 </div>
 
                 <div>
