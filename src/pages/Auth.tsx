@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { Shield, Eye, EyeOff } from "lucide-react";
 
 const signInSchema = z.object({
-  email: z.string().trim().email("Invalid email format").max(255, "Email must be less than 255 characters"),
+  email: z.string().trim().min(1, "Email or username is required").max(255, "Input must be less than 255 characters"),
   password: z.string().min(1, "Password is required"),
 });
 
