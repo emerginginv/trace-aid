@@ -262,10 +262,11 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
       if (!orgMember) return;
 
-      // Get all case numbers in THIS organization to find the highest
+      // Get all case numbers in THIS organization to find the highest base case number
+      // Exclude instance numbers (e.g., CASE-00001-02) and only count base numbers
       const { data: existingCases, error } = await supabase
         .from("cases")
-        .select("case_number")
+        .select("case_number, instance_number")
         .eq("organization_id", orgMember.organization_id);
 
       if (error) {
@@ -275,8 +276,9 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
       let nextNumber = 1;
       if (existingCases && existingCases.length > 0) {
-        // Extract all numbers and find the highest
+        // Extract base case numbers (only cases with instance_number = 1)
         const numbers = existingCases
+          .filter(c => c.instance_number === 1) // Only count original cases
           .map(c => {
             const match = c.case_number.match(/CASE-(\d+)/);
             return match ? parseInt(match[1], 10) : 0;
@@ -351,6 +353,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         const { data: newCase, error } = await supabase.from("cases").insert([{
           ...caseData,
           user_id: user.id,
+          instance_number: 1, // New cases always start at instance 1
         }]).select().single();
 
         if (error) throw error;

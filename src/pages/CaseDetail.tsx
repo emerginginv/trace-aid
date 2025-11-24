@@ -20,6 +20,7 @@ import { CaseCalendar } from "@/components/case-detail/CaseCalendar";
 import { NotificationHelpers } from "@/lib/notifications";
 import { CaseTeamManager } from "@/components/case-detail/CaseTeamManager";
 import { EmailComposer } from "@/components/EmailComposer";
+import { RelatedCases } from "@/components/case-detail/RelatedCases";
 import { Mail } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -39,6 +40,8 @@ interface Case {
   investigator_ids: string[];
   closed_by_user_id: string | null;
   closed_at: string | null;
+  parent_case_id: string | null;
+  instance_number: number;
 }
 interface Account {
   id: string;
@@ -264,73 +267,139 @@ const CaseDetail = () => {
     if (!caseData) return;
 
     // Show confirmation dialog
-    if (!confirm("Are you sure you want to reopen this case?")) {
+    if (!confirm("Reopening this case will create a new instance with the same case number. Continue?")) {
       return;
     }
+
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Get user profile for activity log
-      const {
-        data: profile
-      } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      // Get user profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
       const userName = profile?.full_name || user.email || "Unknown User";
 
       // Find a default "open" status
-      const openStatus = caseStatuses.find(s => s.status_type === 'open');
+      const openStatus = caseStatuses.find((s) => s.status_type === "open");
       if (!openStatus) {
         toast({
           title: "Error",
           description: "No open status available. Please configure an open status first.",
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
 
-      // Update case to reopen it
-      const {
-        error
-      } = await supabase.from("cases").update({
-        status: openStatus.value
-        // Keep closed_by_user_id and closed_at for history
-      }).eq("id", id);
-      if (error) throw error;
+      // Get the root case (the original case in the series)
+      const rootCaseId = caseData.parent_case_id || caseData.id;
 
-      // Create activity log entry
-      const {
-        error: activityError
-      } = await supabase.from("case_activities").insert({
-        case_id: id,
+      // Get all related cases to determine the next instance number
+      const { data: relatedCases } = await supabase.rpc("get_related_cases", {
+        case_id: caseData.id,
+      });
+
+      const maxInstance = relatedCases
+        ? Math.max(...relatedCases.map((c: any) => c.instance_number))
+        : caseData.instance_number;
+      const newInstanceNumber = maxInstance + 1;
+
+      // Extract base case number (remove any existing instance suffix)
+      const baseCaseNumber = caseData.case_number.split("-").slice(0, -1).join("-") || caseData.case_number;
+      const newCaseNumber = `${baseCaseNumber}-${String(newInstanceNumber).padStart(2, "0")}`;
+
+      // Get current case subjects to copy
+      const { data: subjects } = await supabase
+        .from("case_subjects")
+        .select("*")
+        .eq("case_id", caseData.id);
+
+      // Create new case instance
+      const { data: newCase, error: caseError } = await supabase
+        .from("cases")
+        .insert({
+          case_number: newCaseNumber,
+          title: caseData.title,
+          description: caseData.description,
+          status: openStatus.value,
+          account_id: caseData.account_id,
+          contact_id: caseData.contact_id,
+          case_manager_id: caseData.case_manager_id,
+          investigator_ids: caseData.investigator_ids,
+          parent_case_id: rootCaseId,
+          instance_number: newInstanceNumber,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (caseError) throw caseError;
+
+      // Copy subjects to new case instance
+      if (subjects && subjects.length > 0) {
+        const subjectsToInsert = subjects.map((subject) => ({
+          case_id: newCase.id,
+          subject_type: subject.subject_type,
+          name: subject.name,
+          details: subject.details,
+          notes: subject.notes,
+          profile_image_url: subject.profile_image_url,
+          user_id: user.id,
+          organization_id: subject.organization_id,
+        }));
+
+        const { error: subjectsError } = await supabase
+          .from("case_subjects")
+          .insert(subjectsToInsert);
+
+        if (subjectsError) {
+          console.error("Error copying subjects:", subjectsError);
+        }
+      }
+
+      // Create activity log entry on the OLD case
+      await supabase.from("case_activities").insert({
+        case_id: caseData.id,
         user_id: user.id,
         activity_type: "Status Change",
         title: "Case Reopened",
-        description: `Case reopened by ${userName}`,
-        status: "completed"
+        description: `Case reopened as new instance ${newCaseNumber} by ${userName}`,
+        status: "completed",
       });
-      if (activityError) {
-        console.error("Error creating activity log:", activityError);
-      }
 
-      // Update local state
-      setCaseData({
-        ...caseData,
-        status: openStatus.value
+      // Create activity log entry on the NEW case
+      await supabase.from("case_activities").insert({
+        case_id: newCase.id,
+        user_id: user.id,
+        activity_type: "Status Change",
+        title: "Case Instance Created",
+        description: `New case instance created from ${caseData.case_number} by ${userName}`,
+        status: "completed",
       });
+
+      // Create notification
+      await NotificationHelpers.caseStatusChanged(
+        newCaseNumber,
+        openStatus.value,
+        newCase.id
+      );
+
       toast({
         title: "Success",
-        description: "Case reopened successfully"
+        description: `Case reopened as ${newCaseNumber}`,
       });
+
+      // Navigate to the new case
+      navigate(`/cases/${newCase.id}`);
     } catch (error) {
       console.error("Error reopening case:", error);
       toast({
         title: "Error",
         description: "Failed to reopen case",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -496,6 +565,7 @@ const CaseDetail = () => {
         {!isVendor && <div className="space-y-4 sm:space-y-6">
             <RetainerFundsWidget caseId={id!} />
             <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} investigatorIds={caseData.investigator_ids || []} onUpdate={fetchCaseData} />
+            <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
           </div>}
       </div>
 

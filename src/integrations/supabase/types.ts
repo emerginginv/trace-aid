@@ -456,8 +456,10 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          instance_number: number
           investigator_ids: string[] | null
           organization_id: string | null
+          parent_case_id: string | null
           start_date: string | null
           status: string
           title: string
@@ -475,8 +477,10 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          instance_number?: number
           investigator_ids?: string[] | null
           organization_id?: string | null
+          parent_case_id?: string | null
           start_date?: string | null
           status?: string
           title: string
@@ -494,8 +498,10 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          instance_number?: number
           investigator_ids?: string[] | null
           organization_id?: string | null
+          parent_case_id?: string | null
           start_date?: string | null
           status?: string
           title?: string
@@ -529,6 +535,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_parent_case_id_fkey"
+            columns: ["parent_case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
             referencedColumns: ["id"]
           },
           {
@@ -1327,6 +1340,18 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["app_role"]
           status: string
+        }[]
+      }
+      get_related_cases: {
+        Args: { case_id: string }
+        Returns: {
+          case_number: string
+          closed_at: string
+          created_at: string
+          id: string
+          instance_number: number
+          status: string
+          title: string
         }[]
       }
       get_user_organization: { Args: { _user_id: string }; Returns: string }
