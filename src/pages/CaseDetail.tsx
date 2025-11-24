@@ -307,8 +307,22 @@ const CaseDetail = () => {
         : caseData.instance_number;
       const newInstanceNumber = maxInstance + 1;
 
-      // Extract base case number (remove any existing instance suffix)
-      const baseCaseNumber = caseData.case_number.split("-").slice(0, -1).join("-") || caseData.case_number;
+      // For the base case number, use the original case number (without any instance suffix)
+      // If this is already an instance (has a suffix), get the root case's number
+      let baseCaseNumber = caseData.case_number;
+      if (caseData.parent_case_id) {
+        // This is already a reopened case, get the root case number
+        const { data: rootCase } = await supabase
+          .from("cases")
+          .select("case_number")
+          .eq("id", rootCaseId)
+          .single();
+        if (rootCase) {
+          baseCaseNumber = rootCase.case_number;
+        }
+      }
+      
+      // Create the new case number with instance suffix
       const newCaseNumber = `${baseCaseNumber}-${String(newInstanceNumber).padStart(2, "0")}`;
 
       // Get current case subjects to copy
