@@ -1164,6 +1164,7 @@ export type Database = {
           notification_push: boolean | null
           notification_sms: boolean | null
           updated_at: string | null
+          username: string
         }
         Insert: {
           avatar_url?: string | null
@@ -1177,6 +1178,7 @@ export type Database = {
           notification_push?: boolean | null
           notification_sms?: boolean | null
           updated_at?: string | null
+          username: string
         }
         Update: {
           avatar_url?: string | null
@@ -1190,6 +1192,7 @@ export type Database = {
           notification_push?: boolean | null
           notification_sms?: boolean | null
           updated_at?: string | null
+          username?: string
         }
         Relationships: []
       }

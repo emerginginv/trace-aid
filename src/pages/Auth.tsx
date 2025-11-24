@@ -218,8 +218,27 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      let loginEmail = data.email;
+
+      // Check if input is a username (doesn't contain @)
+      if (!data.email.includes("@")) {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("username", data.email)
+          .maybeSingle();
+
+        if (profileError || !profile) {
+          toast.error("Username not found");
+          setLoading(false);
+          return;
+        }
+
+        loginEmail = profile.email;
+      }
+
       const { data: authData, error } = await supabase.auth.signInWithPassword({
-        email: data.email,
+        email: loginEmail,
         password: data.password,
       });
 
@@ -360,11 +379,11 @@ const Auth = () => {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel>Email or Username</FormLabel>
                           <FormControl>
                             <Input
-                              type="email"
-                              placeholder="your@email.com"
+                              type="text"
+                              placeholder="Enter username or email"
                               {...field}
                             />
                           </FormControl>
