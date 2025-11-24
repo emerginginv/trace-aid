@@ -272,6 +272,23 @@ const CaseDetail = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Check if this case has already been reopened
+      const { data: existingReopen } = await supabase
+        .from("cases")
+        .select("id")
+        .eq("parent_case_id", caseData.id)
+        .maybeSingle();
+
+      if (existingReopen) {
+        toast({
+          title: "Cannot Reopen",
+          description: "This case has already been reopened. You cannot reopen the same case multiple times.",
+          variant: "destructive",
+        });
+        setReopenDialogOpen(false);
+        return;
+      }
+
       // Get user profile
       const { data: profile } = await supabase
         .from("profiles")
@@ -320,7 +337,9 @@ const CaseDetail = () => {
       }
       
       // Create the new case number with instance suffix
-      const newCaseNumber = `${baseCaseNumber}-${String(newInstanceNumber).padStart(2, "0")}`;
+      // Instance 2 becomes -01, instance 3 becomes -02, etc.
+      const instanceSuffix = String(newInstanceNumber - 1).padStart(2, "0");
+      const newCaseNumber = `${baseCaseNumber}-${instanceSuffix}`;
 
       // Get current case subjects to copy
       const { data: subjects } = await supabase
@@ -627,7 +646,7 @@ const CaseDetail = () => {
         open={reopenDialogOpen}
         onOpenChange={setReopenDialogOpen}
         title="Reopen Case"
-        description={`Reopening this case will create a new instance with case number ${caseData?.case_number}-${String((caseData?.instance_number || 0) + 1).padStart(2, "0")}. All subjects will be copied to the new instance. Continue?`}
+        description={`Reopening this case will create a new instance with case number ${caseData?.case_number}-${String((caseData?.instance_number || 1)).padStart(2, "0")}. All subjects will be copied to the new instance. Continue?`}
         confirmLabel="Reopen Case"
         cancelLabel="Cancel"
         onConfirm={handleReopenCase}
