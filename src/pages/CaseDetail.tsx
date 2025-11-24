@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronLeft, Edit, Trash2, Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { CaseForm } from "@/components/CaseForm";
 import { CaseSubjects } from "@/components/case-detail/CaseSubjects";
 import { CaseUpdates } from "@/components/case-detail/CaseUpdates";
@@ -79,6 +80,7 @@ const CaseDetail = () => {
     status_type?: string;
   }>>([]);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   useEffect(() => {
     fetchCaseData();
     fetchCaseStatuses();
@@ -265,11 +267,6 @@ const CaseDetail = () => {
   };
   const handleReopenCase = async () => {
     if (!caseData) return;
-
-    // Show confirmation dialog
-    if (!confirm("Reopening this case will create a new instance with the same case number. Continue?")) {
-      return;
-    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -483,7 +480,7 @@ const CaseDetail = () => {
                     Closed on {new Date(caseData.closed_at).toLocaleDateString()} at {new Date(caseData.closed_at).toLocaleTimeString()}
                   </span>}
               </div>
-              {(isAdmin || isManager) && <Button variant="outline" size="sm" onClick={handleReopenCase} className="self-start sm:self-auto">
+              {(isAdmin || isManager) && <Button variant="outline" size="sm" onClick={() => setReopenDialogOpen(true)} className="self-start sm:self-auto">
                   Reopen Case
                 </Button>}
             </div>
@@ -625,6 +622,17 @@ const CaseDetail = () => {
       <CaseForm open={editFormOpen} onOpenChange={setEditFormOpen} onSuccess={fetchCaseData} editingCase={caseData || undefined} />
       
       <EmailComposer open={emailComposerOpen} onOpenChange={setEmailComposerOpen} defaultTo={contact?.first_name && contact?.last_name ? `${contact.first_name} ${contact.last_name}` : undefined} defaultSubject={`Update on Case: ${caseData?.title}`} caseId={id} />
+      
+      <ConfirmationDialog
+        open={reopenDialogOpen}
+        onOpenChange={setReopenDialogOpen}
+        title="Reopen Case"
+        description={`Reopening this case will create a new instance with case number ${caseData?.case_number}-${String((caseData?.instance_number || 0) + 1).padStart(2, "0")}. All subjects will be copied to the new instance. Continue?`}
+        confirmLabel="Reopen Case"
+        cancelLabel="Cancel"
+        onConfirm={handleReopenCase}
+        variant="default"
+      />
     </div>;
 };
 export default CaseDetail;
