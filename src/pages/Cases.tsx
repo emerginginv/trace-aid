@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, LayoutGrid, List, Eye, Trash2 } from "lucide-react";
+import { Plus, Briefcase, Search, LayoutGrid, List, Trash2 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
@@ -26,6 +27,7 @@ interface Case {
   created_at: string;
 }
 const Cases = () => {
+  const navigate = useNavigate();
   const {
     isVendor
   } = useUserRole();
@@ -258,12 +260,10 @@ const Cases = () => {
                   {caseItem.due_date && <span>Due: {new Date(caseItem.due_date).toLocaleDateString()}</span>}
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="icon" asChild>
-                    <Link to={`/cases/${caseItem.id}`}>
-                      <Eye className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  {hasPermission('delete_cases') && <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
+                  {hasPermission('delete_cases') && <Button variant="ghost" size="icon" onClick={(e) => {
+                      e.preventDefault();
+                      handleDeleteClick(caseItem.id);
+                    }}>
                       <Trash2 className="h-4 w-4" />
                     </Button>}
                 </div>
@@ -272,9 +272,19 @@ const Cases = () => {
         </div> : <>
           {/* Mobile Card View */}
           <div className="block sm:hidden space-y-4">
-            {filteredCases.map(caseItem => {
+          {filteredCases.map(caseItem => {
           const isClosed = isClosedCase(caseItem.status);
-          return <Card key={caseItem.id} className={`p-4 ${isClosed ? 'opacity-60' : ''}`}>
+          return <Card key={caseItem.id} className={`p-4 ${isClosed ? 'opacity-60' : ''} cursor-pointer hover:shadow-md transition-all`}
+                  onClick={() => navigate(`/cases/${caseItem.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(`/cases/${caseItem.id}`);
+                    }
+                  }}
+                >
                 <div className="space-y-3">
                   <div>
                     <div className="font-semibold text-sm">{caseItem.case_number}</div>
@@ -297,18 +307,17 @@ const Cases = () => {
                     {caseItem.due_date && <div>Due: {new Date(caseItem.due_date).toLocaleDateString()}</div>}
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" asChild className="flex-1">
-                      <Link to={`/cases/${caseItem.id}`}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        View
-                      </Link>
-                    </Button>
-                    {hasPermission('delete_cases') && <Button variant="outline" size="sm" onClick={() => handleDeleteClick(caseItem.id)} className="flex-1">
+                  {hasPermission('delete_cases') && (
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(caseItem.id);
+                      }} className="flex-1">
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
-                      </Button>}
-                  </div>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </Card>;
         })}
@@ -330,7 +339,19 @@ const Cases = () => {
               <TableBody>
                 {filteredCases.map(caseItem => {
               const isClosed = isClosedCase(caseItem.status);
-              return <TableRow key={caseItem.id} className={`cursor-pointer hover:bg-muted/50 ${isClosed ? 'opacity-60' : ''}`}>
+              return <TableRow 
+                  key={caseItem.id} 
+                  className={`cursor-pointer hover:bg-muted/50 ${isClosed ? 'opacity-60' : ''}`}
+                  onClick={() => navigate(`/cases/${caseItem.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(`/cases/${caseItem.id}`);
+                    }
+                  }}
+                >
                     <TableCell className={`font-medium ${isClosed ? 'text-muted-foreground' : ''}`}>
                       {caseItem.case_number}
                     </TableCell>
@@ -355,12 +376,14 @@ const Cases = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={`/cases/${caseItem.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        {hasPermission('delete_cases') && <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
+                        {hasPermission('delete_cases') && <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(caseItem.id);
+                            }}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>}
                       </div>

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Loader2, DollarSign, Receipt, Wallet, Search, Eye, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { Loader2, DollarSign, Receipt, Wallet, Search, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
 import { Button } from "@/components/ui/button";
@@ -417,7 +417,16 @@ const Finance = () => {
                 {paginatedRetainerBalances.map((balance) => (
                   <TableRow
                     key={balance.case_id}
-                    className="hover:bg-muted/50"
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/cases/${balance.case_id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(`/cases/${balance.case_id}`);
+                      }
+                    }}
                   >
                     <TableCell className="font-medium">{balance.case_title}</TableCell>
                     <TableCell>{balance.case_number}</TableCell>
@@ -430,16 +439,7 @@ const Finance = () => {
                         : "N/A"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/cases/${balance.case_id}`)}
-                          title="View case"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {/* Actions column - row is already clickable */}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -746,7 +746,16 @@ const Finance = () => {
                 {paginatedInvoices.map((invoice) => (
                   <TableRow 
                     key={invoice.id}
-                    className="hover:bg-muted/50"
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/invoices/${invoice.id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(`/invoices/${invoice.id}`);
+                      }
+                    }}
                   >
                     <TableCell className="font-medium">
                       {invoice.invoice_number || "N/A"}
@@ -790,19 +799,14 @@ const Finance = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/invoices/${invoice.id}`)}
-                          title="View invoice"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
                         {invoice.status !== "paid" && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setShowPayModal(invoice)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowPayModal(invoice);
+                            }}
                             title="Record payment"
                           >
                             <CircleDollarSign className="h-4 w-4" />
@@ -811,7 +815,10 @@ const Finance = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setEditingInvoice(invoice.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingInvoice(invoice.id);
+                          }}
                           title="Edit invoice"
                         >
                           <Pencil className="h-4 w-4" />
@@ -819,7 +826,8 @@ const Finance = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={async () => {
+                          onClick={async (e) => {
+                            e.stopPropagation();
                             if (confirm("Are you sure you want to delete this invoice?")) {
                               const { error } = await supabase
                                 .from("invoices")
