@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, User, Search, LayoutGrid, List, Eye, Edit, Trash2, Mail } from "lucide-react";
+import { Plus, User, Search, LayoutGrid, List, Edit, Trash2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { ContactForm } from "@/components/ContactForm";
 import { EmailComposer } from "@/components/EmailComposer";
@@ -182,7 +182,19 @@ const Contacts = () => {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredContacts.map((contact) => (
-            <Card key={contact.id} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={contact.id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/contacts/${contact.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate(`/contacts/${contact.id}`);
+                }
+              }}
+            >
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <Avatar>
@@ -214,7 +226,8 @@ const Contacts = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedContactEmail(contact.email);
                         setEmailSubject(`Message for ${contact.first_name} ${contact.last_name}`);
                         setEmailComposerOpen(true);
@@ -225,20 +238,14 @@ const Contacts = () => {
                       Email
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/contacts/${contact.id}`)}
-                    className="flex-1"
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    View
-                  </Button>
                   {hasPermission('edit_contacts') && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => navigate(`/contacts/${contact.id}/edit`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/contacts/${contact.id}/edit`);
+                      }}
                       className="flex-1"
                     >
                       <Edit className="w-4 h-4 mr-1" />
@@ -249,7 +256,8 @@ const Contacts = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setContactToDelete(contact.id);
                         setDeleteDialogOpen(true);
                       }}
@@ -277,7 +285,19 @@ const Contacts = () => {
             </TableHeader>
             <TableBody>
               {filteredContacts.map((contact) => (
-                <TableRow key={contact.id}>
+                <TableRow 
+                  key={contact.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => navigate(`/contacts/${contact.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(`/contacts/${contact.id}`);
+                    }
+                  }}
+                >
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
@@ -299,7 +319,8 @@ const Contacts = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedContactEmail(contact.email);
                             setEmailSubject(`Message for ${contact.first_name} ${contact.last_name}`);
                             setEmailComposerOpen(true);
@@ -309,19 +330,14 @@ const Contacts = () => {
                           <Mail className="w-4 h-4" />
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/contacts/${contact.id}`)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
                       {hasPermission('edit_contacts') && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/contacts/${contact.id}/edit`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/contacts/${contact.id}/edit`);
+                          }}
                           className="h-8 w-8 p-0"
                         >
                           <Edit className="w-4 h-4" />
@@ -331,7 +347,8 @@ const Contacts = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setContactToDelete(contact.id);
                             setDeleteDialogOpen(true);
                           }}

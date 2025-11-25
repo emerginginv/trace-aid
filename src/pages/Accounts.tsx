@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Building2, Search, LayoutGrid, List, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Building2, Search, LayoutGrid, List, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AccountForm } from "@/components/AccountForm";
 import { Input } from "@/components/ui/input";
@@ -191,7 +191,19 @@ const Accounts = () => {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {filteredAccounts.map((account) => (
-            <Card key={account.id} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={account.id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/accounts/${account.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate(`/accounts/${account.id}`);
+                }
+              }}
+            >
               <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-primary" />
@@ -216,20 +228,14 @@ const Accounts = () => {
                   )}
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/accounts/${account.id}`)}
-                    className="flex-1"
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    View
-                  </Button>
                   {hasPermission('edit_accounts') && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => navigate(`/accounts/${account.id}/edit`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/accounts/${account.id}/edit`);
+                      }}
                       className="flex-1"
                     >
                       <Edit className="w-4 h-4 mr-1" />
@@ -240,7 +246,8 @@ const Accounts = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setAccountToDelete(account.id);
                         setDeleteDialogOpen(true);
                       }}
@@ -270,7 +277,19 @@ const Accounts = () => {
             </TableHeader>
             <TableBody>
               {filteredAccounts.map((account) => (
-                <TableRow key={account.id}>
+                <TableRow 
+                  key={account.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => navigate(`/accounts/${account.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(`/accounts/${account.id}`);
+                    }
+                  }}
+                >
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-primary" />
@@ -285,19 +304,14 @@ const Accounts = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/accounts/${account.id}`)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
                       {hasPermission('edit_accounts') && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/accounts/${account.id}/edit`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/accounts/${account.id}/edit`);
+                          }}
                           className="h-8 w-8 p-0"
                         >
                           <Edit className="w-4 h-4" />
@@ -307,7 +321,8 @@ const Accounts = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setAccountToDelete(account.id);
                             setDeleteDialogOpen(true);
                           }}

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Eye, Pencil, X } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -647,7 +647,19 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
             const signedUrl = previewUrls[attachment.id];
 
             return (
-              <Card key={attachment.id} className="overflow-hidden">
+              <Card 
+                key={attachment.id} 
+                className="overflow-hidden cursor-pointer hover:shadow-lg transition-all"
+                onClick={() => handlePreview(attachment)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handlePreview(attachment);
+                  }
+                }}
+              >
                 <CardContent className="p-3">
                   <div className="w-full h-40 bg-muted rounded overflow-hidden flex items-center justify-center">
                     {attachment.file_type.startsWith("image/") && signedUrl ? (
@@ -692,16 +704,10 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handlePreview(attachment)}
-                      className="h-7 sm:h-8 text-xs px-2"
-                    >
-                      <Eye className="h-3 w-3 sm:mr-1" />
-                      <span className="hidden sm:inline">View</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(attachment)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(attachment);
+                      }}
                       className="h-7 sm:h-8 text-xs px-2"
                     >
                       <Pencil className="h-3 w-3 sm:mr-1" />
@@ -710,7 +716,10 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDownload(attachment)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(attachment);
+                      }}
                       className="h-7 sm:h-8 text-xs px-2"
                     >
                       <Download className="h-3 w-3 sm:mr-1" />
@@ -719,7 +728,10 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(attachment)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(attachment);
+                      }}
                       className="h-7 sm:h-8 text-xs px-2 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-3 w-3 sm:mr-1" />
@@ -748,7 +760,19 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                 const signedUrl = previewUrls[attachment.id];
                 
                 return (
-                <TableRow key={attachment.id} className="text-sm">
+                <TableRow 
+                  key={attachment.id} 
+                  className="text-sm cursor-pointer hover:bg-muted/50"
+                  onClick={() => handlePreview(attachment)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handlePreview(attachment);
+                    }
+                  }}
+                >
                   <TableCell className="py-1.5">
                     <div className="flex items-center justify-center">
                       {attachment.file_type.startsWith("image/") && signedUrl ? (
@@ -794,16 +818,10 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handlePreview(attachment)}
-                        className="h-7 w-7 sm:h-8 sm:w-8"
-                        title="Preview"
-                      >
-                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(attachment)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(attachment);
+                        }}
                         className="h-7 w-7 sm:h-8 sm:w-8"
                         title="Edit"
                       >
@@ -812,7 +830,10 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDownload(attachment)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload(attachment);
+                        }}
                         className="h-7 w-7 sm:h-8 sm:w-8"
                         title="Download"
                       >
@@ -821,8 +842,11 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(attachment)}
-                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(attachment);
+                        }}
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
                         title="Delete"
                       >
                         <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />

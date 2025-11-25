@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, Eye, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical, Edit, CheckCircle2, Trash2 as Trash2Icon } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical, Edit, CheckCircle2, Trash2 as Trash2Icon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
@@ -689,22 +689,15 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          {finance.finance_type === "invoice" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setSelectedInvoiceId(finance.id)}
-                              title="View invoice"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          )}
                           {finance.finance_type === "expense" && (
                             <>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleApprove(finance.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApprove(finance.id);
+                                }}
                                 title="Approve expense"
                               >
                                 <CheckCircle className="h-4 w-4 text-green-500" />
@@ -712,7 +705,10 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleReject(finance.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReject(finance.id);
+                                }}
                                 title="Reject expense"
                               >
                                 <XCircle className="h-4 w-4 text-red-500" />
@@ -722,14 +718,20 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleEdit(finance)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(finance);
+                            }}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(finance.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(finance.id);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -947,15 +949,8 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => window.location.href = `/invoices/${invoice.id}`}
-                              title="View invoice"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 // Convert invoice to finance format for editing
                                 const financeData = {
                                   id: invoice.id,
