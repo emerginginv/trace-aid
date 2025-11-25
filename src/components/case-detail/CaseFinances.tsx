@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical, Edit, CheckCircle2, Trash2 as Trash2Icon } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
@@ -857,13 +857,13 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEdit(finance)}>
-                                  <Edit className="mr-2 h-4 w-4" />
+                                  <Pencil className="mr-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
                                 {finance.status === "pending" && (
                                   <>
                                     <DropdownMenuItem onClick={() => handleApprove(finance.id)}>
-                                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                                      <CheckCircle className="mr-2 h-4 w-4" />
                                       Approve
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleReject(finance.id)}>
@@ -876,7 +876,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                                   onClick={() => handleDelete(finance.id)}
                                   className="text-destructive"
                                 >
-                                  <Trash2Icon className="mr-2 h-4 w-4" />
+                                  <Trash2 className="mr-2 h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
