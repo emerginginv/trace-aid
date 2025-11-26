@@ -58,19 +58,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user already exists
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
+    // Check if user already exists in auth.users by trying to get them via email
+    // We query auth.users directly since profiles might not exist if previous signup failed
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const existingAuthUser = authUsers.users.find(u => u.email === email);
 
-    // If user exists, check if they're already in this organization
-    if (existingProfile) {
+    if (existingAuthUser) {
       const { data: existingMember } = await supabase
         .from('organization_members')
         .select('id')
-        .eq('user_id', existingProfile.id)
+        .eq('user_id', existingAuthUser.id)
         .eq('organization_id', organizationId)
         .maybeSingle();
 
@@ -85,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { error: orgMemberError } = await supabase
         .from('organization_members')
         .insert({
-          user_id: existingProfile.id,
+          user_id: existingAuthUser.id,
           organization_id: organizationId,
           role: role,
         });
@@ -102,12 +99,12 @@ const handler = async (req: Request): Promise<Response> => {
       const { error: deleteRoleError } = await supabase
         .from('user_roles')
         .delete()
-        .eq('user_id', existingProfile.id);
+        .eq('user_id', existingAuthUser.id);
 
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
-          user_id: existingProfile.id,
+          user_id: existingAuthUser.id,
           role: role,
         });
 
@@ -133,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ 
           success: true,
           user: {
-            id: existingProfile.id,
+            id: existingAuthUser.id,
             email: email,
           },
           message: 'Existing user added to organization successfully'
