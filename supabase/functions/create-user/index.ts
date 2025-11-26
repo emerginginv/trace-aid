@@ -65,10 +65,80 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('email', email)
       .maybeSingle();
 
+    // If user exists, check if they're already in this organization
     if (existingProfile) {
+      const { data: existingMember } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('user_id', existingProfile.id)
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      if (existingMember) {
+        return new Response(
+          JSON.stringify({ error: 'This user is already a member of your organization' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // User exists but not in this org - add them to the organization
+      const { error: orgMemberError } = await supabase
+        .from('organization_members')
+        .insert({
+          user_id: existingProfile.id,
+          organization_id: organizationId,
+          role: role,
+        });
+
+      if (orgMemberError) {
+        console.error('Error adding existing user to organization:', orgMemberError);
+        return new Response(
+          JSON.stringify({ error: `Failed to add existing user to organization: ${orgMemberError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Update their role in user_roles
+      const { error: deleteRoleError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', existingProfile.id);
+
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: existingProfile.id,
+          role: role,
+        });
+
+      if (roleError) {
+        console.error('Error updating role:', roleError);
+      }
+
+      // Update organization user count
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('current_users_count')
+        .eq('id', organizationId)
+        .single();
+
+      if (orgData) {
+        await supabase
+          .from('organizations')
+          .update({ current_users_count: (orgData.current_users_count || 0) + 1 })
+          .eq('id', organizationId);
+      }
+
       return new Response(
-        JSON.stringify({ error: 'A user with this email already exists' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: true,
+          user: {
+            id: existingProfile.id,
+            email: email,
+          },
+          message: 'Existing user added to organization successfully'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
