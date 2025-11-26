@@ -183,7 +183,13 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Add role to user_roles
+    // Add role to user_roles (handle case where trigger already added a role)
+    // First delete any existing roles, then insert the new one
+    await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', newUser.user.id);
+
     const { error: roleError } = await supabase
       .from('user_roles')
       .insert({
