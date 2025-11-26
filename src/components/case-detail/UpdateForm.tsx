@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
+import { useNavigate } from "react-router-dom";
+import { ExternalLink } from "lucide-react";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -30,6 +32,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updateTypes, setUpdateTypes] = useState<string[]>([]);
   const [caseTitle, setCaseTitle] = useState<string>("");
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -217,9 +220,16 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
           <DialogTitle>{editingUpdate ? "Edit" : "Add"} Update</DialogTitle>
           <DialogDescription>Add a new progress note or activity log</DialogDescription>
           {caseTitle && (
-            <div className="text-sm text-muted-foreground pt-2">
+            <button
+              onClick={() => {
+                onOpenChange(false);
+                navigate(`/cases/${caseId}`);
+              }}
+              className="text-sm text-muted-foreground pt-2 hover:text-foreground transition-colors flex items-center gap-1.5 group"
+            >
               Case: <span className="font-medium text-foreground">{caseTitle}</span>
-            </div>
+              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
           )}
         </DialogHeader>
 

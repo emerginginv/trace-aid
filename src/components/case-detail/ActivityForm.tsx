@@ -11,10 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ExternalLink } from "lucide-react";
 import { format, formatISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const taskSchema = z.object({
   activity_type: z.literal("task"),
@@ -65,6 +66,7 @@ export function ActivityForm({
   prefilledDate,
 }: ActivityFormProps) {
   const [caseTitle, setCaseTitle] = useState<string>("");
+  const navigate = useNavigate();
   const schema = activityType === "task" ? taskSchema : eventSchema;
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -250,9 +252,16 @@ export function ActivityForm({
             {editingActivity ? `Edit ${activityType === "task" ? "Task" : "Event"}` : `Add New ${activityType === "task" ? "Task" : "Event"}`}
           </DialogTitle>
           {caseTitle && (
-            <div className="text-sm text-muted-foreground pt-2">
+            <button
+              onClick={() => {
+                onOpenChange(false);
+                navigate(`/cases/${caseId}`);
+              }}
+              className="text-sm text-muted-foreground pt-2 hover:text-foreground transition-colors flex items-center gap-1.5 group"
+            >
               Case: <span className="font-medium text-foreground">{caseTitle}</span>
-            </div>
+              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
           )}
         </DialogHeader>
         <Form {...form}>
