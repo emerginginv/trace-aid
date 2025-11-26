@@ -5,13 +5,47 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrgIsolationAudit } from "@/components/OrgIsolationAudit";
-import { Shield, Database, CreditCard, Users, RefreshCw } from "lucide-react";
+import { Shield, Database, CreditCard, Users, RefreshCw, Edit, Trash2, Building2, UserCog } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Organization {
   id: string;
@@ -44,6 +78,19 @@ const Admin = () => {
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  
+  // Dialog states
+  const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showOrgDialog, setShowOrgDialog] = useState(false);
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  // Form states
+  const [editFullName, setEditFullName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [selectedOrgId, setSelectedOrgId] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("");
 
   useEffect(() => {
     const checkAdminAccess = async () => {
@@ -55,6 +102,8 @@ const Admin = () => {
         return;
       }
 
+      // Load organizations for dropdowns
+      fetchOrganizations();
       setLoading(false);
     };
 
@@ -161,6 +210,157 @@ const Admin = () => {
 
     const tierInfo = tierMap[tier.toLowerCase()] || { variant: "outline" as const, label: tier };
     return <Badge variant={tierInfo.variant}>{tierInfo.label}</Badge>;
+  };
+
+  const handleEditUser = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editFullName,
+          email: editEmail,
+        })
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      toast.success('User updated successfully');
+      setShowEditDialog(false);
+      fetchSystemUsers();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('Failed to update user');
+    }
+  };
+
+  const handleChangeOrg = async () => {
+    if (!selectedUser || !selectedOrgId) return;
+    
+    try {
+      // Remove from current organization if exists
+      if (selectedUser.organization_id) {
+        await supabase
+          .from('organization_members')
+          .delete()
+          .eq('user_id', selectedUser.id)
+          .eq('organization_id', selectedUser.organization_id);
+      }
+
+      // Add to new organization with proper role
+      const newRole = selectedUser.role || 'member';
+      const { error } = await supabase
+        .from('organization_members')
+        .insert([{
+          user_id: selectedUser.id,
+          organization_id: selectedOrgId,
+          role: newRole as any,
+        }]);
+
+      if (error) throw error;
+
+      toast.success('Organization changed successfully');
+      setShowOrgDialog(false);
+      fetchSystemUsers();
+    } catch (error) {
+      console.error('Error changing organization:', error);
+      toast.error('Failed to change organization');
+    }
+  };
+
+  const handleChangeRole = async () => {
+    if (!selectedUser || !selectedRole || !selectedUser.organization_id) return;
+    
+    try {
+      // Update organization_members role
+      const { error: orgError } = await supabase
+        .from('organization_members')
+        .update({ role: selectedRole as any })
+        .eq('user_id', selectedUser.id)
+        .eq('organization_id', selectedUser.organization_id);
+
+      if (orgError) throw orgError;
+
+      // Update user_roles table
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', selectedUser.id);
+
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: selectedUser.id,
+          role: selectedRole as any,
+        });
+
+      if (roleError) throw roleError;
+
+      toast.success('Role changed successfully');
+      setShowRoleDialog(false);
+      fetchSystemUsers();
+    } catch (error) {
+      console.error('Error changing role:', error);
+      toast.error('Failed to change role');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      // Delete from organization_members
+      await supabase
+        .from('organization_members')
+        .delete()
+        .eq('user_id', selectedUser.id);
+
+      // Delete from user_roles
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', selectedUser.id);
+
+      // Delete profile
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      toast.success('User deleted successfully');
+      setShowDeleteDialog(false);
+      fetchSystemUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
+    }
+  };
+
+  const openEditDialog = (user: SystemUser) => {
+    setSelectedUser(user);
+    setEditFullName(user.full_name || '');
+    setEditEmail(user.email);
+    setShowEditDialog(true);
+  };
+
+  const openOrgDialog = (user: SystemUser) => {
+    setSelectedUser(user);
+    setSelectedOrgId(user.organization_id || '');
+    setShowOrgDialog(true);
+  };
+
+  const openRoleDialog = (user: SystemUser) => {
+    setSelectedUser(user);
+    setSelectedRole(user.role || '');
+    setShowRoleDialog(true);
+  };
+
+  const openDeleteDialog = (user: SystemUser) => {
+    setSelectedUser(user);
+    setShowDeleteDialog(true);
   };
 
   if (loading || roleLoading) {
@@ -321,11 +521,12 @@ const Admin = () => {
                         <TableHead>Organization</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Joined</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {systemUsers.map((user) => (
-                        <TableRow key={user.id}>
+                      {systemUsers.map((user, index) => (
+                        <TableRow key={`${user.id}-${index}`}>
                           <TableCell className="font-medium">
                             {user.full_name || '-'}
                           </TableCell>
@@ -345,6 +546,37 @@ const Admin = () => {
                           <TableCell className="text-muted-foreground">
                             {format(new Date(user.created_at), 'MMM d, yyyy')}
                           </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <UserCog className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEditDialog(user)}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit Profile
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openOrgDialog(user)}>
+                                  <Building2 className="h-4 w-4 mr-2" />
+                                  Change Organization
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openRoleDialog(user)}>
+                                  <UserCog className="h-4 w-4 mr-2" />
+                                  Change Role
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => openDeleteDialog(user)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete User
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -355,6 +587,133 @@ const Admin = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User Profile</DialogTitle>
+            <DialogDescription>
+              Update user information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input
+                id="full_name"
+                value={editFullName}
+                onChange={(e) => setEditFullName(e.target.value)}
+                placeholder="Enter full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="Enter email"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditUser}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Organization Dialog */}
+      <Dialog open={showOrgDialog} onOpenChange={setShowOrgDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Organization</DialogTitle>
+            <DialogDescription>
+              Assign user to a different organization
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="organization">Organization</Label>
+              <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOrgDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleChangeOrg}>Change Organization</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Dialog */}
+      <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change User Role</DialogTitle>
+            <DialogDescription>
+              Update the user's role and permissions
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="investigator">Investigator</SelectItem>
+                  <SelectItem value="vendor">Vendor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleChangeRole}>Change Role</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedUser?.full_name || selectedUser?.email}? 
+              This action cannot be undone and will remove all user data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
