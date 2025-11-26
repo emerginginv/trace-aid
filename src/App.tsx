@@ -152,7 +152,7 @@ const App = () => {
         <Route
           path="/expenses"
           element={
-            <ProtectedRoute requiresAnyRole={['vendor', 'investigator']}>
+            <ProtectedRoute>
               <DashboardLayout>
                 <Expenses />
               </DashboardLayout>
