@@ -39,20 +39,43 @@ interface Update {
   };
 }
 
+interface Expense {
+  id: string;
+  amount: number;
+  description: string;
+  category: string | null;
+  date: string;
+  status: string | null;
+  case_id: string;
+  cases?: {
+    case_number: string;
+    title: string;
+  };
+}
+
 export default function VendorDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [cases, setCases] = useState<Case[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [updateTypes, setUpdateTypes] = useState<string[]>([]);
 
-  // Form state
+  // Form state for updates
   const [selectedCaseId, setSelectedCaseId] = useState("");
   const [updateType, setUpdateType] = useState("");
   const [updateTitle, setUpdateTitle] = useState("");
   const [updateNotes, setUpdateNotes] = useState("");
+
+  // Form state for expenses
+  const [expenseCaseId, setExpenseCaseId] = useState("");
+  const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseDescription, setExpenseDescription] = useState("");
+  const [expenseCategory, setExpenseCategory] = useState("");
+  const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expenseNotes, setExpenseNotes] = useState("");
 
   useEffect(() => {
     fetchVendorData();
@@ -154,6 +177,31 @@ export default function VendorDashboard() {
 
       if (updatesError) throw updatesError;
       setUpdates(updatesData || []);
+
+      // Fetch vendor's expenses
+      const { data: expensesData, error: expensesError } = await supabase
+        .from("case_finances")
+        .select("id, amount, description, category, date, status, case_id")
+        .eq("user_id", user.id)
+        .eq("finance_type", "expense")
+        .order("date", { ascending: false })
+        .limit(20);
+
+      if (expensesError) throw expensesError;
+      
+      // Enrich expenses with case details
+      const enrichedExpenses = (expensesData || []).map(expense => {
+        const caseInfo = casesData?.find(c => c.id === expense.case_id);
+        return {
+          ...expense,
+          cases: caseInfo ? {
+            case_number: caseInfo.case_number,
+            title: caseInfo.title
+          } : undefined
+        };
+      });
+      
+      setExpenses(enrichedExpenses);
     } catch (error) {
       console.error("Error fetching vendor data:", error);
       toast({
@@ -163,6 +211,75 @@ export default function VendorDashboard() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!expenseCaseId || !expenseAmount || !expenseDescription) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) throw new Error("Organization not found");
+
+      const { error } = await supabase.from("case_finances").insert({
+        case_id: expenseCaseId,
+        user_id: user.id,
+        organization_id: orgMember.organization_id,
+        finance_type: "expense",
+        amount: parseFloat(expenseAmount),
+        description: expenseDescription,
+        category: expenseCategory || null,
+        date: expenseDate,
+        notes: expenseNotes || null,
+        status: "pending",
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Expense submitted successfully",
+      });
+
+      // Reset form
+      setExpenseCaseId("");
+      setExpenseAmount("");
+      setExpenseDescription("");
+      setExpenseCategory("");
+      setExpenseDate(new Date().toISOString().split('T')[0]);
+      setExpenseNotes("");
+
+      // Refresh expenses
+      fetchVendorData();
+    } catch (error) {
+      console.error("Error submitting expense:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit expense",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -234,6 +351,10 @@ export default function VendorDashboard() {
         return "bg-gray-500/10 text-gray-700 border-gray-200";
       case "pending":
         return "bg-yellow-500/10 text-yellow-700 border-yellow-200";
+      case "approved":
+        return "bg-green-500/10 text-green-700 border-green-200";
+      case "rejected":
+        return "bg-red-500/10 text-red-700 border-red-200";
       default:
         return "bg-blue-500/10 text-blue-700 border-blue-200";
     }
@@ -316,6 +437,62 @@ export default function VendorDashboard() {
             </CardContent>
           </Card>
 
+          {/* My Expenses */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                My Expenses
+              </CardTitle>
+              <CardDescription>
+                Track your submitted expenses
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {expenses.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No expenses submitted yet
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {expenses.map((expense) => (
+                    <div
+                      key={expense.id}
+                      className="p-3 border rounded-lg"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">{expense.description}</p>
+                          {expense.category && (
+                            <Badge variant="outline" className="mt-1">
+                              {expense.category}
+                            </Badge>
+                          )}
+                          {expense.cases && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {expense.cases.case_number} - {expense.cases.title}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(expense.date), "MMM d, yyyy")}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-semibold text-lg">
+                            ${expense.amount.toFixed(2)}
+                          </p>
+                          <Badge className={getStatusColor(expense.status || "pending")}>
+                            {expense.status || "pending"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* My Updates */}
           <Card>
             <CardHeader>
@@ -368,9 +545,117 @@ export default function VendorDashboard() {
           </Card>
         </div>
 
-        {/* Submit New Update - 1 column on large screens */}
-        <div>
-          <Card className="sticky top-4">
+        {/* Submit New Update & Expense - 1 column on large screens */}
+        <div className="space-y-6">
+          {/* Submit Expense */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-primary" />
+                Submit Expense
+              </CardTitle>
+              <CardDescription>
+                Submit an expense for reimbursement
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitExpense} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="expense-case">Case *</Label>
+                  <Select value={expenseCaseId} onValueChange={setExpenseCaseId}>
+                    <SelectTrigger id="expense-case">
+                      <SelectValue placeholder="Select a case" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cases.map((caseItem) => (
+                        <SelectItem key={caseItem.id} value={caseItem.id}>
+                          {caseItem.case_number} - {caseItem.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expense-amount">Amount *</Label>
+                  <Input
+                    id="expense-amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={expenseAmount}
+                    onChange={(e) => setExpenseAmount(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expense-description">Description *</Label>
+                  <Input
+                    id="expense-description"
+                    value={expenseDescription}
+                    onChange={(e) => setExpenseDescription(e.target.value)}
+                    placeholder="What was this expense for?"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expense-category">Category</Label>
+                  <Select value={expenseCategory} onValueChange={setExpenseCategory}>
+                    <SelectTrigger id="expense-category">
+                      <SelectValue placeholder="Select category (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Travel">Travel</SelectItem>
+                      <SelectItem value="Meals">Meals</SelectItem>
+                      <SelectItem value="Equipment">Equipment</SelectItem>
+                      <SelectItem value="Supplies">Supplies</SelectItem>
+                      <SelectItem value="Mileage">Mileage</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expense-date">Date *</Label>
+                  <Input
+                    id="expense-date"
+                    type="date"
+                    value={expenseDate}
+                    onChange={(e) => setExpenseDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expense-notes">Notes</Label>
+                  <Textarea
+                    id="expense-notes"
+                    value={expenseNotes}
+                    onChange={(e) => setExpenseNotes(e.target.value)}
+                    placeholder="Additional details..."
+                    rows={3}
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Submit Expense
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Submit New Update */}
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="w-5 h-5 text-primary" />
