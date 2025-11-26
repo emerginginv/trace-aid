@@ -20,6 +20,7 @@ interface FinanceFormFieldsProps {
 
 export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFieldsProps) => {
   const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const financeType = form.watch("finance_type");
   const quantity = form.watch("quantity");
   const unitPrice = form.watch("unit_price");
@@ -307,7 +308,7 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
         render={({ field }) => (
           <FormItem className="flex flex-col">
             <FormLabel>Date</FormLabel>
-            <Popover>
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
                 <FormControl>
                   <Button
@@ -326,7 +327,11 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
                 <Calendar
                   mode="single"
                   selected={field.value}
-                  onSelect={field.onChange}
+                  onSelect={(date) => {
+                    field.onChange(date);
+                    setDatePickerOpen(false);
+                  }}
+                  defaultMonth={field.value || new Date()}
                   initialFocus
                   className="pointer-events-auto"
                 />
