@@ -248,61 +248,77 @@ const Admin = () => {
           .eq('organization_id', selectedUser.organization_id);
       }
 
-      // Add to new organization with proper role
-      const newRole = selectedUser.role || 'member';
-      const { error } = await supabase
+      // Determine role to use - if user has no role, default to member
+      const assignedRole = selectedUser.role || 'member';
+
+      // Add to new organization
+      const { error: insertError } = await supabase
         .from('organization_members')
         .insert([{
           user_id: selectedUser.id,
           organization_id: selectedOrgId,
-          role: newRole as any,
+          role: assignedRole as any,
         }]);
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
-      toast.success('Organization changed successfully');
+      // If user had no role, also add to user_roles table
+      if (!selectedUser.role) {
+        await supabase
+          .from('user_roles')
+          .insert([{
+            user_id: selectedUser.id,
+            role: assignedRole as any,
+          }]);
+      }
+
+      toast.success('Organization assigned successfully');
       setShowOrgDialog(false);
       fetchSystemUsers();
     } catch (error) {
       console.error('Error changing organization:', error);
-      toast.error('Failed to change organization');
+      toast.error('Failed to assign organization');
     }
   };
 
   const handleChangeRole = async () => {
-    if (!selectedUser || !selectedRole || !selectedUser.organization_id) return;
+    if (!selectedUser || !selectedRole) return;
     
     try {
-      // Update organization_members role
-      const { error: orgError } = await supabase
-        .from('organization_members')
-        .update({ role: selectedRole as any })
-        .eq('user_id', selectedUser.id)
-        .eq('organization_id', selectedUser.organization_id);
+      // If user has an organization, update organization_members
+      if (selectedUser.organization_id) {
+        const { error: orgError } = await supabase
+          .from('organization_members')
+          .update({ role: selectedRole as any })
+          .eq('user_id', selectedUser.id)
+          .eq('organization_id', selectedUser.organization_id);
 
-      if (orgError) throw orgError;
+        if (orgError) throw orgError;
+      }
 
-      // Update user_roles table
+      // Always update user_roles table
+      // First delete existing role
       await supabase
         .from('user_roles')
         .delete()
         .eq('user_id', selectedUser.id);
 
+      // Then insert new role
       const { error: roleError } = await supabase
         .from('user_roles')
-        .insert({
+        .insert([{
           user_id: selectedUser.id,
           role: selectedRole as any,
-        });
+        }]);
 
       if (roleError) throw roleError;
 
-      toast.success('Role changed successfully');
+      toast.success('Role assigned successfully');
       setShowRoleDialog(false);
       fetchSystemUsers();
     } catch (error) {
       console.error('Error changing role:', error);
-      toast.error('Failed to change role');
+      toast.error('Failed to assign role');
     }
   };
 
@@ -346,15 +362,21 @@ const Admin = () => {
     setShowEditDialog(true);
   };
 
-  const openOrgDialog = (user: SystemUser) => {
+  const openOrgDialog = async (user: SystemUser) => {
     setSelectedUser(user);
     setSelectedOrgId(user.organization_id || '');
+    
+    // Load organizations if not already loaded
+    if (organizations.length === 0) {
+      await fetchOrganizations();
+    }
+    
     setShowOrgDialog(true);
   };
 
   const openRoleDialog = (user: SystemUser) => {
     setSelectedUser(user);
-    setSelectedRole(user.role || '');
+    setSelectedRole(user.role || 'member');
     setShowRoleDialog(true);
   };
 
@@ -666,9 +688,11 @@ const Admin = () => {
       <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change User Role</DialogTitle>
+            <DialogTitle>Assign User Role</DialogTitle>
             <DialogDescription>
-              Update the user's role and permissions
+              {selectedUser?.organization_id 
+                ? "Update the user's role and permissions" 
+                : "Assign a role to this user. Note: User should also be assigned to an organization."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -691,7 +715,9 @@ const Admin = () => {
             <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleChangeRole}>Change Role</Button>
+            <Button onClick={handleChangeRole} disabled={!selectedRole}>
+              Assign Role
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
