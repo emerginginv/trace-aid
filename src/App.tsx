@@ -31,6 +31,7 @@ import Notifications from "./pages/Notifications";
 import StyleGuide from "./pages/StyleGuide";
 import PremiumShowcase from "./pages/PremiumShowcase";
 import TestNotifications from "./pages/TestNotifications";
+import VendorExpenses from "./pages/VendorExpenses";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -114,6 +115,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Finance />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/expenses"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <VendorExpenses />
               </DashboardLayout>
             </ProtectedRoute>
           }
