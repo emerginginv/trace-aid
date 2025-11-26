@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase, Building2, TrendingUp, CheckCircle2, Calendar, Bell, DollarSign, Clock } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Briefcase, Building2, TrendingUp, CheckCircle2, Calendar, Bell, DollarSign, LayoutDashboard } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import VendorDashboard from "./VendorDashboard";
 const Dashboard = () => {
@@ -146,76 +147,114 @@ const Dashboard = () => {
     return <VendorDashboard />;
   }
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 p-8 border border-border/50">
-        <div className="relative z-10">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Dashboard
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Welcome back! Here's an overview of your organization.
-          </p>
-        </div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-0" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/5 rounded-full blur-3xl -z-0" />
+    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 max-w-7xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+          <LayoutDashboard className="h-8 w-8 text-primary" />
+          Dashboard
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Welcome back! Here's an overview of your organization.
+        </p>
       </div>
 
-      {/* Case Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card
-              key={stat.title}
-              className="group hover-lift border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden relative"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <div className={`${stat.bgColor} p-2.5 rounded-lg transition-transform group-hover:scale-110`}>
-                  <Icon className={`w-5 h-5 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent className="relative z-10">
-                <div className="text-3xl font-bold">{stat.value}</div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            <span>Overview</span>
+          </TabsTrigger>
+          <TabsTrigger value="cases" className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4" />
+            <span>Cases</span>
+          </TabsTrigger>
+          <TabsTrigger value="activities" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            <span>Activities</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Activity Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {activityCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card
-              key={stat.title}
-              className="border-border/50 bg-gradient-to-br from-card to-card/80"
-            >
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {stat.title}
-                  </CardTitle>
-                  {stat.subtitle && (
-                    <p className="text-xs text-muted-foreground/70 mt-1">{stat.subtitle}</p>
-                  )}
-                </div>
-                <div className={`${stat.bgColor} p-2.5 rounded-lg`}>
-                  <Icon className={`w-5 h-5 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {statCards.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <Card
+                  key={stat.title}
+                  className="group hover-lift border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      {stat.title}
+                    </CardTitle>
+                    <div className={`${stat.bgColor} p-2.5 rounded-lg transition-transform group-hover:scale-110`}>
+                      <Icon className={`w-5 h-5 ${stat.color}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="relative z-10">
+                    <div className="text-3xl font-bold">{stat.value}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        {/* Cases Tab */}
+        <TabsContent value="cases" className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {statCards.slice(0, 3).map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={stat.title} className="border-border/50">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      {stat.title}
+                    </CardTitle>
+                    <div className={`${stat.bgColor} p-2.5 rounded-lg`}>
+                      <Icon className={`w-5 h-5 ${stat.color}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{stat.value}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        {/* Activities Tab */}
+        <TabsContent value="activities" className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {activityCards.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={stat.title} className="border-border/50">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        {stat.title}
+                      </CardTitle>
+                      {stat.subtitle && (
+                        <p className="text-xs text-muted-foreground/70 mt-1">{stat.subtitle}</p>
+                      )}
+                    </div>
+                    <div className={`${stat.bgColor} p-2.5 rounded-lg`}>
+                      <Icon className={`w-5 h-5 ${stat.color}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stat.value}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
