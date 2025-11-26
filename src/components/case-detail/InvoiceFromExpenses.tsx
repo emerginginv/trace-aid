@@ -238,13 +238,21 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       // 4. Done!
       toast({
         title: "Invoice created successfully!",
-        description: `Invoice ${invoiceNumber} created with ${selectedItems.size} item(s). ${retainerUsed > 0 ? `$${retainerUsed.toFixed(2)} retainer applied. ` : ''}Balance due: $${balanceDue.toFixed(2)}`,
+        description: `Invoice ${invoiceNumber} created with ${selectedItems.size} item(s). ${retainerUsed > 0 ? `$${retainerUsed.toFixed(2)} retainer applied. ` : ''}Balance due: $${balanceDue.toFixed(2)}. Switch to the Invoices tab to view it.`,
       });
 
       // Clear selection and refresh the list
       setSelectedItems(new Set());
       setRetainerUsed(0);
       fetchBillableItems();
+      
+      // Notify parent to switch to invoices tab if possible
+      if (window.location.pathname.includes('/cases/')) {
+        // Add a small delay then refresh the page to show the invoice
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }
 
     } catch (error) {
       console.error("Error creating invoice:", error);
