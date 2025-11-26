@@ -49,6 +49,7 @@ export default function Expenses() {
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
+    console.log("[Expenses] Component mounted");
     fetchExpenses();
     fetchCases();
   }, []);
