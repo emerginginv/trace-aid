@@ -48,9 +48,10 @@ interface FinanceFormProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   editingFinance?: any;
+  defaultFinanceType?: "retainer" | "expense" | "time";
 }
 
-export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFinance }: FinanceFormProps) => {
+export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFinance, defaultFinanceType = "expense" }: FinanceFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
@@ -58,7 +59,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      finance_type: "expense",
+      finance_type: defaultFinanceType,
       amount: "",
       description: "",
       date: new Date(),
@@ -104,7 +105,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       });
     } else {
       form.reset({
-        finance_type: "expense",
+        finance_type: defaultFinanceType,
         amount: "",
         description: "",
         date: new Date(),
@@ -124,7 +125,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         hourly_rate: undefined,
       });
     }
-  }, [editingFinance, form]);
+  }, [editingFinance, form, defaultFinanceType]);
 
   useEffect(() => {
     const fetchData = async () => {
