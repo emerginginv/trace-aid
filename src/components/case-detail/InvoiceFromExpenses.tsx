@@ -165,10 +165,11 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       const invoiceNumber = await generateInvoiceNumber();
       if (!invoiceNumber) throw new Error("Failed to generate invoice number");
 
-      // Calculate balance due
+      // Calculate initial totals
+      const initialPaid = retainerUsed; // Retainer counts as already paid
       const balanceDue = totalAmount - retainerUsed;
 
-      // 1. Create the invoice
+      // 1. Create the invoice with proper balance tracking
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
         .insert({
@@ -177,6 +178,8 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
           invoice_number: invoiceNumber,
           total: totalAmount,
           retainer_applied: retainerUsed,
+          total_paid: initialPaid,
+          balance_due: balanceDue,
           date: new Date().toISOString().split('T')[0],
           status: "draft",
           notes: "",
