@@ -25,6 +25,11 @@ const allMenuItems = [{
   url: "/cases",
   roles: ['admin', 'manager', 'investigator']
 }, {
+  title: "My Expenses",
+  icon: DollarSign,
+  url: "/expenses",
+  roles: ['vendor', 'investigator']
+}, {
   title: "Calendar",
   icon: Calendar,
   url: "/calendar",

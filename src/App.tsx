@@ -16,6 +16,7 @@ import Finance from "./pages/Finance";
 import InvoiceDetail from "./pages/InvoiceDetail";
 import UpdateDetail from "./pages/UpdateDetail";
 import ExpenseDetail from "./pages/ExpenseDetail";
+import Expenses from "./pages/Expenses";
 import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
 import AccountEdit from "./pages/AccountEdit";
@@ -144,6 +145,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <ExpenseDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/expenses"
+          element={
+            <ProtectedRoute requiresAnyRole={['vendor', 'investigator']}>
+              <DashboardLayout>
+                <Expenses />
               </DashboardLayout>
             </ProtectedRoute>
           }
