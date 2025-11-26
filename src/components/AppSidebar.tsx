@@ -20,11 +20,6 @@ const allMenuItems = [{
   url: "/cases",
   roles: ['vendor']
 }, {
-  title: "My Expenses",
-  icon: DollarSign,
-  url: "/expenses",
-  roles: ['vendor', 'investigator']
-}, {
   title: "Cases",
   icon: Briefcase,
   url: "/cases",
@@ -38,7 +33,7 @@ const allMenuItems = [{
   title: "Finance",
   icon: DollarSign,
   url: "/finance",
-  roles: ['admin', 'manager']
+  roles: ['admin', 'manager', 'investigator']
 }, {
   title: "Accounts",
   icon: Building2,
