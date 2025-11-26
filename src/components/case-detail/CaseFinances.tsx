@@ -52,6 +52,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   const [retainerTotal, setRetainerTotal] = useState<number>(0);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [defaultFinanceType, setDefaultFinanceType] = useState<"retainer" | "expense" | "time">("expense");
 
   useEffect(() => {
     fetchFinances();
@@ -418,7 +419,10 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
               <h2 className="text-2xl font-bold">Finances</h2>
               <p className="text-muted-foreground">Retainers, expenses, and invoices</p>
             </div>
-            <Button onClick={() => setFormOpen(true)}>
+            <Button onClick={() => {
+              setDefaultFinanceType("expense");
+              setFormOpen(true);
+            }}>
               <Plus className="h-4 w-4" />
               Add Transaction
             </Button>
@@ -771,7 +775,10 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Time Entries</CardTitle>
-                <Button onClick={() => setFormOpen(true)}>
+                <Button onClick={() => {
+                  setDefaultFinanceType("time");
+                  setFormOpen(true);
+                }}>
                   <Plus className="mr-2 h-4 w-4" />
                   Log Time
                 </Button>
@@ -1000,6 +1007,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
         onOpenChange={handleFormClose}
         onSuccess={fetchFinances}
         editingFinance={editingFinance}
+        defaultFinanceType={defaultFinanceType}
       />
 
       {selectedInvoiceId && (
