@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
     console.log('Starting org isolation audit...');
 
     // Tables to audit (all tables with organization_id column)
+    // NOTE: picklists is excluded because NULL organization_id is valid for global/system values
     const tablesToAudit = [
       'notifications',
       'cases',
@@ -77,7 +78,6 @@ Deno.serve(async (req) => {
       'retainer_funds',
       'subject_attachments',
       'organization_settings',
-      'picklists',
     ];
 
     const results: AuditResult[] = [];
@@ -119,24 +119,21 @@ Deno.serve(async (req) => {
 
         const orphanedCount = nullCount || 0;
         const invalidOrgCount = invalidOrgRows.length;
-        
-        // Picklists allow NULL organization_id for global/system values - this is by design
-        const isPicklistTable = table === 'picklists';
-        const totalIssues = isPicklistTable ? invalidOrgCount : (orphanedCount + invalidOrgCount);
+        const totalIssues = orphanedCount + invalidOrgCount;
 
         if (totalIssues > 0) {
           const sampleIds = [
-            ...(isPicklistTable ? [] : (nullSamples?.map(s => s.id) || [])),
+            ...(nullSamples?.map(s => s.id) || []),
             ...invalidOrgRows.slice(0, 5).map(r => r.id),
           ];
 
           results.push({
             table,
-            orphaned_count: isPicklistTable ? 0 : orphanedCount,
-            null_org_count: isPicklistTable ? 0 : orphanedCount,
+            orphaned_count: orphanedCount,
+            null_org_count: orphanedCount,
             invalid_org_count: invalidOrgCount,
             sample_ids: sampleIds,
-            severity: (orphanedCount > 0 && !isPicklistTable) ? 'critical' : (invalidOrgCount > 0 ? 'warning' : 'info'),
+            severity: orphanedCount > 0 ? 'critical' : 'warning',
           });
         } else {
           results.push({
