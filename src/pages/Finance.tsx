@@ -5,9 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Loader2, DollarSign, Receipt, Wallet, Search, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { Loader2, DollarSign, Receipt, Wallet, Search, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, ChevronDown, Check, X } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
+import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -67,6 +68,8 @@ const Finance = () => {
   const [showPayModal, setShowPayModal] = useState<Invoice | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<string | null>(null);
   const [retainerMap, setRetainerMap] = useState<Record<string, number>>({});
+  const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
   
   // Pagination states
   const [retainerPage, setRetainerPage] = useState(1);
@@ -592,11 +595,69 @@ const Finance = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {expense.status === "pending" && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                const { error } = await supabase
+                                  .from("case_finances")
+                                  .update({ status: "approved" })
+                                  .eq("id", expense.id);
+                                
+                                if (error) {
+                                  toast.error("Failed to approve expense");
+                                } else {
+                                  toast.success("Expense approved");
+                                  fetchFinanceData();
+                                }
+                              }}
+                              title="Approve expense"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                const { error } = await supabase
+                                  .from("case_finances")
+                                  .update({ status: "rejected" })
+                                  .eq("id", expense.id);
+                                
+                                if (error) {
+                                  toast.error("Failed to reject expense");
+                                } else {
+                                  toast.success("Expense rejected");
+                                  fetchFinanceData();
+                                }
+                              }}
+                              title="Reject expense"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            navigate(`/cases/${expense.case_id}?tab=finances`);
+                          onClick={async () => {
+                            // Fetch full expense details
+                            const { data, error } = await supabase
+                              .from("case_finances")
+                              .select("*")
+                              .eq("id", expense.id)
+                              .single();
+                            
+                            if (error) {
+                              toast.error("Failed to load expense details");
+                            } else {
+                              setEditingExpense(data);
+                              setShowExpenseForm(true);
+                            }
                           }}
                           title="Edit expense"
                         >
@@ -912,6 +973,26 @@ const Finance = () => {
           open={!!editingInvoice}
           onOpenChange={(open) => !open && setEditingInvoice(null)}
           onSuccess={fetchFinanceData}
+        />
+      )}
+
+      {/* Edit Expense Dialog */}
+      {showExpenseForm && (
+        <FinanceForm
+          caseId={editingExpense?.case_id || ""}
+          open={showExpenseForm}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowExpenseForm(false);
+              setEditingExpense(null);
+            }
+          }}
+          onSuccess={() => {
+            setShowExpenseForm(false);
+            setEditingExpense(null);
+            fetchFinanceData();
+          }}
+          editingFinance={editingExpense}
         />
       )}
     </div>
