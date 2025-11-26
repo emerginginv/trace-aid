@@ -29,6 +29,7 @@ const featureGroups: FeatureGroup[] = [
     name: "Cases",
     features: [
       { key: "view_cases", label: "View Cases" },
+      { key: "add_cases", label: "Add Cases" },
       { key: "edit_cases", label: "Edit Cases" },
       { key: "delete_cases", label: "Delete Cases" },
     ],

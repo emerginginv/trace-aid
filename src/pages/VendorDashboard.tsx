@@ -20,7 +20,7 @@ interface Case {
   status: string;
   investigator_ids?: string[];
   case_manager_id?: string;
-  case_manager?: {
+  profiles?: {
     full_name: string;
     email: string;
   } | null;
@@ -302,9 +302,9 @@ export default function VendorDashboard() {
                             </Badge>
                           </div>
                           <p className="font-medium truncate mb-1">{caseItem.title}</p>
-                          {caseItem.case_manager && (
+                          {caseItem.profiles && (
                             <p className="text-xs text-muted-foreground">
-                              Case Manager: {caseItem.case_manager.full_name}
+                              Case Manager: {caseItem.profiles.full_name}
                             </p>
                           )}
                         </div>
