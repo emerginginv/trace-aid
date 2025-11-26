@@ -29,6 +29,7 @@ interface UpdateFormProps {
 export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdate }: UpdateFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updateTypes, setUpdateTypes] = useState<string[]>([]);
+  const [caseTitle, setCaseTitle] = useState<string>("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -41,7 +42,27 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
 
   useEffect(() => {
     fetchUpdateTypes();
-  }, []);
+    if (caseId && open) {
+      fetchCaseTitle();
+    }
+  }, [caseId, open]);
+
+  const fetchCaseTitle = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("cases")
+        .select("title, case_number")
+        .eq("id", caseId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setCaseTitle(`${data.case_number} - ${data.title}`);
+      }
+    } catch (error) {
+      console.error("Error fetching case title:", error);
+    }
+  };
 
   useEffect(() => {
     if (editingUpdate) {
@@ -195,6 +216,11 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         <DialogHeader>
           <DialogTitle>{editingUpdate ? "Edit" : "Add"} Update</DialogTitle>
           <DialogDescription>Add a new progress note or activity log</DialogDescription>
+          {caseTitle && (
+            <div className="text-sm text-muted-foreground pt-2">
+              Case: <span className="font-medium text-foreground">{caseTitle}</span>
+            </div>
+          )}
         </DialogHeader>
 
         <Form {...form}>

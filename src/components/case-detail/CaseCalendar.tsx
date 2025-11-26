@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,7 +59,10 @@ interface CaseCalendarProps {
   isClosedCase?: boolean;
 }
 
-export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false }: CaseCalendarProps) {
+export const CaseCalendar = forwardRef<
+  { triggerAddTask: () => void; triggerAddEvent: () => void },
+  CaseCalendarProps
+>(({ caseId, filterCase, filterUser, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false }, ref) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -277,6 +280,40 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
     setCreateDialogOpen(false);
     setActivityFormOpen(true);
   };
+
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    triggerAddTask: () => {
+      if (!caseId && onNeedCaseSelection) {
+        onNeedCaseSelection((selectedCase: string) => {
+          setSelectedCaseId(selectedCase);
+          setEditingActivity(null);
+          setActivityType("task");
+          setActivityFormOpen(true);
+        });
+      } else {
+        setSelectedCaseId(caseId);
+        setEditingActivity(null);
+        setActivityType("task");
+        setActivityFormOpen(true);
+      }
+    },
+    triggerAddEvent: () => {
+      if (!caseId && onNeedCaseSelection) {
+        onNeedCaseSelection((selectedCase: string) => {
+          setSelectedCaseId(selectedCase);
+          setEditingActivity(null);
+          setActivityType("event");
+          setActivityFormOpen(true);
+        });
+      } else {
+        setSelectedCaseId(caseId);
+        setEditingActivity(null);
+        setActivityType("event");
+        setActivityFormOpen(true);
+      }
+    },
+  }));
 
   const handleToggleTaskComplete = async (activity: CalendarActivity) => {
     try {
@@ -599,4 +636,6 @@ export function CaseCalendar({ caseId, filterCase, filterUser, filterStatus: ext
       </div>
     </div>
   );
-}
+});
+
+CaseCalendar.displayName = "CaseCalendar";
