@@ -753,32 +753,65 @@ const Settings = () => {
       }
 
       if (authData.user) {
-        // Add role to user_roles table
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: authData.user.id,
-            role: inviteRole as any, // Type assertion needed due to Supabase enum mismatch
-          });
+        try {
+          // Add user to organization_members table
+          if (!organization?.id) {
+            throw new Error("Organization not found. Please refresh and try again.");
+          }
 
-        if (roleError) {
-          toast.error("User created but failed to assign role: " + roleError.message);
+          const { error: memberError } = await supabase
+            .from("organization_members")
+            .insert({
+              user_id: authData.user.id,
+              organization_id: organization.id,
+              role: inviteRole as any,
+            });
+
+          if (memberError) {
+            console.error("Organization member error:", memberError);
+            throw new Error(`Failed to add user to organization: ${memberError.message}`);
+          }
+
+          // Add role to user_roles table
+          const { error: roleError } = await supabase
+            .from("user_roles")
+            .insert({
+              user_id: authData.user.id,
+              role: inviteRole as any,
+            });
+
+          if (roleError) {
+            console.error("User role error:", roleError);
+            throw new Error(`User created but failed to assign role: ${roleError.message}`);
+          }
+
+          toast.success(`User ${inviteEmail} has been added successfully`);
+          setInviteDialogOpen(false);
+          setInviteEmail("");
+          setInviteFullName("");
+          setInvitePassword("");
+          setInviteRole("investigator");
+          fetchUsers();
+          updateOrgUsage(); // Update usage count after adding user
+        } catch (dbError: any) {
+          console.error("Database error:", dbError);
+          toast.error(dbError.message || "Failed to complete user setup. Please contact support.");
           setInviting(false);
           return;
         }
-
-        toast.success(`User ${inviteEmail} has been added successfully`);
-        setInviteDialogOpen(false);
-        setInviteEmail("");
-        setInviteFullName("");
-        setInvitePassword("");
-        setInviteRole("investigator");
-        fetchUsers();
-        updateOrgUsage(); // Update usage count after adding user
       }
     } catch (error: any) {
       console.error("Error inviting user:", error);
-      toast.error("An unexpected error occurred. Please try again.");
+      // Show specific error messages
+      if (error.message) {
+        toast.error(error.message);
+      } else if (error.code === "23505") {
+        toast.error("This user already exists in the system.");
+      } else if (error.code === "23503") {
+        toast.error("Database constraint error. Please check your inputs and try again.");
+      } else {
+        toast.error("Failed to create user. Please check all fields and try again.");
+      }
     } finally {
       setInviting(false);
     }
