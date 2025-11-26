@@ -47,25 +47,30 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
         }
 
         const userRole = data?.role;
+        console.log("[ProtectedRoute] User role:", userRole, "Required role:", requiredRole, "Requires any role:", requiresAnyRole, "Block vendors:", blockVendors);
 
         // Block vendors if explicitly requested
         if (blockVendors && userRole === 'vendor') {
+          console.log("[ProtectedRoute] Blocking vendor access");
           navigate("/");
           return;
         }
 
         // Check if user has required role
         if (requiredRole && userRole !== requiredRole) {
+          console.log("[ProtectedRoute] User does not have required role");
           navigate("/");
           return;
         }
 
         // Check if user has any of the required roles
         if (requiresAnyRole && !requiresAnyRole.includes(userRole as any)) {
+          console.log("[ProtectedRoute] User role not in requiresAnyRole array");
           navigate("/");
           return;
         }
 
+        console.log("[ProtectedRoute] Authorization successful");
         setAuthorized(true);
       } catch (error) {
         console.error("Error in role check:", error);
