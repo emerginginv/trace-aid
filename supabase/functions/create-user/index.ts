@@ -1,0 +1,171 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface CreateUserRequest {
+  email: string;
+  fullName: string;
+  password: string;
+  role: 'admin' | 'manager' | 'investigator' | 'vendor';
+  organizationId: string;
+}
+
+const handler = async (req: Request): Promise<Response> => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    // Get the authenticated admin user
+    const authHeader = req.headers.get('Authorization')!;
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: adminUser }, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !adminUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { email, fullName, password, role, organizationId }: CreateUserRequest = await req.json();
+
+    // Verify the requesting user is an admin of the organization
+    const { data: membership, error: memberError } = await supabase
+      .from('organization_members')
+      .select('role')
+      .eq('organization_id', organizationId)
+      .eq('user_id', adminUser.id)
+      .single();
+
+    if (memberError || membership?.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Only admins can create users' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user already exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingProfile) {
+      return new Response(
+        JSON.stringify({ error: 'A user with this email already exists' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create the user with service role (bypasses RLS)
+    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Auto-confirm email
+      user_metadata: {
+        full_name: fullName,
+      }
+    });
+
+    if (createError) {
+      console.error('Error creating user:', createError);
+      return new Response(
+        JSON.stringify({ error: `Failed to create user: ${createError.message}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!newUser.user) {
+      return new Response(
+        JSON.stringify({ error: 'User creation failed' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Add user to organization_members
+    const { error: orgMemberError } = await supabase
+      .from('organization_members')
+      .insert({
+        user_id: newUser.user.id,
+        organization_id: organizationId,
+        role: role,
+      });
+
+    if (orgMemberError) {
+      console.error('Error adding to organization:', orgMemberError);
+      // Try to clean up the created user
+      await supabase.auth.admin.deleteUser(newUser.user.id);
+      return new Response(
+        JSON.stringify({ error: `Failed to add user to organization: ${orgMemberError.message}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Add role to user_roles
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: newUser.user.id,
+        role: role,
+      });
+
+    if (roleError) {
+      console.error('Error adding role:', roleError);
+      return new Response(
+        JSON.stringify({ error: `User created but failed to assign role: ${roleError.message}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Update organization user count
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('current_users_count')
+      .eq('id', organizationId)
+      .single();
+
+    if (orgData) {
+      await supabase
+        .from('organizations')
+        .update({ current_users_count: (orgData.current_users_count || 0) + 1 })
+        .eq('id', organizationId);
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        user: {
+          id: newUser.user.id,
+          email: newUser.user.email,
+          full_name: fullName,
+        },
+        message: 'User created successfully'
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    console.error('Error in create-user function:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+};
+
+serve(handler);

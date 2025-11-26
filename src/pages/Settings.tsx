@@ -713,105 +713,50 @@ const Settings = () => {
         return;
       }
 
+      if (!organization?.id) {
+        toast.error("Organization not found. Please refresh and try again.");
+        return;
+      }
+
       setInviting(true);
 
-      // Check if user already exists in profiles
-      const { data: existingProfile, error: profileCheckError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", inviteEmail)
-        .maybeSingle();
-
-      // Ignore "no rows" errors, only care if we found a user
-      if (existingProfile) {
-        toast.error(`A user with email ${inviteEmail} already exists in the system`);
-        setInviting(false);
-        return;
-      }
-
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: inviteEmail,
-        password: invitePassword,
-        options: {
-          data: {
-            full_name: inviteFullName,
-          },
-          emailRedirectTo: `${window.location.origin}/`,
-        },
+      // Call edge function to create user server-side
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: inviteEmail,
+          fullName: inviteFullName,
+          password: invitePassword,
+          role: inviteRole,
+          organizationId: organization.id,
+        }
       });
 
-      if (authError) {
-        // Handle specific error messages
-        if (authError.message.includes("already registered") || authError.message.includes("already exists")) {
-          toast.error(`User with email ${inviteEmail} is already registered`);
+      if (error) {
+        console.error("Error creating user:", error);
+        if (error.message) {
+          toast.error(error.message);
         } else {
-          toast.error("Failed to create user: " + authError.message);
+          toast.error("Failed to create user. Please try again.");
         }
-        setInviting(false);
         return;
       }
 
-      if (authData.user) {
-        try {
-          // Add user to organization_members table
-          if (!organization?.id) {
-            throw new Error("Organization not found. Please refresh and try again.");
-          }
-
-          const { error: memberError } = await supabase
-            .from("organization_members")
-            .insert({
-              user_id: authData.user.id,
-              organization_id: organization.id,
-              role: inviteRole as any,
-            });
-
-          if (memberError) {
-            console.error("Organization member error:", memberError);
-            throw new Error(`Failed to add user to organization: ${memberError.message}`);
-          }
-
-          // Add role to user_roles table
-          const { error: roleError } = await supabase
-            .from("user_roles")
-            .insert({
-              user_id: authData.user.id,
-              role: inviteRole as any,
-            });
-
-          if (roleError) {
-            console.error("User role error:", roleError);
-            throw new Error(`User created but failed to assign role: ${roleError.message}`);
-          }
-
-          toast.success(`User ${inviteEmail} has been added successfully`);
-          setInviteDialogOpen(false);
-          setInviteEmail("");
-          setInviteFullName("");
-          setInvitePassword("");
-          setInviteRole("investigator");
-          fetchUsers();
-          updateOrgUsage(); // Update usage count after adding user
-        } catch (dbError: any) {
-          console.error("Database error:", dbError);
-          toast.error(dbError.message || "Failed to complete user setup. Please contact support.");
-          setInviting(false);
-          return;
-        }
+      if (data?.error) {
+        toast.error(data.error);
+        return;
       }
+
+      toast.success(`User ${inviteEmail} has been added successfully`);
+      setInviteDialogOpen(false);
+      setInviteEmail("");
+      setInviteFullName("");
+      setInvitePassword("");
+      setInviteRole("investigator");
+      fetchUsers();
+      
     } catch (error: any) {
       console.error("Error inviting user:", error);
-      // Show specific error messages
-      if (error.message) {
-        toast.error(error.message);
-      } else if (error.code === "23505") {
-        toast.error("This user already exists in the system.");
-      } else if (error.code === "23503") {
-        toast.error("Database constraint error. Please check your inputs and try again.");
-      } else {
-        toast.error("Failed to create user. Please check all fields and try again.");
-      }
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setInviting(false);
     }
