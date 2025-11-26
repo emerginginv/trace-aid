@@ -305,47 +305,43 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
       <FormField
         control={form.control}
         name="date"
-        render={({ field }) => {
-          console.log('Date field value:', field.value);
-          return (
-            <FormItem className="flex flex-col">
-              <FormLabel>Date</FormLabel>
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value || undefined}
-                    onSelect={(date) => {
-                      console.log('Date selected:', date);
-                      if (date) {
-                        field.onChange(date);
-                        setDatePickerOpen(false);
-                      }
-                    }}
-                    defaultMonth={new Date()}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          );
-        }}
+        render={({ field }) => (
+          <FormItem className="flex flex-col">
+            <FormLabel>Date</FormLabel>
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <FormControl>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full pl-3 text-left font-normal",
+                      !field.value && "text-muted-foreground"
+                    )}
+                  >
+                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </FormControl>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={field.value || undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      field.onChange(date);
+                      setDatePickerOpen(false);
+                    }
+                  }}
+                  defaultMonth={new Date()}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            <FormMessage />
+          </FormItem>
+        )}
       />
 
       {financeType === "invoice" && (
