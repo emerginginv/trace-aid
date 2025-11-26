@@ -119,21 +119,24 @@ Deno.serve(async (req) => {
 
         const orphanedCount = nullCount || 0;
         const invalidOrgCount = invalidOrgRows.length;
-        const totalIssues = orphanedCount + invalidOrgCount;
+        
+        // Picklists allow NULL organization_id for global/system values - this is by design
+        const isPicklistTable = table === 'picklists';
+        const totalIssues = isPicklistTable ? invalidOrgCount : (orphanedCount + invalidOrgCount);
 
         if (totalIssues > 0) {
           const sampleIds = [
-            ...(nullSamples?.map(s => s.id) || []),
+            ...(isPicklistTable ? [] : (nullSamples?.map(s => s.id) || [])),
             ...invalidOrgRows.slice(0, 5).map(r => r.id),
           ];
 
           results.push({
             table,
-            orphaned_count: orphanedCount,
-            null_org_count: orphanedCount,
+            orphaned_count: isPicklistTable ? 0 : orphanedCount,
+            null_org_count: isPicklistTable ? 0 : orphanedCount,
             invalid_org_count: invalidOrgCount,
             sample_ids: sampleIds,
-            severity: orphanedCount > 0 ? 'critical' : 'warning',
+            severity: (orphanedCount > 0 && !isPicklistTable) ? 'critical' : (invalidOrgCount > 0 ? 'warning' : 'info'),
           });
         } else {
           results.push({

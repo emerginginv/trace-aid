@@ -98,16 +98,33 @@ const Admin = () => {
 
       if (orgError) throw orgError;
 
-      // Map the data together
-      const usersWithOrgs = profiles?.map(profile => {
-        const orgMember = orgMembers?.find(om => om.user_id === profile.id);
-        return {
-          ...profile,
-          organization_id: orgMember?.organization_id || null,
-          organization_name: orgMember?.organizations?.name || null,
-          role: orgMember?.role || null,
-        };
-      }) || [];
+      // Map the data together - create one row per organization membership
+      // Users can belong to multiple organizations, so they may appear multiple times
+      const usersWithOrgs: SystemUser[] = [];
+      
+      profiles?.forEach(profile => {
+        const userOrgMembers = orgMembers?.filter(om => om.user_id === profile.id) || [];
+        
+        if (userOrgMembers.length > 0) {
+          // Add one row for each organization the user belongs to
+          userOrgMembers.forEach(orgMember => {
+            usersWithOrgs.push({
+              ...profile,
+              organization_id: orgMember.organization_id,
+              organization_name: (orgMember.organizations as any)?.name || null,
+              role: orgMember.role,
+            });
+          });
+        } else {
+          // User has no organization - show them with null values
+          usersWithOrgs.push({
+            ...profile,
+            organization_id: null,
+            organization_name: null,
+            role: null,
+          });
+        }
+      });
 
       setSystemUsers(usersWithOrgs);
     } catch (error) {
