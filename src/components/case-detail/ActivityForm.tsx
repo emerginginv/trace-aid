@@ -64,6 +64,7 @@ export function ActivityForm({
   editingActivity,
   prefilledDate,
 }: ActivityFormProps) {
+  const [caseTitle, setCaseTitle] = useState<string>("");
   const schema = activityType === "task" ? taskSchema : eventSchema;
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -80,6 +81,29 @@ export function ActivityForm({
       assigned_user_id: undefined,
     } as any,
   });
+
+  useEffect(() => {
+    if (caseId && open) {
+      fetchCaseTitle();
+    }
+  }, [caseId, open]);
+
+  const fetchCaseTitle = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("cases")
+        .select("title, case_number")
+        .eq("id", caseId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setCaseTitle(`${data.case_number} - ${data.title}`);
+      }
+    } catch (error) {
+      console.error("Error fetching case title:", error);
+    }
+  };
 
   useEffect(() => {
     if (editingActivity) {
@@ -225,6 +249,11 @@ export function ActivityForm({
           <DialogTitle>
             {editingActivity ? `Edit ${activityType === "task" ? "Task" : "Event"}` : `Add New ${activityType === "task" ? "Task" : "Event"}`}
           </DialogTitle>
+          {caseTitle && (
+            <div className="text-sm text-muted-foreground pt-2">
+              Case: <span className="font-medium text-foreground">{caseTitle}</span>
+            </div>
+          )}
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

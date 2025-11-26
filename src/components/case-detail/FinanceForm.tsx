@@ -55,6 +55,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [caseTitle, setCaseTitle] = useState<string>("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -143,8 +144,28 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       if (activitiesRes.data) setActivities(activitiesRes.data);
     };
 
-    if (open) fetchData();
+    if (open) {
+      fetchData();
+      fetchCaseTitle();
+    }
   }, [caseId, open]);
+
+  const fetchCaseTitle = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("cases")
+        .select("title, case_number")
+        .eq("id", caseId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setCaseTitle(`${data.case_number} - ${data.title}`);
+      }
+    } catch (error) {
+      console.error("Error fetching case title:", error);
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
@@ -261,6 +282,11 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         <DialogHeader>
           <DialogTitle>{editingFinance ? "Edit" : "Add"} Financial Transaction</DialogTitle>
           <DialogDescription>Record a retainer, expense, or invoice</DialogDescription>
+          {caseTitle && (
+            <div className="text-sm text-muted-foreground pt-2">
+              Case: <span className="font-medium text-foreground">{caseTitle}</span>
+            </div>
+          )}
         </DialogHeader>
 
         <Form {...form}>

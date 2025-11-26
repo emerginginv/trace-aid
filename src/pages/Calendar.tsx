@@ -1,10 +1,10 @@
 import { CaseCalendar } from "@/components/case-detail/CaseCalendar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Filter } from "lucide-react";
+import { Filter, Plus, CheckSquare, Calendar as CalendarIcon } from "lucide-react";
 
 interface Case {
   id: string;
@@ -26,6 +26,7 @@ export default function Calendar() {
   const [caseSelectionOpen, setCaseSelectionOpen] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [pendingCallback, setPendingCallback] = useState<((caseId: string) => void) | null>(null);
+  const calendarRef = useRef<{ triggerAddTask: () => void; triggerAddEvent: () => void } | null>(null);
 
   useEffect(() => {
     fetchFilters();
@@ -64,12 +65,29 @@ export default function Calendar() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col gap-2 sm:gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Calendar</h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             View all tasks and events across cases
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => calendarRef.current?.triggerAddTask()}
+            className="gap-2"
+          >
+            <CheckSquare className="h-4 w-4" />
+            Add Task
+          </Button>
+          <Button 
+            onClick={() => calendarRef.current?.triggerAddEvent()}
+            className="gap-2"
+            variant="outline"
+          >
+            <CalendarIcon className="h-4 w-4" />
+            Add Event
+          </Button>
         </div>
       </div>
 
@@ -120,6 +138,7 @@ export default function Calendar() {
       </div>
 
       <CaseCalendar 
+        ref={calendarRef}
         filterCase={filterCase}
         filterUser={filterUser}
         filterStatus={filterStatus}
