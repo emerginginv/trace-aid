@@ -58,6 +58,8 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: {
       finance_type: defaultFinanceType,
       amount: "",
