@@ -46,6 +46,7 @@ export default function VendorDashboard() {
   const [updates, setUpdates] = useState<Update[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [updateTypes, setUpdateTypes] = useState<string[]>([]);
 
   // Form state
   const [selectedCaseId, setSelectedCaseId] = useState("");
@@ -55,7 +56,61 @@ export default function VendorDashboard() {
 
   useEffect(() => {
     fetchVendorData();
+    fetchUpdateTypes();
   }, []);
+
+  const fetchUpdateTypes = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) return;
+
+      const { data, error } = await supabase
+        .from("picklists")
+        .select("value")
+        .eq("organization_id", orgMember.organization_id)
+        .eq("type", "update_type")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setUpdateTypes(data.map(item => item.value));
+      } else {
+        // Default update types if none exist in picklist
+        setUpdateTypes([
+          "Case Update",
+          "Surveillance",
+          "Accounting",
+          "Client Contact",
+          "3rd Party Contact",
+          "Review",
+          "Other"
+        ]);
+      }
+    } catch (error) {
+      console.error("Error fetching update types:", error);
+      // Fallback to defaults on error
+      setUpdateTypes([
+        "Case Update",
+        "Surveillance",
+        "Accounting",
+        "Client Contact",
+        "3rd Party Contact",
+        "Review",
+        "Other"
+      ]);
+    }
+  };
 
   const fetchVendorData = async () => {
     try {
@@ -350,11 +405,11 @@ export default function VendorDashboard() {
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Progress Update">Progress Update</SelectItem>
-                      <SelectItem value="Status Change">Status Change</SelectItem>
-                      <SelectItem value="General">General</SelectItem>
-                      <SelectItem value="Issue">Issue</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      {updateTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
