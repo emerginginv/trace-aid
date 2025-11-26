@@ -177,7 +177,6 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
           invoice_number: invoiceNumber,
           total: totalAmount,
           retainer_applied: retainerUsed,
-          balance_due: balanceDue,
           date: new Date().toISOString().split('T')[0],
           status: "draft",
           notes: "",
