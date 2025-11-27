@@ -21,6 +21,9 @@ interface FinanceFormFieldsProps {
 export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFieldsProps) => {
   const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dueDatePickerOpen, setDueDatePickerOpen] = useState(false);
+  const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
+  const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
   const financeType = form.watch("finance_type");
   const quantity = form.watch("quantity");
   const unitPrice = form.watch("unit_price");
@@ -351,7 +354,7 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Due Date (Optional)</FormLabel>
-              <Popover>
+              <Popover open={dueDatePickerOpen} onOpenChange={setDueDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
@@ -370,7 +373,10 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
                   <Calendar
                     mode="single"
                     selected={field.value}
-                    onSelect={field.onChange}
+                    onSelect={(date) => {
+                      field.onChange(date);
+                      setDueDatePickerOpen(false);
+                    }}
                     initialFocus
                     className="pointer-events-auto"
                   />
@@ -390,7 +396,7 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Start Date</FormLabel>
-                <Popover>
+                <Popover open={startDatePickerOpen} onOpenChange={setStartDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -409,7 +415,10 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
                     <Calendar
                       mode="single"
                       selected={field.value}
-                      onSelect={field.onChange}
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        setStartDatePickerOpen(false);
+                      }}
                       initialFocus
                       className="pointer-events-auto"
                     />
@@ -426,7 +435,7 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>End Date (Optional)</FormLabel>
-                <Popover>
+                <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -445,7 +454,10 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
                     <Calendar
                       mode="single"
                       selected={field.value}
-                      onSelect={field.onChange}
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        setEndDatePickerOpen(false);
+                      }}
                       initialFocus
                       className="pointer-events-auto"
                     />

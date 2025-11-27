@@ -89,6 +89,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const [profiles, setProfiles] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
   const [caseManagerId, setCaseManagerId] = useState<string>("");
   const [investigators, setInvestigators] = useState<string[]>([]);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [dueDateOpen, setDueDateOpen] = useState(false);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
@@ -537,7 +539,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Start Date *</FormLabel>
-                    <Popover>
+                    <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -560,7 +562,10 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setStartDateOpen(false);
+                          }}
                           initialFocus
                           className="pointer-events-auto"
                         />
@@ -577,7 +582,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Due Date</FormLabel>
-                    <Popover>
+                    <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -600,7 +605,10 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setDueDateOpen(false);
+                          }}
                           initialFocus
                           className="pointer-events-auto"
                         />
