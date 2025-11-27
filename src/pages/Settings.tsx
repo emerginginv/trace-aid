@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive, Palette, GripVertical } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive, Palette, GripVertical, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
@@ -141,6 +141,7 @@ const Settings = () => {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [selectedUserForColor, setSelectedUserForColor] = useState<User | null>(null);
+  const [showInvitePassword, setShowInvitePassword] = useState(false);
 
   const colorPalette = [
     "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", 
@@ -752,6 +753,7 @@ const Settings = () => {
       setInviteFullName("");
       setInvitePassword("");
       setInviteRole("investigator");
+      setShowInvitePassword(false);
       fetchUsers();
       
     } catch (error: any) {
@@ -1685,13 +1687,23 @@ const Settings = () => {
                       </div>
                       <div>
                         <Label htmlFor="invitePassword">Temporary Password</Label>
-                        <Input
-                          id="invitePassword"
-                          type="password"
-                          placeholder="Min 6 characters"
-                          value={invitePassword}
-                          onChange={(e) => setInvitePassword(e.target.value)}
-                        />
+                        <div className="relative">
+                          <Input
+                            id="invitePassword"
+                            type={showInvitePassword ? "text" : "password"}
+                            placeholder="Min 6 characters"
+                            value={invitePassword}
+                            onChange={(e) => setInvitePassword(e.target.value)}
+                            className="pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowInvitePassword(!showInvitePassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showInvitePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <Label htmlFor="inviteRole">Role</Label>
