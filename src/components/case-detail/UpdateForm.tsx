@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
@@ -281,7 +281,12 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Update details" rows={5} {...field} />
+                    <RichTextEditor 
+                      value={field.value || ""} 
+                      onChange={field.onChange}
+                      placeholder="Update details"
+                      className="min-h-[150px]"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

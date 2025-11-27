@@ -1147,3 +1147,12 @@
   @apply bg-card;
 }
 
+/* Compact variant for dialogs */
+.rich-text-editor.min-h-\[150px\] .ql-container {
+  @apply min-h-[120px];
+}
+
+.rich-text-editor.min-h-\[150px\] .ql-editor {
+  @apply min-h-[120px];
+}
+
