@@ -66,6 +66,9 @@ export function ActivityForm({
   prefilledDate,
 }: ActivityFormProps) {
   const [caseTitle, setCaseTitle] = useState<string>("");
+  const [dueDateOpen, setDueDateOpen] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
   const navigate = useNavigate();
   const schema = activityType === "task" ? taskSchema : eventSchema;
   const form = useForm<z.infer<typeof schema>>({
@@ -371,7 +374,7 @@ export function ActivityForm({
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Due Date (Optional)</FormLabel>
-                    <Popover>
+                    <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -394,7 +397,10 @@ export function ActivityForm({
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setDueDateOpen(false);
+                          }}
                           initialFocus
                           className={cn("p-3 pointer-events-auto")}
                         />
@@ -413,7 +419,7 @@ export function ActivityForm({
                     render={({ field }) => (
                       <FormItem className="flex flex-col space-y-2">
                         <FormLabel>Start Date</FormLabel>
-                        <Popover>
+                        <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -436,7 +442,10 @@ export function ActivityForm({
                             <Calendar
                               mode="single"
                               selected={field.value}
-                              onSelect={field.onChange}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                setStartDateOpen(false);
+                              }}
                               initialFocus
                               className={cn("p-3 pointer-events-auto")}
                             />
@@ -469,7 +478,7 @@ export function ActivityForm({
                     render={({ field }) => (
                       <FormItem className="flex flex-col space-y-2">
                         <FormLabel>End Date</FormLabel>
-                        <Popover>
+                        <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -492,7 +501,10 @@ export function ActivityForm({
                             <Calendar
                               mode="single"
                               selected={field.value}
-                              onSelect={field.onChange}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                setEndDateOpen(false);
+                              }}
                               initialFocus
                               className={cn("p-3 pointer-events-auto")}
                             />
