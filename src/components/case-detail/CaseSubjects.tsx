@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, User, Car, MapPin, Package, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, User, Car, MapPin, Package, Pencil, Trash2, Search, ExternalLink, Phone, Mail, Calendar, DollarSign } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SubjectForm } from "./SubjectForm";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProfileImageModal } from "./ProfileImageModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUserRole } from "@/hooks/useUserRole";
+import { format } from "date-fns";
 
 interface Subject {
   id: string;
@@ -30,6 +32,7 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{ url: string; subjectId: string } | null>(null);
+  const { isAdmin, isManager } = useUserRole();
 
   useEffect(() => {
     fetchSubjects();
@@ -44,7 +47,6 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
         .from("case_subjects")
         .select("*")
         .eq("case_id", caseId)
-        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -132,6 +134,27 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
       .slice(0, 2);
   };
 
+  const openGoogleMaps = (address: string) => {
+    const encodedAddress = encodeURIComponent(address);
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "MMM d, yyyy");
+    } catch {
+      return dateString;
+    }
+  };
+
+  const formatCurrency = (value: string) => {
+    const num = parseFloat(value);
+    if (isNaN(num)) return value;
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+  };
+
+  const canViewSSN = isAdmin || isManager;
+
   const filteredSubjects = subjects.filter(subject => {
     const matchesSearch = searchQuery === '' || 
       subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -141,6 +164,263 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
     
     return matchesSearch && matchesType;
   });
+
+  const renderPersonDetails = (details: any) => (
+    <div className="space-y-3">
+      {details.aliases && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">Aliases:</span>{" "}
+          <span>{details.aliases}</span>
+        </div>
+      )}
+      {details.date_of_birth && (
+        <div className="flex items-center gap-2 text-sm">
+          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="font-medium text-muted-foreground">DOB:</span>{" "}
+          <span>{formatDate(details.date_of_birth)}</span>
+        </div>
+      )}
+      {details.drivers_license && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">DL#:</span>{" "}
+          <span>{details.drivers_license}</span>
+        </div>
+      )}
+      {details.ssn && canViewSSN && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">SSN:</span>{" "}
+          <span className="font-mono">{details.ssn}</span>
+        </div>
+      )}
+      {details.ssn && !canViewSSN && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">SSN:</span>{" "}
+          <span className="text-muted-foreground italic">Hidden (Admin only)</span>
+        </div>
+      )}
+      {details.phone && (
+        <div className="flex items-center gap-2 text-sm">
+          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+          <a href={`tel:${details.phone}`} className="text-primary hover:underline">{details.phone}</a>
+        </div>
+      )}
+      {details.email && (
+        <div className="flex items-center gap-2 text-sm">
+          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+          <a href={`mailto:${details.email}`} className="text-primary hover:underline">{details.email}</a>
+        </div>
+      )}
+      {details.address && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">Address:</span>{" "}
+          <button 
+            onClick={() => openGoogleMaps(details.address)} 
+            className="text-primary hover:underline inline-flex items-center gap-1"
+          >
+            {details.address}
+            <ExternalLink className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+      {details.physical_description && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">Physical Description:</span>
+          <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{details.physical_description}</p>
+        </div>
+      )}
+      {details.employer && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">Employer:</span>
+          <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{details.employer}</p>
+        </div>
+      )}
+      {details.education && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">Education:</span>
+          <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{details.education}</p>
+        </div>
+      )}
+      {details.family_relationships && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">Family & Relationships:</span>
+          <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{details.family_relationships}</p>
+        </div>
+      )}
+      {details.habits_mannerisms && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">Habits & Mannerisms:</span>
+          <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{details.habits_mannerisms}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderVehicleDetails = (details: any) => (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        {details.vehicle_color && (
+          <div>
+            <span className="font-medium text-muted-foreground">Color:</span>{" "}
+            <span>{details.vehicle_color}</span>
+          </div>
+        )}
+        {details.year && (
+          <div>
+            <span className="font-medium text-muted-foreground">Year:</span>{" "}
+            <span>{details.year}</span>
+          </div>
+        )}
+        {details.make && (
+          <div>
+            <span className="font-medium text-muted-foreground">Make:</span>{" "}
+            <span>{details.make}</span>
+          </div>
+        )}
+        {details.model && (
+          <div>
+            <span className="font-medium text-muted-foreground">Model:</span>{" "}
+            <span>{details.model}</span>
+          </div>
+        )}
+        {details.style && (
+          <div>
+            <span className="font-medium text-muted-foreground">Style:</span>{" "}
+            <span>{details.style}</span>
+          </div>
+        )}
+        {details.vin && (
+          <div className="col-span-2">
+            <span className="font-medium text-muted-foreground">VIN:</span>{" "}
+            <span className="font-mono text-xs">{details.vin}</span>
+          </div>
+        )}
+        {details.license_plate && (
+          <div>
+            <span className="font-medium text-muted-foreground">License Plate:</span>{" "}
+            <span className="font-mono">{details.license_plate}</span>
+          </div>
+        )}
+      </div>
+      {details.registered_to && (
+        <div className="text-sm mt-2">
+          <span className="font-medium text-muted-foreground">Registered To:</span>
+          <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{details.registered_to}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderLocationDetails = (details: any) => (
+    <div className="space-y-3">
+      {details.location_address && (
+        <div className="space-y-2">
+          <div className="text-sm">
+            <span className="font-medium text-muted-foreground">Address:</span>{" "}
+            <button 
+              onClick={() => openGoogleMaps(details.location_address)} 
+              className="text-primary hover:underline inline-flex items-center gap-1"
+            >
+              {details.location_address}
+              <ExternalLink className="h-3 w-3" />
+            </button>
+          </div>
+          {/* Small map preview using Google Maps embed */}
+          <div 
+            className="w-full h-32 rounded-lg border bg-muted overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => openGoogleMaps(details.location_address)}
+          >
+            <iframe
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(details.location_address)}&zoom=15`}
+              title="Location Map"
+            />
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        {details.location_contact_name && (
+          <div>
+            <span className="font-medium text-muted-foreground">Contact:</span>{" "}
+            <span>{details.location_contact_name}</span>
+          </div>
+        )}
+        {details.location_phone && (
+          <div className="flex items-center gap-1">
+            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+            <a href={`tel:${details.location_phone}`} className="text-primary hover:underline">{details.location_phone}</a>
+          </div>
+        )}
+      </div>
+      {details.location_description && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">Description:</span>
+          <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{details.location_description}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderItemDetails = (details: any) => (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        {details.item_type && (
+          <div>
+            <span className="font-medium text-muted-foreground">Type:</span>{" "}
+            <span>{details.item_type}</span>
+          </div>
+        )}
+        {details.item_value && (
+          <div className="flex items-center gap-1">
+            <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-medium text-muted-foreground">Value:</span>{" "}
+            <span>{formatCurrency(details.item_value)}</span>
+          </div>
+        )}
+        {details.serial_number && (
+          <div className="col-span-2">
+            <span className="font-medium text-muted-foreground">Serial #:</span>{" "}
+            <span className="font-mono">{details.serial_number}</span>
+          </div>
+        )}
+      </div>
+      {details.item_description && (
+        <div className="text-sm">
+          <span className="font-medium text-muted-foreground">Description:</span>
+          <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{details.item_description}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderSubjectDetails = (subject: Subject) => {
+    const details = subject.details || {};
+    
+    switch (subject.subject_type) {
+      case "person":
+        return renderPersonDetails(details);
+      case "vehicle":
+        return renderVehicleDetails(details);
+      case "location":
+        return renderLocationDetails(details);
+      case "item":
+        return renderItemDetails(details);
+      default:
+        return Object.keys(details).length > 0 && (
+          <div className="space-y-1">
+            {Object.entries(details).map(([key, value]) => (
+              <div key={key} className="text-sm">
+                <span className="font-medium capitalize">{key.replace(/_/g, " ")}:</span>{" "}
+                <span className="text-muted-foreground">{String(value)}</span>
+              </div>
+            ))}
+          </div>
+        );
+    }
+  };
 
   if (loading) {
     return <p className="text-muted-foreground">Loading subjects...</p>;
@@ -240,18 +520,12 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
+                {renderSubjectDetails(subject)}
                 {subject.notes && (
-                  <p className="text-sm text-muted-foreground mb-2">{subject.notes}</p>
-                )}
-                {subject.details && Object.keys(subject.details).length > 0 && (
-                  <div className="space-y-1">
-                    {Object.entries(subject.details).map(([key, value]) => (
-                      <div key={key} className="text-sm">
-                        <span className="font-medium capitalize">{key.replace("_", " ")}:</span>{" "}
-                        <span className="text-muted-foreground">{String(value)}</span>
-                      </div>
-                    ))}
+                  <div className="text-sm pt-2 border-t">
+                    <span className="font-medium text-muted-foreground">Notes:</span>
+                    <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{subject.notes}</p>
                   </div>
                 )}
               </CardContent>
