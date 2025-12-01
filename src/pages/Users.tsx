@@ -125,14 +125,23 @@ const Users = () => {
   const handleInviteUser = async (values: z.infer<typeof inviteSchema>) => {
     if (!organization?.id) return;
 
+    console.log("🔵 Inviting user:", {
+      email: values.email,
+      role: values.role,
+      orgId: organization.id,
+      currentUserCount: users.filter(u => u.status === 'active').length
+    });
+
     try {
-      const { error } = await supabase.functions.invoke('send-user-invite', {
+      const { data, error } = await supabase.functions.invoke('send-user-invite', {
         body: {
           email: values.email,
           role: values.role,
           organizationId: organization.id,
         }
       });
+
+      console.log("🔵 Invite response:", { data, error });
 
       if (error) throw error;
 
@@ -141,7 +150,7 @@ const Users = () => {
       form.reset();
       fetchUsers();
     } catch (error: any) {
-      console.error("Error sending invite:", error);
+      console.error("🔵 Error sending invite:", error);
       toast.error(error.message || "Failed to send invite");
     }
   };
