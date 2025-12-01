@@ -239,7 +239,12 @@ const Users = () => {
 
         // Recalculate actual user count from database
         console.log("🔴 Recalculating user count...");
-        const { error: usageError } = await supabase.functions.invoke('update-org-usage');
+        const { data: { session } } = await supabase.auth.getSession();
+        const { error: usageError } = await supabase.functions.invoke('update-org-usage', {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+        });
         
         if (usageError) {
           console.error("🔴 Failed to update usage:", usageError);
@@ -253,6 +258,11 @@ const Users = () => {
       console.log("🔴 Refreshing user list...");
       // Force immediate refresh
       await fetchUsers();
+      
+      // Also refresh organization context to update limits
+      if (window.location.pathname.includes('/users')) {
+        window.location.reload();
+      }
       
     } catch (error: any) {
       console.error("🔴 ERROR in handleRemoveUser:", error);
