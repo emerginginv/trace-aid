@@ -227,9 +227,11 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
 
       let error;
       if (editingSubject) {
+        // For updates, exclude case_id, user_id, and organization_id as they shouldn't change
+        const { case_id, user_id, organization_id, ...updateData } = subjectData;
         const result = await supabase
           .from("case_subjects")
-          .update(subjectData)
+          .update(updateData)
           .eq("id", editingSubject.id);
         error = result.error;
       } else {
