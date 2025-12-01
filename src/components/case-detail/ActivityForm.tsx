@@ -236,6 +236,7 @@ export function ActivityForm({
         description: editingActivity ? `${activityType === "task" ? "Task" : "Event"} updated successfully` : `${activityType === "task" ? "Task" : "Event"} added successfully`,
       });
 
+      onOpenChange(false);
       onSuccess();
     } catch (error) {
       console.error("Error saving activity:", error);
