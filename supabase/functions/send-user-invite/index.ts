@@ -51,22 +51,31 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user already exists in organization
-    const { data: existingMember } = await supabase
-      .from('organization_members')
+    // Check if this email already exists as a user in the system
+    const { data: existingProfile } = await supabase
+      .from('profiles')
       .select('id')
-      .eq('organization_id', organizationId)
-      .eq('user_id', user.id)
+      .eq('email', email)
       .maybeSingle();
 
-    if (existingMember) {
-      return new Response(
-        JSON.stringify({ error: 'User is already a member of this organization' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // If user exists, check if they're already in THIS organization
+    if (existingProfile) {
+      const { data: existingMember } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('user_id', existingProfile.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        return new Response(
+          JSON.stringify({ error: 'This user is already a member of your organization' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    // Check if there's already a pending invite
+    // Check if there's already a pending invite for this email in THIS organization
     const { data: existingInvite } = await supabase
       .from('organization_invites')
       .select('id')
@@ -106,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
     // TODO: Send actual email with invite link
     // For now, we'll just log it
     const inviteLink = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${invite.token}&type=invite`;
-    console.log(`Invite created for ${email} with role ${role}`);
+    console.log(`Invite created for ${email} with role ${role} in organization ${organizationId}`);
     console.log(`Invite link: ${inviteLink}`);
     console.log(`Token: ${invite.token}`);
 
