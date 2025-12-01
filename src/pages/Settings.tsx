@@ -170,7 +170,7 @@ const Settings = () => {
   );
 
   // Billing State
-  const { organization, subscriptionStatus, checkSubscription } = useOrganization();
+  const { organization, subscriptionStatus, checkSubscription, refreshOrganization } = useOrganization();
   const [billingLoading, setBillingLoading] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
 
@@ -919,7 +919,12 @@ const Settings = () => {
 
       // Recalculate actual user count from database
       console.log("🔴 Settings: Recalculating user count...");
-      const { error: usageError } = await supabase.functions.invoke('update-org-usage');
+      const { data: { session } } = await supabase.auth.getSession();
+      const { error: usageError } = await supabase.functions.invoke('update-org-usage', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
       
       if (usageError) {
         console.error("🔴 Settings: Failed to update usage:", usageError);
@@ -931,6 +936,11 @@ const Settings = () => {
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
       await fetchUsers();
+      
+      // Refresh the organization context
+      if (organization) {
+        await refreshOrganization();
+      }
     } catch (error: any) {
       console.error("🔴 Settings: Error removing user:", error);
       toast.error(error.message || "Failed to remove user");
