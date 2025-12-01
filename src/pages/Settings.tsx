@@ -142,6 +142,7 @@ const Settings = () => {
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [selectedUserForColor, setSelectedUserForColor] = useState<User | null>(null);
   const [showInvitePassword, setShowInvitePassword] = useState(false);
+  const [cleaningUp, setCleaningUp] = useState(false);
 
   const colorPalette = [
     "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", 
@@ -968,6 +969,74 @@ const Settings = () => {
     }
   };
 
+  const handleCleanupOrphanedMembers = async () => {
+    if (!organization?.id) return;
+
+    setCleaningUp(true);
+    console.log("🧹 Starting orphaned members cleanup");
+
+    try {
+      // Get all organization members
+      const { data: orgMembers, error: membersError } = await supabase
+        .from("organization_members")
+        .select("user_id, id")
+        .eq("organization_id", organization.id);
+
+      if (membersError) throw membersError;
+
+      console.log("🧹 Found", orgMembers?.length, "members in org");
+
+      // Get all profiles (which should match auth.users)
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id");
+
+      if (profilesError) throw profilesError;
+
+      const profileIds = new Set(profiles?.map(p => p.id) || []);
+      const orphanedMembers = orgMembers?.filter(m => !profileIds.has(m.user_id)) || [];
+
+      console.log("🧹 Found", orphanedMembers.length, "orphaned members");
+
+      if (orphanedMembers.length === 0) {
+        toast.success("No orphaned members found - all clean!");
+        return;
+      }
+
+      // Delete orphaned members
+      const orphanedIds = orphanedMembers.map(m => m.id);
+      const { error: deleteError } = await supabase
+        .from("organization_members")
+        .delete()
+        .in("id", orphanedIds);
+
+      if (deleteError) throw deleteError;
+
+      console.log("🧹 Deleted", orphanedIds.length, "orphaned members");
+
+      // Recalculate user count
+      const { data: { session } } = await supabase.auth.getSession();
+      await supabase.functions.invoke('update-org-usage', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      toast.success(`Cleaned up ${orphanedIds.length} orphaned member records`);
+      
+      // Refresh
+      await fetchUsers();
+      if (organization) {
+        await refreshOrganization();
+      }
+    } catch (error: any) {
+      console.error("🧹 Cleanup error:", error);
+      toast.error(error.message || "Failed to cleanup orphaned members");
+    } finally {
+      setCleaningUp(false);
+    }
+  };
+
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1680,14 +1749,32 @@ const Settings = () => {
                     Manage team members and their roles
                   </CardDescription>
                 </div>
-                <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Add User
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleCleanupOrphanedMembers}
+                    disabled={cleaningUp}
+                  >
+                    {cleaningUp ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Cleaning...
+                      </>
+                    ) : (
+                      <>
+                        <HardDrive className="w-4 h-4 mr-2" />
+                        Cleanup
+                      </>
+                    )}
+                  </Button>
+                  <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Add User
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Add New User</DialogTitle>
                       <DialogDescription>
@@ -1761,7 +1848,8 @@ const Settings = () => {
                       </Button>
                     </div>
                   </DialogContent>
-                </Dialog>
+                  </Dialog>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
