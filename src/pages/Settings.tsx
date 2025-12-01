@@ -895,9 +895,30 @@ const Settings = () => {
   const handleDeleteUser = async () => {
     if (!userToDelete || !organization?.id) return;
 
-    console.log("🔴 Settings: Deleting user", userToDelete.email, "from org", organization.id);
+    console.log("🔴 Settings: Deleting user", {
+      email: userToDelete.email,
+      userId: userToDelete.id,
+      orgId: organization.id,
+      orgName: organization.name
+    });
 
     try {
+      // First, let's verify the user exists in organization_members
+      const { data: verifyMember, error: verifyError } = await supabase
+        .from("organization_members")
+        .select("*")
+        .eq("user_id", userToDelete.id)
+        .eq("organization_id", organization.id)
+        .maybeSingle();
+
+      console.log("🔴 Settings: Pre-delete verification", { verifyMember, verifyError });
+
+      if (!verifyMember && !verifyError) {
+        console.log("🔴 Settings: User not found in organization_members!");
+        toast.error("User not found in organization");
+        return;
+      }
+
       // Remove user from THIS organization only (not deleting the entire user account)
       const { data: deleteResult, error: memberError, count } = await supabase
         .from("organization_members")

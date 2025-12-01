@@ -60,23 +60,43 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Check if user already exists in auth.users by trying to get them via email
     // We query auth.users directly since profiles might not exist if previous signup failed
+    console.log('[CREATE-USER] Checking if user exists:', email);
     const { data: authUsers } = await supabase.auth.admin.listUsers();
     const existingAuthUser = authUsers.users.find(u => u.email === email);
 
     if (existingAuthUser) {
-      const { data: existingMember } = await supabase
+      console.log('[CREATE-USER] Found existing auth user:', existingAuthUser.id);
+      
+      const { data: existingMember, error: memberCheckError } = await supabase
         .from('organization_members')
-        .select('id')
+        .select('id, user_id, organization_id, role')
         .eq('user_id', existingAuthUser.id)
         .eq('organization_id', organizationId)
         .maybeSingle();
 
+      console.log('[CREATE-USER] Member check result:', { 
+        existingMember, 
+        memberCheckError,
+        userId: existingAuthUser.id,
+        orgId: organizationId 
+      });
+
       if (existingMember) {
+        console.log('[CREATE-USER] User already a member, rejecting');
         return new Response(
-          JSON.stringify({ error: 'This user is already a member of your organization' }),
+          JSON.stringify({ 
+            error: `This user (${email}) is already a member of your organization`,
+            details: {
+              userId: existingAuthUser.id,
+              membershipId: existingMember.id,
+              role: existingMember.role
+            }
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      
+      console.log('[CREATE-USER] User exists in auth but not in org, will add to org');
 
       // User exists but not in this org - add them to the organization
       const { error: orgMemberError } = await supabase
