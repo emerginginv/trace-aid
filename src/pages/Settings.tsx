@@ -893,48 +893,51 @@ const Settings = () => {
   };
 
   const handleDeleteUser = async () => {
-    if (!userToDelete) return;
+    if (!userToDelete || !organization?.id) return;
+
+    console.log("🔴 Settings: Deleting user", userToDelete.email, "from org", organization.id);
 
     try {
-      // Check if user has any assigned cases
-      const { data: cases, error: casesError } = await supabase
-        .from("cases")
-        .select("id")
+      // Remove user from THIS organization only (not deleting the entire user account)
+      const { data: deleteResult, error: memberError, count } = await supabase
+        .from("organization_members")
+        .delete({ count: 'exact' })
         .eq("user_id", userToDelete.id)
-        .limit(1);
+        .eq("organization_id", organization.id);
 
-      if (casesError) throw casesError;
+      console.log("🔴 Settings: Delete result", { deleteResult, error: memberError, count });
 
-      if (cases && cases.length > 0) {
-        toast.error("Cannot delete user: They have cases assigned to them");
-        setDeleteConfirmOpen(false);
-        setUserToDelete(null);
-        return;
+      if (memberError) {
+        console.error("🔴 Settings: Delete error", memberError);
+        throw memberError;
       }
 
-      // Delete user roles first (foreign key constraint)
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userToDelete.id);
+      if (count === 0) {
+        console.error("🔴 Settings: No rows deleted");
+        throw new Error("User not found in this organization");
+      }
 
-      if (roleError) throw roleError;
+      // Update organization user count
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('current_users_count')
+        .eq('id', organization.id)
+        .single();
 
-      // Delete profile
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userToDelete.id);
+      if (orgData && orgData.current_users_count && orgData.current_users_count > 0) {
+        await supabase
+          .from('organizations')
+          .update({ current_users_count: orgData.current_users_count - 1 })
+          .eq('id', organization.id);
+      }
 
-      if (profileError) throw profileError;
-
-      toast.success("User deleted successfully");
+      toast.success("User removed from organization");
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
-      fetchUsers();
+      await fetchUsers();
     } catch (error: any) {
-      console.error("Error deleting user:", error);
-      toast.error("Failed to delete user");
+      console.error("🔴 Settings: Error removing user:", error);
+      toast.error(error.message || "Failed to remove user");
     }
   };
 
