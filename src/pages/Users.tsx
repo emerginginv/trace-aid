@@ -190,6 +190,8 @@ const Users = () => {
     if (!userToRemove || !organization?.id) return;
 
     try {
+      console.log("Attempting to remove user:", userToRemove.id, "from org:", organization.id);
+      
       if (userToRemove.status === 'pending') {
         // Remove invite
         const { error } = await supabase
@@ -197,21 +199,32 @@ const Users = () => {
           .delete()
           .eq("id", userToRemove.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Failed to delete invite:", error);
+          throw error;
+        }
+        
+        console.log("Invite deleted successfully");
         toast.success("Invite cancelled");
       } else {
         // Remove member from this organization only
-        // We only delete from organization_members, NOT from user_roles
-        // because user_roles is system-wide and the user might be in other organizations
-        const { error: memberError } = await supabase
+        const { data: deleteResult, error: memberError } = await supabase
           .from("organization_members")
           .delete()
           .eq("user_id", userToRemove.id)
-          .eq("organization_id", organization.id);
+          .eq("organization_id", organization.id)
+          .select();
+
+        console.log("Delete result:", deleteResult, "Error:", memberError);
 
         if (memberError) {
           console.error("Error removing user from organization:", memberError);
           throw memberError;
+        }
+
+        if (!deleteResult || deleteResult.length === 0) {
+          console.error("No rows were deleted - user may not exist in this organization");
+          throw new Error("User not found in organization");
         }
 
         // Update organization user count
@@ -222,19 +235,27 @@ const Users = () => {
           .single();
 
         if (orgData && orgData.current_users_count && orgData.current_users_count > 0) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('organizations')
             .update({ current_users_count: orgData.current_users_count - 1 })
             .eq('id', organization.id);
+          
+          if (updateError) {
+            console.error("Failed to update user count:", updateError);
+          }
         }
 
+        console.log("User removed successfully");
         toast.success("User removed from organization");
       }
 
-      fetchUsers();
-    } catch (error) {
+      // Force refresh with a small delay to ensure database has updated
+      setTimeout(() => {
+        fetchUsers();
+      }, 300);
+    } catch (error: any) {
       console.error("Error removing user:", error);
-      toast.error("Failed to remove user");
+      toast.error(error.message || "Failed to remove user");
     } finally {
       setUserToRemove(null);
     }
