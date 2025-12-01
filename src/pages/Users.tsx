@@ -200,21 +200,33 @@ const Users = () => {
         if (error) throw error;
         toast.success("Invite cancelled");
       } else {
-        // Remove member
+        // Remove member from this organization only
+        // We only delete from organization_members, NOT from user_roles
+        // because user_roles is system-wide and the user might be in other organizations
         const { error: memberError } = await supabase
           .from("organization_members")
           .delete()
           .eq("user_id", userToRemove.id)
           .eq("organization_id", organization.id);
 
-        if (memberError) throw memberError;
+        if (memberError) {
+          console.error("Error removing user from organization:", memberError);
+          throw memberError;
+        }
 
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", userToRemove.id);
+        // Update organization user count
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('current_users_count')
+          .eq('id', organization.id)
+          .single();
 
-        if (roleError) throw roleError;
+        if (orgData && orgData.current_users_count && orgData.current_users_count > 0) {
+          await supabase
+            .from('organizations')
+            .update({ current_users_count: orgData.current_users_count - 1 })
+            .eq('id', organization.id);
+        }
 
         toast.success("User removed from organization");
       }
