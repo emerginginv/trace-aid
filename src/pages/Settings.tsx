@@ -142,7 +142,6 @@ const Settings = () => {
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [selectedUserForColor, setSelectedUserForColor] = useState<User | null>(null);
   const [showInvitePassword, setShowInvitePassword] = useState(false);
-  const [cleaningUp, setCleaningUp] = useState(false);
 
   const colorPalette = [
     "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", 
@@ -969,120 +968,6 @@ const Settings = () => {
     }
   };
 
-  const handleCleanupOrphanedMembers = async () => {
-    if (!organization?.id) return;
-
-    setCleaningUp(true);
-    console.log("🧹 Starting comprehensive cleanup");
-
-    try {
-      // Get ALL organization members for this org
-      const { data: allOrgMembers, error: membersError } = await supabase
-        .from("organization_members")
-        .select("user_id, id, role, created_at")
-        .eq("organization_id", organization.id);
-
-      if (membersError) throw membersError;
-
-      console.log("🧹 Total members in database:", allOrgMembers?.length);
-
-      // Get all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, email, full_name");
-
-      if (profilesError) throw profilesError;
-
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-      
-      // Get what's shown in the UI via the RPC function
-      const { data: uiUsers } = await supabase.rpc('get_organization_users', {
-        org_id: organization.id
-      });
-
-      const uiUserIds = new Set((uiUsers || []).map((u: any) => u.id));
-
-      console.log("🧹 Users visible in UI:", uiUserIds.size);
-      console.log("🧹 Database members:", allOrgMembers?.length);
-
-      // Find members that exist in DB but not in UI (hidden orphans)
-      const hiddenMembers = allOrgMembers?.filter(m => {
-        const profile = profileMap.get(m.user_id);
-        const inUI = uiUserIds.has(m.user_id);
-        
-        console.log(`🧹 Checking member ${m.user_id}:`, {
-          hasProfile: !!profile,
-          email: profile?.email,
-          inUI,
-          willRemove: !inUI && !!profile
-        });
-
-        // Remove if they have a profile but aren't shown in UI
-        return !!profile && !inUI;
-      }) || [];
-
-      // Also find truly orphaned members (no profile at all)
-      const orphanedMembers = allOrgMembers?.filter(m => !profileMap.has(m.user_id)) || [];
-
-      const totalToRemove = [...hiddenMembers, ...orphanedMembers];
-
-      console.log("🧹 Hidden members (exist but not in UI):", hiddenMembers.length);
-      console.log("🧹 Orphaned members (no profile):", orphanedMembers.length);
-
-      if (totalToRemove.length === 0) {
-        toast.success("No problematic members found - all clean!");
-        return;
-      }
-
-      // Show confirmation with details
-      const hiddenEmails = hiddenMembers.map(m => {
-        const profile = profileMap.get(m.user_id);
-        return profile?.email || m.user_id;
-      });
-
-      const confirmMsg = `Found ${totalToRemove.length} problematic member(s):\n\n` +
-        (hiddenEmails.length > 0 ? `Hidden: ${hiddenEmails.join(', ')}\n` : '') +
-        (orphanedMembers.length > 0 ? `Orphaned: ${orphanedMembers.length} records\n` : '') +
-        `\nRemove these members?`;
-
-      if (!confirm(confirmMsg)) {
-        setCleaningUp(false);
-        return;
-      }
-
-      // Delete all problematic members
-      const idsToDelete = totalToRemove.map(m => m.id);
-      const { error: deleteError } = await supabase
-        .from("organization_members")
-        .delete()
-        .in("id", idsToDelete);
-
-      if (deleteError) throw deleteError;
-
-      console.log("🧹 Deleted", idsToDelete.length, "members");
-
-      // Recalculate user count
-      const { data: { session } } = await supabase.auth.getSession();
-      await supabase.functions.invoke('update-org-usage', {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      toast.success(`Cleaned up ${idsToDelete.length} member records`);
-      
-      // Refresh
-      await fetchUsers();
-      if (organization) {
-        await refreshOrganization();
-      }
-    } catch (error: any) {
-      console.error("🧹 Cleanup error:", error);
-      toast.error(error.message || "Failed to cleanup");
-    } finally {
-      setCleaningUp(false);
-    }
-  };
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -1797,23 +1682,6 @@ const Settings = () => {
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleCleanupOrphanedMembers}
-                    disabled={cleaningUp}
-                  >
-                    {cleaningUp ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Cleaning...
-                      </>
-                    ) : (
-                      <>
-                        <HardDrive className="w-4 h-4 mr-2" />
-                        Cleanup
-                      </>
-                    )}
-                  </Button>
                   <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
                     <DialogTrigger asChild>
                       <Button>
