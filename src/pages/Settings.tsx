@@ -917,18 +917,14 @@ const Settings = () => {
         throw new Error("User not found in this organization");
       }
 
-      // Update organization user count
-      const { data: orgData } = await supabase
-        .from('organizations')
-        .select('current_users_count')
-        .eq('id', organization.id)
-        .single();
-
-      if (orgData && orgData.current_users_count && orgData.current_users_count > 0) {
-        await supabase
-          .from('organizations')
-          .update({ current_users_count: orgData.current_users_count - 1 })
-          .eq('id', organization.id);
+      // Recalculate actual user count from database
+      console.log("🔴 Settings: Recalculating user count...");
+      const { error: usageError } = await supabase.functions.invoke('update-org-usage');
+      
+      if (usageError) {
+        console.error("🔴 Settings: Failed to update usage:", usageError);
+      } else {
+        console.log("✅ Settings: User count recalculated successfully");
       }
 
       toast.success("User removed from organization");
