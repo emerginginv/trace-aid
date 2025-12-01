@@ -165,12 +165,13 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
             name="unit_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Unit Price</FormLabel>
+                <FormLabel>Unit Price <span className="text-destructive">*</span></FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
-                    step="0.01" 
-                    placeholder="Price per unit" 
+                    step="0.01"
+                    min="0.01"
+                    placeholder="Price per unit (required)" 
                     {...field} 
                   />
                 </FormControl>
