@@ -40,7 +40,21 @@ const formSchema = z.object({
   notes: z.string().optional(),
   hours: z.string().optional(),
   hourly_rate: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    // For expenses, require unit_price to be provided and positive
+    if (data.finance_type === "expense") {
+      if (!data.unit_price || Number(data.unit_price) <= 0) {
+        return false;
+      }
+    }
+    return true;
+  },
+  {
+    message: "Unit Price is required for expenses and must be greater than 0",
+    path: ["unit_price"],
+  }
+);
 
 interface FinanceFormProps {
   caseId: string;
