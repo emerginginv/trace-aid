@@ -187,52 +187,68 @@ const Users = () => {
   };
 
   const handleRemoveUser = async () => {
-    if (!userToRemove || !organization?.id) return;
+    console.log("🔴 handleRemoveUser called", { userToRemove, orgId: organization?.id });
+    
+    if (!userToRemove || !organization?.id) {
+      console.log("🔴 Missing data - userToRemove or organization");
+      return;
+    }
 
     try {
-      console.log("Attempting to remove user:", userToRemove.id, "from org:", organization.id);
+      console.log("🔴 Starting removal process for:", userToRemove.email, "Status:", userToRemove.status);
       
       if (userToRemove.status === 'pending') {
-        // Remove invite
+        console.log("🔴 Deleting pending invite with ID:", userToRemove.id);
         const { error } = await supabase
           .from("organization_invites")
           .delete()
           .eq("id", userToRemove.id);
 
         if (error) {
-          console.error("Failed to delete invite:", error);
+          console.error("🔴 Failed to delete invite:", error);
           throw error;
         }
         
-        console.log("Invite deleted successfully");
+        console.log("✅ Invite deleted successfully");
         toast.success("Invite cancelled");
       } else {
+        console.log("🔴 Deleting active user from organization");
+        console.log("🔴 Deleting with user_id:", userToRemove.id, "org_id:", organization.id);
+        
         // Remove member from this organization only
-        const { data: deleteResult, error: memberError } = await supabase
+        const { data: deleteResult, error: memberError, count } = await supabase
           .from("organization_members")
-          .delete()
+          .delete({ count: 'exact' })
           .eq("user_id", userToRemove.id)
-          .eq("organization_id", organization.id)
-          .select();
+          .eq("organization_id", organization.id);
 
-        console.log("Delete result:", deleteResult, "Error:", memberError);
+        console.log("🔴 Delete operation completed");
+        console.log("🔴 Delete result:", { deleteResult, error: memberError, count });
 
         if (memberError) {
-          console.error("Error removing user from organization:", memberError);
+          console.error("🔴 Error from database:", memberError);
           throw memberError;
         }
 
-        if (!deleteResult || deleteResult.length === 0) {
-          console.error("No rows were deleted - user may not exist in this organization");
-          throw new Error("User not found in organization");
+        if (count === 0) {
+          console.error("🔴 No rows deleted - user may not exist in organization");
+          throw new Error("User not found in this organization");
         }
 
+        console.log("✅ Successfully deleted", count, "row(s)");
+
         // Update organization user count
-        const { data: orgData } = await supabase
+        const { data: orgData, error: orgFetchError } = await supabase
           .from('organizations')
           .select('current_users_count')
           .eq('id', organization.id)
           .single();
+
+        console.log("🔴 Current org user count:", orgData?.current_users_count);
+
+        if (orgFetchError) {
+          console.error("🔴 Error fetching org data:", orgFetchError);
+        }
 
         if (orgData && orgData.current_users_count && orgData.current_users_count > 0) {
           const { error: updateError } = await supabase
@@ -241,22 +257,24 @@ const Users = () => {
             .eq('id', organization.id);
           
           if (updateError) {
-            console.error("Failed to update user count:", updateError);
+            console.error("🔴 Failed to update user count:", updateError);
+          } else {
+            console.log("✅ Updated user count to:", orgData.current_users_count - 1);
           }
         }
 
-        console.log("User removed successfully");
         toast.success("User removed from organization");
       }
 
-      // Force refresh with a small delay to ensure database has updated
-      setTimeout(() => {
-        fetchUsers();
-      }, 300);
+      console.log("🔴 Refreshing user list...");
+      // Force immediate refresh
+      await fetchUsers();
+      
     } catch (error: any) {
-      console.error("Error removing user:", error);
+      console.error("🔴 ERROR in handleRemoveUser:", error);
       toast.error(error.message || "Failed to remove user");
     } finally {
+      console.log("🔴 Closing dialog");
       setUserToRemove(null);
     }
   };
