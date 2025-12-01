@@ -87,15 +87,12 @@ const CaseDetail = () => {
   }, [id]);
   const fetchCaseStatuses = async () => {
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      const { getCurrentUserOrganizationId } = await import("@/lib/organizationHelpers");
+      const organizationId = await getCurrentUserOrganizationId();
+      
       const {
         data
-      } = await supabase.from("picklists").select("id, value, color, status_type").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true).order("display_order");
+      } = await supabase.from("picklists").select("id, value, color, status_type").eq("type", "case_status").eq("is_active", true).or(`organization_id.eq.${organizationId},organization_id.is.null`).order("display_order");
       if (data) {
         setCaseStatuses(data);
       }
