@@ -237,30 +237,14 @@ const Users = () => {
 
         console.log("✅ Successfully deleted", count, "row(s)");
 
-        // Update organization user count
-        const { data: orgData, error: orgFetchError } = await supabase
-          .from('organizations')
-          .select('current_users_count')
-          .eq('id', organization.id)
-          .single();
-
-        console.log("🔴 Current org user count:", orgData?.current_users_count);
-
-        if (orgFetchError) {
-          console.error("🔴 Error fetching org data:", orgFetchError);
-        }
-
-        if (orgData && orgData.current_users_count && orgData.current_users_count > 0) {
-          const { error: updateError } = await supabase
-            .from('organizations')
-            .update({ current_users_count: orgData.current_users_count - 1 })
-            .eq('id', organization.id);
-          
-          if (updateError) {
-            console.error("🔴 Failed to update user count:", updateError);
-          } else {
-            console.log("✅ Updated user count to:", orgData.current_users_count - 1);
-          }
+        // Recalculate actual user count from database
+        console.log("🔴 Recalculating user count...");
+        const { error: usageError } = await supabase.functions.invoke('update-org-usage');
+        
+        if (usageError) {
+          console.error("🔴 Failed to update usage:", usageError);
+        } else {
+          console.log("✅ User count recalculated successfully");
         }
 
         toast.success("User removed from organization");
