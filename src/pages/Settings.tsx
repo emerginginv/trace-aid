@@ -973,46 +973,93 @@ const Settings = () => {
     if (!organization?.id) return;
 
     setCleaningUp(true);
-    console.log("🧹 Starting orphaned members cleanup");
+    console.log("🧹 Starting comprehensive cleanup");
 
     try {
-      // Get all organization members
-      const { data: orgMembers, error: membersError } = await supabase
+      // Get ALL organization members for this org
+      const { data: allOrgMembers, error: membersError } = await supabase
         .from("organization_members")
-        .select("user_id, id")
+        .select("user_id, id, role, created_at")
         .eq("organization_id", organization.id);
 
       if (membersError) throw membersError;
 
-      console.log("🧹 Found", orgMembers?.length, "members in org");
+      console.log("🧹 Total members in database:", allOrgMembers?.length);
 
-      // Get all profiles (which should match auth.users)
+      // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id");
+        .select("id, email, full_name");
 
       if (profilesError) throw profilesError;
 
-      const profileIds = new Set(profiles?.map(p => p.id) || []);
-      const orphanedMembers = orgMembers?.filter(m => !profileIds.has(m.user_id)) || [];
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      
+      // Get what's shown in the UI via the RPC function
+      const { data: uiUsers } = await supabase.rpc('get_organization_users', {
+        org_id: organization.id
+      });
 
-      console.log("🧹 Found", orphanedMembers.length, "orphaned members");
+      const uiUserIds = new Set((uiUsers || []).map((u: any) => u.id));
 
-      if (orphanedMembers.length === 0) {
-        toast.success("No orphaned members found - all clean!");
+      console.log("🧹 Users visible in UI:", uiUserIds.size);
+      console.log("🧹 Database members:", allOrgMembers?.length);
+
+      // Find members that exist in DB but not in UI (hidden orphans)
+      const hiddenMembers = allOrgMembers?.filter(m => {
+        const profile = profileMap.get(m.user_id);
+        const inUI = uiUserIds.has(m.user_id);
+        
+        console.log(`🧹 Checking member ${m.user_id}:`, {
+          hasProfile: !!profile,
+          email: profile?.email,
+          inUI,
+          willRemove: !inUI && !!profile
+        });
+
+        // Remove if they have a profile but aren't shown in UI
+        return !!profile && !inUI;
+      }) || [];
+
+      // Also find truly orphaned members (no profile at all)
+      const orphanedMembers = allOrgMembers?.filter(m => !profileMap.has(m.user_id)) || [];
+
+      const totalToRemove = [...hiddenMembers, ...orphanedMembers];
+
+      console.log("🧹 Hidden members (exist but not in UI):", hiddenMembers.length);
+      console.log("🧹 Orphaned members (no profile):", orphanedMembers.length);
+
+      if (totalToRemove.length === 0) {
+        toast.success("No problematic members found - all clean!");
         return;
       }
 
-      // Delete orphaned members
-      const orphanedIds = orphanedMembers.map(m => m.id);
+      // Show confirmation with details
+      const hiddenEmails = hiddenMembers.map(m => {
+        const profile = profileMap.get(m.user_id);
+        return profile?.email || m.user_id;
+      });
+
+      const confirmMsg = `Found ${totalToRemove.length} problematic member(s):\n\n` +
+        (hiddenEmails.length > 0 ? `Hidden: ${hiddenEmails.join(', ')}\n` : '') +
+        (orphanedMembers.length > 0 ? `Orphaned: ${orphanedMembers.length} records\n` : '') +
+        `\nRemove these members?`;
+
+      if (!confirm(confirmMsg)) {
+        setCleaningUp(false);
+        return;
+      }
+
+      // Delete all problematic members
+      const idsToDelete = totalToRemove.map(m => m.id);
       const { error: deleteError } = await supabase
         .from("organization_members")
         .delete()
-        .in("id", orphanedIds);
+        .in("id", idsToDelete);
 
       if (deleteError) throw deleteError;
 
-      console.log("🧹 Deleted", orphanedIds.length, "orphaned members");
+      console.log("🧹 Deleted", idsToDelete.length, "members");
 
       // Recalculate user count
       const { data: { session } } = await supabase.auth.getSession();
@@ -1022,7 +1069,7 @@ const Settings = () => {
         },
       });
 
-      toast.success(`Cleaned up ${orphanedIds.length} orphaned member records`);
+      toast.success(`Cleaned up ${idsToDelete.length} member records`);
       
       // Refresh
       await fetchUsers();
@@ -1031,7 +1078,7 @@ const Settings = () => {
       }
     } catch (error: any) {
       console.error("🧹 Cleanup error:", error);
-      toast.error(error.message || "Failed to cleanup orphaned members");
+      toast.error(error.message || "Failed to cleanup");
     } finally {
       setCleaningUp(false);
     }
