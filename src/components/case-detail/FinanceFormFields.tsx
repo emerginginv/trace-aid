@@ -43,15 +43,15 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
 
   const fetchExpenseCategories = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { getCurrentUserOrganizationId } = await import("@/lib/organizationHelpers");
+      const organizationId = await getCurrentUserOrganizationId();
 
       const { data, error } = await supabase
         .from("picklists")
         .select("value")
-        .eq("user_id", user.id)
         .eq("type", "expense_category")
         .eq("is_active", true)
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .order("display_order", { ascending: true });
 
       if (error) throw error;
