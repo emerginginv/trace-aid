@@ -393,10 +393,19 @@ export const CaseCalendar = forwardRef<
     <div className="flex flex-col lg:flex-row gap-4">
       <ActivityForm
         open={activityFormOpen}
-        onOpenChange={setActivityFormOpen}
+        onOpenChange={(open) => {
+          setActivityFormOpen(open);
+          if (!open) {
+            setEditingActivity(null);
+          }
+        }}
         caseId={selectedCaseId || ""}
         editingActivity={editingActivity}
-        onSuccess={fetchData}
+        onSuccess={() => {
+          setActivityFormOpen(false);
+          setEditingActivity(null);
+          fetchData();
+        }}
         activityType={activityType}
         users={users}
         prefilledDate={createDate || undefined}
