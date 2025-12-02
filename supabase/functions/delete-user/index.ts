@@ -104,73 +104,115 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Delete user data in correct order (respecting foreign key constraints)
     
-    // 1. Delete case attachments
+    // 1. Delete invoice payments (references invoices)
+    await supabaseClient
+      .from("invoice_payments")
+      .delete()
+      .eq("user_id", userId);
+
+    // 2. Delete retainer funds (may reference invoices)
+    await supabaseClient
+      .from("retainer_funds")
+      .delete()
+      .eq("user_id", userId);
+
+    // 3. Delete invoices
+    await supabaseClient
+      .from("invoices")
+      .delete()
+      .eq("user_id", userId);
+
+    // 4. Delete case attachments
     await supabaseClient
       .from("case_attachments")
       .delete()
       .eq("user_id", userId);
 
-    // 2. Delete case finances
+    // 5. Delete subject attachments
+    await supabaseClient
+      .from("subject_attachments")
+      .delete()
+      .eq("user_id", userId);
+
+    // 6. Delete case finances
     await supabaseClient
       .from("case_finances")
       .delete()
       .eq("user_id", userId);
 
-    // 3. Delete case activities (both created by and assigned to)
+    // 7. Delete case activities (both created by and assigned to)
     await supabaseClient
       .from("case_activities")
       .delete()
       .or(`user_id.eq.${userId},assigned_user_id.eq.${userId}`);
 
-    // 4. Delete case updates
+    // 8. Delete case updates
     await supabaseClient
       .from("case_updates")
       .delete()
       .eq("user_id", userId);
 
-    // 5. Delete case subjects
+    // 9. Delete case subjects
     await supabaseClient
       .from("case_subjects")
       .delete()
       .eq("user_id", userId);
 
-    // 6. Delete cases
+    // 10. Delete notifications
+    await supabaseClient
+      .from("notifications")
+      .delete()
+      .eq("user_id", userId);
+
+    // 11. Delete cases
     await supabaseClient
       .from("cases")
       .delete()
       .eq("user_id", userId);
 
-    // 7. Delete contacts
+    // 12. Delete contacts
     await supabaseClient
       .from("contacts")
       .delete()
       .eq("user_id", userId);
 
-    // 8. Delete accounts
+    // 13. Delete accounts
     await supabaseClient
       .from("accounts")
       .delete()
       .eq("user_id", userId);
 
-    // 9. Delete organization settings
+    // 14. Delete case update templates
+    await supabaseClient
+      .from("case_update_templates")
+      .delete()
+      .eq("user_id", userId);
+
+    // 15. Delete picklists
+    await supabaseClient
+      .from("picklists")
+      .delete()
+      .eq("user_id", userId);
+
+    // 16. Delete organization settings
     await supabaseClient
       .from("organization_settings")
       .delete()
       .eq("user_id", userId);
 
-    // 10. Delete organization memberships
+    // 17. Delete organization memberships
     await supabaseClient
       .from("organization_members")
       .delete()
       .eq("user_id", userId);
 
-    // 11. Delete user roles
+    // 18. Delete user roles
     await supabaseClient
       .from("user_roles")
       .delete()
       .eq("user_id", userId);
 
-    // 12. Delete the user from auth.users - this will cascade delete the profile
+    // 19. Delete the user from auth.users - this will cascade delete the profile
     const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId);
 
     if (deleteError) {
