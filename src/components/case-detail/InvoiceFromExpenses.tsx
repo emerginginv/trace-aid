@@ -157,6 +157,17 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Get organization_id
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!orgMember?.organization_id) {
+        throw new Error("User not in organization");
+      }
+
       // Calculate total from selected items
       const selectedItemsList = billableItems.filter(item => selectedItems.has(item.id));
       const totalAmount = selectedItemsList.reduce((sum, item) => sum + Number(item.amount), 0);
@@ -175,6 +186,7 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
         .insert({
           case_id: caseId,
           user_id: user.id,
+          organization_id: orgMember.organization_id,
           invoice_number: invoiceNumber,
           total: totalAmount,
           retainer_applied: retainerUsed,
@@ -211,30 +223,19 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
 
       // 3. If retainer funds were applied, record the transaction
       if (retainerUsed > 0) {
-        // Get organization_id
-        const { data: orgMember } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .single();
+        const { error: retainerError } = await supabase
+          .from("retainer_funds")
+          .insert({
+            case_id: caseId,
+            user_id: user.id,
+            organization_id: orgMember.organization_id,
+            amount: -retainerUsed,
+            invoice_id: invoice.id,
+            note: `Applied to invoice ${invoiceNumber}`,
+          });
 
-        if (!orgMember?.organization_id) {
-          console.error("User not in organization");
-        } else {
-          const { error: retainerError } = await supabase
-            .from("retainer_funds")
-            .insert({
-              case_id: caseId,
-              user_id: user.id,
-              organization_id: orgMember.organization_id,
-              amount: -retainerUsed,
-              invoice_id: invoice.id,
-              note: `Applied to invoice ${invoiceNumber}`,
-            });
-
-          if (retainerError) {
-            console.error("Failed to record retainer usage:", retainerError);
-          }
+        if (retainerError) {
+          console.error("Failed to record retainer usage:", retainerError);
         }
       }
 
