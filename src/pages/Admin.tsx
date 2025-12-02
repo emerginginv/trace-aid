@@ -144,31 +144,19 @@ const Admin = () => {
         return;
       }
 
-      console.log(`[DEBUG] Fetched ${usersData.length} users`);
-
-      // Get ALL organization memberships (no filtering by user_id)
+      // Get ALL organization memberships
       const { data: memberships, error: memberError } = await supabase
         .from('organization_members')
         .select('user_id, organization_id, role');
 
-      if (memberError) {
-        console.error('[DEBUG] Error fetching memberships:', memberError);
-        throw memberError;
-      }
-
-      console.log(`[DEBUG] Fetched ${memberships?.length || 0} total memberships`);
+      if (memberError) throw memberError;
 
       // Get ALL organizations
       const { data: orgsData, error: orgsError } = await supabase
         .from('organizations')
         .select('id, name');
 
-      if (orgsError) {
-        console.error('[DEBUG] Error fetching orgs:', orgsError);
-        throw orgsError;
-      }
-
-      console.log(`[DEBUG] Fetched ${orgsData?.length || 0} organizations`);
+      if (orgsError) throw orgsError;
 
       // Create a map of org_id -> org_name for quick lookup
       const orgMap = new Map(orgsData?.map(org => [org.id, org.name]) || []);
@@ -182,22 +170,17 @@ const Admin = () => {
         if (userMemberships.length > 0) {
           // Create one entry per organization membership
           userMemberships.forEach(membership => {
-            const orgName = orgMap.get(membership.organization_id);
-            if (!orgName) {
-              console.warn(`[DEBUG] No org name found for org_id: ${membership.organization_id}, user: ${user.email}`);
-            }
             usersWithOrgs.push({
               id: user.id,
               email: user.email,
               full_name: user.full_name,
               created_at: user.created_at,
               organization_id: membership.organization_id,
-              organization_name: orgName || 'Unknown',
+              organization_name: orgMap.get(membership.organization_id) || 'Unknown',
               role: membership.role,
             });
           });
         } else {
-          console.log(`[DEBUG] User ${user.email} has no organization memberships`);
           // User has no organization
           usersWithOrgs.push({
             id: user.id,
@@ -211,7 +194,6 @@ const Admin = () => {
         }
       });
 
-      console.log(`[DEBUG] Final users with orgs: ${usersWithOrgs.length}`);
       setSystemUsers(usersWithOrgs);
     } catch (error) {
       console.error('Error fetching system users:', error);
