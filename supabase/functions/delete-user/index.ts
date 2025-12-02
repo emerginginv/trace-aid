@@ -75,41 +75,116 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`[DELETE-USER] Admin ${user.email} deleting user ${userId}`);
 
-    // Delete from organization_members first (no foreign key constraints)
-    const { error: orgMemberError } = await supabaseClient
+    // Check what data the user owns
+    const { data: ownedCases, error: casesError } = await supabaseClient
+      .from("cases")
+      .select("id")
+      .eq("user_id", userId);
+
+    if (casesError) {
+      console.error("[DELETE-USER] Error checking cases:", casesError);
+    }
+
+    const { data: ownedActivities } = await supabaseClient
+      .from("case_activities")
+      .select("id")
+      .or(`user_id.eq.${userId},assigned_user_id.eq.${userId}`);
+
+    const { data: ownedUpdates } = await supabaseClient
+      .from("case_updates")
+      .select("id")
+      .eq("user_id", userId);
+
+    const { data: ownedFinances } = await supabaseClient
+      .from("case_finances")
+      .select("id")
+      .eq("user_id", userId);
+
+    console.log(`[DELETE-USER] User owns: ${ownedCases?.length || 0} cases, ${ownedActivities?.length || 0} activities, ${ownedUpdates?.length || 0} updates, ${ownedFinances?.length || 0} finances`);
+
+    // Delete user data in correct order (respecting foreign key constraints)
+    
+    // 1. Delete case attachments
+    await supabaseClient
+      .from("case_attachments")
+      .delete()
+      .eq("user_id", userId);
+
+    // 2. Delete case finances
+    await supabaseClient
+      .from("case_finances")
+      .delete()
+      .eq("user_id", userId);
+
+    // 3. Delete case activities (both created by and assigned to)
+    await supabaseClient
+      .from("case_activities")
+      .delete()
+      .or(`user_id.eq.${userId},assigned_user_id.eq.${userId}`);
+
+    // 4. Delete case updates
+    await supabaseClient
+      .from("case_updates")
+      .delete()
+      .eq("user_id", userId);
+
+    // 5. Delete case subjects
+    await supabaseClient
+      .from("case_subjects")
+      .delete()
+      .eq("user_id", userId);
+
+    // 6. Delete cases
+    await supabaseClient
+      .from("cases")
+      .delete()
+      .eq("user_id", userId);
+
+    // 7. Delete contacts
+    await supabaseClient
+      .from("contacts")
+      .delete()
+      .eq("user_id", userId);
+
+    // 8. Delete accounts
+    await supabaseClient
+      .from("accounts")
+      .delete()
+      .eq("user_id", userId);
+
+    // 9. Delete organization settings
+    await supabaseClient
+      .from("organization_settings")
+      .delete()
+      .eq("user_id", userId);
+
+    // 10. Delete organization memberships
+    await supabaseClient
       .from("organization_members")
       .delete()
       .eq("user_id", userId);
 
-    if (orgMemberError) {
-      console.error("[DELETE-USER] Error deleting organization members:", orgMemberError);
-    }
-
-    // Delete from user_roles
-    const { error: roleError } = await supabaseClient
+    // 11. Delete user roles
+    await supabaseClient
       .from("user_roles")
       .delete()
       .eq("user_id", userId);
 
-    if (roleError) {
-      console.error("[DELETE-USER] Error deleting user roles:", roleError);
-    }
-
-    // Delete the user from auth.users - this will cascade delete the profile
+    // 12. Delete the user from auth.users - this will cascade delete the profile
     const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId);
 
     if (deleteError) {
       console.error("[DELETE-USER] Error deleting user from auth:", deleteError);
       return new Response(
         JSON.stringify({ 
-          error: "Failed to delete user", 
+          error: "Failed to delete user from authentication system", 
           details: deleteError.message 
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[DELETE-USER] Successfully deleted user ${userId}`);
+    console.log(`[DELETE-USER] Successfully deleted user ${userId} and all associated data`);
 
     return new Response(
       JSON.stringify({ 
