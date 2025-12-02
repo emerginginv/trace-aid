@@ -248,14 +248,6 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       setSelectedItems(new Set());
       setRetainerUsed(0);
       fetchBillableItems();
-      
-      // Notify parent to switch to invoices tab if possible
-      if (window.location.pathname.includes('/cases/')) {
-        // Add a small delay then refresh the page to show the invoice
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      }
 
     } catch (error) {
       console.error("Error creating invoice:", error);
