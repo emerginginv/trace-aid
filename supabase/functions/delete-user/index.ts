@@ -164,55 +164,88 @@ const handler = async (req: Request): Promise<Response> => {
       .delete()
       .eq("user_id", userId);
 
-    // 11. Delete cases
+    // 11. Remove user from investigator_ids arrays in cases
+    const { data: casesWithUser } = await supabaseClient
+      .from("cases")
+      .select("id, investigator_ids")
+      .contains("investigator_ids", [userId]);
+
+    if (casesWithUser && casesWithUser.length > 0) {
+      for (const caseItem of casesWithUser) {
+        const updatedIds = (caseItem.investigator_ids || []).filter((id: string) => id !== userId);
+        await supabaseClient
+          .from("cases")
+          .update({ investigator_ids: updatedIds })
+          .eq("id", caseItem.id);
+      }
+    }
+
+    // 12. Nullify case_manager_id and closed_by_user_id in cases where user is referenced
+    await supabaseClient
+      .from("cases")
+      .update({ case_manager_id: null })
+      .eq("case_manager_id", userId);
+
+    await supabaseClient
+      .from("cases")
+      .update({ closed_by_user_id: null })
+      .eq("closed_by_user_id", userId);
+
+    // 13. Delete organization invites where user was invited_by
+    await supabaseClient
+      .from("organization_invites")
+      .delete()
+      .eq("invited_by", userId);
+
+    // 14. Delete cases owned by user
     await supabaseClient
       .from("cases")
       .delete()
       .eq("user_id", userId);
 
-    // 12. Delete contacts
+    // 15. Delete contacts
     await supabaseClient
       .from("contacts")
       .delete()
       .eq("user_id", userId);
 
-    // 13. Delete accounts
+    // 16. Delete accounts
     await supabaseClient
       .from("accounts")
       .delete()
       .eq("user_id", userId);
 
-    // 14. Delete case update templates
+    // 17. Delete case update templates
     await supabaseClient
       .from("case_update_templates")
       .delete()
       .eq("user_id", userId);
 
-    // 15. Delete picklists
+    // 18. Delete picklists
     await supabaseClient
       .from("picklists")
       .delete()
       .eq("user_id", userId);
 
-    // 16. Delete organization settings
+    // 19. Delete organization settings
     await supabaseClient
       .from("organization_settings")
       .delete()
       .eq("user_id", userId);
 
-    // 17. Delete organization memberships
+    // 20. Delete organization memberships
     await supabaseClient
       .from("organization_members")
       .delete()
       .eq("user_id", userId);
 
-    // 18. Delete user roles
+    // 21. Delete user roles
     await supabaseClient
       .from("user_roles")
       .delete()
       .eq("user_id", userId);
 
-    // 19. Delete the user from auth.users - this will cascade delete the profile
+    // 22. Delete the user from auth.users - this will cascade delete the profile
     const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId);
 
     if (deleteError) {
