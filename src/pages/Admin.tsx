@@ -131,43 +131,70 @@ const Admin = () => {
   const fetchSystemUsers = async () => {
     setLoadingUsers(true);
     try {
-      const { data: profiles, error: profilesError } = await supabase
+      // Fetch all users with their organization memberships in a single query
+      const { data: usersData, error: usersError } = await supabase
         .from('profiles')
-        .select('id, email, full_name, created_at');
+        .select(`
+          id, 
+          email, 
+          full_name, 
+          created_at
+        `)
+        .order('created_at', { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (usersError) throw usersError;
 
-      // Get organization memberships and roles for all users
-      const userIds = profiles?.map(p => p.id) || [];
-      
-      const { data: orgMembers, error: orgError } = await supabase
+      if (!usersData || usersData.length === 0) {
+        setSystemUsers([]);
+        return;
+      }
+
+      // Get all organization memberships for these users
+      const { data: memberships, error: memberError } = await supabase
         .from('organization_members')
-        .select('user_id, organization_id, role, organizations(name)')
-        .in('user_id', userIds);
+        .select('user_id, organization_id, role')
+        .in('user_id', usersData.map(u => u.id));
 
-      if (orgError) throw orgError;
+      if (memberError) throw memberError;
 
-      // Map the data together - create one row per organization membership
-      // Users can belong to multiple organizations, so they may appear multiple times
+      // Get all organizations
+      const orgIds = [...new Set(memberships?.map(m => m.organization_id) || [])];
+      const { data: orgsData, error: orgsError } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .in('id', orgIds);
+
+      if (orgsError) throw orgsError;
+
+      // Create a map of org_id -> org_name for quick lookup
+      const orgMap = new Map(orgsData?.map(org => [org.id, org.name]) || []);
+
+      // Map users with their organization info
       const usersWithOrgs: SystemUser[] = [];
       
-      profiles?.forEach(profile => {
-        const userOrgMembers = orgMembers?.filter(om => om.user_id === profile.id) || [];
+      usersData.forEach(user => {
+        const userMemberships = memberships?.filter(m => m.user_id === user.id) || [];
         
-        if (userOrgMembers.length > 0) {
-          // Add one row for each organization the user belongs to
-          userOrgMembers.forEach(orgMember => {
+        if (userMemberships.length > 0) {
+          // Create one entry per organization membership
+          userMemberships.forEach(membership => {
             usersWithOrgs.push({
-              ...profile,
-              organization_id: orgMember.organization_id,
-              organization_name: (orgMember.organizations as any)?.name || null,
-              role: orgMember.role,
+              id: user.id,
+              email: user.email,
+              full_name: user.full_name,
+              created_at: user.created_at,
+              organization_id: membership.organization_id,
+              organization_name: orgMap.get(membership.organization_id) || 'Unknown',
+              role: membership.role,
             });
           });
         } else {
-          // User has no organization - show them with null values
+          // User has no organization
           usersWithOrgs.push({
-            ...profile,
+            id: user.id,
+            email: user.email,
+            full_name: user.full_name,
+            created_at: user.created_at,
             organization_id: null,
             organization_name: null,
             role: null,
@@ -326,32 +353,39 @@ const Admin = () => {
     if (!selectedUser) return;
     
     try {
-      // Delete from organization_members
-      await supabase
-        .from('organization_members')
-        .delete()
-        .eq('user_id', selectedUser.id);
+      // Call the edge function to delete user from auth
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Not authenticated');
+        return;
+      }
 
-      // Delete from user_roles
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', selectedUser.id);
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: selectedUser.id }),
+        }
+      );
 
-      // Delete profile
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', selectedUser.id);
+      const result = await response.json();
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete user');
+      }
 
       toast.success('User deleted successfully');
       setShowDeleteDialog(false);
+      setSelectedUser(null);
       fetchSystemUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete user');
     }
   };
 
