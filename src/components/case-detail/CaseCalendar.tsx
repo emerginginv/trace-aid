@@ -123,10 +123,28 @@ export const CaseCalendar = forwardRef<
         eventsQuery = eventsQuery.eq("status", filterStatus);
       }
 
+      // Get user's organization for filtering profiles
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      let orgUserIds: string[] = [];
+      if (orgMember) {
+        const { data: orgMembers } = await supabase
+          .from("organization_members")
+          .select("user_id")
+          .eq("organization_id", orgMember.organization_id);
+        orgUserIds = orgMembers?.map(m => m.user_id) || [];
+      }
+
       const [tasksResult, eventsResult, usersResult] = await Promise.all([
         tasksQuery,
         eventsQuery,
-        supabase.from("profiles").select("id, email, full_name, color"),
+        orgUserIds.length > 0 
+          ? supabase.from("profiles").select("id, email, full_name, color").in("id", orgUserIds)
+          : supabase.from("profiles").select("id, email, full_name, color").eq("id", user.id),
       ]);
 
       if (tasksResult.error) throw tasksResult.error;
