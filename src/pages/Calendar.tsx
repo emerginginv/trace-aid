@@ -37,9 +37,27 @@ export default function Calendar() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization for filtering profiles
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      let orgUserIds: string[] = [];
+      if (orgMember) {
+        const { data: orgMembers } = await supabase
+          .from("organization_members")
+          .select("user_id")
+          .eq("organization_id", orgMember.organization_id);
+        orgUserIds = orgMembers?.map(m => m.user_id) || [];
+      }
+
       const [casesResult, usersResult] = await Promise.all([
         supabase.from("cases").select("id, title").eq("user_id", user.id),
-        supabase.from("profiles").select("id, email, full_name"),
+        orgUserIds.length > 0 
+          ? supabase.from("profiles").select("id, email, full_name").in("id", orgUserIds)
+          : supabase.from("profiles").select("id, email, full_name").eq("id", user.id),
       ]);
 
       if (casesResult.data) setCases(casesResult.data);

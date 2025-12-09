@@ -54,9 +54,33 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
 
   const fetchUsers = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!orgMember) return;
+
+      // Get all organization member user_ids
+      const { data: orgMembers } = await supabase
+        .from("organization_members")
+        .select("user_id")
+        .eq("organization_id", orgMember.organization_id);
+
+      if (!orgMembers) return;
+
+      const userIds = orgMembers.map(m => m.user_id);
+
+      // Fetch profiles only for users in the same organization
       const { data, error } = await supabase
         .from('profiles')
         .select('id, email, full_name')
+        .in('id', userIds)
         .order('full_name');
 
       if (error) throw error;
