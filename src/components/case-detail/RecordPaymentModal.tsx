@@ -162,12 +162,11 @@ export default function RecordPaymentModal({
         if (retainerError) throw retainerError;
       }
 
-      // 5️⃣ Update invoice totals, balance, and status
+      // 5️⃣ Update invoice totals and status (balance_due is auto-calculated)
       const { error: updateError } = await supabase
         .from("invoices")
         .update({
           total_paid: newTotalPaid,
-          balance_due: newBalance,
           status: newStatus,
         })
         .eq("id", invoice.id);

@@ -156,13 +156,12 @@ export const RetainerPaymentForm = ({
         newStatus = "partial";
       }
 
-      // Update the invoice with new totals
+      // Update the invoice with new totals (balance_due is auto-calculated)
       const { error: updateError } = await supabase
         .from("invoices")
         .update({ 
           total_paid: newTotalPaid,
           retainer_applied: newRetainerApplied,
-          balance_due: newBalanceDue,
           status: newStatus
         })
         .eq("id", invoiceId);
