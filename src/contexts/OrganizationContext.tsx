@@ -105,6 +105,13 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
   const checkSubscription = async () => {
     try {
+      // Only check subscription if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log("Skipping subscription check - no active session");
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("check-subscription");
       
       if (error) {
@@ -141,9 +148,10 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     refreshOrganization();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
         refreshOrganization();
-        checkSubscription();
+        // Defer checkSubscription to avoid potential deadlocks
+        setTimeout(() => checkSubscription(), 0);
       } else if (event === "SIGNED_OUT") {
         setOrganization(null);
         setSubscriptionStatus(null);
