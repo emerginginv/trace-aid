@@ -114,8 +114,19 @@ export function ActivityForm({
     if (!open) return; // Only reset when dialog is open
     
     if (editingActivity) {
-      // Parse existing due_date for events that have start/end times stored
-      const dueDate = editingActivity.due_date ? new Date(editingActivity.due_date) : undefined;
+      // Parse existing due_date - handle timezone correctly
+      let dueDate: Date | undefined = undefined;
+      if (editingActivity.due_date) {
+        const dateStr = editingActivity.due_date;
+        // If it's just a date string (YYYY-MM-DD), parse as local date
+        if (dateStr.length === 10) {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          dueDate = new Date(year, month - 1, day);
+        } else {
+          // It's a full ISO timestamp (for events)
+          dueDate = new Date(dateStr);
+        }
+      }
       
       form.reset({
         activity_type: editingActivity.activity_type,
@@ -165,7 +176,12 @@ export function ActivityForm({
         startDateTime.setHours(parseInt(startHours), parseInt(startMinutes));
         dueDate = formatISO(startDateTime);
       } else if (values.due_date) {
-        dueDate = format(values.due_date, "yyyy-MM-dd");
+        // Use local date parts to avoid timezone shift
+        const d = values.due_date;
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        dueDate = `${year}-${month}-${day}`;
       }
 
       const activityData = {
