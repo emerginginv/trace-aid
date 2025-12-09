@@ -111,6 +111,8 @@ export function ActivityForm({
   };
 
   useEffect(() => {
+    if (!open) return; // Only reset when dialog is open
+    
     if (editingActivity) {
       // Parse existing due_date for events that have start/end times stored
       const dueDate = editingActivity.due_date ? new Date(editingActivity.due_date) : undefined;
@@ -141,7 +143,7 @@ export function ActivityForm({
         assigned_user_id: undefined,
       } as any);
     }
-  }, [editingActivity, activityType, prefilledDate, form]);
+  }, [open, editingActivity, activityType, prefilledDate, form]);
 
   const onSubmit = async (values: any) => {
     try {
