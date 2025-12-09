@@ -929,11 +929,25 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                               Retainer: -${Number(invoice.retainer_applied).toFixed(2)}
                             </div>
                           )}
-                          {invoice.balance_due !== invoice.total && (
-                            <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                              Due: ${Number(invoice.balance_due || invoice.total).toFixed(2)}
-                            </div>
-                          )}
+                          {(() => {
+                            // Calculate correct balance: total - total_paid
+                            const totalPaid = Number(invoice.total_paid || 0);
+                            const balanceDue = Math.max(0, Number(invoice.total) - totalPaid);
+                            if (balanceDue !== Number(invoice.total) && balanceDue > 0) {
+                              return (
+                                <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                                  Due: ${balanceDue.toFixed(2)}
+                                </div>
+                              );
+                            } else if (balanceDue === 0 && totalPaid > 0) {
+                              return (
+                                <div className="text-xs font-medium text-green-600 dark:text-green-400">
+                                  Paid in Full
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">

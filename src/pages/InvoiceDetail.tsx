@@ -19,6 +19,7 @@ interface Invoice {
   total: number;
   retainer_applied: number;
   balance_due: number;
+  total_paid: number;
   date: string;
   due_date: string | null;
   status: string;
@@ -411,10 +412,22 @@ export default function InvoiceDetail() {
                 <span>Total:</span>
                 <span>${Number(invoice.total).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-red-600 font-semibold">
-                <span>Balance Due:</span>
-                <span>${Number(invoice.balance_due ?? (invoice.total - (invoice.retainer_applied || 0))).toFixed(2)}</span>
-              </div>
+              {(() => {
+                // Calculate correct balance: total - total_paid (retainer is already included in total_paid)
+                const totalPaid = Number((invoice as any).total_paid || 0);
+                const balanceDue = Math.max(0, Number(invoice.total) - totalPaid);
+                return balanceDue > 0 ? (
+                  <div className="flex justify-between text-red-600 font-semibold">
+                    <span>Balance Due:</span>
+                    <span>${balanceDue.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-green-600 font-semibold">
+                    <span>Balance Due:</span>
+                    <span>$0.00</span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
