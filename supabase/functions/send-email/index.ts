@@ -81,8 +81,8 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Default from email - use verified sender from organization settings or fallback
-    let defaultFromEmail = fromEmail || "noreply@yourdomain.com";
+    // Default from email - use verified sender from organization settings or Mailjet default
+    let defaultFromEmail = fromEmail || "pilot@mailjet.com";
     
     // Get sender email from organization settings if available
     if (authHeader) {
