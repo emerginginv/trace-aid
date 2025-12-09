@@ -219,9 +219,9 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   };
 
   const getUserName = (userId: string | null) => {
-    if (!userId) return "Unassigned";
+    if (!userId) return "-";
     const user = users.find(u => u.id === userId);
-    return user?.full_name || user?.email || "Unknown User";
+    return user?.full_name || user?.email || "-";
   };
 
   const filteredActivities = activities
