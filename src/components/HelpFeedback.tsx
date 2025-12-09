@@ -6,6 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+const FEEDBACK_EMAIL = "faizaanchaudary@gmail.com";
 
 export function HelpFeedback() {
   const [open, setOpen] = useState(false);
@@ -20,14 +23,50 @@ export function HelpFeedback() {
     }
 
     setLoading(true);
-    // Simulate sending feedback
-    setTimeout(() => {
+    
+    try {
+      // Get current user info
+      const { data: { user } } = await supabase.auth.getUser();
+      const userEmail = user?.email || "Unknown user";
+      
+      const categoryLabels: Record<string, string> = {
+        bug: "Bug Report",
+        feature: "Feature Request",
+        question: "Question",
+        feedback: "General Feedback"
+      };
+
+      const emailBody = `
+        <h2>New ${categoryLabels[category] || category}</h2>
+        <p><strong>From:</strong> ${userEmail}</p>
+        <p><strong>Category:</strong> ${categoryLabels[category] || category}</p>
+        <hr />
+        <p><strong>Message:</strong></p>
+        <p>${message.replace(/\n/g, '<br>')}</p>
+      `;
+
+      const { error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: FEEDBACK_EMAIL,
+          subject: `[Help & Feedback] ${categoryLabels[category] || category}`,
+          body: emailBody,
+          isHtml: true,
+          fromName: "Legal Case Manager Feedback"
+        }
+      });
+
+      if (error) throw error;
+
       toast.success("Thank you! Your feedback has been submitted.");
       setOpen(false);
       setCategory("");
       setMessage("");
+    } catch (error) {
+      console.error("Error sending feedback:", error);
+      toast.error("Failed to send feedback. Please try again.");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
