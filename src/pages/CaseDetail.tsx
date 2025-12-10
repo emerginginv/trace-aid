@@ -558,9 +558,9 @@ const CaseDetail = () => {
               <Mail className="h-4 w-4 mr-2" />
               <span className="sm:inline">Send Email</span>
             </Button>
-            {hasPermission('edit_cases') && <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed} className="bg-zinc-200  w-full sm:w-auto">
-                <Edit className="h-4 w-4 mr-2" />
-                <span className="sm:inline text-slate-950">Edit</span>
+            {hasPermission('edit_cases') && <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed} className="bg-zinc-200 dark:bg-zinc-700 w-full sm:w-auto">
+                <Edit className="h-4 w-4 mr-2 text-slate-950 dark:text-slate-100" />
+                <span className="sm:inline text-slate-950 dark:text-slate-100">Edit</span>
               </Button>}
             {hasPermission('delete_cases') && <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
                 <Trash2 className="h-4 w-4 mr-2" />
