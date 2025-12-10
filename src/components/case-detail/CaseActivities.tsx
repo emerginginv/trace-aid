@@ -376,7 +376,14 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                       </TableCell>
                       <TableCell className="align-top whitespace-nowrap">
                         {activity.due_date
-                          ? format(new Date(activity.due_date), "MMM dd, yyyy")
+                          ? (() => {
+                              const dateStr = activity.due_date;
+                              if (dateStr.length === 10 && dateStr.includes('-')) {
+                                const [year, month, day] = dateStr.split('-').map(Number);
+                                return format(new Date(year, month - 1, day), "MMM dd, yyyy");
+                              }
+                              return format(new Date(dateStr), "MMM dd, yyyy");
+                            })()
                           : "-"}
                       </TableCell>
                       <TableCell className="align-top">
