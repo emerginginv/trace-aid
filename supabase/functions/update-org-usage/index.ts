@@ -29,9 +29,11 @@ serve(async (req) => {
       .from("organization_members")
       .select("organization_id")
       .eq("user_id", user.id)
+      .limit(1)
       .single();
 
     if (memberError || !memberData) {
+      console.error("Organization member query error:", memberError);
       throw new Error("Organization not found");
     }
 
