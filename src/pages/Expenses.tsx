@@ -124,7 +124,8 @@ export default function Expenses() {
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
       if (!orgMember) throw new Error("User not in organization");
 

@@ -226,7 +226,7 @@ const Dashboard = () => {
       // Fetch users for assignments
       const {
         data: orgMember
-      } = await supabase.from('organization_members').select('organization_id').eq('user_id', user.id).single();
+      } = await supabase.from('organization_members').select('organization_id').eq('user_id', user.id).limit(1).single();
       if (orgMember) {
         const {
           data: orgUsers
