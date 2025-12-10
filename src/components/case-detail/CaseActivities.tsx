@@ -98,14 +98,10 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const { data, error } = await supabase
         .from('case_activities')
         .select('*')
         .eq('case_id', caseId)
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

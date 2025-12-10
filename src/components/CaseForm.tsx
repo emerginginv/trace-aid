@@ -145,6 +145,17 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     }
   }, [open, editingCase]);
 
+  // Re-set status when statuses are loaded and we're editing
+  useEffect(() => {
+    if (editingCase && caseStatuses.length > 0) {
+      const currentStatus = form.getValues("status");
+      const statusExists = caseStatuses.some(s => s.value === currentStatus);
+      if (statusExists) {
+        form.setValue("status", currentStatus);
+      }
+    }
+  }, [caseStatuses, editingCase]);
+
   const fetchPrimarySubject = async (caseId: string) => {
     try {
       const { data, error } = await supabase
