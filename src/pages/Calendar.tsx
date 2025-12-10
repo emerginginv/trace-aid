@@ -42,7 +42,8 @@ export default function Calendar() {
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
       let orgUserIds: string[] = [];
       if (orgMember) {

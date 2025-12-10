@@ -223,6 +223,7 @@ export function ActivityForm({
           .from('organization_members')
           .select('organization_id')
           .eq('user_id', values.assigned_user_id)
+          .limit(1)
           .single();
 
         if (assignedUserOrg) {

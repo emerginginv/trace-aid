@@ -96,6 +96,7 @@ export const RetainerPaymentForm = ({
         .from('organization_members')
         .select('organization_id')
         .eq('user_id', user.id)
+        .limit(1)
         .single();
 
       if (!orgMember?.organization_id) {
