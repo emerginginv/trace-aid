@@ -88,19 +88,33 @@ export const CaseCalendar = forwardRef<
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Build query for tasks
+      // Get user's organization first
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
+
+      if (!orgMember) {
+        console.error("No organization found for user");
+        setLoading(false);
+        return;
+      }
+
+      // Build query for tasks - filter by organization, not user
       let tasksQuery = supabase
         .from("case_activities")
         .select("id, title, due_date, case_id, status, assigned_user_id, activity_type")
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .eq("activity_type", "task")
         .not("due_date", "is", null);
 
-      // Build query for events
+      // Build query for events - filter by organization, not user
       let eventsQuery = supabase
         .from("case_activities")
         .select("id, title, due_date, case_id, status, assigned_user_id, activity_type")
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .eq("activity_type", "event")
         .not("due_date", "is", null);
 
@@ -123,22 +137,12 @@ export const CaseCalendar = forwardRef<
         eventsQuery = eventsQuery.eq("status", filterStatus);
       }
 
-      // Get user's organization for filtering profiles
-      const { data: orgMember } = await supabase
+      // Get organization users for profiles
+      const { data: orgMembers } = await supabase
         .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      let orgUserIds: string[] = [];
-      if (orgMember) {
-        const { data: orgMembers } = await supabase
-          .from("organization_members")
-          .select("user_id")
-          .eq("organization_id", orgMember.organization_id);
-        orgUserIds = orgMembers?.map(m => m.user_id) || [];
-      }
+        .select("user_id")
+        .eq("organization_id", orgMember.organization_id);
+      const orgUserIds = orgMembers?.map(m => m.user_id) || [];
 
       const [tasksResult, eventsResult, usersResult] = await Promise.all([
         tasksQuery,
