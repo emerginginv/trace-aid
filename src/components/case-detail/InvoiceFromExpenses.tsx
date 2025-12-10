@@ -51,12 +51,25 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+
+      if (!orgMember) {
+        setLoading(false);
+        return;
+      }
+
       // Fetch approved, uninvoiced time and expense entries
       const { data: itemsData, error: itemsError } = await supabase
         .from("case_finances")
         .select("*")
         .eq("case_id", caseId)
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .in("finance_type", ["expense", "time"])
         .eq("status", "approved")
         .is("invoice_id", null)
@@ -69,21 +82,21 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
         .from("case_subjects")
         .select("id, name")
         .eq("case_id", caseId)
-        .eq("user_id", user.id);
+        .eq("organization_id", orgMember.organization_id);
 
       // Fetch related activities
       const { data: activitiesData } = await supabase
         .from("case_activities")
         .select("id, title")
         .eq("case_id", caseId)
-        .eq("user_id", user.id);
+        .eq("organization_id", orgMember.organization_id);
 
       // Calculate available retainer balance
       const { data: retainerData } = await supabase
         .from("retainer_funds")
         .select("amount")
         .eq("case_id", caseId)
-        .eq("user_id", user.id);
+        .eq("organization_id", orgMember.organization_id);
 
       const balance = retainerData?.reduce((sum, r) => sum + Number(r.amount), 0) || 0;
       setRetainerBalance(balance);
@@ -127,15 +140,12 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       .reduce((sum, item) => sum + Number(item.amount), 0);
   };
 
-  const generateInvoiceNumber = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
+  const generateInvoiceNumber = async (organizationId: string) => {
     // Get the count of existing invoices to generate a unique number
     const { count } = await supabase
       .from("invoices")
       .select("*", { count: 'exact', head: true })
-      .eq("user_id", user.id);
+      .eq("organization_id", organizationId);
 
     const invoiceNumber = `INV-${String((count || 0) + 1).padStart(5, '0')}`;
     return invoiceNumber;
@@ -174,7 +184,7 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       const totalAmount = selectedItemsList.reduce((sum, item) => sum + Number(item.amount), 0);
 
       // Generate invoice number
-      const invoiceNumber = await generateInvoiceNumber();
+      const invoiceNumber = await generateInvoiceNumber(orgMember.organization_id);
       if (!invoiceNumber) throw new Error("Failed to generate invoice number");
 
       // Calculate initial totals

@@ -86,10 +86,20 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
+
+      if (!orgMember) return;
+
       const { data, error } = await supabase
         .from("accounts")
         .select("id, name")
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .order("name");
 
       if (error) throw error;
@@ -109,6 +119,7 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
         .from('organization_members')
         .select('organization_id')
         .eq('user_id', user.id)
+        .limit(1)
         .single();
 
       if (!orgMember?.organization_id) {

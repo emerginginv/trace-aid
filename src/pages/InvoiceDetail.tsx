@@ -100,12 +100,25 @@ export default function InvoiceDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
+
+      if (!orgMember) {
+        setLoading(false);
+        return;
+      }
+
       // Fetch invoice
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
         .select("*")
         .eq("id", id)
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .maybeSingle();
 
       if (invoiceError) throw invoiceError;
@@ -136,7 +149,7 @@ export default function InvoiceDetail() {
           .from("accounts")
           .select("name, address, city, state, zip_code, email, phone")
           .eq("id", caseData.account_id)
-          .eq("user_id", user.id)
+          .eq("organization_id", orgMember.organization_id)
           .maybeSingle();
 
         if (!accountError && accountData) {
@@ -150,7 +163,7 @@ export default function InvoiceDetail() {
           .from("contacts")
           .select("first_name, last_name, address, city, state, zip_code, email, phone")
           .eq("id", caseData.contact_id)
-          .eq("user_id", user.id)
+          .eq("organization_id", orgMember.organization_id)
           .maybeSingle();
 
         if (!contactError && contactData) {
@@ -163,7 +176,7 @@ export default function InvoiceDetail() {
         .from("case_finances")
         .select("id, description, amount, date, finance_type, hours, hourly_rate, category")
         .eq("invoice_id", id)
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .order("date", { ascending: true });
 
       if (itemsError) throw itemsError;
@@ -173,7 +186,7 @@ export default function InvoiceDetail() {
       const { data: orgData, error: orgError } = await supabase
         .from("organization_settings")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .maybeSingle();
 
       if (!orgError && orgData) {
