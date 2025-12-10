@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-const FEEDBACK_EMAIL = "faizaanchaudary@gmail.com";
+const FEEDBACK_EMAIL = "brian@emerginginv.com";
 
 export function HelpFeedback() {
   const [open, setOpen] = useState(false);
