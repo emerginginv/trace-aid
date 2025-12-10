@@ -148,10 +148,13 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   // Re-set status when statuses are loaded and we're editing
   useEffect(() => {
     if (editingCase && caseStatuses.length > 0) {
-      const currentStatus = form.getValues("status");
-      const statusExists = caseStatuses.some(s => s.value === currentStatus);
-      if (statusExists) {
-        form.setValue("status", currentStatus);
+      const currentStatus = editingCase.status;
+      // Find matching status (case-insensitive)
+      const matchingStatus = caseStatuses.find(
+        s => s.value.toLowerCase() === currentStatus.toLowerCase()
+      );
+      if (matchingStatus) {
+        form.setValue("status", matchingStatus.value);
       }
     }
   }, [caseStatuses, editingCase]);
