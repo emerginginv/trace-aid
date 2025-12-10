@@ -44,11 +44,24 @@ const AccountDetail = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
+
+      if (!orgMember) {
+        setLoading(false);
+        return;
+      }
+
       const { data: accountData, error: accountError } = await supabase
         .from("accounts")
         .select("*")
         .eq("id", id)
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .single();
 
       if (accountError) throw accountError;
@@ -58,7 +71,7 @@ const AccountDetail = () => {
         .from("contacts")
         .select("id, first_name, last_name, email, phone")
         .eq("account_id", id)
-        .eq("user_id", user.id);
+        .eq("organization_id", orgMember.organization_id);
 
       if (contactsError) throw contactsError;
       setContacts(contactsData || []);

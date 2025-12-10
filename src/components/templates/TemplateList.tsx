@@ -29,10 +29,23 @@ export const TemplateList = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
+
+      if (!orgMember) {
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("case_update_templates")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("organization_id", orgMember.organization_id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -53,14 +66,10 @@ export const TemplateList = () => {
     if (!confirm("Are you sure you want to delete this template?")) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
-
       const { error } = await supabase
         .from("case_update_templates")
         .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
+        .eq("id", id);
 
       if (error) throw error;
 
@@ -84,10 +93,21 @@ export const TemplateList = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
+
+      if (!orgMember) throw new Error("User not in organization");
+
       const { error } = await supabase
         .from("case_update_templates")
         .insert({
           user_id: user.id,
+          organization_id: orgMember.organization_id,
           name: `${template.name} (Copy)`,
           body: template.body,
         });

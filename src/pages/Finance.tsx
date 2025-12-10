@@ -99,6 +99,7 @@ const Finance = () => {
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
+        .limit(1)
         .single();
 
       if (!memberData) return;
@@ -113,11 +114,11 @@ const Finance = () => {
 
       const casesMap = new Map(casesData?.map(c => [c.id, c]) || []);
 
-      // Fetch retainer balances by case
+      // Fetch retainer balances by case - filter by organization
       const { data: retainerData, error: retainerError } = await supabase
         .from("retainer_funds")
         .select("case_id, amount, created_at")
-        .eq("user_id", user.id)
+        .eq("organization_id", memberData.organization_id)
         .order("created_at", { ascending: false });
 
       if (retainerError) throw retainerError;
