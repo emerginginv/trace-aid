@@ -16,6 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "@/hooks/use-toast";
 import { ProfileImageUpload } from "./ProfileImageUpload";
 import { useUserRole } from "@/hooks/useUserRole";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -70,6 +71,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [dobOpen, setDobOpen] = useState(false);
+  const [isPrimary, setIsPrimary] = useState(false);
   const { isAdmin, isManager } = useUserRole();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -141,6 +143,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         date_of_birth: dob,
       });
       setProfileImageUrl(editingSubject.profile_image_url || null);
+      setIsPrimary(editingSubject.is_primary || false);
     } else {
       form.reset({
         subject_type: "person",
@@ -178,6 +181,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         serial_number: "",
       });
       setProfileImageUrl(null);
+      setIsPrimary(false);
     }
   }, [editingSubject, form]);
 
@@ -223,6 +227,7 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         notes: values.notes || null,
         details,
         profile_image_url: profileImageUrl,
+        is_primary: isPrimary,
       };
 
       let error;
@@ -267,8 +272,20 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>{editingSubject ? "Edit" : "Add"} Subject</DialogTitle>
-          <DialogDescription>Add a person, vehicle, location, or item related to this case</DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>{editingSubject ? "Edit" : "Add"} Subject</DialogTitle>
+              <DialogDescription>Add a person, vehicle, location, or item related to this case</DialogDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="is-primary" className="text-sm font-medium">Is Primary?</label>
+              <Switch
+                id="is-primary"
+                checked={isPrimary}
+                onCheckedChange={setIsPrimary}
+              />
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-4">

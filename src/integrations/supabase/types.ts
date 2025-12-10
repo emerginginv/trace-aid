@@ -307,6 +307,7 @@ export type Database = {
           created_at: string
           details: Json | null
           id: string
+          is_primary: boolean | null
           name: string
           notes: string | null
           organization_id: string
@@ -320,6 +321,7 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          is_primary?: boolean | null
           name: string
           notes?: string | null
           organization_id: string
@@ -333,6 +335,7 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          is_primary?: boolean | null
           name?: string
           notes?: string | null
           organization_id?: string

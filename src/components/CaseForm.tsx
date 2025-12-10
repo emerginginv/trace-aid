@@ -91,6 +91,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const [investigators, setInvestigators] = useState<string[]>([]);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
+  const [primarySubjectName, setPrimarySubjectName] = useState<string | null>(null);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
@@ -111,6 +112,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       fetchCaseStatuses();
       fetchProfiles();
       if (editingCase) {
+        fetchPrimarySubject(editingCase.id);
         form.reset({
           title: editingCase.title,
           case_number: editingCase.case_number,
@@ -126,6 +128,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         // @ts-ignore
         setInvestigators(editingCase.investigator_ids || []);
       } else {
+        setPrimarySubjectName(null);
         generateCaseNumber();
         form.reset({
           title: "",
@@ -141,6 +144,28 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       }
     }
   }, [open, editingCase]);
+
+  const fetchPrimarySubject = async (caseId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("case_subjects")
+        .select("name")
+        .eq("case_id", caseId)
+        .eq("is_primary", true)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching primary subject:", error);
+        setPrimarySubjectName(null);
+        return;
+      }
+
+      setPrimarySubjectName(data?.name || null);
+    } catch (error) {
+      console.error("Error fetching primary subject:", error);
+      setPrimarySubjectName(null);
+    }
+  };
 
   const fetchCaseStatuses = async () => {
     try {
@@ -470,6 +495,20 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                 )}
               />
             </div>
+
+            {editingCase && primarySubjectName ? (
+              <FormItem>
+                <FormLabel>Primary Subject</FormLabel>
+                <FormControl>
+                  <Input 
+                    value={primarySubjectName} 
+                    readOnly 
+                    className="bg-muted font-medium"
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">This case has a primary subject set</p>
+              </FormItem>
+            ) : null}
 
             <FormField
               control={form.control}
