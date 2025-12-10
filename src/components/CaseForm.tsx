@@ -191,7 +191,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
       if (!orgMember) return;
 
@@ -226,7 +227,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
       if (!orgMember) return;
 
@@ -268,7 +270,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
       if (orgError) {
         console.error("Error fetching organization:", orgError);
