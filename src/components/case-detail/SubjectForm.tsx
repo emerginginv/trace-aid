@@ -212,7 +212,8 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         .from('organization_members')
         .select('organization_id')
         .eq('user_id', user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!orgMember?.organization_id) {
         throw new Error("User not in organization");
@@ -272,32 +273,30 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>{editingSubject ? "Edit" : "Add"} Subject</DialogTitle>
-              <DialogDescription>Add a person, vehicle, location, or item related to this case</DialogDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <label htmlFor="is-primary" className="text-sm font-medium">Is Primary?</label>
-              <Switch
-                id="is-primary"
-                checked={isPrimary}
-                onCheckedChange={setIsPrimary}
-              />
-            </div>
-          </div>
+          <DialogTitle>{editingSubject ? "Edit" : "Add"} Subject</DialogTitle>
+          <DialogDescription>Add a person, vehicle, location, or item related to this case</DialogDescription>
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Profile Photo</label>
-                <ProfileImageUpload
-                  currentImageUrl={profileImageUrl || undefined}
-                  onImageChange={setProfileImageUrl}
-                  subjectId={editingSubject?.id}
-                />
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Profile Photo</label>
+                  <ProfileImageUpload
+                    currentImageUrl={profileImageUrl || undefined}
+                    onImageChange={setProfileImageUrl}
+                    subjectId={editingSubject?.id}
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <label htmlFor="is-primary" className="text-sm font-medium">Is Primary?</label>
+                  <Switch
+                    id="is-primary"
+                    checked={isPrimary}
+                    onCheckedChange={setIsPrimary}
+                  />
+                </div>
               </div>
 
               <FormField
