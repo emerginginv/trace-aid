@@ -10,21 +10,21 @@ export async function getCurrentUserOrganizationId(): Promise<string> {
     throw new Error("User not authenticated");
   }
 
-  // Use maybeSingle to get exactly one or zero results
-  const { data: orgMember, error } = await supabase
+  // Get the first organization membership (user may be in multiple orgs)
+  const { data: orgMembers, error } = await supabase
     .from('organization_members')
     .select('organization_id')
     .eq('user_id', user.id)
-    .maybeSingle();
+    .limit(1);
 
   if (error) {
     console.error("Error fetching organization membership:", error);
     throw new Error("Failed to fetch organization membership");
   }
 
-  if (!orgMember?.organization_id) {
+  if (!orgMembers || orgMembers.length === 0 || !orgMembers[0]?.organization_id) {
     throw new Error("User not in organization");
   }
 
-  return orgMember.organization_id;
+  return orgMembers[0].organization_id;
 }
