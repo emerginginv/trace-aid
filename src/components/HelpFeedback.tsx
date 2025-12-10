@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-const FEEDBACK_EMAIL = "faizaanchaudary@gmail.com";
+const FEEDBACK_EMAIL = "support@casewyze.com";
 
 export function HelpFeedback() {
   const [open, setOpen] = useState(false);
@@ -51,7 +51,7 @@ export function HelpFeedback() {
           subject: `[Help & Feedback] ${categoryLabels[category] || category}`,
           body: emailBody,
           isHtml: true,
-          fromName: "Legal Case Manager Feedback"
+          fromName: "CaseWyze Feedback"
         }
       });
 
