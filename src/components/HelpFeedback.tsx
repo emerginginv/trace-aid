@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-const FEEDBACK_EMAIL = "support@casewyze.com";
+const FEEDBACK_EMAIL = "faizaanchaudary@gmail.com";
 
 export function HelpFeedback() {
   const [open, setOpen] = useState(false);
