@@ -109,16 +109,27 @@ const CaseDetail = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // For vendors, we need to check if they're in the investigator_ids array
-      // For other roles, check user_id ownership
+      // Get user's organizations
+      const { data: userOrgs } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id);
+      
+      const userOrgIds = userOrgs?.map(o => o.organization_id) || [];
+
       const {
         data,
         error
       } = await supabase.from("cases").select("*").eq("id", id).single();
       if (error) throw error;
 
-      // Verify access: either user owns the case OR user is in investigator_ids
-      if (data.user_id !== user.id && !data.investigator_ids?.includes(user.id)) {
+      // Verify access: user owns the case, is in investigator_ids, or is in same org
+      const hasAccess = 
+        data.user_id === user.id || 
+        data.investigator_ids?.includes(user.id) ||
+        (data.organization_id && userOrgIds.includes(data.organization_id));
+      
+      if (!hasAccess) {
         throw new Error("Access denied");
       }
       setCaseData(data);

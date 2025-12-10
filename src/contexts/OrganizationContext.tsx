@@ -56,12 +56,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       }
 
       // Get user's organization through organization_members
-      // Use maybeSingle to handle cases where user might not be in any org yet
+      // Use limit(1) to handle users in multiple organizations
       const { data: memberData, error: memberError } = await supabase
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .limit(1);
 
       if (memberError) {
         console.error("Error fetching organization membership:", memberError);
@@ -69,7 +69,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (!memberData?.organization_id) {
+      if (!memberData || memberData.length === 0 || !memberData[0]?.organization_id) {
         console.warn("User not in any organization");
         setOrganization(null);
         return;
@@ -79,7 +79,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       const { data: orgData, error: orgError } = await supabase
         .from("organizations")
         .select("*")
-        .eq("id", memberData.organization_id)
+        .eq("id", memberData[0].organization_id)
         .maybeSingle();
 
       if (orgError) {
