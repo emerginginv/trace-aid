@@ -22,7 +22,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, subject, body, isHtml = false, fromName = "Legal Case Manager", fromEmail }: EmailRequest = await req.json();
+    const { to, subject, body, isHtml = false, fromName = "CaseWyze", fromEmail }: EmailRequest = await req.json();
 
     console.log("Sending email to:", to);
 
@@ -81,8 +81,8 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Default from email - use verified sender from organization settings or Mailjet default
-    let defaultFromEmail = fromEmail || "pilot@mailjet.com";
+    // Default from email - use verified sender from organization settings or CaseWyze support
+    let defaultFromEmail = fromEmail || "support@casewyze.com";
     
     // Get sender email from organization settings if available
     if (authHeader) {
