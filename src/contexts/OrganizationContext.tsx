@@ -29,6 +29,7 @@ interface OrganizationContextType {
     subscription_id: string | null;
     trial_end: string | null;
     status: string;
+    storage_addon_product_id: string | null;
   } | null;
   checkSubscription: () => Promise<void>;
 }
@@ -44,6 +45,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     subscription_id: string | null;
     trial_end: string | null;
     status: string;
+    storage_addon_product_id: string | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
