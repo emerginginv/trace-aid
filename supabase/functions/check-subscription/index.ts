@@ -17,14 +17,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Use service role key to update organization
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
-
-  // Use anon key for user auth
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_ANON_KEY") ?? ""
@@ -105,51 +97,6 @@ serve(async (req) => {
       }
     } else {
       logStep("No active subscription found");
-    }
-
-    // Get user's organization and update subscription info
-    const { data: orgMember } = await supabaseAdmin
-      .from('organization_members')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single();
-
-    if (orgMember?.organization_id) {
-      const updateData: Record<string, any> = {
-        subscription_status: hasActiveSub ? status : 'inactive',
-        subscription_product_id: productId,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscriptionId,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Set tier based on product
-      if (productId) {
-        const tierMap: Record<string, string> = {
-          'prod_TagUwxglXyq7Ls': 'investigator',
-          'prod_TagbsPhNweUFpe': 'agency',
-          'prod_Tagc0lPxc1XjVC': 'enterprise',
-        };
-        updateData.subscription_tier = tierMap[productId] || 'free';
-      } else {
-        updateData.subscription_tier = 'free';
-      }
-
-      if (trialEnd) {
-        updateData.trial_ends_at = trialEnd;
-      }
-
-      const { error: updateError } = await supabaseAdmin
-        .from('organizations')
-        .update(updateData)
-        .eq('id', orgMember.organization_id);
-
-      if (updateError) {
-        logStep("Failed to update organization", { error: updateError.message });
-      } else {
-        logStep("Updated organization subscription info", { orgId: orgMember.organization_id });
-      }
     }
 
     return new Response(JSON.stringify({
