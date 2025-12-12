@@ -519,7 +519,7 @@ const Admin = () => {
                           <TableCell>{getTierBadge(org.subscription_product_id)}</TableCell>
                           <TableCell>{getStatusBadge(org.subscription_status)}</TableCell>
                           <TableCell>
-                            {org.current_users_count || 0} / {org.max_users || '-'}
+                            {org.current_users_count || 0} / {getPlanLimits(org.subscription_product_id).max_admin_users}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {format(new Date(org.created_at), 'MMM d, yyyy')}
