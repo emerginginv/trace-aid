@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { getPlanLimits, PLAN_LIMITS } from "@/lib/planLimits";
 import {
   Dialog,
   DialogContent,
@@ -221,18 +222,32 @@ const Admin = () => {
     return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
   };
 
-  const getTierBadge = (tier: string | null) => {
-    if (!tier) return <Badge variant="outline">Free</Badge>;
+  const getPlanBadge = (productId: string | null) => {
+    const plan = getPlanLimits(productId);
     
-    const tierMap: Record<string, { variant: "default" | "secondary" | "outline", label: string }> = {
-      free: { variant: "outline", label: "Free" },
-      standard: { variant: "secondary", label: "Standard" },
-      pro: { variant: "default", label: "Pro" },
-      enterprise: { variant: "default", label: "Enterprise" },
+    const planStyles: Record<string, { variant: "default" | "secondary" | "outline", className?: string }> = {
+      "The Investigator": { variant: "secondary" },
+      "The Agency": { variant: "default" },
+      "The Enterprise": { variant: "default", className: "bg-purple-600" },
+      "Free Trial": { variant: "outline" },
     };
 
-    const tierInfo = tierMap[tier.toLowerCase()] || { variant: "outline" as const, label: tier };
-    return <Badge variant={tierInfo.variant}>{tierInfo.label}</Badge>;
+    const style = planStyles[plan.name] || { variant: "outline" as const };
+    return (
+      <Badge variant={style.variant} className={style.className}>
+        {plan.name}
+      </Badge>
+    );
+  };
+
+  const getPlanDetails = (productId: string | null) => {
+    const plan = getPlanLimits(productId);
+    return {
+      name: plan.name,
+      price: plan.price,
+      maxUsers: plan.max_admin_users,
+      storage: plan.storage_gb,
+    };
   };
 
   const handleEditUser = async () => {
@@ -499,28 +514,37 @@ const Admin = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Organization</TableHead>
-                        <TableHead>Billing Email</TableHead>
-                        <TableHead>Tier</TableHead>
+                        <TableHead>Plan</TableHead>
+                        <TableHead>Price</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Users</TableHead>
+                        <TableHead>Storage</TableHead>
                         <TableHead>Created</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {organizations.map((org) => (
-                        <TableRow key={org.id}>
-                          <TableCell className="font-medium">{org.name}</TableCell>
-                          <TableCell>{org.billing_email || '-'}</TableCell>
-                          <TableCell>{getTierBadge(org.subscription_tier)}</TableCell>
-                          <TableCell>{getStatusBadge(org.subscription_status)}</TableCell>
-                          <TableCell>
-                            {org.current_users_count || 0} / {org.max_users || '-'}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {format(new Date(org.created_at), 'MMM d, yyyy')}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {organizations.map((org) => {
+                        const planDetails = getPlanDetails(org.subscription_product_id);
+                        return (
+                          <TableRow key={org.id}>
+                            <TableCell className="font-medium">{org.name}</TableCell>
+                            <TableCell>{getPlanBadge(org.subscription_product_id)}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {planDetails.price > 0 ? `$${planDetails.price}/mo` : 'Free'}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(org.subscription_status)}</TableCell>
+                            <TableCell>
+                              {org.current_users_count || 0} / {planDetails.maxUsers}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {planDetails.storage}GB
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {format(new Date(org.created_at), 'MMM d, yyyy')}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
