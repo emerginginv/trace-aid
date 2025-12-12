@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { getPlanLimits } from "@/lib/planLimits";
 
 interface Organization {
   id: string;
@@ -123,8 +124,9 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       // Update organization subscription status in database
       if (organization && data) {
-        const tier = data.product_id === "prod_TIFNfVbkhFmIuB" ? "standard" : 
-                     data.product_id === "prod_TIFN9OVHNQ1tlK" ? "pro" : "free";
+        // Use getPlanLimits to determine the tier based on product ID
+        const planInfo = getPlanLimits(data.product_id);
+        const tier = data.product_id ? "standard" : "free"; // Just use "standard" for any paid plan
         
         await supabase
           .from("organizations")
