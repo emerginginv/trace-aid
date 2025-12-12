@@ -32,7 +32,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     unlimited_vendors: true,
   },
   // The Agency - $39/month
-  "prod_AGENCY_ID": {
+  "prod_TagbsPhNweUFpe": {
     max_admin_users: 5,
     storage_gb: 250,
     name: "The Agency",
@@ -42,7 +42,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     unlimited_vendors: true,
   },
   // The Enterprise - $69/month
-  "prod_ENTERPRISE_ID": {
+  "prod_Tagc0lPxc1XjVC": {
     max_admin_users: 16,
     storage_gb: 500,
     name: "The Enterprise",
@@ -101,8 +101,8 @@ export const PRICING_TIERS = [
   {
     name: "The Agency",
     price: "$39",
-    priceId: "price_AGENCY_ID", // Replace with actual price ID
-    productId: "prod_AGENCY_ID", // Replace with actual product ID
+    priceId: "price_1SdVEjRWPtpjyF4h3d5E7a7D",
+    productId: "prod_TagbsPhNweUFpe",
     features: [
       "5 Admin Users",
       "250GB Storage",
@@ -117,8 +117,8 @@ export const PRICING_TIERS = [
   {
     name: "The Enterprise",
     price: "$69",
-    priceId: "price_ENTERPRISE_ID", // Replace with actual price ID
-    productId: "prod_ENTERPRISE_ID", // Replace with actual product ID
+    priceId: "price_1SdVFPRWPtpjyF4hp7WfLXFC",
+    productId: "prod_Tagc0lPxc1XjVC",
     features: [
       "16 Admin Users",
       "500GB Storage",
