@@ -15,7 +15,7 @@ import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, 
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { getPlanLimits, isTrialActive, getTrialDaysRemaining } from "@/lib/planLimits";
+import { getPlanLimits, isTrialActive, getTrialDaysRemaining, PRICING_TIERS, STORAGE_ADDON_TIERS } from "@/lib/planLimits";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -174,35 +174,7 @@ const Settings = () => {
   const [billingLoading, setBillingLoading] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
 
-  const PRICING_TIERS = [
-    {
-      name: "Free",
-      price: "$0",
-      priceId: null,
-      productId: null,
-      features: ["Up to 2 users", "5 GB storage", "Basic case management", "Email support"],
-      maxUsers: 2,
-      storageGb: 5,
-    },
-    {
-      name: "Standard",
-      price: "$49",
-      priceId: "price_1SLesURWPtpjyF4hGZI3sw13",
-      productId: "prod_TIFNfVbkhFmIuB",
-      features: ["Up to 10 users", "50 GB storage", "14-day free trial", "Full case management", "Priority support", "Advanced reporting"],
-      maxUsers: 10,
-      storageGb: 50,
-    },
-    {
-      name: "Pro",
-      price: "$99",
-      priceId: "price_1SLeslRWPtpjyF4hxtzH85Ad",
-      productId: "prod_TIFN9OVHNQ1tlK",
-      features: ["Up to 10 users", "50 GB storage", "14-day free trial", "All features", "24/7 support", "Custom integrations", "API access"],
-      maxUsers: 10,
-      storageGb: 50,
-    },
-  ];
+  // Import pricing tiers from planLimits - removed local definition
 
   useEffect(() => {
     loadSettings();
@@ -2714,51 +2686,95 @@ const Settings = () => {
               </Card>
             )}
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {PRICING_TIERS.map((tier) => {
-                const isCurrentPlan = tier.name.toLowerCase() === getCurrentTier();
-                const isFree = tier.name === "Free";
+            {/* Subscription Plans */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Subscription Plans</h3>
+              <div className="grid md:grid-cols-3 gap-6">
+                {PRICING_TIERS.map((tier) => {
+                  const isCurrentPlan = tier.name === getCurrentTier();
 
-                return (
-                  <Card key={tier.name} className={isCurrentPlan ? "border-primary shadow-lg" : ""}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle>{tier.name}</CardTitle>
-                        {isCurrentPlan && <Badge>Current Plan</Badge>}
+                  return (
+                    <Card 
+                      key={tier.name} 
+                      className={`relative ${isCurrentPlan ? "border-primary shadow-lg ring-2 ring-primary/20" : ""} ${tier.popular ? "border-primary/50" : ""}`}
+                    >
+                      {tier.popular && !isCurrentPlan && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                          <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+                        </div>
+                      )}
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">{tier.name}</CardTitle>
+                          {isCurrentPlan && <Badge variant="secondary">Current</Badge>}
+                        </div>
+                        <CardDescription>
+                          <span className="text-3xl font-bold text-foreground">{tier.price}</span>
+                          <span className="text-muted-foreground">/month</span>
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <ul className="space-y-2">
+                          {tier.features.map((feature) => (
+                            <li key={feature} className="flex items-start gap-2">
+                              <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                              <span className="text-sm">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {!isCurrentPlan ? (
+                          <Button
+                            className="w-full"
+                            variant={tier.popular ? "default" : "outline"}
+                            onClick={() => handleSubscribe(tier.priceId)}
+                            disabled={billingLoading === tier.priceId}
+                          >
+                            {billingLoading === tier.priceId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {subscriptionStatus?.subscribed ? "Switch Plan" : "Subscribe"}
+                          </Button>
+                        ) : (
+                          <Button className="w-full" variant="secondary" disabled>
+                            Current Plan
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Storage Add-ons */}
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Additional Storage</h3>
+              <p className="text-muted-foreground text-sm mb-4">Need more space? Add extra storage to your plan.</p>
+              <div className="grid md:grid-cols-2 gap-6 max-w-2xl">
+                {STORAGE_ADDON_TIERS.map((addon) => (
+                  <Card key={addon.name}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
+                        <HardDrive className="w-5 h-5 text-primary" />
+                        <CardTitle className="text-base">{addon.name}</CardTitle>
                       </div>
                       <CardDescription>
-                        <span className="text-3xl font-bold text-foreground">{tier.price}</span>
-                        {!isFree && <span className="text-muted-foreground">/month</span>}
+                        <span className="text-2xl font-bold text-foreground">{addon.price}</span>
+                        <span className="text-muted-foreground">/month</span>
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <ul className="space-y-2">
-                        {tier.features.map((feature) => (
-                          <li key={feature} className="flex items-start gap-2">
-                            <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                            <span className="text-sm">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                       {!isCurrentPlan && !isFree && (
-                        <Button
-                          className="w-full"
-                          onClick={() => handleSubscribe(tier.priceId!)}
-                          disabled={billingLoading === tier.priceId}
-                        >
-                          {billingLoading === tier.priceId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                          Start 14-Day Free Trial
-                        </Button>
-                      )}
-                      {isFree && !isCurrentPlan && (
-                        <Button className="w-full" variant="outline" disabled>
-                          Contact Support
-                        </Button>
-                      )}
+                    <CardContent>
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={() => handleSubscribe(addon.priceId)}
+                        disabled={billingLoading === addon.priceId || !subscriptionStatus?.subscribed}
+                      >
+                        {billingLoading === addon.priceId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {!subscriptionStatus?.subscribed ? "Subscribe to a plan first" : "Add Storage"}
+                      </Button>
                     </CardContent>
                   </Card>
-                );
-              })}
+                ))}
+              </div>
             </div>
           </TabsContent>
         )}
@@ -2798,9 +2814,9 @@ const Settings = () => {
   }
 
   function getCurrentTier() {
-    if (!subscriptionStatus?.product_id) return "free";
+    if (!subscriptionStatus?.product_id) return null;
     const tier = PRICING_TIERS.find(t => t.productId === subscriptionStatus.product_id);
-    return tier?.name.toLowerCase() || "free";
+    return tier?.name || null;
   }
 };
 
