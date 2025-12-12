@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getPlanLimits } from "@/lib/planLimits";
+import type { User } from "@supabase/supabase-js";
 
 interface Organization {
   id: string;
@@ -123,18 +123,14 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       // Update organization subscription status in database
       if (organization && data) {
-        // Get plan name from the product_id using planLimits
-        const planInfo = getPlanLimits(data.product_id);
-        const tier = planInfo.name === "Free Trial" ? "free" : planInfo.name.toLowerCase().replace(/\s+/g, '_');
-        
-        // During trial, user should still get the plan features
-        const isActiveOrTrialing = data.status === "active" || data.status === "trialing";
+        const tier = data.product_id === "prod_TIFNfVbkhFmIuB" ? "standard" : 
+                     data.product_id === "prod_TIFN9OVHNQ1tlK" ? "pro" : "free";
         
         await supabase
           .from("organizations")
           .update({
             subscription_tier: tier,
-            subscription_status: isActiveOrTrialing ? "active" : (data.status || "inactive"),
+            subscription_status: data.status || (data.subscribed ? "active" : "inactive"),
             stripe_subscription_id: data.subscription_id,
             trial_ends_at: data.trial_end,
             subscription_product_id: data.product_id,
