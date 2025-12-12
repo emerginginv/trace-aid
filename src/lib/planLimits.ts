@@ -22,7 +22,7 @@ export interface StorageAddon {
 // Main subscription plans
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   // The Investigator - $12/month
-  "prod_INVESTIGATOR_ID": {
+  "prod_TagUwxglXyq7Ls": {
     max_admin_users: 2,
     storage_gb: 50,
     name: "The Investigator",
@@ -86,8 +86,8 @@ export const PRICING_TIERS = [
   {
     name: "The Investigator",
     price: "$12",
-    priceId: "price_INVESTIGATOR_ID", // Replace with actual price ID
-    productId: "prod_INVESTIGATOR_ID", // Replace with actual product ID
+    priceId: "price_1SdV7dRWPtpjyF4h7Qa9JdFr",
+    productId: "prod_TagUwxglXyq7Ls",
     features: [
       "2 Admin Users",
       "50GB Storage",
