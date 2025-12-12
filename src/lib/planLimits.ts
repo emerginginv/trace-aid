@@ -177,9 +177,3 @@ export function getTotalStorage(basePlanId: string | null, storageAddonId: strin
   const addon = getStorageAddon(storageAddonId);
   return basePlan.storage_gb + (addon?.storage_gb || 0);
 }
-
-// Get total max admin users from plan
-export function getMaxAdminUsers(basePlanId: string | null): number {
-  const basePlan = getPlanLimits(basePlanId);
-  return basePlan.max_admin_users;
-}

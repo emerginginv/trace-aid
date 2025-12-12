@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { getPlanLimits, getTotalStorage } from "@/lib/planLimits";
+import { getPlanLimits } from "@/lib/planLimits";
 
 interface Attachment {
   id: string;
@@ -41,7 +41,7 @@ interface CaseAttachmentsProps {
 }
 
 export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachmentsProps) => {
-  const { organization, subscriptionStatus } = useOrganization();
+  const { organization } = useOrganization();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -129,18 +129,16 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
     // Check storage limits
     if (organization) {
       const planLimits = getPlanLimits(organization.subscription_product_id);
-      const storageAddonId = subscriptionStatus?.storage_addon_product_id || null;
-      const totalStorageLimit = getTotalStorage(organization.subscription_product_id, storageAddonId);
       const totalNewSize = fileArray.reduce((sum, file) => sum + file.size, 0);
       const totalNewSizeGb = totalNewSize / (1024 * 1024 * 1024);
       const currentStorageGb = organization.storage_used_gb || 0;
       const projectedStorage = currentStorageGb + totalNewSizeGb;
 
-      if (projectedStorage > totalStorageLimit) {
-        const remainingGb = Math.max(0, totalStorageLimit - currentStorageGb);
+      if (projectedStorage > planLimits.storage_gb) {
+        const remainingGb = Math.max(0, planLimits.storage_gb - currentStorageGb);
         toast({
           title: "Storage Limit Exceeded",
-          description: `Your ${planLimits.name} allows ${totalStorageLimit} GB of storage. You have ${remainingGb.toFixed(2)} GB remaining. Please upgrade your plan or add storage to upload more files.`,
+          description: `Your ${planLimits.name} allows ${planLimits.storage_gb} GB of storage. You have ${remainingGb.toFixed(2)} GB remaining. Please upgrade your plan to upload more files.`,
           variant: "destructive",
         });
         return;

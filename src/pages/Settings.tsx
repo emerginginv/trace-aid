@@ -15,7 +15,7 @@ import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, 
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { getPlanLimits, isTrialActive, getTrialDaysRemaining, PRICING_TIERS, STORAGE_ADDON_TIERS, getTotalStorage, getStorageAddon } from "@/lib/planLimits";
+import { getPlanLimits, isTrialActive, getTrialDaysRemaining, PRICING_TIERS, STORAGE_ADDON_TIERS } from "@/lib/planLimits";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -2672,18 +2672,13 @@ const Settings = () => {
                         <div className="flex items-center gap-2">
                           <HardDrive className="w-4 h-4" />
                           <span>Storage</span>
-                          {subscriptionStatus?.storage_addon_product_id && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{getStorageAddon(subscriptionStatus.storage_addon_product_id)?.storage_gb || 0}GB Add-on
-                            </Badge>
-                          )}
                         </div>
                         <span className="text-muted-foreground">
-                          {(organization.storage_used_gb || 0).toFixed(2)} GB / {getTotalStorage(organization.subscription_product_id, subscriptionStatus?.storage_addon_product_id || null)} GB
+                          {(organization.storage_used_gb || 0).toFixed(2)} GB / {getPlanLimits(organization.subscription_product_id).storage_gb} GB
                         </span>
                       </div>
                       <Progress 
-                        value={((organization.storage_used_gb || 0) / getTotalStorage(organization.subscription_product_id, subscriptionStatus?.storage_addon_product_id || null)) * 100} 
+                        value={((organization.storage_used_gb || 0) / getPlanLimits(organization.subscription_product_id).storage_gb) * 100} 
                       />
                     </div>
                   </div>

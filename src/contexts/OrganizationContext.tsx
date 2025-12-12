@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getPlanLimits } from "@/lib/planLimits";
 import type { User } from "@supabase/supabase-js";
 
 interface Organization {
@@ -8,8 +7,8 @@ interface Organization {
   name: string;
   slug: string | null;
   logo_url: string | null;
-  subscription_tier: string;
-  subscription_status: string;
+  subscription_tier: "free" | "standard" | "pro";
+  subscription_status: "active" | "inactive" | "past_due" | "canceled";
   max_users: number;
   billing_email: string | null;
   stripe_subscription_id: string | null;
@@ -30,7 +29,6 @@ interface OrganizationContextType {
     subscription_id: string | null;
     trial_end: string | null;
     status: string;
-    storage_addon_product_id: string | null;
   } | null;
   checkSubscription: () => Promise<void>;
 }
@@ -46,7 +44,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     subscription_id: string | null;
     trial_end: string | null;
     status: string;
-    storage_addon_product_id: string | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -126,20 +123,8 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       // Update organization subscription status in database
       if (organization && data) {
-        // Get the plan limits to determine the tier name and max users
-        const planLimits = getPlanLimits(data.product_id);
-        
-        // Map product IDs to tier names
-        let tier: string;
-        if (data.product_id === "prod_TagUwxglXyq7Ls") {
-          tier = "investigator";
-        } else if (data.product_id === "prod_TagbsPhNweUFpe") {
-          tier = "agency";
-        } else if (data.product_id === "prod_Tagc0lPxc1XjVC") {
-          tier = "enterprise";
-        } else {
-          tier = "free";
-        }
+        const tier = data.product_id === "prod_TIFNfVbkhFmIuB" ? "standard" : 
+                     data.product_id === "prod_TIFN9OVHNQ1tlK" ? "pro" : "free";
         
         await supabase
           .from("organizations")
@@ -149,7 +134,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
             stripe_subscription_id: data.subscription_id,
             trial_ends_at: data.trial_end,
             subscription_product_id: data.product_id,
-            max_users: planLimits.max_admin_users,
           })
           .eq("id", organization.id);
 
