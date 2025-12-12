@@ -65,19 +65,19 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
 
 // Storage add-ons (can be purchased in addition to main plan)
 export const STORAGE_ADDONS: Record<string, StorageAddon> = {
-  "prod_STORAGE_500GB_ID": {
+  "prod_TagpgL61tfiDeS": {
     storage_gb: 500,
     name: "500GB Storage Add-on",
     price: 29,
-    price_id: "price_STORAGE_500GB_ID",
-    product_id: "prod_STORAGE_500GB_ID",
+    price_id: "price_1SdVRQRWPtpjyF4hkNZADRsE",
+    product_id: "prod_TagpgL61tfiDeS",
   },
-  "prod_STORAGE_1TB_ID": {
+  "prod_TagqN9os8BWfbU": {
     storage_gb: 1000,
     name: "1TB Storage Add-on",
     price: 49,
-    price_id: "price_STORAGE_1TB_ID",
-    product_id: "prod_STORAGE_1TB_ID",
+    price_id: "price_1SdVScRWPtpjyF4hhvt5adQw",
+    product_id: "prod_TagqN9os8BWfbU",
   },
 };
 
@@ -136,15 +136,15 @@ export const STORAGE_ADDON_TIERS = [
   {
     name: "500GB Storage",
     price: "$29",
-    priceId: "price_STORAGE_500GB_ID", // Replace with actual price ID
-    productId: "prod_STORAGE_500GB_ID", // Replace with actual product ID
+    priceId: "price_1SdVRQRWPtpjyF4hkNZADRsE",
+    productId: "prod_TagpgL61tfiDeS",
     storageGb: 500,
   },
   {
     name: "1TB Storage",
     price: "$49",
-    priceId: "price_STORAGE_1TB_ID", // Replace with actual price ID
-    productId: "prod_STORAGE_1TB_ID", // Replace with actual product ID
+    priceId: "price_1SdVScRWPtpjyF4hhvt5adQw",
+    productId: "prod_TagqN9os8BWfbU",
     storageGb: 1000,
   },
 ];
