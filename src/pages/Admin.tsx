@@ -131,67 +131,71 @@ const Admin = () => {
   const fetchSystemUsers = async () => {
     setLoadingUsers(true);
     try {
-      // Fetch all users
-      const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, created_at')
-        .order('created_at', { ascending: false });
+      // First, get the current user's organization
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Not authenticated');
+        return;
+      }
 
-      if (usersError) throw usersError;
+      const { data: currentUserOrg, error: orgError } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
 
-      if (!usersData || usersData.length === 0) {
+      if (orgError || !currentUserOrg) {
+        toast.error('Could not determine your organization');
+        return;
+      }
+
+      const myOrgId = currentUserOrg.organization_id;
+
+      // Get organization name
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', myOrgId)
+        .single();
+
+      const orgName = orgData?.name || 'Unknown';
+
+      // Get all members of MY organization only
+      const { data: memberships, error: memberError } = await supabase
+        .from('organization_members')
+        .select('user_id, organization_id, role')
+        .eq('organization_id', myOrgId);
+
+      if (memberError) throw memberError;
+
+      if (!memberships || memberships.length === 0) {
         setSystemUsers([]);
         return;
       }
 
-      // Get ALL organization memberships
-      const { data: memberships, error: memberError } = await supabase
-        .from('organization_members')
-        .select('user_id, organization_id, role');
+      // Get profile info for these users
+      const userIds = memberships.map(m => m.user_id);
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, created_at')
+        .in('id', userIds)
+        .order('created_at', { ascending: false });
 
-      if (memberError) throw memberError;
-
-      // Get ALL organizations
-      const { data: orgsData, error: orgsError } = await supabase
-        .from('organizations')
-        .select('id, name');
-
-      if (orgsError) throw orgsError;
-
-      // Create a map of org_id -> org_name for quick lookup
-      const orgMap = new Map(orgsData?.map(org => [org.id, org.name]) || []);
+      if (usersError) throw usersError;
 
       // Map users with their organization info
-      const usersWithOrgs: SystemUser[] = [];
-      
-      usersData.forEach(user => {
-        const userMemberships = memberships?.filter(m => m.user_id === user.id) || [];
-        
-        if (userMemberships.length > 0) {
-          // Create one entry per organization membership
-          userMemberships.forEach(membership => {
-            usersWithOrgs.push({
-              id: user.id,
-              email: user.email,
-              full_name: user.full_name,
-              created_at: user.created_at,
-              organization_id: membership.organization_id,
-              organization_name: orgMap.get(membership.organization_id) || 'Unknown',
-              role: membership.role,
-            });
-          });
-        } else {
-          // User has no organization
-          usersWithOrgs.push({
-            id: user.id,
-            email: user.email,
-            full_name: user.full_name,
-            created_at: user.created_at,
-            organization_id: null,
-            organization_name: null,
-            role: null,
-          });
-        }
+      const usersWithOrgs: SystemUser[] = memberships.map(membership => {
+        const userProfile = usersData?.find(u => u.id === membership.user_id);
+        return {
+          id: membership.user_id,
+          email: userProfile?.email || 'Unknown',
+          full_name: userProfile?.full_name || null,
+          created_at: userProfile?.created_at || new Date().toISOString(),
+          organization_id: myOrgId,
+          organization_name: orgName,
+          role: membership.role,
+        };
       });
 
       setSystemUsers(usersWithOrgs);
