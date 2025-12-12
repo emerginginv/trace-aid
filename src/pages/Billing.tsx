@@ -82,9 +82,15 @@ export default function Billing() {
             <CardTitle className="flex items-center gap-2">
               <Star className="w-5 h-5 text-primary" />
               Current Plan
+              {subscriptionStatus.status === "trialing" && (
+                <Badge variant="outline" className="ml-2">Trial</Badge>
+              )}
             </CardTitle>
             <CardDescription>
-              Your subscription is {organization.subscription_status}
+              {subscriptionStatus.status === "trialing" 
+                ? "You're on a free trial - enjoy full plan features!"
+                : `Your subscription is ${organization.subscription_status}`
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -96,7 +102,12 @@ export default function Billing() {
                   <span>•</span>
                   <span>{currentPlanLimits.storage_gb}GB Storage</span>
                 </div>
-                {subscriptionStatus.subscription_end && (
+                {subscriptionStatus.status === "trialing" && subscriptionStatus.trial_end && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    Trial ends on {new Date(subscriptionStatus.trial_end).toLocaleDateString()}
+                  </p>
+                )}
+                {subscriptionStatus.status !== "trialing" && subscriptionStatus.subscription_end && (
                   <p className="text-sm text-muted-foreground mt-1">
                     Renews on {new Date(subscriptionStatus.subscription_end).toLocaleDateString()}
                   </p>
