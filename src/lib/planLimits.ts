@@ -1,40 +1,162 @@
 // Plan limits configuration
-// Ideally these should come from Stripe price metadata, but we have fallback values
+// Replace the product/price IDs with your actual Stripe IDs
 
 export interface PlanLimits {
-  max_users: number;
+  max_admin_users: number;
   storage_gb: number;
   name: string;
   price: number;
+  unlimited_cases: boolean;
+  unlimited_investigators: boolean;
+  unlimited_vendors: boolean;
 }
 
+export interface StorageAddon {
+  storage_gb: number;
+  name: string;
+  price: number;
+  price_id: string;
+  product_id: string;
+}
+
+// Main subscription plans
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
-  // Pro Plan - prod_TIFN9OVHNQ1tlK
-  "prod_TIFN9OVHNQ1tlK": {
-    max_users: 10,
+  // The Investigator - $12/month
+  "prod_INVESTIGATOR_ID": {
+    max_admin_users: 2,
     storage_gb: 50,
-    name: "Pro Plan",
-    price: 99,
+    name: "The Investigator",
+    price: 12,
+    unlimited_cases: true,
+    unlimited_investigators: true,
+    unlimited_vendors: true,
   },
-  // Standard Plan - prod_TIFNfVbkhFmIuB
-  "prod_TIFNfVbkhFmIuB": {
-    max_users: 10,
-    storage_gb: 50,
-    name: "Standard Plan", 
-    price: 49,
+  // The Agency - $39/month
+  "prod_AGENCY_ID": {
+    max_admin_users: 5,
+    storage_gb: 250,
+    name: "The Agency",
+    price: 39,
+    unlimited_cases: true,
+    unlimited_investigators: true,
+    unlimited_vendors: true,
   },
-  // Free Plan (default)
+  // The Enterprise - $69/month
+  "prod_ENTERPRISE_ID": {
+    max_admin_users: 16,
+    storage_gb: 500,
+    name: "The Enterprise",
+    price: 69,
+    unlimited_cases: true,
+    unlimited_investigators: true,
+    unlimited_vendors: true,
+  },
+  // Free/No subscription fallback
   "free": {
-    max_users: 2,
+    max_admin_users: 1,
     storage_gb: 5,
-    name: "Free Plan",
+    name: "Free Trial",
     price: 0,
+    unlimited_cases: false,
+    unlimited_investigators: false,
+    unlimited_vendors: false,
   },
 };
+
+// Storage add-ons (can be purchased in addition to main plan)
+export const STORAGE_ADDONS: Record<string, StorageAddon> = {
+  "prod_STORAGE_500GB_ID": {
+    storage_gb: 500,
+    name: "500GB Storage Add-on",
+    price: 29,
+    price_id: "price_STORAGE_500GB_ID",
+    product_id: "prod_STORAGE_500GB_ID",
+  },
+  "prod_STORAGE_1TB_ID": {
+    storage_gb: 1000,
+    name: "1TB Storage Add-on",
+    price: 49,
+    price_id: "price_STORAGE_1TB_ID",
+    product_id: "prod_STORAGE_1TB_ID",
+  },
+};
+
+// Pricing tiers for the billing page
+export const PRICING_TIERS = [
+  {
+    name: "The Investigator",
+    price: "$12",
+    priceId: "price_INVESTIGATOR_ID", // Replace with actual price ID
+    productId: "prod_INVESTIGATOR_ID", // Replace with actual product ID
+    features: [
+      "2 Admin Users",
+      "50GB Storage",
+      "Unlimited Cases",
+      "Unlimited Investigators",
+      "Unlimited Vendors",
+    ],
+    maxAdminUsers: 2,
+    storageGb: 50,
+  },
+  {
+    name: "The Agency",
+    price: "$39",
+    priceId: "price_AGENCY_ID", // Replace with actual price ID
+    productId: "prod_AGENCY_ID", // Replace with actual product ID
+    features: [
+      "5 Admin Users",
+      "250GB Storage",
+      "Unlimited Cases",
+      "Unlimited Investigators",
+      "Unlimited Vendors",
+    ],
+    maxAdminUsers: 5,
+    storageGb: 250,
+    popular: true,
+  },
+  {
+    name: "The Enterprise",
+    price: "$69",
+    priceId: "price_ENTERPRISE_ID", // Replace with actual price ID
+    productId: "prod_ENTERPRISE_ID", // Replace with actual product ID
+    features: [
+      "16 Admin Users",
+      "500GB Storage",
+      "Unlimited Cases",
+      "Unlimited Investigators",
+      "Unlimited Vendors",
+    ],
+    maxAdminUsers: 16,
+    storageGb: 500,
+  },
+];
+
+// Storage add-on tiers for billing page
+export const STORAGE_ADDON_TIERS = [
+  {
+    name: "500GB Storage",
+    price: "$29",
+    priceId: "price_STORAGE_500GB_ID", // Replace with actual price ID
+    productId: "prod_STORAGE_500GB_ID", // Replace with actual product ID
+    storageGb: 500,
+  },
+  {
+    name: "1TB Storage",
+    price: "$49",
+    priceId: "price_STORAGE_1TB_ID", // Replace with actual price ID
+    productId: "prod_STORAGE_1TB_ID", // Replace with actual product ID
+    storageGb: 1000,
+  },
+];
 
 export function getPlanLimits(productId: string | null): PlanLimits {
   if (!productId) return PLAN_LIMITS.free;
   return PLAN_LIMITS[productId] || PLAN_LIMITS.free;
+}
+
+export function getStorageAddon(productId: string | null): StorageAddon | null {
+  if (!productId) return null;
+  return STORAGE_ADDONS[productId] || null;
 }
 
 export function isTrialActive(trialEnd: string | null): boolean {
@@ -48,4 +170,10 @@ export function getTrialDaysRemaining(trialEnd: string | null): number {
   const end = new Date(trialEnd);
   const diff = end.getTime() - now.getTime();
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
+export function getTotalStorage(basePlanId: string | null, storageAddonId: string | null): number {
+  const basePlan = getPlanLimits(basePlanId);
+  const addon = getStorageAddon(storageAddonId);
+  return basePlan.storage_gb + (addon?.storage_gb || 0);
 }

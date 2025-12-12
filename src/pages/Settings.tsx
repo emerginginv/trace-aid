@@ -690,8 +690,8 @@ const Settings = () => {
         const planLimits = getPlanLimits(organization.subscription_product_id);
         const currentUsers = organization.current_users_count || 0;
         
-        if (planLimits.max_users !== Infinity && currentUsers >= planLimits.max_users) {
-          toast.error(`You've reached the maximum of ${planLimits.max_users} users for your ${planLimits.name}. Please upgrade to add more users.`);
+        if (planLimits.max_admin_users !== Infinity && currentUsers >= planLimits.max_admin_users) {
+          toast.error(`You've reached the maximum of ${planLimits.max_admin_users} admin users for your ${planLimits.name}. Please upgrade to add more users.`);
           return;
         }
 
@@ -2683,14 +2683,14 @@ const Settings = () => {
                           <span>Users</span>
                         </div>
                         <span className="text-muted-foreground">
-                          {organization.current_users_count || 0} / {getPlanLimits(organization.subscription_product_id).max_users === Infinity ? "Unlimited" : getPlanLimits(organization.subscription_product_id).max_users}
+                          {organization.current_users_count || 0} / {getPlanLimits(organization.subscription_product_id).max_admin_users === Infinity ? "Unlimited" : getPlanLimits(organization.subscription_product_id).max_admin_users}
                         </span>
                       </div>
                       <Progress 
                         value={
-                          getPlanLimits(organization.subscription_product_id).max_users === Infinity 
+                          getPlanLimits(organization.subscription_product_id).max_admin_users === Infinity 
                             ? 0 
-                            : ((organization.current_users_count || 0) / getPlanLimits(organization.subscription_product_id).max_users) * 100
+                            : ((organization.current_users_count || 0) / getPlanLimits(organization.subscription_product_id).max_admin_users) * 100
                         } 
                       />
                     </div>
