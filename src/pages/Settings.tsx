@@ -129,6 +129,7 @@ const Settings = () => {
   const [usersLoading, setUsersLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [adminUsersCount, setAdminUsersCount] = useState(0);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteFullName, setInviteFullName] = useState("");
@@ -642,6 +643,10 @@ const Settings = () => {
       console.log("Settings: Loaded users:", usersData.length);
       setUsers(usersData);
       
+      // Count admin users for plan limit tracking
+      const adminCount = usersData.filter(u => u.roles.includes('admin')).length;
+      setAdminUsersCount(adminCount);
+      
       // Update current user role if we're in the list
       const currentUser = usersData.find(u => u.id === currentUserId);
       if (currentUser && currentUser.roles.length > 0) {
@@ -657,15 +662,17 @@ const Settings = () => {
 
   const handleInviteUser = async () => {
     try {
-      // Check user limits before inviting
-      if (organization) {
+      // Check admin user limits before inviting (only applies to admin role)
+      if (organization && inviteRole === 'admin') {
         const planLimits = getPlanLimits(organization.subscription_product_id);
-        const currentUsers = organization.current_users_count || 0;
         
-        if (planLimits.max_admin_users !== Infinity && currentUsers >= planLimits.max_admin_users) {
-          toast.error(`You've reached the maximum of ${planLimits.max_admin_users} admin users for your ${planLimits.name}. Please upgrade to add more users.`);
+        if (planLimits.max_admin_users !== Infinity && adminUsersCount >= planLimits.max_admin_users) {
+          toast.error(`You've reached the maximum of ${planLimits.max_admin_users} admin users for your ${planLimits.name}. Please upgrade to add more admins.`);
           return;
         }
+      }
+      
+      if (organization) {
 
         // Check if trial expired
         if (subscriptionStatus?.trial_end && !isTrialActive(subscriptionStatus.trial_end) && subscriptionStatus.status !== "active") {
@@ -743,6 +750,17 @@ const Settings = () => {
       if (userId === currentUserId) {
         toast.error("You cannot change your own role");
         return;
+      }
+
+      // Check admin user limits when changing role TO admin
+      if (newRole === 'admin' && organization) {
+        const planLimits = getPlanLimits(organization.subscription_product_id);
+        // Check if user is already an admin (not counted in limit)
+        const userCurrentRole = users.find(u => u.id === userId)?.roles[0];
+        if (userCurrentRole !== 'admin' && planLimits.max_admin_users !== Infinity && adminUsersCount >= planLimits.max_admin_users) {
+          toast.error(`You've reached the maximum of ${planLimits.max_admin_users} admin users for your ${planLimits.name}. Please upgrade to add more admins.`);
+          return;
+        }
       }
 
       if (!currentUserId) {
@@ -2652,17 +2670,17 @@ const Settings = () => {
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
                           <UsersIcon className="w-4 h-4" />
-                          <span>Users</span>
+                          <span>Admin Users</span>
                         </div>
                         <span className="text-muted-foreground">
-                          {organization.current_users_count || 0} / {getPlanLimits(organization.subscription_product_id).max_admin_users === Infinity ? "Unlimited" : getPlanLimits(organization.subscription_product_id).max_admin_users}
+                          {adminUsersCount} / {getPlanLimits(organization.subscription_product_id).max_admin_users === Infinity ? "Unlimited" : getPlanLimits(organization.subscription_product_id).max_admin_users}
                         </span>
                       </div>
                       <Progress 
                         value={
                           getPlanLimits(organization.subscription_product_id).max_admin_users === Infinity 
                             ? 0 
-                            : ((organization.current_users_count || 0) / getPlanLimits(organization.subscription_product_id).max_admin_users) * 100
+                            : (adminUsersCount / getPlanLimits(organization.subscription_product_id).max_admin_users) * 100
                         } 
                       />
                     </div>

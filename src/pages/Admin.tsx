@@ -56,6 +56,7 @@ interface Organization {
   subscription_status: string | null;
   subscription_product_id: string | null;
   current_users_count: number | null;
+  admin_count: number;
   max_users: number | null;
   trial_ends_at: string | null;
   created_at: string;
@@ -120,7 +121,29 @@ const Admin = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOrganizations(data || []);
+      
+      // Fetch admin counts for each organization
+      const orgIds = data?.map(o => o.id) || [];
+      const { data: adminCounts } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .in('organization_id', orgIds)
+        .eq('role', 'admin');
+      
+      // Count admins per organization
+      const adminCountMap = new Map<string, number>();
+      adminCounts?.forEach(member => {
+        const count = adminCountMap.get(member.organization_id) || 0;
+        adminCountMap.set(member.organization_id, count + 1);
+      });
+      
+      // Merge admin counts with organizations
+      const orgsWithAdminCount = (data || []).map(org => ({
+        ...org,
+        admin_count: adminCountMap.get(org.id) || 0
+      }));
+      
+      setOrganizations(orgsWithAdminCount);
     } catch (error) {
       console.error('Error fetching organizations:', error);
       toast.error('Failed to load organizations');
@@ -507,7 +530,7 @@ const Admin = () => {
                         <TableHead>Billing Email</TableHead>
                         <TableHead>Tier</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Users</TableHead>
+                        <TableHead>Admin Users</TableHead>
                         <TableHead>Created</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -519,7 +542,7 @@ const Admin = () => {
                           <TableCell>{getTierBadge(org.subscription_product_id)}</TableCell>
                           <TableCell>{getStatusBadge(org.subscription_status)}</TableCell>
                           <TableCell>
-                            {org.current_users_count || 0} / {getPlanLimits(org.subscription_product_id).max_admin_users}
+                            {org.admin_count} / {getPlanLimits(org.subscription_product_id).max_admin_users}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {format(new Date(org.created_at), 'MMM d, yyyy')}
