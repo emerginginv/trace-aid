@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSearchParams } from "react-router-dom";
-import { PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanLimits } from "@/lib/planLimits";
+import { PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanLimits, getTotalStorage, getStorageAddon } from "@/lib/planLimits";
 
 export default function Billing() {
   const { organization, subscriptionStatus, checkSubscription } = useOrganization();
@@ -91,10 +91,15 @@ export default function Billing() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <p className="font-semibold text-lg">{currentTierName || organization.subscription_tier} Plan</p>
-                <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                <div className="flex gap-4 text-sm text-muted-foreground mt-1 flex-wrap">
                   <span>{currentPlanLimits.max_admin_users} Admin Users</span>
                   <span>•</span>
-                  <span>{currentPlanLimits.storage_gb}GB Storage</span>
+                  <span>{getTotalStorage(subscriptionStatus?.product_id || null, subscriptionStatus?.storage_addon_product_id || null)}GB Storage</span>
+                  {subscriptionStatus?.storage_addon_product_id && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{getStorageAddon(subscriptionStatus.storage_addon_product_id)?.storage_gb || 0}GB Add-on
+                    </Badge>
+                  )}
                 </div>
                 {subscriptionStatus.subscription_end && (
                   <p className="text-sm text-muted-foreground mt-1">
