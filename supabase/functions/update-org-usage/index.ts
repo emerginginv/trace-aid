@@ -39,13 +39,14 @@ serve(async (req) => {
 
     const orgId = memberData.organization_id;
 
-    // Count active members
-    const { count: userCount, error: countError } = await supabaseClient
+    // Count only admin-type users (role = 'admin')
+    const { count: adminCount, error: countError } = await supabaseClient
       .from("organization_members")
       .select("*", { count: "exact", head: true })
-      .eq("organization_id", orgId);
+      .eq("organization_id", orgId)
+      .eq("role", "admin");
 
-    if (countError) throw new Error("Failed to count users");
+    if (countError) throw new Error("Failed to count admin users");
 
     // Calculate storage usage (sum of all file sizes in bytes, convert to GB)
     const { data: attachments } = await supabaseClient
@@ -64,11 +65,11 @@ serve(async (req) => {
     
     const storageGb = totalBytes / (1024 * 1024 * 1024); // Convert bytes to GB
 
-    // Update organization
+    // Update organization with admin user count
     const { error: updateError } = await supabaseClient
       .from("organizations")
       .update({
-        current_users_count: userCount || 0,
+        current_users_count: adminCount || 0,
         storage_used_gb: storageGb,
       })
       .eq("id", orgId);
@@ -78,7 +79,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        users_count: userCount || 0,
+        admin_users_count: adminCount || 0,
         storage_gb: storageGb 
       }),
       {

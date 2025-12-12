@@ -657,21 +657,21 @@ const Settings = () => {
 
   const handleInviteUser = async () => {
     try {
-      // Check user limits before inviting
-      if (organization) {
+      // Check admin user limits only when adding an admin
+      if (organization && inviteRole === "admin") {
         const planLimits = getPlanLimits(organization.subscription_product_id);
-        const currentUsers = organization.current_users_count || 0;
+        const currentAdminUsers = organization.current_users_count || 0;
         
-        if (planLimits.max_admin_users !== Infinity && currentUsers >= planLimits.max_admin_users) {
-          toast.error(`You've reached the maximum of ${planLimits.max_admin_users} admin users for your ${planLimits.name}. Please upgrade to add more users.`);
+        if (planLimits.max_admin_users !== Infinity && currentAdminUsers >= planLimits.max_admin_users) {
+          toast.error(`You've reached the maximum of ${planLimits.max_admin_users} admin users for your ${planLimits.name}. Please upgrade to add more admin users.`);
           return;
         }
+      }
 
-        // Check if trial expired
-        if (subscriptionStatus?.trial_end && !isTrialActive(subscriptionStatus.trial_end) && subscriptionStatus.status !== "active") {
-          toast.error("Your trial has expired. Please add a payment method to continue adding users.");
-          return;
-        }
+      // Check if trial expired
+      if (organization && subscriptionStatus?.trial_end && !isTrialActive(subscriptionStatus.trial_end) && subscriptionStatus.status !== "active") {
+        toast.error("Your trial has expired. Please add a payment method to continue adding users.");
+        return;
       }
 
       // Validate input
@@ -2652,7 +2652,7 @@ const Settings = () => {
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
                           <UsersIcon className="w-4 h-4" />
-                          <span>Users</span>
+                          <span>Admin Users</span>
                         </div>
                         <span className="text-muted-foreground">
                           {organization.current_users_count || 0} / {getPlanLimits(organization.subscription_product_id).max_admin_users === Infinity ? "Unlimited" : getPlanLimits(organization.subscription_product_id).max_admin_users}
