@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { getPlanLimits } from "@/lib/planLimits";
 import {
   Dialog,
   DialogContent,
@@ -221,18 +222,22 @@ const Admin = () => {
     return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
   };
 
-  const getTierBadge = (tier: string | null) => {
-    if (!tier) return <Badge variant="outline">Free</Badge>;
+  const getTierBadge = (productId: string | null) => {
+    const plan = getPlanLimits(productId);
     
-    const tierMap: Record<string, { variant: "default" | "secondary" | "outline", label: string }> = {
-      free: { variant: "outline", label: "Free" },
-      standard: { variant: "secondary", label: "Standard" },
-      pro: { variant: "default", label: "Pro" },
-      enterprise: { variant: "default", label: "Enterprise" },
+    if (!productId || plan.name === "Free Trial") {
+      return <Badge variant="outline">Free</Badge>;
+    }
+    
+    // Use product ID to determine variant styling
+    const tierVariants: Record<string, "default" | "secondary" | "outline"> = {
+      "prod_TagUwxglXyq7Ls": "secondary", // The Investigator
+      "prod_TagbsPhNweUFpe": "default", // The Agency
+      "prod_Tagc0lPxc1XjVC": "default", // The Enterprise
     };
 
-    const tierInfo = tierMap[tier.toLowerCase()] || { variant: "outline" as const, label: tier };
-    return <Badge variant={tierInfo.variant}>{tierInfo.label}</Badge>;
+    const variant = tierVariants[productId] || "outline";
+    return <Badge variant={variant}>{plan.name}</Badge>;
   };
 
   const handleEditUser = async () => {
@@ -511,7 +516,7 @@ const Admin = () => {
                         <TableRow key={org.id}>
                           <TableCell className="font-medium">{org.name}</TableCell>
                           <TableCell>{org.billing_email || '-'}</TableCell>
-                          <TableCell>{getTierBadge(org.subscription_tier)}</TableCell>
+                          <TableCell>{getTierBadge(org.subscription_product_id)}</TableCell>
                           <TableCell>{getStatusBadge(org.subscription_status)}</TableCell>
                           <TableCell>
                             {org.current_users_count || 0} / {org.max_users || '-'}
