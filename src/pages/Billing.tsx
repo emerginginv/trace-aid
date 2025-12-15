@@ -18,7 +18,8 @@ export default function Billing() {
     checkSubscription();
     
     if (searchParams.get("success") === "true") {
-      toast.success("Subscription activated successfully!");
+      const isAddon = searchParams.get("addon") === "storage";
+      toast.success(isAddon ? "Storage add-on activated successfully!" : "Subscription activated successfully!");
       checkSubscription();
     }
   }, [searchParams]);
@@ -27,6 +28,25 @@ export default function Billing() {
     setLoading(priceId);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { priceId },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleAddStorageAddon = async (priceId: string) => {
+    setLoading(priceId);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-storage-addon", {
         body: { priceId },
       });
 
@@ -67,6 +87,11 @@ export default function Billing() {
 
   const currentTierName = getCurrentTier();
   const currentPlanLimits = getPlanLimits(subscriptionStatus?.product_id || null);
+  
+  // Calculate total storage: base plan + add-ons
+  const baseStorage = currentPlanLimits.storage_gb;
+  const addonStorage = subscriptionStatus?.storage_addon_gb || 0;
+  const totalStorage = baseStorage + addonStorage;
 
   return (
     <div className="space-y-8">
@@ -94,7 +119,14 @@ export default function Billing() {
                 <div className="flex gap-4 text-sm text-muted-foreground mt-1">
                   <span>{currentPlanLimits.max_admin_users} Admin Users</span>
                   <span>•</span>
-                  <span>{currentPlanLimits.storage_gb}GB Storage</span>
+                  <span>
+                    {totalStorage}GB Storage
+                    {addonStorage > 0 && (
+                      <span className="text-primary ml-1">
+                        ({baseStorage}GB + {addonStorage}GB add-on)
+                      </span>
+                    )}
+                  </span>
                 </div>
                 {subscriptionStatus.subscription_end && (
                   <p className="text-sm text-muted-foreground mt-1">
@@ -191,7 +223,7 @@ export default function Billing() {
                 <Button
                   className="w-full"
                   variant="outline"
-                  onClick={() => handleSubscribe(addon.priceId)}
+                  onClick={() => handleAddStorageAddon(addon.priceId)}
                   disabled={loading === addon.priceId || !subscriptionStatus?.subscribed}
                 >
                   {loading === addon.priceId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

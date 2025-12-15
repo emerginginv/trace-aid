@@ -2626,7 +2626,7 @@ const Settings = () => {
                 <AlertDescription>
                   You have {getTrialDaysRemaining(subscriptionStatus.trial_end)} days remaining in your 14-day trial of {getPlanLimits(subscriptionStatus.product_id).name}.
                   Trial ends on {new Date(subscriptionStatus.trial_end).toLocaleDateString()}.
-                  You have access to {getPlanLimits(subscriptionStatus.product_id).max_admin_users} admin users and {getPlanLimits(subscriptionStatus.product_id).storage_gb}GB storage during this trial.
+                  You have access to {getPlanLimits(subscriptionStatus.product_id).max_admin_users} admin users and {getPlanLimits(subscriptionStatus.product_id).storage_gb + (subscriptionStatus.storage_addon_gb || 0)}GB storage during this trial.
                 </AlertDescription>
               </Alert>
             )}
@@ -2647,6 +2647,10 @@ const Settings = () => {
               // Use subscriptionStatus.product_id from Stripe as source of truth, fallback to organization
               const activeProductId = subscriptionStatus?.product_id || organization.subscription_product_id;
               const planLimits = getPlanLimits(activeProductId);
+              // Calculate total storage: base plan + add-ons
+              const baseStorage = planLimits.storage_gb;
+              const addonStorage = subscriptionStatus?.storage_addon_gb || 0;
+              const totalStorage = baseStorage + addonStorage;
               
               return (
                 <Card>
@@ -2709,11 +2713,16 @@ const Settings = () => {
                             <span>Storage</span>
                           </div>
                           <span className="text-muted-foreground">
-                            {(organization.storage_used_gb || 0).toFixed(2)} GB / {planLimits.storage_gb} GB
+                            {(organization.storage_used_gb || 0).toFixed(2)} GB / {totalStorage} GB
+                            {addonStorage > 0 && (
+                              <span className="text-primary text-xs ml-1">
+                                (+{addonStorage}GB add-on)
+                              </span>
+                            )}
                           </span>
                         </div>
                         <Progress 
-                          value={((organization.storage_used_gb || 0) / planLimits.storage_gb) * 100} 
+                          value={((organization.storage_used_gb || 0) / totalStorage) * 100} 
                         />
                       </div>
                     </div>
