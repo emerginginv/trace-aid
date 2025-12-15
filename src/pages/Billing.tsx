@@ -84,7 +84,7 @@ export default function Billing() {
               Current Plan
             </CardTitle>
             <CardDescription>
-              Your subscription is {organization.subscription_status}
+              Your subscription is {subscriptionStatus?.status === "trialing" ? "on trial" : organization.subscription_status}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -96,9 +96,9 @@ export default function Billing() {
                   <span>•</span>
                   <span>{currentPlanLimits.storage_gb}GB Storage</span>
                 </div>
-                {subscriptionStatus.subscription_end && (
+                {subscriptionStatus?.subscription_end && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Renews on {new Date(subscriptionStatus.subscription_end).toLocaleDateString()}
+                    {subscriptionStatus.status === "trialing" ? "Trial ends" : "Renews"} on {new Date(subscriptionStatus.subscription_end).toLocaleDateString()}
                   </p>
                 )}
               </div>
