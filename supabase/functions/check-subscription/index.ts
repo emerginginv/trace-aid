@@ -57,7 +57,7 @@ serve(async (req) => {
         subscribed: false, 
         product_id: null, 
         subscription_end: null,
-        storage_addon_product_id: null
+        storage_addons: [] // Array of { product_id, quantity }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -71,7 +71,7 @@ serve(async (req) => {
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "all",
-      limit: 10, // Get multiple to find both main and add-on subscriptions
+      limit: 20, // Get more to find all add-on subscriptions
     });
 
     let productId = null;
@@ -79,8 +79,10 @@ serve(async (req) => {
     let subscriptionId = null;
     let trialEnd = null;
     let status = "inactive";
-    let storageAddonProductId = null;
     let hasActiveSub = false;
+    
+    // Track all storage add-ons with their quantities
+    const storageAddons: Array<{ product_id: string; quantity: number }> = [];
 
     // Process all subscriptions
     for (const subscription of subscriptions.data) {
@@ -91,11 +93,12 @@ serve(async (req) => {
       // Check each item in the subscription
       for (const item of subscription.items?.data || []) {
         const itemProductId = item.price?.product as string;
+        const quantity = item.quantity || 1;
         
         if (STORAGE_ADDON_PRODUCT_IDS.includes(itemProductId)) {
-          // This is a storage add-on
-          storageAddonProductId = itemProductId;
-          logStep("Found storage add-on subscription", { productId: itemProductId });
+          // This is a storage add-on - add to array (supports multiple purchases)
+          storageAddons.push({ product_id: itemProductId, quantity });
+          logStep("Found storage add-on subscription", { productId: itemProductId, quantity });
         } else {
           // This is the main plan subscription
           hasActiveSub = true;
@@ -126,6 +129,8 @@ serve(async (req) => {
       logStep("No active main subscription found");
     }
 
+    logStep("Total storage add-ons found", { count: storageAddons.length, addons: storageAddons });
+
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
       product_id: productId,
@@ -133,7 +138,7 @@ serve(async (req) => {
       subscription_id: subscriptionId,
       trial_end: trialEnd,
       status: status,
-      storage_addon_product_id: storageAddonProductId
+      storage_addons: storageAddons
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
