@@ -157,7 +157,13 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    refreshOrganization();
+    const initialize = async () => {
+      await refreshOrganization();
+      // Always check subscription on initial load to sync plan limits
+      setTimeout(() => checkSubscription(), 100);
+    };
+    
+    initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
