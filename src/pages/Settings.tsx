@@ -15,7 +15,7 @@ import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, 
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { getPlanLimits, isTrialActive, getTrialDaysRemaining, PRICING_TIERS, STORAGE_ADDON_TIERS, getStorageAddon, getTotalStorage } from "@/lib/planLimits";
+import { getPlanLimits, isTrialActive, getTrialDaysRemaining, PRICING_TIERS, STORAGE_ADDON_TIERS, getStorageAddon, getTotalStorage, getTotalAddonStorage } from "@/lib/planLimits";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -2626,7 +2626,7 @@ const Settings = () => {
                 <AlertDescription>
                   You have {getTrialDaysRemaining(subscriptionStatus.trial_end)} days remaining in your 14-day trial of {getPlanLimits(subscriptionStatus.product_id).name}.
                   Trial ends on {new Date(subscriptionStatus.trial_end).toLocaleDateString()}.
-                  You have access to {getPlanLimits(subscriptionStatus.product_id).max_admin_users} admin users and {getTotalStorage(subscriptionStatus.product_id, subscriptionStatus.storage_addon_product_id)}GB storage during this trial.
+                  You have access to {getPlanLimits(subscriptionStatus.product_id).max_admin_users} admin users and {getTotalStorage(subscriptionStatus.product_id, subscriptionStatus.storage_addons)}GB storage during this trial.
                 </AlertDescription>
               </Alert>
             )}
@@ -2647,8 +2647,8 @@ const Settings = () => {
               // Use subscriptionStatus.product_id from Stripe as source of truth, fallback to organization
               const activeProductId = subscriptionStatus?.product_id || organization.subscription_product_id;
               const planLimits = getPlanLimits(activeProductId);
-              const storageAddon = getStorageAddon(subscriptionStatus?.storage_addon_product_id || null);
-              const totalStorage = getTotalStorage(activeProductId, subscriptionStatus?.storage_addon_product_id || null);
+              const addonStorage = getTotalAddonStorage(subscriptionStatus?.storage_addons || null);
+              const totalStorage = getTotalStorage(activeProductId, subscriptionStatus?.storage_addons || null);
               
               return (
                 <Card>
@@ -2712,9 +2712,9 @@ const Settings = () => {
                           </div>
                           <span className="text-muted-foreground">
                             {(organization.storage_used_gb || 0).toFixed(2)} GB / {totalStorage} GB
-                            {storageAddon && (
+                            {addonStorage > 0 && (
                               <span className="text-primary ml-1">
-                                (+{storageAddon.storage_gb}GB add-on)
+                                (+{addonStorage}GB add-on)
                               </span>
                             )}
                           </span>

@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSearchParams } from "react-router-dom";
-import { PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanLimits, getStorageAddon, getTotalStorage } from "@/lib/planLimits";
+import { PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanLimits, getStorageAddon, getTotalStorage, getTotalAddonStorage } from "@/lib/planLimits";
 
 export default function Billing() {
   const { organization, subscriptionStatus, checkSubscription } = useOrganization();
@@ -67,8 +67,8 @@ export default function Billing() {
 
   const currentTierName = getCurrentTier();
   const currentPlanLimits = getPlanLimits(subscriptionStatus?.product_id || null);
-  const storageAddon = getStorageAddon(subscriptionStatus?.storage_addon_product_id || null);
-  const totalStorage = getTotalStorage(subscriptionStatus?.product_id || null, subscriptionStatus?.storage_addon_product_id || null);
+  const addonStorage = getTotalAddonStorage(subscriptionStatus?.storage_addons || null);
+  const totalStorage = getTotalStorage(subscriptionStatus?.product_id || null, subscriptionStatus?.storage_addons || null);
 
   return (
     <div className="space-y-8">
@@ -98,9 +98,9 @@ export default function Billing() {
                   <span>•</span>
                   <span>
                     {totalStorage}GB Storage
-                    {storageAddon && (
+                    {addonStorage > 0 && (
                       <span className="text-primary ml-1">
-                        (+{storageAddon.storage_gb}GB add-on)
+                        (+{addonStorage}GB add-on)
                       </span>
                     )}
                   </span>
