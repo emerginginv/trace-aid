@@ -9,7 +9,7 @@ interface Organization {
   slug: string | null;
   logo_url: string | null;
   subscription_tier: "free" | "standard" | "pro";
-  subscription_status: "active" | "inactive" | "past_due" | "canceled";
+  subscription_status: "active" | "inactive" | "past_due" | "canceled" | "trialing";
   max_users: number;
   billing_email: string | null;
   stripe_subscription_id: string | null;
@@ -124,18 +124,28 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       // Update organization subscription status in database
       if (organization && data) {
-        // Use getPlanLimits to determine the tier based on product ID
+        // Use getPlanLimits to determine the tier and limits based on product ID
         const planInfo = getPlanLimits(data.product_id);
-        const tier = data.product_id ? "standard" : "free"; // Just use "standard" for any paid plan
         
+        // Determine tier: if subscribed (active or trialing) with a product, use "standard"
+        const isSubscribed = data.subscribed && data.product_id;
+        const tier = isSubscribed ? "standard" : "free";
+        
+        // Determine status: preserve Stripe status (active, trialing, etc.)
+        // If subscribed is true, status should be from Stripe; otherwise inactive
+        const status = data.subscribed ? (data.status || "active") : "inactive";
+        
+        // Update organization with plan limits from Stripe product
         await supabase
           .from("organizations")
           .update({
             subscription_tier: tier,
-            subscription_status: data.status || (data.subscribed ? "active" : "inactive"),
+            subscription_status: status,
             stripe_subscription_id: data.subscription_id,
             trial_ends_at: data.trial_end,
             subscription_product_id: data.product_id,
+            // Update max_users based on the plan limits
+            max_users: isSubscribed ? planInfo.max_admin_users : 1,
           })
           .eq("id", organization.id);
 
