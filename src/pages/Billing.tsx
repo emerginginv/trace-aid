@@ -32,8 +32,15 @@ export default function Billing() {
 
       if (error) throw error;
 
-      if (data?.url) {
+      // If subscription was updated directly (upgrade/downgrade)
+      if (data?.success) {
+        toast.success(data.message || "Subscription updated successfully!");
+        await checkSubscription();
+      } else if (data?.url) {
+        // New subscription - redirect to checkout
         window.open(data.url, "_blank");
+      } else if (data?.message) {
+        toast.info(data.message);
       }
     } catch (error: any) {
       toast.error(error.message);
