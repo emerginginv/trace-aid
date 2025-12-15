@@ -809,22 +809,6 @@ const Settings = () => {
     if (!editingUser) return;
 
     try {
-      // Check admin limit when changing role to admin
-      const newRole = editingUser.roles[0];
-      const originalUser = users.find(u => u.id === editingUser.id);
-      const wasAdmin = originalUser?.roles[0] === "admin";
-      
-      if (newRole === "admin" && !wasAdmin && organization) {
-        const activeProductId = subscriptionStatus?.product_id || organization.subscription_product_id;
-        const planLimits = getPlanLimits(activeProductId);
-        const currentAdminUsers = organization.current_users_count || 0;
-        
-        if (planLimits.max_admin_users !== Infinity && currentAdminUsers >= planLimits.max_admin_users) {
-          toast.error(`You've reached the maximum of ${planLimits.max_admin_users} admin users for your ${planLimits.name}. Please upgrade to add more admin users.`);
-          return;
-        }
-      }
-
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -844,10 +828,6 @@ const Settings = () => {
       setEditDialogOpen(false);
       setEditingUser(null);
       fetchUsers();
-      
-      // Refresh org usage after role change
-      await supabase.functions.invoke("update-org-usage");
-      await refreshOrganization();
     } catch (error: any) {
       console.error("Error updating user:", error);
       toast.error("Failed to update user");
@@ -1734,43 +1714,17 @@ const Settings = () => {
                       </div>
                       <div>
                         <Label htmlFor="inviteRole">Role</Label>
-                        {(() => {
-                          const activeProductId = subscriptionStatus?.product_id || organization?.subscription_product_id;
-                          const planLimits = getPlanLimits(activeProductId);
-                          const currentAdminUsers = organization?.current_users_count || 0;
-                          const adminLimitReached = planLimits.max_admin_users !== Infinity && currentAdminUsers >= planLimits.max_admin_users;
-                          
-                          return (
-                            <>
-                              <Select 
-                                value={inviteRole} 
-                                onValueChange={(value: "admin" | "manager" | "investigator" | "vendor") => setInviteRole(value)}
-                              >
-                                <SelectTrigger id="inviteRole">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="admin" disabled={adminLimitReached}>
-                                    Admin {adminLimitReached && `(${currentAdminUsers}/${planLimits.max_admin_users} limit reached)`}
-                                  </SelectItem>
-                                  <SelectItem value="manager">Manager</SelectItem>
-                                  <SelectItem value="investigator">Investigator</SelectItem>
-                                  <SelectItem value="vendor">Vendor</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              {adminLimitReached && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Admin limit reached ({currentAdminUsers}/{planLimits.max_admin_users}). Upgrade your {planLimits.name} plan to add more admins.
-                                </p>
-                              )}
-                              {!adminLimitReached && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Admin users: {currentAdminUsers}/{planLimits.max_admin_users}
-                                </p>
-                              )}
-                            </>
-                          );
-                        })()}
+                        <Select value={inviteRole} onValueChange={(value: "admin" | "manager" | "investigator" | "vendor") => setInviteRole(value)}>
+                          <SelectTrigger id="inviteRole">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="investigator">Investigator</SelectItem>
+                            <SelectItem value="vendor">Vendor</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <Button onClick={handleInviteUser} disabled={inviting} className="w-full">
                         {inviting ? (
@@ -1987,42 +1941,22 @@ const Settings = () => {
                   </div>
                   <div>
                     <Label htmlFor="editRole">Role</Label>
-                    {(() => {
-                      const activeProductId = subscriptionStatus?.product_id || organization?.subscription_product_id;
-                      const planLimits = getPlanLimits(activeProductId);
-                      const currentAdminUsers = organization?.current_users_count || 0;
-                      // Allow if user is already admin (not adding a new admin)
-                      const isCurrentlyAdmin = editingUser.roles[0] === "admin";
-                      const adminLimitReached = !isCurrentlyAdmin && planLimits.max_admin_users !== Infinity && currentAdminUsers >= planLimits.max_admin_users;
-                      
-                      return (
-                        <>
-                          <Select 
-                            value={editingUser.roles[0] || "investigator"}
-                            onValueChange={(value: string) => 
-                              setEditingUser({...editingUser, roles: [value]})
-                            }
-                          >
-                            <SelectTrigger id="editRole">
-                              <SelectValue placeholder="Select a role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="admin" disabled={adminLimitReached}>
-                                Admin {adminLimitReached && `(${currentAdminUsers}/${planLimits.max_admin_users} limit reached)`}
-                              </SelectItem>
-                              <SelectItem value="manager">Case Manager</SelectItem>
-                              <SelectItem value="investigator">Investigator</SelectItem>
-                              <SelectItem value="vendor">Vendor</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {adminLimitReached && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Admin limit reached ({currentAdminUsers}/{planLimits.max_admin_users}). Upgrade to add more admins.
-                            </p>
-                          )}
-                        </>
-                      );
-                    })()}
+                    <Select 
+                      value={editingUser.roles[0] || "investigator"}
+                      onValueChange={(value: string) => 
+                        setEditingUser({...editingUser, roles: [value]})
+                      }
+                    >
+                      <SelectTrigger id="editRole">
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="manager">Case Manager</SelectItem>
+                        <SelectItem value="investigator">Investigator</SelectItem>
+                        <SelectItem value="vendor">Vendor</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
