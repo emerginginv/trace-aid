@@ -22,7 +22,7 @@ interface Organization {
 interface OrganizationContextType {
   organization: Organization | null;
   loading: boolean;
-  refreshOrganization: () => Promise<void>;
+  refreshOrganization: () => Promise<string | null>;
   subscriptionStatus: {
     subscribed: boolean;
     product_id: string | null;
@@ -31,7 +31,7 @@ interface OrganizationContextType {
     trial_end: string | null;
     status: string;
   } | null;
-  checkSubscription: () => Promise<void>;
+  checkSubscription: (orgId?: string) => Promise<void>;
 }
 
 const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
@@ -48,12 +48,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshOrganization = async () => {
+  const refreshOrganization = async (): Promise<string | null> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setOrganization(null);
-        return;
+        return null;
       }
 
       // Get user's organization through organization_members
@@ -67,44 +67,48 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       if (memberError) {
         console.error("Error fetching organization membership:", memberError);
         setOrganization(null);
-        return;
+        return null;
       }
 
       if (!memberData || memberData.length === 0 || !memberData[0]?.organization_id) {
         console.warn("User not in any organization");
         setOrganization(null);
-        return;
+        return null;
       }
+
+      const orgId = memberData[0].organization_id;
 
       // Get organization details with explicit filter for this specific org only
       const { data: orgData, error: orgError } = await supabase
         .from("organizations")
         .select("*")
-        .eq("id", memberData[0].organization_id)
+        .eq("id", orgId)
         .maybeSingle();
 
       if (orgError) {
         console.error("Error fetching organization:", orgError);
         setOrganization(null);
-        return;
+        return null;
       }
 
       if (!orgData) {
         console.warn("Organization not found");
         setOrganization(null);
-        return;
+        return null;
       }
 
       setOrganization(orgData as Organization);
+      return orgId;
     } catch (error) {
       console.error("Error in refreshOrganization:", error);
       setOrganization(null);
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
-  const checkSubscription = async () => {
+  const checkSubscription = async (orgId?: string) => {
     try {
       // Only check subscription if user is authenticated
       const { data: { session } } = await supabase.auth.getSession();
@@ -120,23 +124,37 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      console.log("Subscription data received:", data);
       setSubscriptionStatus(data);
 
+      // Use provided orgId or get from current organization state
+      const targetOrgId = orgId || organization?.id;
+      
       // Update organization subscription status in database
-      if (organization && data) {
+      if (targetOrgId && data) {
         // Use getPlanLimits to determine the tier and limits based on product ID
         const planInfo = getPlanLimits(data.product_id);
         
-        // Determine tier: if subscribed (active or trialing) with a product, use "standard"
+        console.log("Plan info for product:", data.product_id, planInfo);
+        
+        // Determine if user has an active subscription (active or trialing)
         const isSubscribed = data.subscribed && data.product_id;
-        const tier = isSubscribed ? "standard" : "free";
+        
+        // Set tier based on subscription - use the actual plan name or "standard"
+        const tier = isSubscribed ? planInfo.name.toLowerCase().replace(/\s+/g, '_') : "free";
         
         // Determine status: preserve Stripe status (active, trialing, etc.)
-        // If subscribed is true, status should be from Stripe; otherwise inactive
         const status = data.subscribed ? (data.status || "active") : "inactive";
         
+        console.log("Updating organization with:", {
+          tier,
+          status,
+          max_users: isSubscribed ? planInfo.max_admin_users : 1,
+          product_id: data.product_id
+        });
+        
         // Update organization with plan limits from Stripe product
-        await supabase
+        const { error: updateError } = await supabase
           .from("organizations")
           .update({
             subscription_tier: tier,
@@ -144,12 +162,19 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
             stripe_subscription_id: data.subscription_id,
             trial_ends_at: data.trial_end,
             subscription_product_id: data.product_id,
-            // Update max_users based on the plan limits
+            // Update max_users based on the plan limits - this is the KEY fix
             max_users: isSubscribed ? planInfo.max_admin_users : 1,
           })
-          .eq("id", organization.id);
+          .eq("id", targetOrgId);
 
-        await refreshOrganization();
+        if (updateError) {
+          console.error("Error updating organization:", updateError);
+        } else {
+          console.log("Organization updated successfully with plan limits");
+          await refreshOrganization();
+        }
+      } else {
+        console.log("No organization to update, orgId:", targetOrgId);
       }
     } catch (error) {
       console.error("Error in checkSubscription:", error);
@@ -158,18 +183,22 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initialize = async () => {
-      await refreshOrganization();
+      const orgId = await refreshOrganization();
       // Always check subscription on initial load to sync plan limits
-      setTimeout(() => checkSubscription(), 100);
+      if (orgId) {
+        setTimeout(() => checkSubscription(orgId), 100);
+      }
     };
     
     initialize();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
-        refreshOrganization();
+        const orgId = await refreshOrganization();
         // Defer checkSubscription to avoid potential deadlocks
-        setTimeout(() => checkSubscription(), 0);
+        if (orgId) {
+          setTimeout(() => checkSubscription(orgId), 0);
+        }
       } else if (event === "SIGNED_OUT") {
         setOrganization(null);
         setSubscriptionStatus(null);
