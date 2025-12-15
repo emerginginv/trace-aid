@@ -55,7 +55,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
   "free": {
     max_admin_users: 1,
     storage_gb: 5,
-    name: "Free Trial",
+    name: "No Subscription",
     price: 0,
     unlimited_cases: false,
     unlimited_investigators: false,

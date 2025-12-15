@@ -2591,12 +2591,11 @@ const Settings = () => {
             {subscriptionStatus?.trial_end && isTrialActive(subscriptionStatus.trial_end) && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Free Trial Active</AlertTitle>
+                <AlertTitle>{getPlanLimits(subscriptionStatus.product_id).name} Trial Active</AlertTitle>
                 <AlertDescription>
-                  You have {getTrialDaysRemaining(subscriptionStatus.trial_end)} days remaining in your 14-day free trial.
-                  {subscriptionStatus.trial_end && (
-                    <> Trial ends on {new Date(subscriptionStatus.trial_end).toLocaleDateString()}.</>
-                  )}
+                  You have {getTrialDaysRemaining(subscriptionStatus.trial_end)} days remaining in your 14-day trial of {getPlanLimits(subscriptionStatus.product_id).name}.
+                  Trial ends on {new Date(subscriptionStatus.trial_end).toLocaleDateString()}.
+                  You have access to {getPlanLimits(subscriptionStatus.product_id).max_admin_users} admin users and {getPlanLimits(subscriptionStatus.product_id).storage_gb}GB storage during this trial.
                 </AlertDescription>
               </Alert>
             )}
