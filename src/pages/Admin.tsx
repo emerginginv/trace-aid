@@ -59,6 +59,15 @@ interface Organization {
   max_users: number | null;
   trial_ends_at: string | null;
   created_at: string;
+  stripe_customer_id: string | null;
+}
+
+interface StripeSubscriptionData {
+  org_id: string;
+  product_id: string | null;
+  status: string | null;
+  trial_end: string | null;
+  storage_addon_gb: number;
 }
 
 interface SystemUser {
@@ -79,6 +88,8 @@ const Admin = () => {
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [stripeData, setStripeData] = useState<Record<string, StripeSubscriptionData>>({});
+  const [adminCounts, setAdminCounts] = useState<Record<string, number>>({});
   
   // Dialog states
   const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
@@ -121,6 +132,60 @@ const Admin = () => {
 
       if (error) throw error;
       setOrganizations(data || []);
+
+      // Fetch Stripe subscription data and admin counts for each organization
+      if (data && data.length > 0) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Fetch subscription data from Stripe for orgs with stripe_customer_id
+          const stripeDataMap: Record<string, StripeSubscriptionData> = {};
+          const adminCountMap: Record<string, number> = {};
+          
+          for (const org of data) {
+            // Count admin users for this organization
+            const { count } = await supabase
+              .from('organization_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('organization_id', org.id)
+              .eq('role', 'admin');
+            
+            adminCountMap[org.id] = count || 0;
+            
+            // Only fetch from Stripe if org has a stripe_customer_id
+            if (org.stripe_customer_id) {
+              try {
+                const response = await fetch(
+                  `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-subscription`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${session.access_token}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ customerId: org.stripe_customer_id }),
+                  }
+                );
+                
+                if (response.ok) {
+                  const result = await response.json();
+                  stripeDataMap[org.id] = {
+                    org_id: org.id,
+                    product_id: result.product_id,
+                    status: result.status,
+                    trial_end: result.trial_end,
+                    storage_addon_gb: result.storage_addon_gb || 0,
+                  };
+                }
+              } catch (e) {
+                console.error('Error fetching Stripe data for org:', org.id, e);
+              }
+            }
+          }
+          
+          setStripeData(stripeDataMap);
+          setAdminCounts(adminCountMap);
+        }
+      }
     } catch (error) {
       console.error('Error fetching organizations:', error);
       toast.error('Failed to load organizations');
@@ -512,20 +577,29 @@ const Admin = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {organizations.map((org) => (
-                        <TableRow key={org.id}>
-                          <TableCell className="font-medium">{org.name}</TableCell>
-                          <TableCell>{org.billing_email || '-'}</TableCell>
-                          <TableCell>{getTierBadge(org.subscription_product_id)}</TableCell>
-                          <TableCell>{getStatusBadge(org.subscription_status)}</TableCell>
-                          <TableCell>
-                            {org.current_users_count || 0} / {getPlanLimits(org.subscription_product_id).max_admin_users}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {format(new Date(org.created_at), 'MMM d, yyyy')}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {organizations.map((org) => {
+                        // Use Stripe data if available, otherwise fall back to DB data
+                        const orgStripeData = stripeData[org.id];
+                        const effectiveProductId = orgStripeData?.product_id || org.subscription_product_id;
+                        const effectiveStatus = orgStripeData?.status || org.subscription_status;
+                        const planLimits = getPlanLimits(effectiveProductId);
+                        const currentAdminCount = adminCounts[org.id] || 0;
+                        
+                        return (
+                          <TableRow key={org.id}>
+                            <TableCell className="font-medium">{org.name}</TableCell>
+                            <TableCell>{org.billing_email || '-'}</TableCell>
+                            <TableCell>{getTierBadge(effectiveProductId)}</TableCell>
+                            <TableCell>{getStatusBadge(effectiveStatus)}</TableCell>
+                            <TableCell>
+                              {currentAdminCount} / {planLimits.max_admin_users}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {format(new Date(org.created_at), 'MMM d, yyyy')}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
