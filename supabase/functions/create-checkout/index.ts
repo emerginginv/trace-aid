@@ -9,8 +9,8 @@ const corsHeaders = {
 
 // Storage add-on product IDs
 const STORAGE_ADDON_PRODUCT_IDS = [
-  "prod_SnhCPKjpHxWOMg", // 500GB
-  "prod_SnhDCB8CPhvjlU", // 1TB
+  "prod_TagpgL61tfiDeS", // 500GB Storage Add-on
+  "prod_TagqN9os8BWfbU", // 1TB Storage Add-on
 ];
 
 const logStep = (step: string, details?: any) => {
