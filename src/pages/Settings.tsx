@@ -697,6 +697,19 @@ const Settings = () => {
       setInviting(true);
 
       // Call edge function to create user server-side
+      // Check admin limit if adding an admin user
+      if (inviteRole === 'admin') {
+        const planProductId = subscriptionStatus?.product_id || organization.subscription_product_id;
+        const planLimits = getPlanLimits(planProductId);
+        const currentAdminCount = users.filter(u => u.roles.includes('admin')).length;
+        
+        if (currentAdminCount >= planLimits.max_admin_users) {
+          toast.error(`Maximum admin limit reached for ${planLimits.name} plan (${planLimits.max_admin_users} admin${planLimits.max_admin_users !== 1 ? 's' : ''}). Please upgrade your plan to add more admins.`);
+          setInviting(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: inviteEmail,
@@ -750,6 +763,22 @@ const Settings = () => {
       if (!currentUserId) {
         toast.error("Not authenticated");
         return;
+      }
+
+      // Check admin limit if changing to admin role
+      if (newRole === 'admin') {
+        const planProductId = subscriptionStatus?.product_id || organization?.subscription_product_id;
+        const planLimits = getPlanLimits(planProductId || null);
+        const currentAdminCount = users.filter(u => u.roles.includes('admin')).length;
+        
+        // Check if the user being changed is already an admin (not adding to count)
+        const userBeingChanged = users.find(u => u.id === userId);
+        const isAlreadyAdmin = userBeingChanged?.roles.includes('admin');
+        
+        if (!isAlreadyAdmin && currentAdminCount >= planLimits.max_admin_users) {
+          toast.error(`Maximum admin limit reached for ${planLimits.name} plan (${planLimits.max_admin_users} admin${planLimits.max_admin_users !== 1 ? 's' : ''}). Please upgrade your plan to add more admins.`);
+          return;
+        }
       }
 
       // Get the organization ID from the current user's organization membership
