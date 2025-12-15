@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
+import { getPlanLimits } from "@/lib/planLimits";
 
 interface Organization {
   id: string;
@@ -120,9 +122,23 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       setSubscriptionStatus(data);
 
-      // The edge function now updates the organization directly using service role
-      // Just refresh the organization data to get the updated values
-      if (data) {
+      // Update organization subscription status in database
+      if (organization && data) {
+        // Use getPlanLimits to determine the tier based on product ID
+        const planInfo = getPlanLimits(data.product_id);
+        const tier = data.product_id ? "standard" : "free"; // Just use "standard" for any paid plan
+        
+        await supabase
+          .from("organizations")
+          .update({
+            subscription_tier: tier,
+            subscription_status: data.status || (data.subscribed ? "active" : "inactive"),
+            stripe_subscription_id: data.subscription_id,
+            trial_ends_at: data.trial_end,
+            subscription_product_id: data.product_id,
+          })
+          .eq("id", organization.id);
+
         await refreshOrganization();
       }
     } catch (error) {

@@ -17,16 +17,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Use anon key for auth, service role for updates
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-  );
-
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
   );
 
   try {
@@ -68,8 +61,6 @@ serve(async (req) => {
       status: "all",
       limit: 1,
     });
-    
-    // Check for active OR trialing subscriptions - both count as valid subscriptions
     const hasActiveSub = subscriptions.data.length > 0 && 
       (subscriptions.data[0].status === "active" || subscriptions.data[0].status === "trialing");
     
@@ -106,42 +97,6 @@ serve(async (req) => {
       }
     } else {
       logStep("No active subscription found");
-    }
-
-    // Get user's organization and update it directly using admin client
-    const { data: memberData } = await supabaseAdmin
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .single();
-
-    if (memberData?.organization_id) {
-      // Determine subscription tier based on whether they have a product
-      const tier = productId ? "standard" : "free";
-      
-      const { error: updateError } = await supabaseAdmin
-        .from("organizations")
-        .update({
-          subscription_tier: tier,
-          subscription_status: status,
-          stripe_subscription_id: subscriptionId,
-          stripe_customer_id: customerId,
-          trial_ends_at: trialEnd,
-          subscription_product_id: productId,
-        })
-        .eq("id", memberData.organization_id);
-
-      if (updateError) {
-        logStep("Error updating organization", { error: updateError.message });
-      } else {
-        logStep("Organization updated successfully", { 
-          orgId: memberData.organization_id, 
-          productId, 
-          status,
-          trialEnd 
-        });
-      }
     }
 
     return new Response(JSON.stringify({
