@@ -1714,17 +1714,43 @@ const Settings = () => {
                       </div>
                       <div>
                         <Label htmlFor="inviteRole">Role</Label>
-                        <Select value={inviteRole} onValueChange={(value: "admin" | "manager" | "investigator" | "vendor") => setInviteRole(value)}>
-                          <SelectTrigger id="inviteRole">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                            <SelectItem value="investigator">Investigator</SelectItem>
-                            <SelectItem value="vendor">Vendor</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        {(() => {
+                          const activeProductId = subscriptionStatus?.product_id || organization?.subscription_product_id;
+                          const planLimits = getPlanLimits(activeProductId);
+                          const currentAdminUsers = organization?.current_users_count || 0;
+                          const adminLimitReached = planLimits.max_admin_users !== Infinity && currentAdminUsers >= planLimits.max_admin_users;
+                          
+                          return (
+                            <>
+                              <Select 
+                                value={inviteRole} 
+                                onValueChange={(value: "admin" | "manager" | "investigator" | "vendor") => setInviteRole(value)}
+                              >
+                                <SelectTrigger id="inviteRole">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="admin" disabled={adminLimitReached}>
+                                    Admin {adminLimitReached && `(${currentAdminUsers}/${planLimits.max_admin_users} limit reached)`}
+                                  </SelectItem>
+                                  <SelectItem value="manager">Manager</SelectItem>
+                                  <SelectItem value="investigator">Investigator</SelectItem>
+                                  <SelectItem value="vendor">Vendor</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {adminLimitReached && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Admin limit reached ({currentAdminUsers}/{planLimits.max_admin_users}). Upgrade your {planLimits.name} plan to add more admins.
+                                </p>
+                              )}
+                              {!adminLimitReached && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Admin users: {currentAdminUsers}/{planLimits.max_admin_users}
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                       <Button onClick={handleInviteUser} disabled={inviting} className="w-full">
                         {inviting ? (
