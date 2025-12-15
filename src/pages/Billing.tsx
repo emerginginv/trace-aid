@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSearchParams } from "react-router-dom";
-import { PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanLimits } from "@/lib/planLimits";
+import { PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanLimits, getStorageAddon, getTotalStorage } from "@/lib/planLimits";
 
 export default function Billing() {
   const { organization, subscriptionStatus, checkSubscription } = useOrganization();
@@ -67,6 +67,8 @@ export default function Billing() {
 
   const currentTierName = getCurrentTier();
   const currentPlanLimits = getPlanLimits(subscriptionStatus?.product_id || null);
+  const storageAddon = getStorageAddon(subscriptionStatus?.storage_addon_product_id || null);
+  const totalStorage = getTotalStorage(subscriptionStatus?.product_id || null, subscriptionStatus?.storage_addon_product_id || null);
 
   return (
     <div className="space-y-8">
@@ -94,7 +96,14 @@ export default function Billing() {
                 <div className="flex gap-4 text-sm text-muted-foreground mt-1">
                   <span>{currentPlanLimits.max_admin_users} Admin Users</span>
                   <span>•</span>
-                  <span>{currentPlanLimits.storage_gb}GB Storage</span>
+                  <span>
+                    {totalStorage}GB Storage
+                    {storageAddon && (
+                      <span className="text-primary ml-1">
+                        (+{storageAddon.storage_gb}GB add-on)
+                      </span>
+                    )}
+                  </span>
                 </div>
                 {subscriptionStatus.subscription_end && (
                   <p className="text-sm text-muted-foreground mt-1">
