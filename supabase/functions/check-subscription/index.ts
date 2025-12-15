@@ -12,12 +12,6 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-// Storage add-on product IDs
-const STORAGE_ADDON_PRODUCT_IDS = [
-  "prod_TagpgL61tfiDeS", // 500GB
-  "prod_TagqN9os8BWfbU", // 1TB
-];
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -53,12 +47,7 @@ serve(async (req) => {
     
     if (customers.data.length === 0) {
       logStep("No customer found, updating unsubscribed state");
-      return new Response(JSON.stringify({ 
-        subscribed: false, 
-        product_id: null, 
-        subscription_end: null,
-        storage_addons: [] // Array of { product_id, quantity }
-      }), {
+      return new Response(JSON.stringify({ subscribed: false, product_id: null, subscription_end: null }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
@@ -67,69 +56,48 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    // Get ALL active subscriptions (to check for both main plan and storage add-ons)
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "all",
-      limit: 20, // Get more to find all add-on subscriptions
+      limit: 1,
     });
-
+    const hasActiveSub = subscriptions.data.length > 0 && 
+      (subscriptions.data[0].status === "active" || subscriptions.data[0].status === "trialing");
+    
     let productId = null;
     let subscriptionEnd = null;
     let subscriptionId = null;
     let trialEnd = null;
     let status = "inactive";
-    let hasActiveSub = false;
-    
-    // Track all storage add-ons with their quantities
-    const storageAddons: Array<{ product_id: string; quantity: number }> = [];
 
-    // Process all subscriptions
-    for (const subscription of subscriptions.data) {
-      const isActive = subscription.status === "active" || subscription.status === "trialing";
+    if (hasActiveSub) {
+      const subscription = subscriptions.data[0];
+      subscriptionId = subscription.id;
+      status = subscription.status;
       
-      if (!isActive) continue;
-
-      // Check each item in the subscription
-      for (const item of subscription.items?.data || []) {
-        const itemProductId = item.price?.product as string;
-        const quantity = item.quantity || 1;
-        
-        if (STORAGE_ADDON_PRODUCT_IDS.includes(itemProductId)) {
-          // This is a storage add-on - add to array (supports multiple purchases)
-          storageAddons.push({ product_id: itemProductId, quantity });
-          logStep("Found storage add-on subscription", { productId: itemProductId, quantity });
-        } else {
-          // This is the main plan subscription
-          hasActiveSub = true;
-          productId = itemProductId;
-          subscriptionId = subscription.id;
-          status = subscription.status;
-          
-          if (subscription.current_period_end && typeof subscription.current_period_end === 'number') {
-            subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-          }
-          
-          if (subscription.trial_end && typeof subscription.trial_end === 'number') {
-            trialEnd = new Date(subscription.trial_end * 1000).toISOString();
-          }
-          
-          logStep("Found main subscription", { 
-            subscriptionId: subscription.id, 
-            status: subscription.status,
-            productId,
-            endDate: subscriptionEnd,
-            trialEnd 
-          });
-        }
+      // Safely handle date conversion
+      if (subscription.current_period_end && typeof subscription.current_period_end === 'number') {
+        subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
       }
+      
+      if (subscription.trial_end && typeof subscription.trial_end === 'number') {
+        trialEnd = new Date(subscription.trial_end * 1000).toISOString();
+      }
+      
+      logStep("Subscription found", { 
+        subscriptionId: subscription.id, 
+        status: subscription.status,
+        endDate: subscriptionEnd,
+        trialEnd 
+      });
+      
+      if (subscription.items?.data?.[0]?.price?.product) {
+        productId = subscription.items.data[0].price.product as string;
+        logStep("Determined subscription product", { productId });
+      }
+    } else {
+      logStep("No active subscription found");
     }
-
-    if (!hasActiveSub) {
-      logStep("No active main subscription found");
-    }
-
-    logStep("Total storage add-ons found", { count: storageAddons.length, addons: storageAddons });
 
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
@@ -137,8 +105,7 @@ serve(async (req) => {
       subscription_end: subscriptionEnd,
       subscription_id: subscriptionId,
       trial_end: trialEnd,
-      status: status,
-      storage_addons: storageAddons
+      status: status
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

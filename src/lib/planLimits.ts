@@ -172,22 +172,8 @@ export function getTrialDaysRemaining(trialEnd: string | null): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
-// Calculate total additional storage from all add-ons
-export function getTotalAddonStorage(storageAddons: Array<{ product_id: string; quantity: number }> | null): number {
-  if (!storageAddons || storageAddons.length === 0) return 0;
-  
-  return storageAddons.reduce((total, addon) => {
-    const addonInfo = getStorageAddon(addon.product_id);
-    if (addonInfo) {
-      return total + (addonInfo.storage_gb * addon.quantity);
-    }
-    return total;
-  }, 0);
-}
-
-// Get total storage (base plan + all add-ons)
-export function getTotalStorage(basePlanId: string | null, storageAddons: Array<{ product_id: string; quantity: number }> | null): number {
+export function getTotalStorage(basePlanId: string | null, storageAddonId: string | null): number {
   const basePlan = getPlanLimits(basePlanId);
-  const addonStorage = getTotalAddonStorage(storageAddons);
-  return basePlan.storage_gb + addonStorage;
+  const addon = getStorageAddon(storageAddonId);
+  return basePlan.storage_gb + (addon?.storage_gb || 0);
 }

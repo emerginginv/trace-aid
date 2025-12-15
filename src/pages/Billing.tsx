@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSearchParams } from "react-router-dom";
-import { PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanLimits, getStorageAddon, getTotalStorage, getTotalAddonStorage } from "@/lib/planLimits";
+import { PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanLimits } from "@/lib/planLimits";
 
 export default function Billing() {
   const { organization, subscriptionStatus, checkSubscription } = useOrganization();
@@ -32,15 +32,8 @@ export default function Billing() {
 
       if (error) throw error;
 
-      // If subscription was updated directly (upgrade/downgrade)
-      if (data?.success) {
-        toast.success(data.message || "Subscription updated successfully!");
-        await checkSubscription();
-      } else if (data?.url) {
-        // New subscription - redirect to checkout
+      if (data?.url) {
         window.open(data.url, "_blank");
-      } else if (data?.message) {
-        toast.info(data.message);
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -74,8 +67,6 @@ export default function Billing() {
 
   const currentTierName = getCurrentTier();
   const currentPlanLimits = getPlanLimits(subscriptionStatus?.product_id || null);
-  const addonStorage = getTotalAddonStorage(subscriptionStatus?.storage_addons || null);
-  const totalStorage = getTotalStorage(subscriptionStatus?.product_id || null, subscriptionStatus?.storage_addons || null);
 
   return (
     <div className="space-y-8">
@@ -103,14 +94,7 @@ export default function Billing() {
                 <div className="flex gap-4 text-sm text-muted-foreground mt-1">
                   <span>{currentPlanLimits.max_admin_users} Admin Users</span>
                   <span>•</span>
-                  <span>
-                    {totalStorage}GB Storage
-                    {addonStorage > 0 && (
-                      <span className="text-primary ml-1">
-                        (+{addonStorage}GB add-on)
-                      </span>
-                    )}
-                  </span>
+                  <span>{currentPlanLimits.storage_gb}GB Storage</span>
                 </div>
                 {subscriptionStatus.subscription_end && (
                   <p className="text-sm text-muted-foreground mt-1">
