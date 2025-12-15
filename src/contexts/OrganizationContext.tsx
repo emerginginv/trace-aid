@@ -19,18 +19,22 @@ interface Organization {
   storage_used_gb: number;
 }
 
+interface SubscriptionStatus {
+  subscribed: boolean;
+  product_id: string | null;
+  subscription_end: string | null;
+  subscription_id: string | null;
+  trial_end: string | null;
+  status: string;
+  storage_addon_gb: number;
+  storage_addon_ids: string[];
+}
+
 interface OrganizationContextType {
   organization: Organization | null;
   loading: boolean;
   refreshOrganization: () => Promise<void>;
-  subscriptionStatus: {
-    subscribed: boolean;
-    product_id: string | null;
-    subscription_end: string | null;
-    subscription_id: string | null;
-    trial_end: string | null;
-    status: string;
-  } | null;
+  subscriptionStatus: SubscriptionStatus | null;
   checkSubscription: () => Promise<void>;
 }
 
@@ -38,14 +42,7 @@ const OrganizationContext = createContext<OrganizationContextType | undefined>(u
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<{
-    subscribed: boolean;
-    product_id: string | null;
-    subscription_end: string | null;
-    subscription_id: string | null;
-    trial_end: string | null;
-    status: string;
-  } | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refreshOrganization = async () => {
