@@ -659,7 +659,9 @@ const Settings = () => {
     try {
       // Check admin user limits only when adding an admin
       if (organization && inviteRole === "admin") {
-        const planLimits = getPlanLimits(organization.subscription_product_id);
+        // Use subscriptionStatus.product_id from Stripe as source of truth, fallback to organization
+        const activeProductId = subscriptionStatus?.product_id || organization.subscription_product_id;
+        const planLimits = getPlanLimits(activeProductId);
         const currentAdminUsers = organization.current_users_count || 0;
         
         if (planLimits.max_admin_users !== Infinity && currentAdminUsers >= planLimits.max_admin_users) {
@@ -2612,78 +2614,84 @@ const Settings = () => {
             )}
 
             {/* Current Plan & Usage */}
-            {organization && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Current Plan & Usage</CardTitle>
-                  <CardDescription>
-                    {subscriptionStatus?.subscribed ? (
-                      <>Your subscription is {subscriptionStatus.status === "trialing" ? "on trial" : organization.subscription_status}</>
-                    ) : (
-                      <>You are on the Free plan</>
-                    )}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-lg capitalize">
-                        {getPlanLimits(organization.subscription_product_id).name}
-                      </p>
-                      {subscriptionStatus?.subscription_end && (
-                        <p className="text-sm text-muted-foreground">
-                          {subscriptionStatus.status === "trialing" ? "Trial ends" : "Renews"} on {new Date(subscriptionStatus.subscription_end).toLocaleDateString()}
+            {organization && (() => {
+              // Use subscriptionStatus.product_id from Stripe as source of truth, fallback to organization
+              const activeProductId = subscriptionStatus?.product_id || organization.subscription_product_id;
+              const planLimits = getPlanLimits(activeProductId);
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Current Plan & Usage</CardTitle>
+                    <CardDescription>
+                      {subscriptionStatus?.subscribed ? (
+                        <>Your subscription is {subscriptionStatus.status === "trialing" ? "on trial" : organization.subscription_status}</>
+                      ) : (
+                        <>You are on the Free plan</>
+                      )}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-lg capitalize">
+                          {planLimits.name}
                         </p>
+                        {subscriptionStatus?.subscription_end && (
+                          <p className="text-sm text-muted-foreground">
+                            {subscriptionStatus.status === "trialing" ? "Trial ends" : "Renews"} on {new Date(subscriptionStatus.subscription_end).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                      {subscriptionStatus?.subscribed && (
+                        <Button onClick={handleManageSubscription} disabled={billingLoading === "portal"}>
+                          {billingLoading === "portal" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          Manage Subscription
+                        </Button>
                       )}
                     </div>
-                    {subscriptionStatus?.subscribed && (
-                      <Button onClick={handleManageSubscription} disabled={billingLoading === "portal"}>
-                        {billingLoading === "portal" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        Manage Subscription
-                      </Button>
-                    )}
-                  </div>
 
-                  {/* Usage Metrics */}
-                  <div className="space-y-4 pt-4 border-t">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <UsersIcon className="w-4 h-4" />
-                          <span>Admin Users</span>
+                    {/* Usage Metrics */}
+                    <div className="space-y-4 pt-4 border-t">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <UsersIcon className="w-4 h-4" />
+                            <span>Admin Users</span>
+                          </div>
+                          <span className="text-muted-foreground">
+                            {organization.current_users_count || 0} / {planLimits.max_admin_users === Infinity ? "Unlimited" : planLimits.max_admin_users}
+                          </span>
                         </div>
-                        <span className="text-muted-foreground">
-                          {organization.current_users_count || 0} / {getPlanLimits(organization.subscription_product_id).max_admin_users === Infinity ? "Unlimited" : getPlanLimits(organization.subscription_product_id).max_admin_users}
-                        </span>
+                        <Progress 
+                          value={
+                            planLimits.max_admin_users === Infinity 
+                              ? 0 
+                              : ((organization.current_users_count || 0) / planLimits.max_admin_users) * 100
+                          } 
+                        />
                       </div>
-                      <Progress 
-                        value={
-                          getPlanLimits(organization.subscription_product_id).max_admin_users === Infinity 
-                            ? 0 
-                            : ((organization.current_users_count || 0) / getPlanLimits(organization.subscription_product_id).max_admin_users) * 100
-                        } 
-                      />
-                    </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <HardDrive className="w-4 h-4" />
-                          <span>Storage</span>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <HardDrive className="w-4 h-4" />
+                            <span>Storage</span>
+                          </div>
+                          <span className="text-muted-foreground">
+                            {(organization.storage_used_gb || 0).toFixed(2)} GB / {planLimits.storage_gb} GB
+                          </span>
                         </div>
-                        <span className="text-muted-foreground">
-                          {(organization.storage_used_gb || 0).toFixed(2)} GB / {getPlanLimits(organization.subscription_product_id).storage_gb} GB
-                        </span>
+                        <Progress 
+                          value={((organization.storage_used_gb || 0) / planLimits.storage_gb) * 100} 
+                        />
                       </div>
-                      <Progress 
-                        value={((organization.storage_used_gb || 0) / getPlanLimits(organization.subscription_product_id).storage_gb) * 100} 
-                      />
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Subscription Plans */}
             <div>
