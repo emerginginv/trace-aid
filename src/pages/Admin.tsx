@@ -125,9 +125,32 @@ const Admin = () => {
   const fetchOrganizations = async () => {
     setLoadingOrgs(true);
     try {
+      // Get the current user's organization
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Not authenticated');
+        setLoadingOrgs(false);
+        return;
+      }
+
+      const { data: currentUserOrg, error: orgMemberError } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+
+      if (orgMemberError || !currentUserOrg) {
+        toast.error('Could not determine your organization');
+        setLoadingOrgs(false);
+        return;
+      }
+
+      // Only fetch the current user's organization
       const { data, error } = await supabase
         .from('organizations')
         .select('*')
+        .eq('id', currentUserOrg.organization_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
