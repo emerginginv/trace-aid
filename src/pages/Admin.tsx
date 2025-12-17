@@ -638,13 +638,15 @@ const Admin = () => {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Email</TableHead>
                                 <TableHead>Role</TableHead>
+                                <TableHead>Tier</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead>Joined</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {orgUsers.length === 0 ? (
                                 <TableRow>
-                                  <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                                  <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
                                     No users found
                                   </TableCell>
                                 </TableRow>
@@ -664,6 +666,8 @@ const Admin = () => {
                                         <span className="text-muted-foreground">-</span>
                                       )}
                                     </TableCell>
+                                    <TableCell>{getTierBadge(effectiveProductId)}</TableCell>
+                                    <TableCell>{getStatusBadge(effectiveStatus)}</TableCell>
                                     <TableCell className="text-muted-foreground">
                                       {format(new Date(user.created_at), 'MMM d, yyyy')}
                                     </TableCell>
