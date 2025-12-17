@@ -528,7 +528,14 @@ const Admin = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="data-integrity" className="space-y-6">
+      <Tabs defaultValue="data-integrity" className="space-y-6" onValueChange={(value) => {
+        if (value === 'subscriptions') {
+          fetchOrganizations();
+          fetchSystemUsers();
+        } else if (value === 'system-users') {
+          fetchSystemUsers();
+        }
+      }}>
         <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
           <TabsTrigger value="data-integrity" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
@@ -566,65 +573,109 @@ const Admin = () => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={fetchOrganizations}
-                  disabled={loadingOrgs}
+                  onClick={() => { fetchOrganizations(); fetchSystemUsers(); }}
+                  disabled={loadingOrgs || loadingUsers}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingOrgs ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingOrgs || loadingUsers ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              {loadingOrgs ? (
+              {loadingOrgs || loadingUsers ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : organizations.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-sm text-muted-foreground">No organizations found</p>
-                  <Button onClick={fetchOrganizations} variant="outline" className="mt-4">
-                    Load Organizations
+                  <Button onClick={() => { fetchOrganizations(); fetchSystemUsers(); }} variant="outline" className="mt-4">
+                    Load Data
                   </Button>
                 </div>
               ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Organization</TableHead>
-                        <TableHead>Billing Email</TableHead>
-                        <TableHead>Tier</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Users</TableHead>
-                        <TableHead>Created</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {organizations.map((org) => {
-                        // Use Stripe data if available, otherwise fall back to DB data
-                        const orgStripeData = stripeData[org.id];
-                        const effectiveProductId = orgStripeData?.product_id || org.subscription_product_id;
-                        const effectiveStatus = orgStripeData?.status || org.subscription_status;
-                        const planLimits = getPlanLimits(effectiveProductId);
-                        const currentAdminCount = adminCounts[org.id] || 0;
+                <div className="space-y-6">
+                  {/* Organization Summary */}
+                  {organizations.map((org) => {
+                    const orgStripeData = stripeData[org.id];
+                    const effectiveProductId = orgStripeData?.product_id || org.subscription_product_id;
+                    const effectiveStatus = orgStripeData?.status || org.subscription_status;
+                    const planLimits = getPlanLimits(effectiveProductId);
+                    const orgUsers = systemUsers.filter(u => u.organization_id === org.id);
+                    
+                    return (
+                      <div key={org.id} className="space-y-4">
+                        {/* Organization Info Header */}
+                        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-4">
+                            <Building2 className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium">{org.name}</p>
+                              <p className="text-sm text-muted-foreground">{org.billing_email || 'No billing email'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Tier</p>
+                              {getTierBadge(effectiveProductId)}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Status</p>
+                              {getStatusBadge(effectiveStatus)}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Users</p>
+                              <p className="font-medium">{orgUsers.length} / {planLimits.max_admin_users}</p>
+                            </div>
+                          </div>
+                        </div>
                         
-                        return (
-                          <TableRow key={org.id}>
-                            <TableCell className="font-medium">{org.name}</TableCell>
-                            <TableCell>{org.billing_email || '-'}</TableCell>
-                            <TableCell>{getTierBadge(effectiveProductId)}</TableCell>
-                            <TableCell>{getStatusBadge(effectiveStatus)}</TableCell>
-                            <TableCell>
-                              {currentAdminCount} / {planLimits.max_admin_users}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {format(new Date(org.created_at), 'MMM d, yyyy')}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                        {/* Users Table */}
+                        <div className="rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Role</TableHead>
+                                <TableHead>Joined</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {orgUsers.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                                    No users found
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                orgUsers.map((user, index) => (
+                                  <TableRow key={`${user.id}-${index}`}>
+                                    <TableCell className="font-medium">
+                                      {user.full_name || '-'}
+                                    </TableCell>
+                                    <TableCell>{user.email}</TableCell>
+                                    <TableCell>
+                                      {user.role ? (
+                                        <Badge variant="outline" className="capitalize">
+                                          {user.role}
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-muted-foreground">-</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                      {format(new Date(user.created_at), 'MMM d, yyyy')}
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
