@@ -206,33 +206,14 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
       if (error) {
         console.error("Error fetching case statuses:", error);
-        // Use default statuses on error
-        setCaseStatuses([
-          { id: 'default-open', value: 'Open' },
-          { id: 'default-in-progress', value: 'In Progress' },
-          { id: 'default-closed', value: 'Closed' },
-        ]);
         return;
       }
 
-      if (data && data.length > 0) {
+      if (data) {
         setCaseStatuses(data);
-      } else {
-        // No picklists found, use default statuses
-        setCaseStatuses([
-          { id: 'default-open', value: 'Open' },
-          { id: 'default-in-progress', value: 'In Progress' },
-          { id: 'default-closed', value: 'Closed' },
-        ]);
       }
     } catch (error) {
       console.error("Error fetching case statuses:", error);
-      // Use default statuses on error
-      setCaseStatuses([
-        { id: 'default-open', value: 'Open' },
-        { id: 'default-in-progress', value: 'In Progress' },
-        { id: 'default-closed', value: 'Closed' },
-      ]);
     }
   };
 
