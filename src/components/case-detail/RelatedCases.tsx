@@ -40,12 +40,19 @@ export function RelatedCases({ caseId, currentInstanceNumber }: RelatedCasesProp
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
       const { data } = await supabase
         .from("picklists")
         .select("value, color, status_type")
-        .eq("user_id", user.id)
         .eq("type", "case_status")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .or(orgMember ? `organization_id.eq.${orgMember.organization_id},organization_id.is.null` : 'organization_id.is.null');
 
       if (data) {
         setCaseStatuses(data);
