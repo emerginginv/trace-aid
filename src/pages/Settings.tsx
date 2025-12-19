@@ -355,10 +355,13 @@ const Settings = () => {
 
       if (!existing.hasCaseStatuses) {
         inserts.push(
-          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Open', color: '#10b981', status_type: 'open', display_order: 0, is_active: true },
-          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Active', color: '#3b82f6', status_type: 'open', display_order: 1, is_active: true },
-          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'On Hold', color: '#f59e0b', status_type: 'open', display_order: 2, is_active: true },
-          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Closed', color: '#6b7280', status_type: 'closed', display_order: 3, is_active: true }
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'New', color: '#6366f1', status_type: 'open', display_order: 0, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Open', color: '#10b981', status_type: 'open', display_order: 1, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Active', color: '#3b82f6', status_type: 'open', display_order: 2, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'On Hold', color: '#f59e0b', status_type: 'open', display_order: 3, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Pending', color: '#8b5cf6', status_type: 'open', display_order: 4, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Closed', color: '#6b7280', status_type: 'closed', display_order: 5, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Cancelled', color: '#ef4444', status_type: 'closed', display_order: 6, is_active: true }
         );
       }
 
@@ -366,7 +369,12 @@ const Settings = () => {
         inserts.push(
           { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Surveillance', color: '#6366f1', status_type: 'open', display_order: 0, is_active: true },
           { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Case Update', color: '#8b5cf6', status_type: 'open', display_order: 1, is_active: true },
-          { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Interview', color: '#06b6d4', status_type: 'open', display_order: 2, is_active: true }
+          { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Interview', color: '#06b6d4', status_type: 'open', display_order: 2, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Accounting', color: '#10b981', status_type: 'open', display_order: 3, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Client Contact', color: '#f59e0b', status_type: 'open', display_order: 4, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'update_type', value: '3rd Party Contact', color: '#ec4899', status_type: 'open', display_order: 5, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Review', color: '#14b8a6', status_type: 'open', display_order: 6, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Other', color: '#64748b', status_type: 'open', display_order: 7, is_active: true }
         );
       }
 
