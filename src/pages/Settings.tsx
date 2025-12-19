@@ -277,7 +277,7 @@ const Settings = () => {
       console.log("Loading picklists for org:", orgMember.organization_id);
 
       // Load picklists from database filtered by organization
-      const { data: picklists, error: picklistError } = await supabase
+      const { data: picklistsRaw, error: picklistError } = await supabase
         .from("picklists")
         .select("*")
         .eq("organization_id", orgMember.organization_id)
@@ -287,33 +287,47 @@ const Settings = () => {
         console.error("Error loading picklists:", picklistError);
       }
 
+      let picklists = picklistsRaw ?? [];
       console.log("Loaded picklists:", picklists);
 
-      if (picklists) {
-        const statuses = picklists
-          .filter(p => p.type === 'case_status')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1', statusType: p.status_type || 'open' }));
-        const updates = picklists
-          .filter(p => p.type === 'update_type')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
-        const categories = picklists
-          .filter(p => p.type === 'expense_category')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
+      // Ensure each picklist type has at least defaults for this organization
+      if (user && orgMember) {
+        const hasCaseStatuses = picklists.some(p => p.type === "case_status");
+        const hasUpdateTypes = picklists.some(p => p.type === "update_type");
+        const hasExpenseCategories = picklists.some(p => p.type === "expense_category");
 
-        console.log("Update types found:", updates);
-        
-        setCaseStatuses(statuses);
-        setUpdateTypes(updates);
-        setExpenseCategories(categories);
-        
-        // Initialize default picklists if none exist for this organization
-        if (picklists.length === 0 && user && orgMember) {
-          await initializeDefaultPicklists(user.id, orgMember.organization_id);
+        if (!hasCaseStatuses || !hasUpdateTypes || !hasExpenseCategories) {
+          await initializeDefaultPicklists(user.id, orgMember.organization_id, {
+            hasCaseStatuses,
+            hasUpdateTypes,
+            hasExpenseCategories,
+          });
+
+          const { data: refreshedPicklists } = await supabase
+            .from("picklists")
+            .select("*")
+            .eq("organization_id", orgMember.organization_id)
+            .order("display_order");
+
+          picklists = refreshedPicklists ?? picklists;
         }
-      } else if (user && orgMember) {
-        // No picklists at all - initialize defaults
-        await initializeDefaultPicklists(user.id, orgMember.organization_id);
       }
+
+      const statuses = picklists
+        .filter(p => p.type === 'case_status')
+        .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1', statusType: p.status_type || 'open' }));
+      const updates = picklists
+        .filter(p => p.type === 'update_type')
+        .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
+      const categories = picklists
+        .filter(p => p.type === 'expense_category')
+        .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
+
+      console.log("Update types found:", updates);
+
+      setCaseStatuses(statuses);
+      setUpdateTypes(updates);
+      setExpenseCategories(categories);
     } catch (error) {
       console.error("Error loading settings:", error);
       toast.error("Failed to load settings");
@@ -322,81 +336,57 @@ const Settings = () => {
     }
   };
 
-  const initializeDefaultPicklists = async (userId: string, organizationId: string) => {
+  const initializeDefaultPicklists = async (
+    userId: string,
+    organizationId: string,
+    existing: { hasCaseStatuses: boolean; hasUpdateTypes: boolean; hasExpenseCategories: boolean }
+  ) => {
     try {
-      // Check if organization already has picklists
-      const { data: existingPicklists } = await supabase
-        .from('picklists')
-        .select('id')
-        .eq('organization_id', organizationId)
-        .limit(1);
+      const inserts: Array<{
+        user_id: string;
+        organization_id: string;
+        type: string;
+        value: string;
+        color?: string;
+        status_type?: string;
+        display_order: number;
+        is_active: boolean;
+      }> = [];
 
-      if (existingPicklists && existingPicklists.length > 0) {
-        // Organization already has picklists, just reload
-        return;
+      if (!existing.hasCaseStatuses) {
+        inserts.push(
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Open', color: '#10b981', status_type: 'open', display_order: 0, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Active', color: '#3b82f6', status_type: 'open', display_order: 1, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'On Hold', color: '#f59e0b', status_type: 'open', display_order: 2, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'case_status', value: 'Closed', color: '#6b7280', status_type: 'closed', display_order: 3, is_active: true }
+        );
       }
 
-      // Default picklists for new organizations
-      const defaultPicklists = [
-        // Case Statuses
-        { type: 'case_status', value: 'Open', color: '#10b981', status_type: 'open', display_order: 0 },
-        { type: 'case_status', value: 'Active', color: '#3b82f6', status_type: 'open', display_order: 1 },
-        { type: 'case_status', value: 'On Hold', color: '#f59e0b', status_type: 'open', display_order: 2 },
-        { type: 'case_status', value: 'Closed', color: '#6b7280', status_type: 'closed', display_order: 3 },
-        // Update Types
-        { type: 'update_type', value: 'Surveillance', color: '#6366f1', display_order: 0 },
-        { type: 'update_type', value: 'Case Update', color: '#8b5cf6', display_order: 1 },
-        { type: 'update_type', value: 'Interview', color: '#06b6d4', display_order: 2 },
-        // Expense Categories
-        { type: 'expense_category', value: 'Surveillance', color: '#6366f1', display_order: 0 },
-        { type: 'expense_category', value: 'Research', color: '#8b5cf6', display_order: 1 },
-        { type: 'expense_category', value: 'Mileage', color: '#10b981', display_order: 2 },
-        { type: 'expense_category', value: 'Lodging', color: '#f59e0b', display_order: 3 },
-      ];
-
-      const { error } = await supabase
-        .from('picklists')
-        .insert(
-          defaultPicklists.map(item => ({
-            user_id: userId,
-            organization_id: organizationId,
-            type: item.type,
-            value: item.value,
-            color: item.color,
-            status_type: item.status_type || 'open',
-            display_order: item.display_order,
-            is_active: true,
-          }))
+      if (!existing.hasUpdateTypes) {
+        inserts.push(
+          { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Surveillance', color: '#6366f1', status_type: 'open', display_order: 0, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Case Update', color: '#8b5cf6', status_type: 'open', display_order: 1, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'update_type', value: 'Interview', color: '#06b6d4', status_type: 'open', display_order: 2, is_active: true }
         );
+      }
 
+      if (!existing.hasExpenseCategories) {
+        inserts.push(
+          { user_id: userId, organization_id: organizationId, type: 'expense_category', value: 'Surveillance', color: '#6366f1', status_type: 'open', display_order: 0, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'expense_category', value: 'Research', color: '#8b5cf6', status_type: 'open', display_order: 1, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'expense_category', value: 'Mileage', color: '#10b981', status_type: 'open', display_order: 2, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'expense_category', value: 'Lodging', color: '#f59e0b', status_type: 'open', display_order: 3, is_active: true }
+        );
+      }
+
+      if (inserts.length === 0) return;
+
+      const { error } = await supabase.from('picklists').insert(inserts);
       if (error) throw error;
 
-      // Reload picklists
-      const { data: picklists } = await supabase
-        .from("picklists")
-        .select("*")
-        .eq("organization_id", organizationId)
-        .order("display_order");
-
-      if (picklists) {
-        const statuses = picklists
-          .filter(p => p.type === 'case_status')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1', statusType: p.status_type || 'open' }));
-        const updates = picklists
-          .filter(p => p.type === 'update_type')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
-        const categories = picklists
-          .filter(p => p.type === 'expense_category')
-          .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
-
-        setCaseStatuses(statuses);
-        setUpdateTypes(updates);
-        setExpenseCategories(categories);
-      }
-      
-      toast.success("Default picklists created for your organization");
+      toast.success('Picklists created for your organization');
     } catch (error) {
-      console.error("Error initializing default picklists:", error);
+      console.error('Error initializing default picklists:', error);
     }
   };
 
