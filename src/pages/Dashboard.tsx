@@ -102,10 +102,22 @@ const Dashboard = () => {
         data: allCases
       } = await supabase.from("cases").select("status").eq("user_id", user.id);
 
-      // Fetch status picklists to get status_type
+      // Fetch user's organization
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // Fetch status picklists to get status_type - filter by organization_id
       const {
         data: statusPicklists
-      } = await supabase.from("picklists").select("value, status_type").eq("user_id", user.id).eq("type", "case_status").eq("is_active", true);
+      } = await supabase
+        .from("picklists")
+        .select("value, status_type")
+        .eq("type", "case_status")
+        .eq("is_active", true)
+        .or(orgMember ? `organization_id.eq.${orgMember.organization_id},organization_id.is.null` : 'organization_id.is.null');
       let openCasesCount = 0;
       let closedCasesCount = 0;
       if (allCases && statusPicklists) {
@@ -223,10 +235,7 @@ const Dashboard = () => {
         setExpenses(recentExpenses);
       }
 
-      // Fetch users for assignments
-      const {
-        data: orgMember
-      } = await supabase.from('organization_members').select('organization_id').eq('user_id', user.id).limit(1).single();
+      // Fetch users for assignments - reuse orgMember from above if available
       if (orgMember) {
         const {
           data: orgUsers
