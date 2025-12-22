@@ -4,9 +4,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import { OrganizationProvider } from "./contexts/OrganizationContext";
+import { OrganizationProvider, useOrganization } from "./contexts/OrganizationContext";
+import { OrganizationSwitcher } from "./components/OrganizationSwitcher";
 import Auth from "./pages/Auth";
 import { Onboarding } from "./components/Onboarding";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
@@ -45,6 +48,32 @@ const queryClient = new QueryClient({
   },
 });
 
+// Component to handle org switcher within the provider
+function AppWithOrgSwitcher({ children }: { children: React.ReactNode }) {
+  const { showOrgSwitcher, setShowOrgSwitcher, selectOrganization } = useOrganization();
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserId(user?.id || null);
+    });
+  }, []);
+
+  return (
+    <>
+      {children}
+      {userId && (
+        <OrganizationSwitcher
+          open={showOrgSwitcher}
+          onClose={() => setShowOrgSwitcher(false)}
+          onSelect={selectOrganization}
+          userId={userId}
+        />
+      )}
+    </>
+  );
+}
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -56,9 +85,10 @@ const App = () => {
       >
         <OrganizationProvider>
           <BrowserRouter>
-            <Toaster />
-            <Sonner />
-            <Routes>
+            <AppWithOrgSwitcher>
+              <Toaster />
+              <Sonner />
+              <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
             <Route
@@ -282,7 +312,8 @@ const App = () => {
         <Route path="/style-guide" element={<StyleGuide />} />
         <Route path="/premium-showcase" element={<PremiumShowcase />} />
         <Route path="*" element={<NotFound />} />
-            </Routes>
+              </Routes>
+            </AppWithOrgSwitcher>
           </BrowserRouter>
         </OrganizationProvider>
       </ThemeProvider>
