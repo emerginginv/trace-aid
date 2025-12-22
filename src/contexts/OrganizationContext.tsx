@@ -3,8 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { getPlanLimits } from "@/lib/planLimits";
 
-const SELECTED_ORG_KEY = "selected_organization_id";
-
 interface Organization {
   id: string;
   name: string;
@@ -38,12 +36,6 @@ interface OrganizationContextType {
   refreshOrganization: () => Promise<void>;
   subscriptionStatus: SubscriptionStatus | null;
   checkSubscription: () => Promise<void>;
-  userOrganizations: { id: string; name: string; role: string }[];
-  hasMultipleOrgs: boolean;
-  showOrgSwitcher: boolean;
-  setShowOrgSwitcher: (show: boolean) => void;
-  selectOrganization: (orgId: string) => Promise<void>;
-  pendingOrgSelection: boolean;
 }
 
 const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
@@ -52,59 +44,40 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userOrganizations, setUserOrganizations] = useState<{ id: string; name: string; role: string }[]>([]);
-  const [showOrgSwitcher, setShowOrgSwitcher] = useState(false);
-  const [pendingOrgSelection, setPendingOrgSelection] = useState(false);
 
-  const hasMultipleOrgs = userOrganizations.length > 1;
-
-  const fetchUserOrganizations = async (userId: string) => {
+  const refreshOrganization = async () => {
     try {
-      const { data: memberships, error: memberError } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setOrganization(null);
+        return;
+      }
+
+      // Get user's organization through organization_members
+      // Use limit(1) to handle users in multiple organizations
+      const { data: memberData, error: memberError } = await supabase
         .from("organization_members")
-        .select("organization_id, role")
-        .eq("user_id", userId);
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .limit(1);
 
-      if (memberError || !memberships || memberships.length === 0) {
-        return [];
+      if (memberError) {
+        console.error("Error fetching organization membership:", memberError);
+        setOrganization(null);
+        return;
       }
 
-      const orgIds = memberships.map(m => m.organization_id);
-      const { data: orgs, error: orgError } = await supabase
-        .from("organizations")
-        .select("id, name")
-        .in("id", orgIds);
-
-      if (orgError || !orgs) {
-        return [];
+      if (!memberData || memberData.length === 0 || !memberData[0]?.organization_id) {
+        console.warn("User not in any organization");
+        setOrganization(null);
+        return;
       }
 
-      return orgs.map(org => {
-        const membership = memberships.find(m => m.organization_id === org.id);
-        return {
-          id: org.id,
-          name: org.name,
-          role: membership?.role || "member"
-        };
-      });
-    } catch (error) {
-      console.error("Error fetching user organizations:", error);
-      return [];
-    }
-  };
-
-  const selectOrganization = async (orgId: string) => {
-    localStorage.setItem(SELECTED_ORG_KEY, orgId);
-    setPendingOrgSelection(false);
-    await loadOrganization(orgId);
-  };
-
-  const loadOrganization = async (orgId: string) => {
-    try {
+      // Get organization details with explicit filter for this specific org only
       const { data: orgData, error: orgError } = await supabase
         .from("organizations")
         .select("*")
-        .eq("id", orgId)
+        .eq("id", memberData[0].organization_id)
         .maybeSingle();
 
       if (orgError) {
@@ -120,47 +93,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       }
 
       setOrganization(orgData as Organization);
-    } catch (error) {
-      console.error("Error in loadOrganization:", error);
-      setOrganization(null);
-    }
-  };
-
-  const refreshOrganization = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setOrganization(null);
-        setUserOrganizations([]);
-        return;
-      }
-
-      // Fetch all user organizations
-      const orgs = await fetchUserOrganizations(user.id);
-      setUserOrganizations(orgs);
-
-      if (orgs.length === 0) {
-        console.warn("User not in any organization");
-        setOrganization(null);
-        return;
-      }
-
-      // Check for saved org selection
-      const savedOrgId = localStorage.getItem(SELECTED_ORG_KEY);
-      const savedOrgValid = savedOrgId && orgs.some(o => o.id === savedOrgId);
-
-      if (orgs.length === 1) {
-        // Single org - auto select
-        await loadOrganization(orgs[0].id);
-        localStorage.setItem(SELECTED_ORG_KEY, orgs[0].id);
-      } else if (savedOrgValid) {
-        // Multiple orgs but has valid saved selection
-        await loadOrganization(savedOrgId);
-      } else {
-        // Multiple orgs, no valid saved selection - need to prompt
-        setPendingOrgSelection(true);
-        setShowOrgSwitcher(true);
-      }
     } catch (error) {
       console.error("Error in refreshOrganization:", error);
       setOrganization(null);
@@ -222,8 +154,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       } else if (event === "SIGNED_OUT") {
         setOrganization(null);
         setSubscriptionStatus(null);
-        setUserOrganizations([]);
-        localStorage.removeItem(SELECTED_ORG_KEY);
       }
     });
 
@@ -236,13 +166,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       loading, 
       refreshOrganization,
       subscriptionStatus,
-      checkSubscription,
-      userOrganizations,
-      hasMultipleOrgs,
-      showOrgSwitcher,
-      setShowOrgSwitcher,
-      selectOrganization,
-      pendingOrgSelection
+      checkSubscription 
     }}>
       {children}
     </OrganizationContext.Provider>
