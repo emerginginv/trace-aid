@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Filter, Plus, CheckSquare, Calendar as CalendarIcon } from "lucide-react";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface Case {
   id: string;
@@ -18,6 +19,7 @@ interface User {
 }
 
 export default function Calendar() {
+  const { organization } = useOrganization();
   const [cases, setCases] = useState<Case[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filterCase, setFilterCase] = useState<string>("all");
@@ -28,37 +30,32 @@ export default function Calendar() {
   const [pendingCallback, setPendingCallback] = useState<((caseId: string) => void) | null>(null);
   const calendarRef = useRef<{ triggerAddTask: () => void; triggerAddEvent: () => void } | null>(null);
 
+  // Refetch when organization changes
   useEffect(() => {
-    fetchFilters();
-  }, []);
+    if (organization?.id) {
+      fetchFilters();
+    }
+  }, [organization?.id]);
 
   const fetchFilters = async () => {
+    if (!organization?.id) return;
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const orgId = organization.id;
 
-      // Get user's organization for filtering profiles
-      const { data: orgMember } = await supabase
+      // Get organization members
+      const { data: orgMembers } = await supabase
         .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      let orgUserIds: string[] = [];
-      if (orgMember) {
-        const { data: orgMembers } = await supabase
-          .from("organization_members")
-          .select("user_id")
-          .eq("organization_id", orgMember.organization_id);
-        orgUserIds = orgMembers?.map(m => m.user_id) || [];
-      }
+        .select("user_id")
+        .eq("organization_id", orgId);
+      
+      const orgUserIds = orgMembers?.map(m => m.user_id) || [];
 
       const [casesResult, usersResult] = await Promise.all([
-        supabase.from("cases").select("id, title").eq("user_id", user.id),
+        supabase.from("cases").select("id, title").eq("organization_id", orgId),
         orgUserIds.length > 0 
           ? supabase.from("profiles").select("id, email, full_name").in("id", orgUserIds)
-          : supabase.from("profiles").select("id, email, full_name").eq("id", user.id),
+          : Promise.resolve({ data: [] }),
       ]);
 
       if (casesResult.data) setCases(casesResult.data);
