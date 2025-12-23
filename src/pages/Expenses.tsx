@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { DollarSign, Plus, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface Expense {
   id: string;
@@ -35,6 +36,7 @@ interface Case {
 }
 
 export default function Expenses() {
+  const { organization } = useOrganization();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,10 +51,12 @@ export default function Expenses() {
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    console.log("[Expenses] Component mounted");
-    fetchExpenses();
-    fetchCases();
-  }, []);
+    if (organization?.id) {
+      console.log("[Expenses] Fetching for organization:", organization.id);
+      fetchExpenses();
+      fetchCases();
+    }
+  }, [organization?.id]);
 
   const fetchExpenses = async () => {
     try {
@@ -96,13 +100,17 @@ export default function Expenses() {
   };
 
   const fetchCases = async () => {
+    if (!organization?.id) return;
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Fetch cases from selected organization where user is an investigator
       const { data, error } = await supabase
         .from("cases")
         .select("id, case_number, title, investigator_ids")
+        .eq("organization_id", organization.id)
         .contains("investigator_ids", [user.id]);
 
       if (error) throw error;
