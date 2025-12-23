@@ -423,6 +423,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         const { data: newCase, error } = await supabase.from("cases").insert([{
           ...caseData,
           user_id: user.id,
+          organization_id: orgMember.organization_id,
           instance_number: 1, // New cases always start at instance 1
         }]).select().single();
 
