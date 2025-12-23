@@ -13,6 +13,8 @@ import VendorDashboard from "./VendorDashboard";
 import { ActivityForm } from "@/components/case-detail/ActivityForm";
 import { UpdateForm } from "@/components/case-detail/UpdateForm";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
+import { useOrganization } from "@/contexts/OrganizationContext";
+
 interface Task {
   id: string;
   title: string;
@@ -49,13 +51,9 @@ interface Expense {
   financeData: any;
 }
 const Dashboard = () => {
-  const {
-    toast
-  } = useToast();
-  const {
-    isVendor,
-    loading: roleLoading
-  } = useUserRole();
+  const { toast } = useToast();
+  const { isVendor, loading: roleLoading } = useUserRole();
+  const { organization } = useOrganization();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -76,48 +74,37 @@ const Dashboard = () => {
     totalContacts: 0,
     totalAccounts: 0
   });
+
   useEffect(() => {
+    if (!organization?.id) return;
+
     const fetchDashboardData = async () => {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch stats
-      const [casesResult, contactsResult, accountsResult] = await Promise.all([supabase.from("cases").select("*", {
-        count: "exact",
-        head: true
-      }).eq("user_id", user.id), supabase.from("contacts").select("*", {
-        count: "exact",
-        head: true
-      }).eq("user_id", user.id), supabase.from("accounts").select("*", {
-        count: "exact",
-        head: true
-      }).eq("user_id", user.id)]);
+      const orgId = organization.id;
+
+      // Fetch stats filtered by organization
+      const [casesResult, contactsResult, accountsResult] = await Promise.all([
+        supabase.from("cases").select("*", { count: "exact", head: true }).eq("organization_id", orgId),
+        supabase.from("contacts").select("*", { count: "exact", head: true }).eq("organization_id", orgId),
+        supabase.from("accounts").select("*", { count: "exact", head: true }).eq("organization_id", orgId)
+      ]);
 
       // Fetch all cases to categorize by status_type
-      const {
-        data: allCases
-      } = await supabase.from("cases").select("status").eq("user_id", user.id);
+      const { data: allCases } = await supabase
+        .from("cases")
+        .select("status")
+        .eq("organization_id", orgId);
 
-      // Fetch user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      // Fetch status picklists to get status_type - filter by organization_id
-      const {
-        data: statusPicklists
-      } = await supabase
+      // Fetch status picklists filtered by organization
+      const { data: statusPicklists } = await supabase
         .from("picklists")
         .select("value, status_type")
         .eq("type", "case_status")
         .eq("is_active", true)
-        .or(orgMember ? `organization_id.eq.${orgMember.organization_id},organization_id.is.null` : 'organization_id.is.null');
+        .or(`organization_id.eq.${orgId},organization_id.is.null`);
+
       let openCasesCount = 0;
       let closedCasesCount = 0;
       if (allCases && statusPicklists) {
@@ -130,10 +117,13 @@ const Dashboard = () => {
           }
         });
       }
-      const activeCasesResult = await supabase.from("cases").select("*", {
-        count: "exact",
-        head: true
-      }).eq("user_id", user.id).eq("status", "open");
+
+      const activeCasesResult = await supabase
+        .from("cases")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", orgId)
+        .eq("status", "open");
+
       setStats({
         totalCases: casesResult.count || 0,
         activeCases: activeCasesResult.count || 0,
@@ -143,18 +133,16 @@ const Dashboard = () => {
         totalAccounts: accountsResult.count || 0
       });
 
-      // Fetch tasks from case_activities (pending tasks only)
-      const {
-        data: activitiesData,
-        error: tasksError
-      } = await supabase.from("case_activities").select("*").eq("activity_type", "task").eq("completed", false).order("due_date", {
-        ascending: true,
-        nullsFirst: false
-      }).limit(10);
-      console.log('Dashboard tasks query:', {
-        activitiesData,
-        tasksError
-      });
+      // Fetch tasks from case_activities (pending tasks only) filtered by organization
+      const { data: activitiesData, error: tasksError } = await supabase
+        .from("case_activities")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("activity_type", "task")
+        .eq("completed", false)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(10);
+
       if (activitiesData) {
         const tasksData: Task[] = activitiesData.map(activity => ({
           id: activity.id,
@@ -168,23 +156,23 @@ const Dashboard = () => {
         setTasks(tasksData);
       }
 
-      // Fetch calendar events from case_activities (upcoming events in next 30 days)
+      // Fetch calendar events from case_activities (upcoming events in next 30 days) filtered by organization
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
-      const {
-        data: eventsData,
-        error: eventsError
-      } = await supabase.from("case_activities").select("*").eq("activity_type", "event").not("due_date", "is", null).gte("due_date", today.toISOString().split('T')[0]).lte("due_date", futureDate.toISOString().split('T')[0]).order("due_date", {
-        ascending: true
-      }).limit(10);
-      console.log('Dashboard events query:', {
-        eventsData,
-        eventsError,
-        today: today.toISOString().split('T')[0],
-        futureDate: futureDate.toISOString().split('T')[0]
-      });
+
+      const { data: eventsData } = await supabase
+        .from("case_activities")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("activity_type", "event")
+        .not("due_date", "is", null)
+        .gte("due_date", today.toISOString().split('T')[0])
+        .lte("due_date", futureDate.toISOString().split('T')[0])
+        .order("due_date", { ascending: true })
+        .limit(10);
+
       if (eventsData) {
         const calendarEvents: CalendarEvent[] = eventsData.map(event => ({
           id: event.id,
@@ -198,12 +186,14 @@ const Dashboard = () => {
         setEvents(calendarEvents);
       }
 
-      // Fetch recent updates from case_updates
-      const {
-        data: updatesData
-      } = await supabase.from("case_updates").select("*").eq("user_id", user.id).order("created_at", {
-        ascending: false
-      }).limit(5);
+      // Fetch recent updates from case_updates filtered by organization
+      const { data: updatesData } = await supabase
+        .from("case_updates")
+        .select("*")
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
       if (updatesData) {
         const recentUpdates: Update[] = updatesData.map(update => ({
           id: update.id,
@@ -216,12 +206,15 @@ const Dashboard = () => {
         setUpdates(recentUpdates);
       }
 
-      // Fetch recent expenses from case_finances
-      const {
-        data: expensesData
-      } = await supabase.from("case_finances").select("*").eq("user_id", user.id).eq("finance_type", "expense").order("date", {
-        ascending: false
-      }).limit(5);
+      // Fetch recent expenses from case_finances filtered by organization
+      const { data: expensesData } = await supabase
+        .from("case_finances")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("finance_type", "expense")
+        .order("date", { ascending: false })
+        .limit(5);
+
       if (expensesData) {
         const recentExpenses: Expense[] = expensesData.map(expense => ({
           id: expense.id,
@@ -235,22 +228,23 @@ const Dashboard = () => {
         setExpenses(recentExpenses);
       }
 
-      // Fetch users for assignments - reuse orgMember from above if available
-      if (orgMember) {
-        const {
-          data: orgUsers
-        } = await supabase.from('profiles').select('id, email, full_name').in('id', (await supabase.from('organization_members').select('user_id').eq('organization_id', orgMember.organization_id)).data?.map(m => m.user_id) || []);
-        if (orgUsers) {
-          setUsers(orgUsers.map(u => ({
-            id: u.id,
-            email: u.email,
-            full_name: u.full_name
-          })));
-        }
+      // Fetch users for assignments filtered by organization
+      const { data: orgUsers } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .in('id', (await supabase.from('organization_members').select('user_id').eq('organization_id', orgId)).data?.map(m => m.user_id) || []);
+
+      if (orgUsers) {
+        setUsers(orgUsers.map(u => ({
+          id: u.id,
+          email: u.email,
+          full_name: u.full_name
+        })));
       }
     };
+
     fetchDashboardData();
-  }, []);
+  }, [organization?.id]);
   const handleTaskToggle = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
