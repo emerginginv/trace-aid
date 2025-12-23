@@ -53,6 +53,7 @@ export default function Expenses() {
   useEffect(() => {
     if (organization?.id) {
       console.log("[Expenses] Fetching for organization:", organization.id);
+      setSelectedCaseId("");
       fetchExpenses();
       fetchCases();
     }
@@ -101,22 +102,21 @@ export default function Expenses() {
 
   const fetchCases = async () => {
     if (!organization?.id) return;
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
 
-      // Fetch cases from selected organization where user is an investigator
+    try {
+      // Fetch cases for the selected organization.
+      // RLS will automatically restrict what the current user is allowed to see.
       const { data, error } = await supabase
         .from("cases")
-        .select("id, case_number, title, investigator_ids")
+        .select("id, case_number, title")
         .eq("organization_id", organization.id)
-        .contains("investigator_ids", [user.id]);
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setCases(data || []);
     } catch (error) {
       console.error("Error fetching cases:", error);
+      setCases([]);
     }
   };
 
