@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-
+import { useOrganization } from "@/contexts/OrganizationContext";
 interface RetainerBalance {
   case_id: string;
   case_title: string;
@@ -51,6 +51,7 @@ interface Invoice {
 
 const Finance = () => {
   const navigate = useNavigate();
+  const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [totalRetainerBalance, setTotalRetainerBalance] = useState(0);
   const [totalOutstandingExpenses, setTotalOutstandingExpenses] = useState(0);
@@ -84,41 +85,35 @@ const Finance = () => {
   const [expensesOpen, setExpensesOpen] = useState(true);
   const [invoicesOpen, setInvoicesOpen] = useState(true);
 
+  // Refetch when organization changes
   useEffect(() => {
-    fetchFinanceData();
-  }, []);
+    if (organization?.id) {
+      fetchFinanceData();
+    }
+  }, [organization?.id]);
 
   const fetchFinanceData = async () => {
+    if (!organization?.id) return;
+
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: memberData } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!memberData) return;
+      const orgId = organization.id;
 
       // Fetch all cases first (needed for joins)
       const { data: casesData, error: casesError } = await supabase
         .from("cases")
         .select("id, title, case_number")
-        .eq("organization_id", memberData.organization_id);
+        .eq("organization_id", orgId);
 
       if (casesError) throw casesError;
 
       const casesMap = new Map(casesData?.map(c => [c.id, c]) || []);
 
-      // Fetch retainer balances by case - filter by organization
+      // Fetch retainer balances by case - filter by selected organization
       const { data: retainerData, error: retainerError } = await supabase
         .from("retainer_funds")
         .select("case_id, amount, created_at")
-        .eq("organization_id", memberData.organization_id)
+        .eq("organization_id", orgId)
         .order("created_at", { ascending: false });
 
       if (retainerError) throw retainerError;
@@ -160,7 +155,7 @@ const Finance = () => {
       const { data: expenseData, error: expenseError } = await supabase
         .from("case_finances")
         .select("id, case_id, date, amount, category, status, invoiced, quantity")
-        .eq("organization_id", memberData.organization_id)
+        .eq("organization_id", orgId)
         .eq("finance_type", "expense")
         .order("date", { ascending: false });
 
@@ -193,7 +188,7 @@ const Finance = () => {
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
         .select("id, case_id, invoice_number, date, total, status, due_date, balance_due, total_paid")
-        .eq("organization_id", memberData.organization_id)
+        .eq("organization_id", orgId)
         .order("date", { ascending: false });
 
       if (invoiceError) throw invoiceError;
