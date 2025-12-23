@@ -8,7 +8,6 @@ import { Plus, Briefcase, Search, LayoutGrid, List, Trash2 } from "lucide-react"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
-import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +15,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { useOrganization } from "@/contexts/OrganizationContext";
 interface Case {
   id: string;
   case_number: string;
@@ -28,10 +28,9 @@ interface Case {
 }
 const Cases = () => {
   const navigate = useNavigate();
-  const {
-    isVendor
-  } = useUserRole();
+  const { isVendor } = useUserRole();
   const { hasPermission } = usePermissions();
+  const { organization } = useOrganization();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -47,37 +46,25 @@ const Cases = () => {
     status_type?: string;
   }>>([]);
   const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
+
+  // Refetch when organization changes
   useEffect(() => {
-    fetchCases();
-    fetchPicklists();
-  }, []);
+    if (organization?.id) {
+      fetchCases();
+      fetchPicklists();
+    }
+  }, [organization?.id]);
   const fetchPicklists = async () => {
+    if (!organization?.id) return;
+    
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!orgMember) return;
-
-      // Fetch status picklists (org-level or global)
-      const {
-        data: statusData
-      } = await supabase
+      // Fetch status picklists for selected organization
+      const { data: statusData } = await supabase
         .from("picklists")
         .select("id, value, color, status_type")
         .eq("type", "case_status")
         .eq("is_active", true)
-        .or(`organization_id.eq.${orgMember.organization_id},organization_id.is.null`)
+        .or(`organization_id.eq.${organization.id},organization_id.is.null`)
         .order("display_order");
       
       if (statusData) {
@@ -88,22 +75,17 @@ const Cases = () => {
     }
   };
   const fetchCases = async () => {
+    if (!organization?.id) return;
+    
+    setLoading(true);
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Vendors see only cases they have access to through RLS
-      // RLS will automatically filter based on is_vendor_case_accessible function
-      const {
-        data,
-        error
-      } = await supabase.from("cases").select("*").order("created_at", {
-        ascending: false
-      });
+      // Filter cases by the selected organization
+      const { data, error } = await supabase
+        .from("cases")
+        .select("*")
+        .eq("organization_id", organization.id)
+        .order("created_at", { ascending: false });
+        
       if (error) throw error;
       setCases(data || []);
     } catch (error) {
