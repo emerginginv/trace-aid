@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ActivityForm } from "./ActivityForm";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface CalendarActivity {
   id: string;
@@ -63,6 +64,7 @@ export const CaseCalendar = forwardRef<
   { triggerAddTask: () => void; triggerAddEvent: () => void },
   CaseCalendarProps
 >(({ caseId, filterCase, filterUser, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false }, ref) => {
+  const { organization } = useOrganization();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -79,42 +81,35 @@ export const CaseCalendar = forwardRef<
 
   const filterStatus = externalFilterStatus || internalFilterStatus;
 
+  // Refetch when organization changes
   useEffect(() => {
-    fetchData();
-  }, [caseId, filterCase, filterUser, filterStatus]);
+    if (organization?.id) {
+      fetchData();
+    }
+  }, [caseId, filterCase, filterUser, filterStatus, organization?.id]);
 
   const fetchData = async () => {
+    if (!organization?.id) return;
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get user's organization first
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
+      const orgId = organization.id;
 
-      if (!orgMember) {
-        console.error("No organization found for user");
-        setLoading(false);
-        return;
-      }
-
-      // Build query for tasks - filter by organization, not user
+      // Build query for tasks - filter by selected organization
       let tasksQuery = supabase
         .from("case_activities")
         .select("id, title, due_date, case_id, status, assigned_user_id, activity_type")
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", orgId)
         .eq("activity_type", "task")
         .not("due_date", "is", null);
 
-      // Build query for events - filter by organization, not user
+      // Build query for events - filter by selected organization
       let eventsQuery = supabase
         .from("case_activities")
         .select("id, title, due_date, case_id, status, assigned_user_id, activity_type")
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", orgId)
         .eq("activity_type", "event")
         .not("due_date", "is", null);
 
@@ -141,7 +136,7 @@ export const CaseCalendar = forwardRef<
       const { data: orgMembers } = await supabase
         .from("organization_members")
         .select("user_id")
-        .eq("organization_id", orgMember.organization_id);
+        .eq("organization_id", orgId);
       const orgUserIds = orgMembers?.map(m => m.user_id) || [];
 
       const [tasksResult, eventsResult, usersResult] = await Promise.all([
