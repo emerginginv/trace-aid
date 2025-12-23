@@ -122,8 +122,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       setOrganization(selectedOrg);
       // Refresh subscription status for the new org
       setTimeout(() => checkSubscription(), 0);
-      // Force a page reload to refetch all data with new org context
-      window.location.reload();
     }
   };
 
