@@ -32,72 +32,96 @@ interface SubscriptionStatus {
 
 interface OrganizationContextType {
   organization: Organization | null;
+  organizations: Organization[];
   loading: boolean;
   refreshOrganization: () => Promise<void>;
+  switchOrganization: (orgId: string) => Promise<void>;
   subscriptionStatus: SubscriptionStatus | null;
   checkSubscription: () => Promise<void>;
 }
 
 const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
 
+const SELECTED_ORG_KEY = "selectedOrganizationId";
+
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [organization, setOrganization] = useState<Organization | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchAllUserOrganizations = async (userId: string): Promise<Organization[]> => {
+    // Get all organization memberships for this user
+    const { data: memberData, error: memberError } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", userId);
+
+    if (memberError || !memberData || memberData.length === 0) {
+      return [];
+    }
+
+    const orgIds = memberData.map(m => m.organization_id);
+    
+    // Fetch all organizations
+    const { data: orgsData, error: orgsError } = await supabase
+      .from("organizations")
+      .select("*")
+      .in("id", orgIds);
+
+    if (orgsError || !orgsData) {
+      return [];
+    }
+
+    return orgsData as Organization[];
+  };
 
   const refreshOrganization = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setOrganization(null);
+        setOrganizations([]);
         return;
       }
 
-      // Get user's organization through organization_members
-      // Use limit(1) to handle users in multiple organizations
-      const { data: memberData, error: memberError } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1);
+      // Fetch all organizations for this user
+      const allOrgs = await fetchAllUserOrganizations(user.id);
+      setOrganizations(allOrgs);
 
-      if (memberError) {
-        console.error("Error fetching organization membership:", memberError);
-        setOrganization(null);
-        return;
-      }
-
-      if (!memberData || memberData.length === 0 || !memberData[0]?.organization_id) {
+      if (allOrgs.length === 0) {
         console.warn("User not in any organization");
         setOrganization(null);
         return;
       }
 
-      // Get organization details with explicit filter for this specific org only
-      const { data: orgData, error: orgError } = await supabase
-        .from("organizations")
-        .select("*")
-        .eq("id", memberData[0].organization_id)
-        .maybeSingle();
-
-      if (orgError) {
-        console.error("Error fetching organization:", orgError);
-        setOrganization(null);
-        return;
+      // Check localStorage for previously selected org
+      const savedOrgId = localStorage.getItem(SELECTED_ORG_KEY);
+      let selectedOrg = allOrgs.find(org => org.id === savedOrgId);
+      
+      // If no saved selection or saved org not in list, use first org
+      if (!selectedOrg) {
+        selectedOrg = allOrgs[0];
+        localStorage.setItem(SELECTED_ORG_KEY, selectedOrg.id);
       }
 
-      if (!orgData) {
-        console.warn("Organization not found");
-        setOrganization(null);
-        return;
-      }
-
-      setOrganization(orgData as Organization);
+      setOrganization(selectedOrg);
     } catch (error) {
       console.error("Error in refreshOrganization:", error);
       setOrganization(null);
+      setOrganizations([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const switchOrganization = async (orgId: string) => {
+    const selectedOrg = organizations.find(org => org.id === orgId);
+    if (selectedOrg) {
+      localStorage.setItem(SELECTED_ORG_KEY, orgId);
+      setOrganization(selectedOrg);
+      // Refresh subscription status for the new org
+      setTimeout(() => checkSubscription(), 0);
     }
   };
 
@@ -163,8 +187,10 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   return (
     <OrganizationContext.Provider value={{ 
       organization, 
+      organizations,
       loading, 
       refreshOrganization,
+      switchOrganization,
       subscriptionStatus,
       checkSubscription 
     }}>

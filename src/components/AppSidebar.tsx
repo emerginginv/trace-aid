@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar, FileText } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar, FileText, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { HelpFeedback } from "@/components/HelpFeedback";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
+
 const allMenuItems = [{
   title: "Dashboard",
   icon: LayoutDashboard,
@@ -55,6 +56,7 @@ const allMenuItems = [{
   url: "/admin",
   roles: ['admin']
 }];
+
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,6 +73,7 @@ export function AppSidebar() {
 
   // Filter menu items based on user role
   const menuItems = allMenuItems.filter(item => !role || item.roles.includes(role));
+  
   useEffect(() => {
     const fetchUserProfile = async () => {
       const {
@@ -96,6 +99,7 @@ export function AppSidebar() {
     };
     fetchUserProfile();
   }, []);
+
   const handleSignOut = async () => {
     const {
       error
@@ -107,45 +111,57 @@ export function AppSidebar() {
       navigate("/auth");
     }
   };
+
   const getInitials = (name: string | null, email: string) => {
     if (name) {
       return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     }
     return email.charAt(0).toUpperCase();
   };
-  return <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border p-4">
+
+  return (
+    <Sidebar>
+      <SidebarHeader className="border-b border-sidebar-border p-4 space-y-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
             <h2 className="text-sky-300 font-medium text-base">CaseWyze</h2>
-            <p className="text-xs text-sidebar-foreground/60">Investigation Management   </p>
+            <p className="text-xs text-sidebar-foreground/60">Investigation Management</p>
           </div>
         </div>
+        <OrganizationSwitcher />
       </SidebarHeader>
 
       <SidebarContent>
-        {isVendor && <div className="px-4 pt-2 pb-4">
+        {isVendor && (
+          <div className="px-4 pt-2 pb-4">
             <Alert className="bg-muted/50 border-primary/20">
               <Info className="h-4 w-4" />
               <AlertDescription className="text-xs">
                 Limited Access - Vendor Account
               </AlertDescription>
             </Alert>
-          </div>}
+          </div>
+        )}
         
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map(item => <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton onClick={() => navigate(item.url)} isActive={location.pathname === item.url} className="w-full">
+              {menuItems.map(item => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    onClick={() => navigate(item.url)} 
+                    isActive={location.pathname === item.url} 
+                    className="w-full"
+                  >
                     <item.icon className="w-4 h-4" />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
-                </SidebarMenuItem>)}
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -155,12 +171,12 @@ export function AppSidebar() {
         {/* Help & Feedback */}
         <HelpFeedback />
         
-        {/* Settings and Sign Out buttons - hide Settings for vendors */}
+        {/* Settings and Sign Out buttons */}
         <div className="flex gap-2 rounded bg-transparent">
           <SidebarMenuButton onClick={() => navigate("/settings")} className="flex-1 justify-center">
-              <Settings className="w-4 h-4" />
-              <span className="sr-only">Settings</span>
-            </SidebarMenuButton>
+            <Settings className="w-4 h-4" />
+            <span className="sr-only">Settings</span>
+          </SidebarMenuButton>
           <SidebarMenuButton onClick={handleSignOut} className="flex-1 justify-center">
             <LogOut className="w-4 h-4" />
             <span className="sr-only">Sign Out</span>
@@ -168,11 +184,18 @@ export function AppSidebar() {
         </div>
 
         {/* User Profile Section */}
-        {userProfile && <div onClick={() => navigate("/profile")} role="button" tabIndex={0} onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          navigate("/profile");
-        }
-      }} className="flex items-center gap-3 p-2 cursor-pointer transition-colors rounded-md bg-transparent">
+        {userProfile && (
+          <div 
+            onClick={() => navigate("/profile")} 
+            role="button" 
+            tabIndex={0} 
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                navigate("/profile");
+              }
+            }} 
+            className="flex items-center gap-3 p-2 cursor-pointer transition-colors rounded-md bg-transparent"
+          >
             <Avatar className="h-10 w-10">
               <AvatarImage src={userProfile.avatar_url || ""} alt={userProfile.full_name || userProfile.email} />
               <AvatarFallback className="bg-primary text-primary-foreground">
@@ -187,7 +210,9 @@ export function AppSidebar() {
                 {userProfile.role}
               </p>
             </div>
-          </div>}
+          </div>
+        )}
       </SidebarFooter>
-    </Sidebar>;
+    </Sidebar>
+  );
 }
