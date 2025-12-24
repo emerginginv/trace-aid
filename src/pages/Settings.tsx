@@ -185,7 +185,7 @@ const Settings = () => {
       toast.success("Subscription activated successfully!");
       checkSubscription();
     }
-  }, [searchParams]);
+  }, [searchParams, organization?.id]);
 
   const updateOrgUsage = async () => {
     try {
@@ -221,14 +221,44 @@ const Settings = () => {
         setNotificationPush(profile.notification_push ?? true);
       }
 
-      // Load user role - use impersonated user's role if impersonating
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", effectiveUserId);
+      // Load user role - get from organization_members for current org context
+      if (organization?.id) {
+        const { data: orgMemberRole } = await supabase
+          .from("organization_members")
+          .select("role")
+          .eq("user_id", effectiveUserId)
+          .eq("organization_id", organization.id)
+          .maybeSingle();
 
-      if (roles && roles.length > 0) {
-        setCurrentUserRole(roles[0].role);
+        if (orgMemberRole?.role) {
+          setCurrentUserRole(orgMemberRole.role);
+        } else {
+          // Fallback to user_roles if not found in org members
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", effectiveUserId)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          if (roles?.role) {
+            setCurrentUserRole(roles.role);
+          }
+        }
+      } else {
+        // No org context, fallback to user_roles
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", effectiveUserId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (roles?.role) {
+          setCurrentUserRole(roles.role);
+        }
       }
 
       // Load organization settings
