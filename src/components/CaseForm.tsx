@@ -109,7 +109,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   });
 
   useEffect(() => {
-    if (open) {
+    if (open && organization?.id) {
       fetchAccountsAndContacts();
       fetchCaseStatuses();
       fetchProfiles();
@@ -145,7 +145,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         setInvestigators([]);
       }
     }
-  }, [open, editingCase]);
+  }, [open, editingCase, organization?.id]);
 
   // Re-set status when statuses are loaded and we're editing
   useEffect(() => {
