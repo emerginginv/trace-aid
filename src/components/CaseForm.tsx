@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 const caseSchema = z.object({
   title: z.string().min(1, "Case title is required").max(200),
@@ -83,6 +84,7 @@ interface Contact {
 }
 
 export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFormProps) {
+  const { organization } = useOrganization();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string}>>([]);
@@ -183,25 +185,14 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
   const fetchCaseStatuses = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) return;
+      if (!organization?.id) return;
 
       const { data, error } = await supabase
         .from("picklists")
         .select("id, value")
         .eq("type", "case_status")
         .eq("is_active", true)
-        .or(`organization_id.eq.${orgMember.organization_id},organization_id.is.null`)
+        .or(`organization_id.eq.${organization.id},organization_id.is.null`)
         .order("display_order");
 
       if (error) {
@@ -219,24 +210,13 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
   const fetchProfiles = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) return;
+      if (!organization?.id) return;
 
       // Get all organization member user_ids
       const { data: orgMembers } = await supabase
         .from("organization_members")
         .select("user_id")
-        .eq("organization_id", orgMember.organization_id);
+        .eq("organization_id", organization.id);
 
       if (!orgMembers) return;
 
@@ -259,42 +239,23 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
   const fetchAccountsAndContacts = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log("No authenticated user");
+      if (!organization?.id) {
+        console.log("No organization selected");
         return;
       }
 
-      // Get user's organization
-      const { data: orgMember, error: orgError } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (orgError) {
-        console.error("Error fetching organization:", orgError);
-        return;
-      }
-
-      if (!orgMember) {
-        console.log("User has no organization");
-        return;
-      }
-
-      console.log("Fetching accounts and contacts for org:", orgMember.organization_id);
+      console.log("Fetching accounts and contacts for org:", organization.id);
 
       const [accountsData, contactsData] = await Promise.all([
         supabase
           .from("accounts")
           .select("id, name")
-          .eq("organization_id", orgMember.organization_id)
+          .eq("organization_id", organization.id)
           .order("name"),
         supabase
           .from("contacts")
           .select("id, first_name, last_name")
-          .eq("organization_id", orgMember.organization_id)
+          .eq("organization_id", organization.id)
           .order("first_name"),
       ]);
 
@@ -318,25 +279,14 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
   const generateCaseNumber = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) return;
+      if (!organization?.id) return;
 
       // Get all case numbers in THIS organization to find the highest base case number
       // Exclude instance numbers (e.g., CASE-00001-02) and only count base numbers
       const { data: existingCases, error } = await supabase
         .from("cases")
         .select("case_number, instance_number")
-        .eq("organization_id", orgMember.organization_id);
+        .eq("organization_id", organization.id);
 
       if (error) {
         console.error("Error fetching existing cases:", error);
@@ -360,7 +310,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       }
 
       const caseNumber = `CASE-${String(nextNumber).padStart(5, "0")}`;
-      console.log(`Generated case number ${caseNumber} for organization ${orgMember.organization_id}`);
+      console.log(`Generated case number ${caseNumber} for organization ${organization.id}`);
       form.setValue("case_number", caseNumber);
     } catch (error) {
       console.error("Error generating case number:", error);
@@ -372,15 +322,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) throw new Error("User not in organization");
+      if (!organization?.id) throw new Error("No organization selected");
 
       const caseData = {
         title: data.title,
@@ -414,7 +356,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               status: data.status,
             },
             user.id,
-            orgMember.organization_id
+            organization.id
           );
         }
         
@@ -423,7 +365,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         const { data: newCase, error } = await supabase.from("cases").insert([{
           ...caseData,
           user_id: user.id,
-          organization_id: orgMember.organization_id,
+          organization_id: organization.id,
           instance_number: 1, // New cases always start at instance 1
         }]).select().single();
 
@@ -437,7 +379,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
             case_number: data.case_number,
           },
           user.id,
-          orgMember.organization_id
+          organization.id
         );
         
         toast.success("Case created successfully");
