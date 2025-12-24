@@ -99,8 +99,6 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('[CREATE-USER] User exists in auth but not in org, will add to org');
 
       // User exists but not in this org - add them to the organization
-      // IMPORTANT: Do NOT modify user_roles table - the user keeps their existing role(s)
-      // The organization_members.role field defines their role within THIS organization
       const { error: orgMemberError } = await supabase
         .from('organization_members')
         .insert({
@@ -117,20 +115,21 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      // Add the new role to user_roles WITHOUT deleting existing roles
-      // This allows a user to have multiple roles across different organizations
+      // Update their role in user_roles
+      const { error: deleteRoleError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', existingAuthUser.id);
+
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
           user_id: existingAuthUser.id,
           role: role,
-        })
-        .select()
-        .maybeSingle(); // Use maybeSingle to handle duplicate gracefully
+        });
 
-      // Ignore duplicate role errors (user might already have this role)
-      if (roleError && !roleError.message.includes('duplicate')) {
-        console.error('Error adding role:', roleError);
+      if (roleError) {
+        console.error('Error updating role:', roleError);
       }
 
       // Update organization user count
