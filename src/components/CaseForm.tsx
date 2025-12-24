@@ -185,20 +185,27 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
   const fetchCaseStatuses = async () => {
     try {
-      if (!organization?.id) return;
+      if (!organization?.id) {
+        console.log("No organization ID available for fetching case statuses");
+        return;
+      }
+
+      console.log("Fetching case statuses for organization:", organization.id);
 
       const { data, error } = await supabase
         .from("picklists")
         .select("id, value")
         .eq("type", "case_status")
         .eq("is_active", true)
-        .or(`organization_id.eq.${organization.id},organization_id.is.null`)
+        .eq("organization_id", organization.id)
         .order("display_order");
 
       if (error) {
         console.error("Error fetching case statuses:", error);
         return;
       }
+
+      console.log("Case statuses fetched:", data);
 
       if (data) {
         setCaseStatuses(data);
