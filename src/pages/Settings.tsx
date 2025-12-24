@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PermissionsManager } from "@/components/PermissionsManager";
@@ -90,10 +91,10 @@ interface User {
 
 const Settings = () => {
   const { impersonatedUserId } = useImpersonation();
+  const { role: currentUserRole, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   // User Preferences State
   const [fullName, setFullName] = useState("");
@@ -221,45 +222,7 @@ const Settings = () => {
         setNotificationPush(profile.notification_push ?? true);
       }
 
-      // Load user role - get from organization_members for current org context
-      if (organization?.id) {
-        const { data: orgMemberRole } = await supabase
-          .from("organization_members")
-          .select("role")
-          .eq("user_id", effectiveUserId)
-          .eq("organization_id", organization.id)
-          .maybeSingle();
-
-        if (orgMemberRole?.role) {
-          setCurrentUserRole(orgMemberRole.role);
-        } else {
-          // Fallback to user_roles if not found in org members
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", effectiveUserId)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-
-          if (roles?.role) {
-            setCurrentUserRole(roles.role);
-          }
-        }
-      } else {
-        // No org context, fallback to user_roles
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", effectiveUserId)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        if (roles?.role) {
-          setCurrentUserRole(roles.role);
-        }
-      }
+      // Role is now managed by useUserRole hook - no need to fetch here
 
       // Load organization settings
       const { data: orgSettings } = await supabase
@@ -717,12 +680,7 @@ const Settings = () => {
 
       console.log("Settings: Loaded users:", usersData.length);
       setUsers(usersData);
-      
-      // Update current user role if we're in the list
-      const currentUser = usersData.find(u => u.id === currentUserId);
-      if (currentUser && currentUser.roles.length > 0) {
-        setCurrentUserRole(currentUser.roles[0]);
-      }
+      // Role is now managed by useUserRole hook - no need to update here
     } catch (error: any) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
@@ -1394,7 +1352,7 @@ const Settings = () => {
     }
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
