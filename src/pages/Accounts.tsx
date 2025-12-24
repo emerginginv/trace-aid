@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Building2, Search, LayoutGrid, List, Edit, Trash2 } from "lucide-react";
@@ -34,6 +35,7 @@ interface Account {
 const Accounts = () => {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const { organization } = useOrganization();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -45,17 +47,20 @@ const Accounts = () => {
 
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [organization?.id]);
 
   const fetchAccounts = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!organization?.id) {
+        setAccounts([]);
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from("accounts")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("organization_id", organization.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
