@@ -9,6 +9,7 @@ import { HelpFeedback } from "@/components/HelpFeedback";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 const allMenuItems = [{
   title: "Dashboard",
@@ -64,6 +65,7 @@ export function AppSidebar() {
     role,
     isVendor
   } = useUserRole();
+  const { organization } = useOrganization();
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null;
     email: string;
@@ -82,23 +84,48 @@ export function AppSidebar() {
         }
       } = await supabase.auth.getUser();
       if (!user) return;
+      
       const {
-        data: profile,
-        error: profileError
+        data: profile
       } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", user.id).maybeSingle();
-      const {
-        data: userRole,
-        error: roleError
-      } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
+      
+      // Get role from organization_members for the current organization
+      let displayRole = "member";
+      if (organization?.id) {
+        const { data: orgMember } = await supabase
+          .from("organization_members")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("organization_id", organization.id)
+          .maybeSingle();
+        
+        if (orgMember?.role) {
+          displayRole = orgMember.role;
+        }
+      } else {
+        // Fallback to user_roles if no organization context
+        const { data: userRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        
+        if (userRole?.role) {
+          displayRole = userRole.role;
+        }
+      }
+      
       setUserProfile({
         full_name: profile?.full_name || null,
         email: profile?.email || user.email || "",
-        role: userRole?.role || "member",
+        role: displayRole,
         avatar_url: profile?.avatar_url || null
       });
     };
     fetchUserProfile();
-  }, []);
+  }, [organization?.id]);
 
   const handleSignOut = async () => {
     const {
