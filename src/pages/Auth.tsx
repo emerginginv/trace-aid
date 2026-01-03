@@ -12,108 +12,85 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Shield, Eye, EyeOff } from "lucide-react";
-
 const signInSchema = z.object({
   email: z.string().trim().min(1, "Email or username is required").max(255, "Input must be less than 255 characters"),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(1, "Password is required")
 });
-
 const signUpSchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required").max(100, "Full name must be less than 100 characters"),
   email: z.string().trim().email("Invalid email format").max(255, "Email must be less than 255 characters"),
-  password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .max(128, "Password must be less than 128 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be less than 128 characters").regex(/[A-Z]/, "Password must contain at least one uppercase letter").regex(/[a-z]/, "Password must contain at least one lowercase letter").regex(/[0-9]/, "Password must contain at least one number")
 });
-
 type SignInFormData = z.infer<typeof signInSchema>;
 type SignUpFormData = z.infer<typeof signUpSchema>;
-
 const resetPasswordSchema = z.object({
-  password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .max(128, "Password must be less than 128 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be less than 128 characters").regex(/[A-Z]/, "Password must contain at least one uppercase letter").regex(/[a-z]/, "Password must contain at least one lowercase letter").regex(/[0-9]/, "Password must contain at least one number"),
   confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
+}).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
-  path: ["confirmPassword"],
+  path: ["confirmPassword"]
 });
-
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
-
 const forgotPasswordSchema = z.object({
-  email: z.string().trim().email("Invalid email format"),
+  email: z.string().trim().email("Invalid email format")
 });
-
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
-
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
       email: "",
-      password: "",
-    },
+      password: ""
+    }
   });
-
   const signUpForm = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       fullName: "",
       email: "",
-      password: "",
-    },
+      password: ""
+    }
   });
-
   const resetPasswordForm = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
       password: "",
-      confirmPassword: "",
-    },
+      confirmPassword: ""
+    }
   });
-
   const forgotPasswordForm = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
-      email: "",
-    },
+      email: ""
+    }
   });
-
   useEffect(() => {
     const checkSessionAndRedirect = async () => {
       // Check for hash parameters (password reset token from email)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const type = hashParams.get('type');
-      
+
       // If we have a recovery token in the URL, show password reset form
       if (accessToken && type === 'recovery') {
         setIsPasswordReset(true);
         return;
       }
-
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
       if (session) {
         // Check user role and redirect accordingly
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
+        const {
+          data: roleData
+        } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle();
         if (roleData?.role === "vendor") {
           navigate("/dashboard"); // Vendor dashboard shows automatically via role check
         } else {
@@ -121,37 +98,33 @@ const Auth = () => {
         }
       }
     };
-
     checkSessionAndRedirect();
   }, [navigate]);
-
   const handleSignUp = async (data: SignUpFormData) => {
     setLoading(true);
-
     try {
-      const { data: authData, error } = await supabase.auth.signUp({
+      const {
+        data: authData,
+        error
+      } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
-            full_name: data.fullName,
-          },
-        },
+            full_name: data.fullName
+          }
+        }
       });
-
       if (error) {
         toast.error(error.message);
       } else if (authData.user) {
         toast.success("Account created! Redirecting...");
-        
-        // Check if user has vendor role
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", authData.user.id)
-          .maybeSingle();
 
+        // Check if user has vendor role
+        const {
+          data: roleData
+        } = await supabase.from("user_roles").select("role").eq("user_id", authData.user.id).maybeSingle();
         setTimeout(() => {
           navigate("/dashboard"); // Dashboard automatically shows vendor view based on role
         }, 1000);
@@ -162,24 +135,23 @@ const Auth = () => {
       setLoading(false);
     }
   };
-
   const handleResetPassword = async (data: ResetPasswordFormData) => {
     setLoading(true);
-
     try {
-      const { error } = await supabase.auth.updateUser({
+      const {
+        error
+      } = await supabase.auth.updateUser({
         password: data.password
       });
-
       if (error) {
         toast.error(error.message);
       } else {
         toast.success("Password updated successfully!");
         setIsPasswordReset(false);
-        
+
         // Clear the hash from URL
         window.history.replaceState({}, document.title, window.location.pathname);
-        
+
         // Redirect to dashboard
         setTimeout(() => {
           navigate("/dashboard");
@@ -191,15 +163,14 @@ const Auth = () => {
       setLoading(false);
     }
   };
-
   const handleForgotPassword = async (data: ForgotPasswordFormData) => {
     setLoading(true);
-
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/auth?reset=true`,
+      const {
+        error
+      } = await supabase.auth.resetPasswordForEmail(data.email, {
+        redirectTo: `${window.location.origin}/auth?reset=true`
       });
-
       if (error) {
         toast.error(error.message);
       } else {
@@ -213,46 +184,40 @@ const Auth = () => {
       setLoading(false);
     }
   };
-
   const handleSignIn = async (data: SignInFormData) => {
     setLoading(true);
-
     try {
       let loginEmail = data.email;
 
       // Check if input is a username (doesn't contain @)
       if (!data.email.includes("@")) {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("email")
-          .eq("username", data.email)
-          .maybeSingle();
-
+        const {
+          data: profile,
+          error: profileError
+        } = await supabase.from("profiles").select("email").eq("username", data.email).maybeSingle();
         if (profileError || !profile) {
           toast.error("Username not found");
           setLoading(false);
           return;
         }
-
         loginEmail = profile.email;
       }
-
-      const { data: authData, error } = await supabase.auth.signInWithPassword({
+      const {
+        data: authData,
+        error
+      } = await supabase.auth.signInWithPassword({
         email: loginEmail,
-        password: data.password,
+        password: data.password
       });
-
       if (error) {
         toast.error(error.message);
       } else if (authData.user) {
         toast.success("Signed in successfully!");
-        
+
         // Check user role for appropriate redirect
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", authData.user.id)
-          .maybeSingle();
+        const {
+          data: roleData
+        } = await supabase.from("user_roles").select("role").eq("user_id", authData.user.id).maybeSingle();
 
         // All users go to dashboard - role determines what they see
         navigate("/dashboard");
@@ -263,16 +228,14 @@ const Auth = () => {
       setLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+  return <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold">PI Case Manager</h1>
-          <p className="text-muted-foreground mt-2">Professional investigation case management</p>
+          <h1 className="text-3xl font-bold">Case Manager</h1>
+          <p className="text-muted-foreground mt-2">Professional case management</p>
         </div>
 
         <Card>
@@ -281,91 +244,53 @@ const Auth = () => {
               {isPasswordReset ? "Reset Password" : isForgotPassword ? "Forgot Password" : "Welcome"}
             </CardTitle>
             <CardDescription>
-              {isPasswordReset 
-                ? "Enter your new password below" 
-                : isForgotPassword 
-                ? "Enter your email to receive a password reset link"
-                : "Sign in to your account or create a new one"}
+              {isPasswordReset ? "Enter your new password below" : isForgotPassword ? "Enter your email to receive a password reset link" : "Sign in to your account or create a new one"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isPasswordReset ? (
-              <Form {...resetPasswordForm}>
+            {isPasswordReset ? <Form {...resetPasswordForm}>
                 <form onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)} className="space-y-4">
-                  <FormField
-                    control={resetPasswordForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
+                  <FormField control={resetPasswordForm.control} name="password" render={({
+                field
+              }) => <FormItem>
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="••••••••"
-                            {...field}
-                          />
+                          <Input type="password" placeholder="••••••••" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={resetPasswordForm.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
+                      </FormItem>} />
+                  <FormField control={resetPasswordForm.control} name="confirmPassword" render={({
+                field
+              }) => <FormItem>
                         <FormLabel>Confirm Password</FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="••••••••"
-                            {...field}
-                          />
+                          <Input type="password" placeholder="••••••••" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      </FormItem>} />
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Updating..." : "Update Password"}
                   </Button>
                 </form>
-              </Form>
-            ) : isForgotPassword ? (
-              <Form {...forgotPasswordForm}>
+              </Form> : isForgotPassword ? <Form {...forgotPasswordForm}>
                 <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPassword)} className="space-y-4">
-                  <FormField
-                    control={forgotPasswordForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
+                  <FormField control={forgotPasswordForm.control} name="email" render={({
+                field
+              }) => <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="your@email.com"
-                            {...field}
-                          />
+                          <Input type="email" placeholder="your@email.com" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      </FormItem>} />
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Sending..." : "Send Reset Link"}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => setIsForgotPassword(false)}
-                  >
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => setIsForgotPassword(false)}>
                     Back to Sign In
                   </Button>
                 </form>
-              </Form>
-            ) : (
-            <Tabs defaultValue="signin">
+              </Form> : <Tabs defaultValue="signin">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -374,62 +299,31 @@ const Auth = () => {
               <TabsContent value="signin">
                 <Form {...signInForm}>
                   <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-4">
-                    <FormField
-                      control={signInForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
+                    <FormField control={signInForm.control} name="email" render={({
+                    field
+                  }) => <FormItem>
                           <FormLabel>Email or Username</FormLabel>
                           <FormControl>
-                            <Input
-                              type="text"
-                              placeholder="Enter username or email"
-                              {...field}
-                            />
+                            <Input type="text" placeholder="Enter username or email" {...field} />
                           </FormControl>
                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signInForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
+                        </FormItem>} />
+                    <FormField control={signInForm.control} name="password" render={({
+                    field
+                  }) => <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="••••••••"
-                                {...field}
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                                onClick={() => setShowPassword(!showPassword)}
-                              >
-                                {showPassword ? (
-                                  <EyeOff className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                  <Eye className="h-4 w-4 text-muted-foreground" />
-                                )}
+                              <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                              <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                               </Button>
                             </div>
                           </FormControl>
                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        </FormItem>} />
                     <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="px-0 text-sm"
-                        onClick={() => setIsForgotPassword(true)}
-                      >
+                      <Button type="button" variant="link" className="px-0 text-sm" onClick={() => setIsForgotPassword(true)}>
                         Forgot password?
                       </Button>
                     </div>
@@ -443,70 +337,43 @@ const Auth = () => {
               <TabsContent value="signup">
                 <Form {...signUpForm}>
                   <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
-                    <FormField
-                      control={signUpForm.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
+                    <FormField control={signUpForm.control} name="fullName" render={({
+                    field
+                  }) => <FormItem>
                           <FormLabel>Full Name</FormLabel>
                           <FormControl>
-                            <Input
-                              type="text"
-                              placeholder="John Doe"
-                              {...field}
-                            />
+                            <Input type="text" placeholder="John Doe" {...field} />
                           </FormControl>
                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signUpForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
+                        </FormItem>} />
+                    <FormField control={signUpForm.control} name="email" render={({
+                    field
+                  }) => <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="your@email.com"
-                              {...field}
-                            />
+                            <Input type="email" placeholder="your@email.com" {...field} />
                           </FormControl>
                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signUpForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
+                        </FormItem>} />
+                    <FormField control={signUpForm.control} name="password" render={({
+                    field
+                  }) => <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="••••••••"
-                              {...field}
-                            />
+                            <Input type="password" placeholder="••••••••" {...field} />
                           </FormControl>
                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        </FormItem>} />
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading ? "Creating account..." : "Create Account"}
                     </Button>
                   </form>
                 </Form>
               </TabsContent>
-             </Tabs>
-            )}
+             </Tabs>}
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Auth;
