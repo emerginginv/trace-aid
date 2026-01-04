@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail } from "lucide-react";
+import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail, FileText } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CaseDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +28,8 @@ import { BudgetAdjustmentForm } from "@/components/case-detail/BudgetAdjustmentF
 import { BudgetAdjustmentsHistory } from "@/components/case-detail/BudgetAdjustmentsHistory";
 import { BudgetConsumptionSnapshot } from "@/components/case-detail/BudgetConsumptionSnapshot";
 import { CaseBudgetWidget } from "@/components/case-detail/CaseBudgetWidget";
+import { GenerateReportDialog } from "@/components/templates/GenerateReportDialog";
+import { CaseReports } from "@/components/case-detail/CaseReports";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -95,6 +97,9 @@ const CaseDetail = () => {
   const [activeTab, setActiveTab] = useState(isVendor ? "updates" : "subjects");
   const [highlightHistory, setHighlightHistory] = useState(false);
   const budgetTabRef = useRef<HTMLDivElement>(null);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [updates, setUpdates] = useState<Array<{ id: string; title: string; description: string | null; created_at: string; update_type: string; user_id: string }>>([]);
+  const [userProfiles, setUserProfiles] = useState<Record<string, { id: string; full_name: string; email: string }>>({});
 
   const handleViewBudgetHistory = () => {
     setActiveTab("budget");
@@ -106,9 +111,29 @@ const CaseDetail = () => {
       setTimeout(() => setHighlightHistory(false), 2000);
     }, 100);
   };
+  const fetchUpdatesForReport = async () => {
+    const { data } = await supabase
+      .from("case_updates")
+      .select("*")
+      .eq("case_id", id)
+      .order("created_at", { ascending: false });
+    setUpdates(data || []);
+  };
+
+  const fetchUserProfilesForReport = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, full_name, email");
+    const profiles: Record<string, { id: string; full_name: string; email: string }> = {};
+    (data || []).forEach(p => { profiles[p.id] = p; });
+    setUserProfiles(profiles);
+  };
+
   useEffect(() => {
     fetchCaseData();
     fetchCaseStatuses();
+    fetchUpdatesForReport();
+    fetchUserProfilesForReport();
   }, [id]);
   const fetchCaseStatuses = async () => {
     try {
@@ -605,6 +630,12 @@ const CaseDetail = () => {
                   <Mail className="h-4 w-4 mr-2" />
                   Send Email
                 </DropdownMenuItem>
+                {hasPermission('view_reports') && (
+                  <DropdownMenuItem onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Generate Report
+                  </DropdownMenuItem>
+                )}
                 {hasPermission('edit_cases') && (
                   <DropdownMenuItem onClick={() => setEditFormOpen(true)} disabled={isClosed}>
                     <Edit className="h-4 w-4 mr-2" />
@@ -662,21 +693,26 @@ const CaseDetail = () => {
             </div>
           )}
           
-          {/* Desktop action buttons (hidden on mobile) */}
           {!isVendor && !isMobile && (
             <div className="flex items-center gap-2 ml-auto">
-              <Button variant="outline" onClick={() => setEmailComposerOpen(true)} disabled={isClosed} className="text-foreground bg-muted hover:bg-muted/80">
+              <Button variant="outline" className="h-10 px-4" onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
                 <Mail className="h-4 w-4 mr-2" />
                 Send Email
               </Button>
+              {hasPermission('view_reports') && (
+                <Button variant="outline" className="h-10 px-4" onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Report
+                </Button>
+              )}
               {hasPermission('edit_cases') && (
-                <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed}>
+                <Button variant="outline" className="h-10 px-4" onClick={() => setEditFormOpen(true)} disabled={isClosed}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
               )}
               {hasPermission('delete_cases') && (
-                <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-destructive hover:bg-destructive/10">
+                <Button variant="outline" className="h-10 px-4 text-destructive hover:bg-destructive/10" onClick={handleDelete} disabled={deleting}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   {deleting ? "Deleting..." : "Delete"}
                 </Button>
@@ -750,10 +786,11 @@ const CaseDetail = () => {
         <div className="overflow-x-auto -mx-1 px-1 scrollbar-hide">
           <TabsList className={`
             inline-flex sm:grid w-auto sm:w-full gap-1
-            ${isVendor ? 'sm:grid-cols-2' : 'sm:grid-cols-7'}
+            ${isVendor ? 'sm:grid-cols-2' : 'sm:grid-cols-8'}
           `}>
             {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Subjects</TabsTrigger>}
             <TabsTrigger value="updates" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Updates</TabsTrigger>
+            {!isVendor && <TabsTrigger value="reports" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Reports</TabsTrigger>}
             {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Activities</TabsTrigger>}
             {!isVendor && <TabsTrigger value="calendar" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Calendar</TabsTrigger>}
             {!isVendor && <TabsTrigger value="finances" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Finances</TabsTrigger>}
@@ -769,6 +806,12 @@ const CaseDetail = () => {
         <TabsContent value="updates" className="mt-4 sm:mt-6">
           <CaseUpdates caseId={id!} isClosedCase={isClosed} />
         </TabsContent>
+
+        {!isVendor && hasPermission('view_reports') && (
+          <TabsContent value="reports" className="mt-4 sm:mt-6">
+            <CaseReports caseId={id!} />
+          </TabsContent>
+        )}
 
         {!isVendor && <>
             <TabsContent value="activities" className="mt-4 sm:mt-6">
@@ -804,6 +847,21 @@ const CaseDetail = () => {
       <CaseForm open={editFormOpen} onOpenChange={setEditFormOpen} onSuccess={fetchCaseData} editingCase={caseData || undefined} />
       
       <EmailComposer open={emailComposerOpen} onOpenChange={setEmailComposerOpen} defaultTo={contact?.first_name && contact?.last_name ? `${contact.first_name} ${contact.last_name}` : undefined} defaultSubject={`Update on Case: ${caseData?.title}`} caseId={id} />
+      
+      {caseData && (
+        <GenerateReportDialog
+          open={reportDialogOpen}
+          onOpenChange={setReportDialogOpen}
+          caseId={id!}
+          caseData={{
+            title: caseData.title,
+            case_number: caseData.case_number,
+            case_manager_id: caseData.case_manager_id,
+          }}
+          updates={updates}
+          userProfiles={userProfiles}
+        />
+      )}
       
       <ConfirmationDialog
         open={reopenDialogOpen}
