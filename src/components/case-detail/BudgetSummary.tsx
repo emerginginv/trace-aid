@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/usePermissions";
+import { BudgetAdjustmentForm } from "./BudgetAdjustmentForm";
+import { DollarSign, Info } from "lucide-react";
 
 interface BudgetSummaryData {
   budget_hours_authorized: number;
@@ -17,11 +21,13 @@ interface BudgetSummaryData {
 interface BudgetSummaryProps {
   caseId: string;
   refreshKey?: number;
+  onAdjustmentSuccess?: () => void;
 }
 
-export function BudgetSummary({ caseId, refreshKey }: BudgetSummaryProps) {
+export function BudgetSummary({ caseId, refreshKey, onAdjustmentSuccess }: BudgetSummaryProps) {
   const [summary, setSummary] = useState<BudgetSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { hasPermission, loading: permLoading } = usePermissions();
 
   useEffect(() => {
     fetchBudgetSummary();
@@ -55,7 +61,10 @@ export function BudgetSummary({ caseId, refreshKey }: BudgetSummaryProps) {
     return `${hours.toFixed(1)} hrs`;
   };
 
-  if (loading) {
+  const canModifyBudget = hasPermission("modify_case_budget");
+  const hasBudget = summary && (summary.budget_hours_authorized > 0 || summary.budget_dollars_authorized > 0);
+
+  if (loading || permLoading) {
     return (
       <Card>
         <CardHeader className="pb-3">
@@ -70,14 +79,34 @@ export function BudgetSummary({ caseId, refreshKey }: BudgetSummaryProps) {
     );
   }
 
-  if (!summary || (summary.budget_hours_authorized === 0 && summary.budget_dollars_authorized === 0)) {
+  // No budget set - show option to set one
+  if (!hasBudget) {
     return (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Budget Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No budget set for this case.</p>
+          {canModifyBudget ? (
+            <div className="text-center py-4 space-y-3">
+              <p className="text-sm text-muted-foreground">No budget set for this case.</p>
+              <BudgetAdjustmentForm 
+                caseId={caseId} 
+                onSuccess={onAdjustmentSuccess || fetchBudgetSummary}
+                triggerButton={
+                  <Button variant="outline" size="sm">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Set Budget
+                  </Button>
+                }
+              />
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 text-sm text-muted-foreground py-2">
+              <Info className="h-4 w-4 mt-0.5 shrink-0" />
+              <p>No budget set for this case. Contact an admin or manager to set a budget.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -85,8 +114,14 @@ export function BudgetSummary({ caseId, refreshKey }: BudgetSummaryProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="text-base">Budget Summary</CardTitle>
+        {canModifyBudget && (
+          <BudgetAdjustmentForm 
+            caseId={caseId} 
+            onSuccess={onAdjustmentSuccess || fetchBudgetSummary}
+          />
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {summary.budget_hours_authorized > 0 && (
@@ -164,6 +199,14 @@ export function BudgetSummary({ caseId, refreshKey }: BudgetSummaryProps) {
                 style={{ width: `${Math.min(summary.dollars_utilization_pct, 100)}%` }}
               />
             </div>
+          </div>
+        )}
+
+        {/* Permission message for non-permitted users */}
+        {!canModifyBudget && (
+          <div className="flex items-start gap-2 text-xs text-muted-foreground pt-2 border-t">
+            <Info className="h-3 w-3 mt-0.5 shrink-0" />
+            <p>Contact an admin or manager to adjust the budget.</p>
           </div>
         )}
       </CardContent>

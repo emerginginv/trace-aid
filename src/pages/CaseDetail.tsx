@@ -681,14 +681,13 @@ const CaseDetail = () => {
         </TabsContent>
 
         <TabsContent value="budget" className="mt-4 sm:mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <BudgetSummary caseId={id!} refreshKey={budgetRefreshKey} />
-              <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} />
-            </div>
-            <div>
-              <BudgetAdjustmentForm caseId={id!} onSuccess={() => setBudgetRefreshKey(k => k + 1)} />
-            </div>
+          <div className="space-y-6">
+            <BudgetSummary 
+              caseId={id!} 
+              refreshKey={budgetRefreshKey} 
+              onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
+            />
+            <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} />
           </div>
         </TabsContent>
           </>}
