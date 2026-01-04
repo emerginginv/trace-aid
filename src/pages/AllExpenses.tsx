@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Search, Pencil, Trash2, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon } from "lucide-react";
+import { Loader2, Search, Pencil, Trash2, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, LayoutGrid, List, Receipt } from "lucide-react";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -57,6 +57,7 @@ const AllExpenses = () => {
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   
   // Filter states
   const [expenseSearch, setExpenseSearch] = useState("");
@@ -168,7 +169,6 @@ const AllExpenses = () => {
     
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
-
 
   // Sorted data
   const sortedExpenses = [...filteredExpenses].sort((a, b) => {
@@ -390,7 +390,7 @@ const AllExpenses = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Expenses</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-2">
             Manage expenses across all cases
           </p>
         </div>
@@ -446,118 +446,371 @@ const AllExpenses = () => {
         </Card>
       )}
 
-      {/* Expenses List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Expenses</CardTitle>
-          <CardDescription>
-            {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''} found
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-wrap gap-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by case, category..."
-                value={expenseSearch}
-                onChange={(e) => setExpenseSearch(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <Select value={expenseStatusFilter} onValueChange={setExpenseStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="invoiced">Invoiced</SelectItem>
-              </SelectContent>
-            </Select>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateFrom}
-                  onSelect={setDateFrom}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateTo ? format(dateTo, "MMM d, yyyy") : "To date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateTo}
-                  onSelect={setDateTo}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            {(dateFrom || dateTo) && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => {
-                  setDateFrom(undefined);
-                  setDateTo(undefined);
-                }}
-                title="Clear date filters"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={exportToCSV}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Export to CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToPDF}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Export to PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <ColumnVisibility
-              columns={COLUMNS}
-              visibility={visibility}
-              onToggle={toggleColumn}
-              onReset={resetToDefaults}
+      {/* Search and Filters - Outside Card */}
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by case, category..."
+            value={expenseSearch}
+            onChange={(e) => setExpenseSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={expenseStatusFilter} onValueChange={setExpenseStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[140px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="invoiced">Invoiced</SelectItem>
+          </SelectContent>
+        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-[140px] justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateFrom}
+              onSelect={setDateFrom}
+              initialFocus
+              className="pointer-events-auto"
             />
-          </div>
-          {/* Entry count */}
-          <div className="text-sm text-muted-foreground mb-4">
-            Showing {sortedExpenses.length} expense{sortedExpenses.length !== 1 ? 's' : ''}
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-[140px] justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateTo ? format(dateTo, "MMM d, yyyy") : "To date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateTo}
+              onSelect={setDateTo}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+        {(dateFrom || dateTo) && (
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => {
+              setDateFrom(undefined);
+              setDateTo(undefined);
+            }}
+            title="Clear date filters"
+            className="h-10 w-10"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+        <ColumnVisibility
+          columns={COLUMNS}
+          visibility={visibility}
+          onToggle={toggleColumn}
+          onReset={resetToDefaults}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={exportToCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={exportToPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <div className="flex gap-1 border rounded-md p-1 h-10">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-7 w-7 p-0"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="h-7 w-7 p-0"
+          >
+            <List className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {sortedExpenses.length} expense{sortedExpenses.length !== 1 ? 's' : ''}
+      </div>
+
+      {expenses.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Receipt className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">No expenses yet</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Start by adding your first expense
+            </p>
+            <Button className="gap-2" onClick={openAddExpense}>
+              <Plus className="w-4 h-4" />
+              Add First Expense
+            </Button>
+          </CardContent>
+        </Card>
+      ) : filteredExpenses.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No expenses match your search criteria</p>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sortedExpenses.map((expense) => {
+            const isPending = expense.status === "pending" && !expense.invoiced;
+            return (
+              <Card key={expense.id} className="hover:shadow-lg transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-semibold">{expense.case_title}</div>
+                      <div className="text-sm text-muted-foreground">{expense.case_number}</div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        expense.invoiced
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                          : expense.status === "approved"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                          : expense.status === "rejected"
+                          ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                      }`}
+                    >
+                      {expense.invoiced ? "Invoiced" : expense.status || "Pending"}
+                    </span>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Date</span>
+                      <span>{format(new Date(expense.date), "MMM d, yyyy")}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Category</span>
+                      <span>{expense.category || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Amount</span>
+                      <span className="font-medium">${expense.amount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4 pt-4 border-t">
+                    {isPending && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            const { error } = await supabase
+                              .from("case_finances")
+                              .update({ status: "approved" })
+                              .eq("id", expense.id);
+                            
+                            if (error) {
+                              toast.error("Failed to approve expense");
+                            } else {
+                              toast.success("Expense approved");
+                              fetchExpenseData();
+                            }
+                          }}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            const { error } = await supabase
+                              .from("case_finances")
+                              .update({ status: "rejected" })
+                              .eq("id", expense.id);
+                            
+                            if (error) {
+                              toast.error("Failed to reject expense");
+                            } else {
+                              toast.success("Expense rejected");
+                              fetchExpenseData();
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        const { data, error } = await supabase
+                          .from("case_finances")
+                          .select("*")
+                          .eq("id", expense.id)
+                          .single();
+                        
+                        if (error) {
+                          toast.error("Failed to load expense details");
+                        } else {
+                          setEditingExpense(data);
+                          setShowExpenseForm(true);
+                        }
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        if (confirm("Are you sure you want to delete this expense?")) {
+                          const { error } = await supabase
+                            .from("case_finances")
+                            .delete()
+                            .eq("id", expense.id);
+                          
+                          if (error) {
+                            toast.error("Failed to delete expense");
+                          } else {
+                            toast.success("Expense deleted");
+                            fetchExpenseData();
+                          }
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <>
+          {/* Mobile Card View */}
+          <div className="block sm:hidden space-y-4">
+            {sortedExpenses.map((expense) => {
+              const isPending = expense.status === "pending" && !expense.invoiced;
+              return (
+                <Card key={expense.id} className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">{expense.case_title}</div>
+                        <div className="text-sm text-muted-foreground">{expense.case_number}</div>
+                      </div>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          expense.invoiced
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            : expense.status === "approved"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : expense.status === "rejected"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                        }`}
+                      >
+                        {expense.invoiced ? "Invoiced" : expense.status || "Pending"}
+                      </span>
+                    </div>
+                    <div className="text-sm space-y-1">
+                      <div>Date: {format(new Date(expense.date), "MMM d, yyyy")}</div>
+                      <div>Category: {expense.category || "N/A"}</div>
+                      <div className="font-medium">Amount: ${expense.amount.toFixed(2)}</div>
+                    </div>
+                    <div className="flex gap-2 pt-2 border-t">
+                      {isPending && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              const { error } = await supabase
+                                .from("case_finances")
+                                .update({ status: "approved" })
+                                .eq("id", expense.id);
+                              
+                              if (error) {
+                                toast.error("Failed to approve expense");
+                              } else {
+                                toast.success("Expense approved");
+                                fetchExpenseData();
+                              }
+                            }}
+                            className="flex-1"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              const { error } = await supabase
+                                .from("case_finances")
+                                .update({ status: "rejected" })
+                                .eq("id", expense.id);
+                              
+                              if (error) {
+                                toast.error("Failed to reject expense");
+                              } else {
+                                toast.success("Expense rejected");
+                                fetchExpenseData();
+                              }
+                            }}
+                            className="flex-1"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
 
-          {sortedExpenses.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No matching expenses found
-            </p>
-          ) : (
+          {/* Desktop Table View */}
+          <Card className="hidden sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -738,7 +991,6 @@ const AllExpenses = () => {
                             variant="ghost"
                             size="icon"
                             onClick={async () => {
-                              // Fetch full expense details
                               const { data, error } = await supabase
                                 .from("case_finances")
                                 .select("*")
@@ -785,9 +1037,9 @@ const AllExpenses = () => {
                 })}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+          </Card>
+        </>
+      )}
 
       {/* Add Expense/Time Dialog - Case Selection */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -19,7 +19,7 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Search, Trash2, Mail, Loader2, Palette, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { UserPlus, Search, Trash2, Mail, Loader2, Palette, Download, FileSpreadsheet, FileText, LayoutGrid, List, Users as UsersIcon } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -63,6 +63,7 @@ const Users = () => {
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<OrgUser | null>(null);
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
@@ -92,7 +93,6 @@ const Users = () => {
   useEffect(() => {
     console.log("Organization changed:", organization?.id);
     if (organization?.id) {
-      // Clear existing users first to prevent stale data display
       setUsers([]);
       fetchUsers();
     }
@@ -108,7 +108,6 @@ const Users = () => {
       setLoading(true);
       console.log("Fetching users for organization:", organization.id);
       
-      // Force fresh data by disabling cache
       const { data, error } = await supabase.rpc('get_organization_users', {
         org_id: organization.id
       });
@@ -116,7 +115,6 @@ const Users = () => {
       console.log("RPC Response - Data:", data, "Error:", error);
       if (error) throw error;
       
-      // Get user colors from profiles
       const userIds = (data || []).filter((u: any) => u.status === 'active').map((u: any) => u.id);
       const { data: profiles } = await supabase
         .from('profiles')
@@ -125,7 +123,6 @@ const Users = () => {
 
       const profileMap = new Map(profiles?.map(p => [p.id, p.color]) || []);
       
-      // Filter out any invalid roles and add colors
       const validUsers = (data || []).filter((u: any) => 
         ['admin', 'manager', 'investigator', 'vendor'].includes(u.role)
       ).map((u: any) => ({
@@ -145,13 +142,6 @@ const Users = () => {
   const handleInviteUser = async (values: z.infer<typeof inviteSchema>) => {
     if (!organization?.id) return;
 
-    console.log("🔵 Inviting user:", {
-      email: values.email,
-      role: values.role,
-      orgId: organization.id,
-      currentUserCount: users.filter(u => u.status === 'active').length
-    });
-
     try {
       const { data, error } = await supabase.functions.invoke('send-user-invite', {
         body: {
@@ -161,8 +151,6 @@ const Users = () => {
         }
       });
 
-      console.log("🔵 Invite response:", { data, error });
-
       if (error) throw error;
 
       toast.success(`Invite sent to ${values.email}`);
@@ -170,7 +158,7 @@ const Users = () => {
       form.reset();
       fetchUsers();
     } catch (error: any) {
-      console.error("🔵 Error sending invite:", error);
+      console.error("Error sending invite:", error);
       toast.error(error.message || "Failed to send invite");
     }
   };
@@ -179,7 +167,6 @@ const Users = () => {
     if (!organization?.id) return;
 
     try {
-      // Use secure database function to update role
       const { error } = await supabase.rpc('update_user_role', {
         _user_id: userId,
         _new_role: newRole,
@@ -216,92 +203,52 @@ const Users = () => {
   };
 
   const handleRemoveUser = async () => {
-    console.log("🔴 handleRemoveUser called", { userToRemove, orgId: organization?.id });
-    
-    if (!userToRemove || !organization?.id) {
-      console.log("🔴 Missing data - userToRemove or organization");
-      return;
-    }
+    if (!userToRemove || !organization?.id) return;
 
     try {
-      console.log("🔴 Starting removal process for:", userToRemove.email, "Status:", userToRemove.status);
-      
       if (userToRemove.status === 'pending') {
-        console.log("🔴 Deleting pending invite with ID:", userToRemove.id);
         const { error } = await supabase
           .from("organization_invites")
           .delete()
           .eq("id", userToRemove.id);
 
-        if (error) {
-          console.error("🔴 Failed to delete invite:", error);
-          throw error;
-        }
-        
-        console.log("✅ Invite deleted successfully");
+        if (error) throw error;
         toast.success("Invite cancelled");
       } else {
-        console.log("🔴 Deleting active user from organization");
-        console.log("🔴 Deleting with user_id:", userToRemove.id, "org_id:", organization.id);
-        
-        // Remove member from this organization only
         const { data: deleteResult, error: memberError, count } = await supabase
           .from("organization_members")
           .delete({ count: 'exact' })
           .eq("user_id", userToRemove.id)
           .eq("organization_id", organization.id);
 
-        console.log("🔴 Delete operation completed");
-        console.log("🔴 Delete result:", { deleteResult, error: memberError, count });
-
-        if (memberError) {
-          console.error("🔴 Error from database:", memberError);
-          throw memberError;
-        }
+        if (memberError) throw memberError;
 
         if (count === 0) {
-          console.error("🔴 No rows deleted - user may not exist in organization");
           throw new Error("User not found in this organization");
         }
 
-        console.log("✅ Successfully deleted", count, "row(s)");
-
-        // Recalculate actual user count from database
-        console.log("🔴 Recalculating user count...");
         const { data: { session } } = await supabase.auth.getSession();
-        const { error: usageError } = await supabase.functions.invoke('update-org-usage', {
+        await supabase.functions.invoke('update-org-usage', {
           headers: {
             Authorization: `Bearer ${session?.access_token}`,
           },
         });
-        
-        if (usageError) {
-          console.error("🔴 Failed to update usage:", usageError);
-        } else {
-          console.log("✅ User count recalculated successfully");
-        }
 
         toast.success("User removed from organization");
       }
 
-      console.log("🔴 Refreshing user list...");
-      // Force immediate refresh
       await fetchUsers();
       
-      // Also refresh organization context to update limits
       if (window.location.pathname.includes('/users')) {
         window.location.reload();
       }
-      
     } catch (error: any) {
-      console.error("🔴 ERROR in handleRemoveUser:", error);
+      console.error("ERROR in handleRemoveUser:", error);
       toast.error(error.message || "Failed to remove user");
     } finally {
-      console.log("🔴 Closing dialog");
       setUserToRemove(null);
     }
   };
-
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -333,7 +280,6 @@ const Users = () => {
       : bVal.localeCompare(aVal);
   });
 
-  // Export columns definition
   const EXPORT_COLUMNS: ExportColumn[] = [
     { key: "full_name", label: "Name" },
     { key: "email", label: "Email" },
@@ -358,7 +304,7 @@ const Users = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Users</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-2">
             Manage team members and their roles
           </p>
         </div>
@@ -428,251 +374,405 @@ const Users = () => {
         )}
       </div>
 
-      <Card className="p-6">
-        <div className="mb-4 text-sm text-muted-foreground">
-          Total Users: {filteredUsers.filter(u => u.status === 'active').length} active, {filteredUsers.filter(u => u.status === 'pending').length} pending
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by role" />
-            </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="manager">Case Manager</SelectItem>
-                <SelectItem value="investigator">Investigator</SelectItem>
-                <SelectItem value="vendor">Vendor</SelectItem>
-              </SelectContent>
-          </Select>
-          <ColumnVisibility
-            columns={COLUMNS}
-            visibility={visibility}
-            onToggle={toggleColumn}
-            onReset={resetToDefaults}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
           />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
+        </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Filter by role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="manager">Case Manager</SelectItem>
+            <SelectItem value="investigator">Investigator</SelectItem>
+            <SelectItem value="vendor">Vendor</SelectItem>
+          </SelectContent>
+        </Select>
+        <ColumnVisibility
+          columns={COLUMNS}
+          visibility={visibility}
+          onToggle={toggleColumn}
+          onReset={resetToDefaults}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <div className="flex gap-1 border rounded-md p-1 h-10">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-7 w-7 p-0"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="h-7 w-7 p-0"
+          >
+            <List className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {sortedUsers.length} user{sortedUsers.length !== 1 ? 's' : ''} ({filteredUsers.filter(u => u.status === 'active').length} active, {filteredUsers.filter(u => u.status === 'pending').length} pending)
+      </div>
+
+      {users.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <UsersIcon className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">No users yet</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Invite team members to your organization
+            </p>
+            {isAdmin && (
+              <Button className="gap-2" onClick={() => setInviteDialogOpen(true)}>
+                <UserPlus className="w-4 h-4" />
+                Invite First User
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportCSV}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Export to CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPDF}>
-                <FileText className="h-4 w-4 mr-2" />
-                Export to PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+          </CardContent>
+        </Card>
+      ) : filteredUsers.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No users match your search criteria</p>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sortedUsers.map((user) => (
+            <Card 
+              key={user.id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => user.status === 'active' && navigate(`/users/${user.id}`)}
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div 
+                    className="w-10 h-10 rounded-full border-2 border-border flex-shrink-0"
+                    style={{ backgroundColor: user.color || "#6366f1" }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold truncate">{user.full_name || "—"}</div>
+                    <div className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                      {user.email}
+                      {user.status === 'pending' && <Mail className="h-3 w-3" />}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <RoleBadge role={user.role} />
+                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                        {user.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  {user.status === 'active' && isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedUserForColor(user);
+                        setColorDialogOpen(true);
+                      }}
+                    >
+                      <Palette className="w-4 h-4 mr-1" />
+                      Color
+                    </Button>
+                  )}
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setUserToRemove(user);
+                      }}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+      ) : (
+        <>
+          {/* Mobile Card View */}
+          <div className="block sm:hidden space-y-4">
+            {sortedUsers.map((user) => (
+              <Card 
+                key={user.id} 
+                className="p-4 cursor-pointer hover:shadow-md transition-all"
+                onClick={() => user.status === 'active' && navigate(`/users/${user.id}`)}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-8 h-8 rounded-full border-2 border-border"
+                      style={{ backgroundColor: user.color || "#6366f1" }}
+                    />
+                    <div>
+                      <div className="font-medium">{user.full_name || "—"}</div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-1">
+                        {user.email}
+                        {user.status === 'pending' && <Mail className="h-3 w-3" />}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <RoleBadge role={user.role} />
+                    <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                      {user.status}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Joined: {new Date(user.created_at).toLocaleDateString()}
+                  </div>
+                  {isAdmin && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setUserToRemove(user);
+                        }}
+                        className="flex-1"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
 
-        {/* Entry count */}
-        <div className="text-sm text-muted-foreground mb-4">
-          Showing {sortedUsers.length} user{sortedUsers.length !== 1 ? 's' : ''}
-        </div>
-
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {isVisible("color") && (
-                  <SortableTableHead
-                    column=""
-                    label="Color"
-                    sortColumn=""
-                    sortDirection="asc"
-                    onSort={() => {}}
-                  />
-                )}
-                {isVisible("full_name") && (
-                  <SortableTableHead
-                    column="full_name"
-                    label="Name"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("email") && (
-                  <SortableTableHead
-                    column="email"
-                    label="Email"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("role") && (
-                  <SortableTableHead
-                    column="role"
-                    label="Role"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("status") && (
-                  <SortableTableHead
-                    column="status"
-                    label="Status"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("created_at") && (
-                  <SortableTableHead
-                    column="created_at"
-                    label="Joined"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("actions") && (
-                  <SortableTableHead
-                    column=""
-                    label="Actions"
-                    sortColumn=""
-                    sortDirection="asc"
-                    onSort={() => {}}
-                    className="text-right"
-                  />
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedUsers.length === 0 ? (
+          {/* Desktop Table View */}
+          <Card className="hidden sm:block">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    No users found
-                  </TableCell>
+                  {isVisible("color") && (
+                    <SortableTableHead
+                      column=""
+                      label="Color"
+                      sortColumn=""
+                      sortDirection="asc"
+                      onSort={() => {}}
+                    />
+                  )}
+                  {isVisible("full_name") && (
+                    <SortableTableHead
+                      column="full_name"
+                      label="Name"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("email") && (
+                    <SortableTableHead
+                      column="email"
+                      label="Email"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("role") && (
+                    <SortableTableHead
+                      column="role"
+                      label="Role"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("status") && (
+                    <SortableTableHead
+                      column="status"
+                      label="Status"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("created_at") && (
+                    <SortableTableHead
+                      column="created_at"
+                      label="Joined"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("actions") && (
+                    <SortableTableHead
+                      column=""
+                      label="Actions"
+                      sortColumn=""
+                      sortDirection="asc"
+                      onSort={() => {}}
+                      className="text-right"
+                    />
+                  )}
                 </TableRow>
-              ) : (
-                sortedUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    {isVisible("color") && (
-                      <TableCell>
-                        {user.status === 'active' && isAdmin ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => {
-                              setSelectedUserForColor(user);
-                              setColorDialogOpen(true);
-                            }}
-                          >
+              </TableHeader>
+              <TableBody>
+                {sortedUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No users found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sortedUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      {isVisible("color") && (
+                        <TableCell>
+                          {user.status === 'active' && isAdmin ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                setSelectedUserForColor(user);
+                                setColorDialogOpen(true);
+                              }}
+                            >
+                              <div 
+                                className="w-6 h-6 rounded-full border-2 border-border"
+                                style={{ backgroundColor: user.color || "#6366f1" }}
+                              />
+                            </Button>
+                          ) : user.status === 'active' ? (
                             <div 
-                              className="w-6 h-6 rounded-full border-2 border-border"
+                              className="w-6 h-6 rounded-full border-2 border-border ml-2"
                               style={{ backgroundColor: user.color || "#6366f1" }}
                             />
-                          </Button>
-                        ) : user.status === 'active' ? (
-                          <div 
-                            className="w-6 h-6 rounded-full border-2 border-border ml-2"
-                            style={{ backgroundColor: user.color || "#6366f1" }}
-                          />
-                        ) : (
-                          <div className="w-6 h-6" />
-                        )}
-                      </TableCell>
-                    )}
-                    {isVisible("full_name") && (
-                      <TableCell className="font-medium">
-                        {user.full_name || "—"}
-                      </TableCell>
-                    )}
-                    {isVisible("email") && (
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {user.email}
-                          {user.status === 'pending' && (
-                            <Mail className="h-3 w-3 text-muted-foreground" />
+                          ) : (
+                            <div className="w-6 h-6" />
                           )}
-                        </div>
-                      </TableCell>
-                    )}
-                    {isVisible("role") && (
-                      <TableCell>
-                        {isAdmin && user.status === 'active' ? (
-                          <Select
-                            value={user.role}
-                            onValueChange={(value) => handleRoleChange(user.id, value as 'admin' | 'manager' | 'investigator' | 'vendor')}
-                          >
-                            <SelectTrigger className="w-[140px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="manager">Case Manager</SelectItem>
-                              <SelectItem value="investigator">Investigator</SelectItem>
-                              <SelectItem value="vendor">Vendor</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <RoleBadge role={user.role} />
-                        )}
-                      </TableCell>
-                    )}
-                    {isVisible("status") && (
-                      <TableCell>
-                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                          {user.status}
-                        </Badge>
-                      </TableCell>
-                    )}
-                    {isVisible("created_at") && (
-                      <TableCell>
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </TableCell>
-                    )}
-                    {isVisible("actions") && (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {user.status === 'active' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/users/${user.id}`)}
+                        </TableCell>
+                      )}
+                      {isVisible("full_name") && (
+                        <TableCell className="font-medium">
+                          {user.full_name || "—"}
+                        </TableCell>
+                      )}
+                      {isVisible("email") && (
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {user.email}
+                            {user.status === 'pending' && (
+                              <Mail className="h-3 w-3 text-muted-foreground" />
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
+                      {isVisible("role") && (
+                        <TableCell>
+                          {isAdmin && user.status === 'active' ? (
+                            <Select
+                              value={user.role}
+                              onValueChange={(value) => handleRoleChange(user.id, value as 'admin' | 'manager' | 'investigator' | 'vendor')}
                             >
-                              View
-                            </Button>
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="manager">Case Manager</SelectItem>
+                                <SelectItem value="investigator">Investigator</SelectItem>
+                                <SelectItem value="vendor">Vendor</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <RoleBadge role={user.role} />
                           )}
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setUserToRemove(user)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+                        </TableCell>
+                      )}
+                      {isVisible("status") && (
+                        <TableCell>
+                          <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                            {user.status}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {isVisible("created_at") && (
+                        <TableCell>
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </TableCell>
+                      )}
+                      {isVisible("actions") && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {user.status === 'active' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/users/${user.id}`)}
+                              >
+                                View
+                              </Button>
+                            )}
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setUserToRemove(user)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </>
+      )}
 
       <AlertDialog open={!!userToRemove} onOpenChange={() => setUserToRemove(null)}>
         <AlertDialogContent>

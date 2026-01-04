@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Loader2, Search, Download, FileSpreadsheet, FileText, LayoutGrid, List, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -38,6 +38,7 @@ const Finance = () => {
   const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [retainerBalances, setRetainerBalances] = useState<RetainerBalance[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   
   // Filter states
   const [retainerSearch, setRetainerSearch] = useState("");
@@ -111,7 +112,6 @@ const Finance = () => {
       setLoading(false);
     }
   };
-
 
   // Filter functions
   const filteredRetainerBalances = retainerBalances.filter((balance) => {
@@ -193,60 +193,143 @@ const Finance = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Retainers</h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-2">
           Manage retainer funds across all cases
         </p>
       </div>
 
-      {/* Retainer Funds List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Retainer Funds by Case</CardTitle>
-          <CardDescription>
-            Showing {sortedRetainerBalances.length} case{sortedRetainerBalances.length !== 1 ? 's' : ''} with retainer funds
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by case name or number..."
-                value={retainerSearch}
-                onChange={(e) => setRetainerSearch(e.target.value)}
-                className="pl-8"
-              />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by case name or number..."
+            value={retainerSearch}
+            onChange={(e) => setRetainerSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <ColumnVisibility
+          columns={COLUMNS}
+          visibility={visibility}
+          onToggle={toggleColumn}
+          onReset={resetToDefaults}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <div className="flex gap-1 border rounded-md p-1 h-10">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-7 w-7 p-0"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="h-7 w-7 p-0"
+          >
+            <List className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {sortedRetainerBalances.length} case{sortedRetainerBalances.length !== 1 ? 's' : ''} with retainer funds
+      </div>
+
+      {retainerBalances.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <DollarSign className="w-8 h-8 text-muted-foreground" />
             </div>
-            <ColumnVisibility
-              columns={COLUMNS}
-              visibility={visibility}
-              onToggle={toggleColumn}
-              onReset={resetToDefaults}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportCSV}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Export to CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportPDF}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Export to PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          {sortedRetainerBalances.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No matching retainer funds found
+            <h3 className="font-semibold text-lg mb-2">No retainer funds yet</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Retainer funds will appear here once added to cases
             </p>
-          ) : (
+          </CardContent>
+        </Card>
+      ) : filteredRetainerBalances.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No retainer funds match your search criteria</p>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sortedRetainerBalances.map((balance) => (
+            <Card 
+              key={balance.case_id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/cases/${balance.case_id}`)}
+            >
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <div className="font-semibold text-lg">{balance.case_title}</div>
+                  <div className="text-sm text-muted-foreground">{balance.case_number}</div>
+                  <div className="text-2xl font-bold text-primary">
+                    ${balance.balance.toFixed(2)}
+                  </div>
+                  {balance.last_topup && (
+                    <div className="text-xs text-muted-foreground">
+                      Last top-up: {format(new Date(balance.last_topup), "MMM d, yyyy")}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Mobile Card View */}
+          <div className="block sm:hidden space-y-4">
+            {sortedRetainerBalances.map((balance) => (
+              <Card 
+                key={balance.case_id} 
+                className="p-4 cursor-pointer hover:shadow-md transition-all"
+                onClick={() => navigate(`/cases/${balance.case_id}`)}
+              >
+                <div className="space-y-3">
+                  <div>
+                    <div className="font-semibold">{balance.case_title}</div>
+                    <div className="text-sm text-muted-foreground">{balance.case_number}</div>
+                  </div>
+                  <div className="text-xl font-bold text-primary">
+                    ${balance.balance.toFixed(2)}
+                  </div>
+                  {balance.last_topup && (
+                    <div className="text-xs text-muted-foreground">
+                      Last top-up: {format(new Date(balance.last_topup), "MMM d, yyyy")}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <Card className="hidden sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -334,9 +417,9 @@ const Finance = () => {
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+          </Card>
+        </>
+      )}
 
       <ScrollProgress />
     </div>
