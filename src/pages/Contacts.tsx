@@ -29,6 +29,7 @@ import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
+import { ContactsPageSkeleton } from "@/components/ui/list-page-skeleton";
 
 interface Contact {
   id: string;
@@ -164,11 +165,7 @@ const Contacts = () => {
   const handleExportPDF = () => exportToPDF(sortedContacts, EXPORT_COLUMNS, "Contacts Report", "contacts");
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <ContactsPageSkeleton />;
   }
 
   return (

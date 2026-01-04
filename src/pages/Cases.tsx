@@ -24,6 +24,7 @@ import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibi
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
+import { CasesPageSkeleton } from "@/components/ui/list-page-skeleton";
 
 interface Case {
   id: string;
@@ -194,9 +195,7 @@ const Cases = () => {
   const handleExportPDF = () => exportToPDF(sortedCases, EXPORT_COLUMNS, "Cases Report", "cases");
 
   if (loading) {
-    return <div className="flex items-center justify-center py-12">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>;
+    return <CasesPageSkeleton />;
   }
 
   return (
