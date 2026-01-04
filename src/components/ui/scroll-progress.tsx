@@ -45,7 +45,7 @@ export function ScrollProgress({
 
   // SVG circle properties - increased size for better visibility
   const size = 56;
-  const strokeWidth = 3;
+  const strokeWidth = 4;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (scrollProgress / 100) * circumference;
@@ -106,12 +106,12 @@ export function ScrollProgress({
                 filter: isNearComplete ? "drop-shadow(0 0 4px hsl(var(--primary) / 0.5))" : undefined 
               }}
             >
-              {/* Gradient definition */}
+              {/* Gradient definition - blue-tinted for visibility */}
               <defs>
                 <linearGradient id="scroll-progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" />
-                  <stop offset="50%" stopColor="hsl(var(--primary) / 0.85)" />
-                  <stop offset="100%" stopColor="hsl(var(--secondary-500, var(--primary)))" />
+                  <stop offset="0%" stopColor="hsl(210 90% 55%)" />
+                  <stop offset="50%" stopColor="hsl(220 85% 50%)" />
+                  <stop offset="100%" stopColor="hsl(230 80% 60%)" />
                 </linearGradient>
               </defs>
               
