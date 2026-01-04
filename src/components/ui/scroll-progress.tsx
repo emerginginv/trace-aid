@@ -106,12 +106,12 @@ export function ScrollProgress({
                 filter: isNearComplete ? "drop-shadow(0 0 4px hsl(var(--primary) / 0.5))" : undefined 
               }}
             >
-              {/* Gradient definition - blue-tinted for visibility */}
+              {/* Gradient definition - darker blue for visibility */}
               <defs>
                 <linearGradient id="scroll-progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="hsl(210 90% 55%)" />
-                  <stop offset="50%" stopColor="hsl(220 85% 50%)" />
-                  <stop offset="100%" stopColor="hsl(230 80% 60%)" />
+                  <stop offset="0%" stopColor="hsl(210 95% 40%)" />
+                  <stop offset="50%" stopColor="hsl(220 90% 35%)" />
+                  <stop offset="100%" stopColor="hsl(230 85% 45%)" />
                 </linearGradient>
               </defs>
               
