@@ -39,11 +39,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
 const caseSchema = z.object({
-  title: z.string().min(1, "Case title is required").max(200),
+  title: z.string().max(200).optional(),
   case_number: z.string().min(1, "Case number is required").max(50),
   description: z.string().max(1000).optional(),
   status: z.string().min(1, "Status is required"),
@@ -51,6 +52,7 @@ const caseSchema = z.object({
   contact_id: z.string().optional(),
   start_date: z.date(),
   due_date: z.date().optional(),
+  use_primary_subject_as_title: z.boolean().default(false),
 });
 
 type CaseFormData = z.infer<typeof caseSchema>;
@@ -69,6 +71,7 @@ interface CaseFormProps {
     contact_id: string | null;
     start_date: string;
     due_date: string | null;
+    use_primary_subject_as_title?: boolean;
   };
 }
 
@@ -105,8 +108,11 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       account_id: "",
       contact_id: "",
       start_date: new Date(),
+      use_primary_subject_as_title: false,
     },
   });
+
+  const usePrimarySubjectAsTitle = form.watch("use_primary_subject_as_title");
 
   useEffect(() => {
     if (open && organization?.id) {
@@ -124,6 +130,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           contact_id: editingCase.contact_id || "",
           start_date: new Date(editingCase.start_date),
           due_date: editingCase.due_date ? new Date(editingCase.due_date) : undefined,
+          use_primary_subject_as_title: editingCase.use_primary_subject_as_title || false,
         });
         // @ts-ignore - case_manager_id and investigator_ids exist on editingCase
         setCaseManagerId(editingCase.case_manager_id || "");
@@ -140,6 +147,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           account_id: "",
           contact_id: "",
           start_date: new Date(),
+          use_primary_subject_as_title: false,
         });
         setCaseManagerId("");
         setInvestigators([]);
@@ -331,8 +339,26 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
       if (!organization?.id) throw new Error("No organization selected");
 
+      // Determine the title to use
+      let titleToUse = data.title || "";
+      if (data.use_primary_subject_as_title) {
+        if (editingCase && primarySubjectName) {
+          // Use primary subject name if editing and it exists
+          titleToUse = primarySubjectName;
+        } else {
+          // For new cases, use case number as placeholder until primary subject is set
+          titleToUse = data.case_number;
+        }
+      }
+
+      // Validate that we have a title (either manual or from primary subject)
+      if (!titleToUse && !data.use_primary_subject_as_title) {
+        toast.error("Case title is required");
+        return;
+      }
+
       const caseData = {
-        title: data.title,
+        title: titleToUse,
         case_number: data.case_number,
         description: data.description,
         status: data.status,
@@ -342,6 +368,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         due_date: data.due_date ? data.due_date.toISOString().split('T')[0] : null,
         case_manager_id: caseManagerId || null,
         investigator_ids: investigators,
+        use_primary_subject_as_title: data.use_primary_subject_as_title,
       };
 
       if (editingCase) {
@@ -358,7 +385,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           await NotificationHelpers.caseStatusChanged(
             {
               id: editingCase.id,
-              title: data.title,
+              title: titleToUse,
               case_number: data.case_number,
               status: data.status,
             },
@@ -382,7 +409,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         await NotificationHelpers.caseCreated(
           {
             id: newCase.id,
-            title: data.title,
+            title: titleToUse,
             case_number: data.case_number,
           },
           user.id,
@@ -465,9 +492,36 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               />
             </div>
 
-            {editingCase && primarySubjectName ? (
+            {/* Use Primary Subject as Title Checkbox */}
+            <FormField
+              control={form.control}
+              name="use_primary_subject_as_title"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="cursor-pointer">
+                      Use Primary Subject as Case Title
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      {field.value 
+                        ? "The case title will automatically update when you set a primary subject"
+                        : "Check this to automatically use the primary subject's name as the case title"}
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            {/* Primary Subject Display (when editing and has primary subject) */}
+            {editingCase && primarySubjectName && usePrimarySubjectAsTitle ? (
               <FormItem>
-                <FormLabel>Primary Subject</FormLabel>
+                <FormLabel>Case Title (from Primary Subject)</FormLabel>
                 <FormControl>
                   <Input 
                     value={primarySubjectName} 
@@ -475,23 +529,35 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                     className="bg-muted font-medium"
                   />
                 </FormControl>
-                <p className="text-xs text-muted-foreground">This case has a primary subject set</p>
+                <p className="text-xs text-muted-foreground">Title is synced with the primary subject</p>
               </FormItem>
-            ) : null}
-
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Case Title *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Investigation title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            ) : !usePrimarySubjectAsTitle ? (
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Case Title *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Investigation title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormItem>
+                <FormLabel>Case Title</FormLabel>
+                <FormControl>
+                  <Input 
+                    value="Will be set from primary subject" 
+                    readOnly 
+                    className="bg-muted text-muted-foreground italic"
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">Add a primary subject to this case to set the title</p>
+              </FormItem>
+            )}
 
             <FormField
               control={form.control}
