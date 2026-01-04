@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { FileText, Download, Clock, User, Hash, FileDown } from "lucide-react";
+import { FileText, Download, Clock, Hash, FileDown, Printer } from "lucide-react";
 import type { ReportInstance } from "@/lib/reportEngine";
 import { updateReportExport } from "@/lib/reportEngine";
 
@@ -31,6 +31,41 @@ export function ReportInstanceViewer({
 
   if (!report) return null;
 
+  const handlePrint = () => {
+    // Create a new window with the report content for printing
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${report.title}</title>
+            <style>
+              @media print {
+                @page {
+                  size: letter;
+                  margin: 0.75in;
+                }
+                body {
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            ${report.renderedHtml}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
+  };
+
   const handleExportPdf = async () => {
     setExporting(true);
     try {
@@ -38,11 +73,25 @@ export function ReportInstanceViewer({
       element.innerHTML = report.renderedHtml;
 
       const options = {
-        margin: 0.75,
+        margin: 0,
         filename: `${report.title.replace(/[^a-z0-9]/gi, '_')}.pdf`,
         image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: "in", format: "letter", orientation: "portrait" as const },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        },
+        jsPDF: { 
+          unit: "in", 
+          format: "letter", 
+          orientation: "portrait" as const,
+        },
+        pagebreak: { 
+          mode: ['avoid-all', 'css', 'legacy'],
+          before: '.break-before',
+          after: '.break-after',
+          avoid: '.no-break',
+        },
       };
 
       await html2pdf().from(element).set(options).save();
@@ -67,9 +116,14 @@ export function ReportInstanceViewer({
   const handleExportDocx = async () => {
     setExporting(true);
     try {
-      // Extract plain text from HTML for DOCX
+      // Extract plain text from HTML for DOCX with better formatting
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = report.renderedHtml;
+      
+      // Remove style tags
+      const styles = tempDiv.querySelectorAll('style');
+      styles.forEach(s => s.remove());
+      
       const plainText = tempDiv.textContent || tempDiv.innerText || '';
 
       const blob = new Blob([plainText], { type: "application/msword" });
@@ -98,9 +152,12 @@ export function ReportInstanceViewer({
     }
   };
 
+  // Count pages estimate based on content
+  const estimatedPages = Math.max(1, Math.ceil((report.renderedHtml.length / 5000)));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -121,28 +178,42 @@ export function ReportInstanceViewer({
           <Badge variant="secondary">
             {report.renderedSections.length} sections
           </Badge>
+          <Badge variant="outline">
+            ~{estimatedPages} pages
+          </Badge>
           {report.exportedAt && (
-            <Badge variant="outline">
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
               Exported as {report.exportFormat?.toUpperCase()}
             </Badge>
           )}
         </div>
 
-        {/* Report Content */}
-        <ScrollArea className="flex-1 border rounded-md bg-white">
-          <div 
-            className="p-6"
-            dangerouslySetInnerHTML={{ __html: report.renderedHtml }}
-          />
+        {/* Report Content - Professional Preview */}
+        <ScrollArea className="flex-1 border rounded-md bg-gray-100">
+          <div className="p-4 min-h-full">
+            <div 
+              className="bg-white shadow-lg mx-auto"
+              style={{ maxWidth: '8.5in' }}
+              dangerouslySetInnerHTML={{ __html: report.renderedHtml }}
+            />
+          </div>
         </ScrollArea>
 
         {/* Export Actions */}
         <Separator />
         <div className="flex justify-between items-center pt-2">
           <p className="text-xs text-muted-foreground">
-            This report is read-only and cannot be edited.
+            Professional report with cover page and branded styling
           </p>
           <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              onClick={handlePrint}
+              disabled={exporting}
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
             <Button
               variant="outline"
               onClick={handleExportDocx}

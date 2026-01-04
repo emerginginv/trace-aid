@@ -14,7 +14,9 @@ import {
   renderVariableBlockSection,
   renderUpdateCollectionSection,
   renderEventCollectionSection,
+  renderCoverPage,
 } from "@/lib/reportRenderers";
+import { generateReportStyles, generateReportHash, formatReportDate } from "@/lib/reportStyles";
 
 // ============= Types =============
 
@@ -133,157 +135,79 @@ export function computeInputHash(data: {
 }
 
 /**
- * Assemble full HTML document from rendered sections
+ * Assemble full HTML document with professional styling
  */
 function assembleReportHtml(
   sections: RenderedSection[],
   title: string,
-  orgProfile: OrganizationProfile | null
+  orgProfile: OrganizationProfile | null,
+  caseVariables: CaseVariables | null,
+  generatedAt: Date,
+  inputHash: string
 ): string {
   const sortedSections = [...sections].sort((a, b) => a.displayOrder - b.displayOrder);
   
+  // Generate professional stylesheet
+  const styles = generateReportStyles({
+    companyName: orgProfile?.companyName,
+    caseNumber: caseVariables?.caseNumber,
+  });
+
+  // Generate cover page
+  const coverPageHtml = renderCoverPage(
+    orgProfile,
+    caseVariables,
+    title,
+    generatedAt
+  );
+
+  // Generate section content with page break logic
   const sectionsHtml = sortedSections
-    .map(section => `
-      <div class="report-section" data-section-id="${section.id}" data-section-type="${section.sectionType}">
-        ${section.htmlContent}
-      </div>
-    `)
+    .map((section, index) => {
+      // Add page break before major sections (but not the first one)
+      const isFirstSection = index === 0;
+      const isMajorSection = section.sectionType === 'static_text' && section.displayOrder > 1;
+      const pageBreakClass = !isFirstSection && isMajorSection ? 'break-before' : '';
+      
+      return `
+        <div class="report-section ${pageBreakClass}" data-section-id="${section.id}" data-section-type="${section.sectionType}">
+          ${section.htmlContent}
+        </div>
+      `;
+    })
     .join('\n');
+
+  // Generate report hash for identification
+  const reportHash = generateReportHash(inputHash).substring(0, 8);
+
+  // Running header
+  const headerHtml = `
+    <div class="report-page-header screen-only">
+      <span class="header-company">${orgProfile?.companyName || 'Investigation Report'}</span>
+      <span class="header-case">${caseVariables?.caseNumber ? `Case #: ${caseVariables.caseNumber}` : ''}</span>
+    </div>
+  `;
+
+  // Running footer
+  const footerHtml = `
+    <div class="report-page-footer">
+      <span class="footer-confidential">CONFIDENTIAL</span>
+      <span class="footer-page"></span>
+      <span class="footer-report-id">Report ID: ${reportHash}</span>
+    </div>
+  `;
 
   return `
     <div class="report-document">
-      <style>
-        .report-document {
-          font-family: 'Times New Roman', Times, serif;
-          line-height: 1.6;
-          color: #1a1a1a;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 40px;
-        }
-        .report-section {
-          margin-bottom: 24px;
-          page-break-inside: avoid;
-        }
-        .report-section h2 {
-          font-size: 18px;
-          font-weight: 600;
-          margin-bottom: 12px;
-          color: #1a1a1a;
-          border-bottom: 1px solid #e5e5e5;
-          padding-bottom: 4px;
-        }
-        .report-section h3 {
-          font-size: 14px;
-          font-weight: 600;
-          margin: 16px 0 8px 0;
-          color: #333;
-        }
-        .variable-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 8px 0;
-        }
-        .variable-table td {
-          padding: 4px 8px;
-          border: 1px solid #e5e5e5;
-          vertical-align: top;
-        }
-        .variable-table td:first-child {
-          font-weight: 500;
-          width: 40%;
-          background: #f9f9f9;
-        }
-        .variable-list {
-          margin: 8px 0;
-          padding-left: 0;
-          list-style: none;
-        }
-        .variable-list li {
-          padding: 4px 0;
-          border-bottom: 1px dotted #e5e5e5;
-        }
-        .variable-inline {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
-          margin: 8px 0;
-        }
-        .variable-inline .variable-item {
-          display: flex;
-          gap: 4px;
-        }
-        .variable-inline .variable-label {
-          font-weight: 500;
-        }
-        .update-item {
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f0f0f0;
-        }
-        .update-item:last-child {
-          border-bottom: none;
-        }
-        .update-header {
-          font-weight: 600;
-          margin-bottom: 4px;
-        }
-        .update-meta {
-          font-size: 12px;
-          color: #666;
-          margin-bottom: 8px;
-        }
-        .update-content {
-          white-space: pre-wrap;
-        }
-        .event-group {
-          margin-bottom: 20px;
-        }
-        .event-group-header {
-          font-weight: 600;
-          background: #f5f5f5;
-          padding: 6px 10px;
-          margin-bottom: 8px;
-          border-left: 3px solid #666;
-        }
-        .event-item {
-          padding: 8px 10px;
-          margin-bottom: 8px;
-          background: #fafafa;
-          border-radius: 4px;
-        }
-        .event-title {
-          font-weight: 500;
-        }
-        .event-meta {
-          font-size: 12px;
-          color: #666;
-          margin-top: 4px;
-        }
-        .event-description {
-          margin-top: 6px;
-          font-size: 13px;
-        }
-        .company-header {
-          text-align: center;
-          margin-bottom: 24px;
-        }
-        .company-header img {
-          max-height: 60px;
-          max-width: 200px;
-          margin-bottom: 8px;
-        }
-        .company-header h1 {
-          font-size: 20px;
-          margin: 8px 0 4px 0;
-        }
-        .company-header p {
-          font-size: 12px;
-          color: #666;
-          margin: 2px 0;
-        }
-      </style>
-      ${sectionsHtml}
+      <style>${styles}</style>
+      
+      ${coverPageHtml}
+      
+      <div class="report-content">
+        ${headerHtml}
+        ${sectionsHtml}
+        ${footerHtml}
+      </div>
     </div>
   `;
 }
@@ -395,9 +319,17 @@ export async function generateReport(input: ReportInput): Promise<GenerationResu
       renderedSections.push(rendered);
     }
 
-    // Step 4: Assemble final HTML
+    // Step 4: Assemble final HTML with professional styling
+    const generatedAt = new Date();
     const reportTitle = `${caseVariables?.caseNumber || 'Report'} - ${effectiveTemplate.name}`;
-    const renderedHtml = assembleReportHtml(renderedSections, reportTitle, orgProfile);
+    const renderedHtml = assembleReportHtml(
+      renderedSections, 
+      reportTitle, 
+      orgProfile, 
+      caseVariables,
+      generatedAt,
+      inputHash
+    );
 
     // Step 5: Save to database
     // Store the effective template (with customizations applied) as the snapshot
