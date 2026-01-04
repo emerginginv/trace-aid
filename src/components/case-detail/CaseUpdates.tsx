@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, FileText, ShieldAlert } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, FileText, ShieldAlert, Download } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { toast } from "@/hooks/use-toast";
 import { UpdateForm } from "./UpdateForm";
 import { Input } from "@/components/ui/input";
@@ -242,6 +244,39 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
           <p className="text-muted-foreground">Showing {sortedUpdates.length} update{sortedUpdates.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => {
+                const exportColumns: ExportColumn[] = [
+                  { key: "title", label: "Title" },
+                  { key: "update_type", label: "Type" },
+                  { key: "user_id", label: "Created By", format: (v) => userProfiles[v]?.full_name || userProfiles[v]?.email || "Unknown" },
+                  { key: "created_at", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                  { key: "description", label: "Description", format: (v) => v || "-" },
+                ];
+                exportToCSV(sortedUpdates, exportColumns, "case-updates");
+              }}>
+                Export to CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const exportColumns: ExportColumn[] = [
+                  { key: "title", label: "Title" },
+                  { key: "update_type", label: "Type" },
+                  { key: "user_id", label: "Created By", format: (v) => userProfiles[v]?.full_name || userProfiles[v]?.email || "Unknown" },
+                  { key: "created_at", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                ];
+                exportToPDF(sortedUpdates, exportColumns, "Case Updates", "case-updates");
+              }}>
+                Export to PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {canViewReports && (
             <Button onClick={() => setReportDialogOpen(true)} variant="outline" className="w-full sm:w-auto" disabled={isClosedCase}>
               <FileText className="h-4 w-4 mr-2" />
