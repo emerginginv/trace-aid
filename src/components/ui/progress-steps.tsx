@@ -44,46 +44,128 @@ export function ProgressSteps({
     <nav 
       aria-label="Progress" 
       className={cn(
-        orientation === "vertical" ? "flex flex-col" : "flex items-center w-full",
+        orientation === "vertical" ? "flex flex-col" : "flex flex-col w-full",
         className
       )}
     >
-      <ol className={cn(
-        "flex",
-        orientation === "vertical" ? "flex-col gap-4" : "items-center w-full"
-      )}>
-        {steps.map((step, index) => {
-          const isCompleted = index < currentStep;
-          const isCurrent = index === currentStep;
-          const isUpcoming = index > currentStep;
-          const isLoading = loadingStep === index;
-          const canClick = isClickable && (isCompleted || isCurrent);
+      {orientation === "horizontal" ? (
+        <>
+          {/* Circles row - all circles on one horizontal line */}
+          <div className="flex items-center w-full">
+            {steps.map((step, index) => {
+              const isCompleted = index < currentStep;
+              const isCurrent = index === currentStep;
+              const isUpcoming = index > currentStep;
+              const isLoading = loadingStep === index;
+              const canClick = isClickable && (isCompleted || isCurrent);
 
-          return (
-            <li
-              key={step.id}
-              className={cn(
-                orientation === "vertical" 
-                  ? "relative" 
-                  : "flex-1 flex items-center",
-                index < steps.length - 1 && orientation === "horizontal" && "flex items-center"
-              )}
-            >
-              <div className={cn(
-                "flex",
-                orientation === "vertical" ? "items-start gap-4" : "flex-col items-center w-full"
-              )}>
-                <div className={cn(
-                  "flex items-center",
-                  orientation === "horizontal" && "w-full"
-                )}>
+              return (
+                <div key={`circle-${step.id}`} className="flex-1 flex items-center">
+                  <div className="flex items-center justify-center w-full">
+                    <button
+                      type="button"
+                      onClick={() => canClick && onStepClick?.(index)}
+                      disabled={!canClick}
+                      className={cn(
+                        sizeConfig.circle,
+                        "relative flex items-center justify-center rounded-full border-2 shrink-0",
+                        "transition-all duration-300 ease-out",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        isCompleted && "bg-primary border-primary text-primary-foreground",
+                        isCurrent && "bg-primary border-primary text-primary-foreground ring-4 ring-primary/20",
+                        isUpcoming && "border-muted bg-background text-muted-foreground",
+                        canClick && "cursor-pointer hover:scale-105",
+                        !canClick && "cursor-default"
+                      )}
+                      aria-current={isCurrent ? "step" : undefined}
+                      aria-label={`Step ${index + 1}: ${step.label}${isCompleted ? " (completed)" : ""}${isCurrent ? " (current)" : ""}`}
+                    >
+                      {isLoading ? (
+                        <Loader2 
+                          className={cn(sizeConfig.icon, "animate-spin")} 
+                          aria-hidden="true" 
+                        />
+                      ) : isCompleted ? (
+                        <Check className={sizeConfig.icon} aria-hidden="true" />
+                      ) : isCurrent ? (
+                        <Circle className={cn(sizeConfig.icon, "fill-current")} aria-hidden="true" />
+                      ) : (
+                        <span className={cn(sizeConfig.text, "font-semibold")}>{index + 1}</span>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Connector line */}
+                  {index < steps.length - 1 && (
+                    <div className="flex-1 mx-1">
+                      <div
+                        className={cn(
+                          "h-0.5 transition-all duration-500 ease-out",
+                          isCompleted ? "bg-primary" : "bg-muted"
+                        )}
+                        aria-hidden="true"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Labels row - all labels on one horizontal line below circles */}
+          {showLabels && (
+            <div className="flex w-full mt-2">
+              {steps.map((step, index) => {
+                const isCompleted = index < currentStep;
+                const isCurrent = index === currentStep;
+
+                return (
+                  <div key={`label-${step.id}`} className="flex-1 text-center min-w-0 px-1">
+                    <div
+                      className={cn(
+                        sizeConfig.text,
+                        "font-medium transition-colors truncate",
+                        isCurrent ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
+                      )}
+                    >
+                      {step.label}
+                      {step.optional && (
+                        <span className="ml-1 text-muted-foreground font-normal">(optional)</span>
+                      )}
+                    </div>
+                    {step.description && (
+                      <div className={cn(
+                        "text-muted-foreground mt-0.5 truncate",
+                        size === "sm" ? "text-xs" : "text-xs"
+                      )}>
+                        {step.description}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      ) : (
+        <ol className="flex flex-col gap-4">
+          {steps.map((step, index) => {
+            const isCompleted = index < currentStep;
+            const isCurrent = index === currentStep;
+            const isUpcoming = index > currentStep;
+            const isLoading = loadingStep === index;
+            const canClick = isClickable && (isCompleted || isCurrent);
+
+            return (
+              <li key={step.id} className="relative">
+                <div className="flex items-start gap-4">
                   <button
                     type="button"
                     onClick={() => canClick && onStepClick?.(index)}
                     disabled={!canClick}
                     className={cn(
                       sizeConfig.circle,
-                      "relative flex items-center justify-center rounded-full border-2",
+                      "relative flex items-center justify-center rounded-full border-2 shrink-0",
                       "transition-all duration-300 ease-out",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                       isCompleted && "bg-primary border-primary text-primary-foreground",
@@ -109,65 +191,49 @@ export function ProgressSteps({
                     )}
                   </button>
 
-                  {/* Connector line */}
-                  {index < steps.length - 1 && orientation === "horizontal" && (
-                    <div className="flex-1 mx-3">
+                  {/* Labels */}
+                  {showLabels && (
+                    <div className="flex-1 min-w-0">
                       <div
                         className={cn(
-                          "h-0.5 transition-all duration-500 ease-out",
-                          isCompleted ? "bg-primary" : "bg-muted"
+                          sizeConfig.text,
+                          "font-medium transition-colors",
+                          isCurrent ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
                         )}
-                        aria-hidden="true"
-                      />
+                      >
+                        {step.label}
+                        {step.optional && (
+                          <span className="ml-1 text-muted-foreground font-normal">(optional)</span>
+                        )}
+                      </div>
+                      {step.description && (
+                        <div className={cn(
+                          "text-muted-foreground mt-0.5",
+                          size === "sm" ? "text-xs" : "text-xs"
+                        )}>
+                          {step.description}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Labels */}
-                {showLabels && (
-                  <div className={cn(
-                    orientation === "vertical" ? "flex-1" : "mt-2 text-center",
-                    "min-w-0"
-                  )}>
-                    <div
-                      className={cn(
-                        sizeConfig.text,
-                        "font-medium transition-colors",
-                        isCurrent ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
-                      )}
-                    >
-                      {step.label}
-                      {step.optional && (
-                        <span className="ml-1 text-muted-foreground font-normal">(optional)</span>
-                      )}
-                    </div>
-                    {step.description && (
-                      <div className={cn(
-                        "text-muted-foreground mt-0.5",
-                        size === "sm" ? "text-xs" : "text-xs"
-                      )}>
-                        {step.description}
-                      </div>
+                {/* Vertical connector */}
+                {index < steps.length - 1 && (
+                  <div
+                    className={cn(
+                      "absolute left-[1.1875rem] top-10 w-0.5 h-full -translate-x-1/2",
+                      "transition-colors duration-500",
+                      isCompleted ? "bg-primary" : "bg-muted"
                     )}
-                  </div>
+                    aria-hidden="true"
+                  />
                 )}
-              </div>
-
-              {/* Vertical connector */}
-              {index < steps.length - 1 && orientation === "vertical" && (
-                <div
-                  className={cn(
-                    "absolute left-[1.1875rem] top-10 w-0.5 h-full -translate-x-1/2",
-                    "transition-colors duration-500",
-                    isCompleted ? "bg-primary" : "bg-muted"
-                  )}
-                  aria-hidden="true"
-                />
-              )}
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </nav>
   );
 }
