@@ -20,6 +20,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Case {
   id: string;
@@ -61,8 +62,7 @@ const Cases = () => {
     status_type?: string;
   }>>([]);
   const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
-  const [sortColumn, setSortColumn] = useState<string>("case_number");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("cases", "case_number", "desc");
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("cases-columns", COLUMNS);
 
@@ -151,14 +151,6 @@ const Cases = () => {
     }
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
 
   const filteredCases = cases.filter(caseItem => {
     const matchesSearch = searchQuery === '' || caseItem.title.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.case_number.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.description?.toLowerCase().includes(searchQuery.toLowerCase());

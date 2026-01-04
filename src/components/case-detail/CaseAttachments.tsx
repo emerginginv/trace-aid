@@ -17,6 +17,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Attachment {
   id: string;
@@ -71,8 +72,7 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
   const [editForm, setEditForm] = useState({ name: "", description: "", tags: "" });
   
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("created_at");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("case-attachments", "created_at", "desc");
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewAttachments = hasPermission("view_attachments");

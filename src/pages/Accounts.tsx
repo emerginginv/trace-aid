@@ -25,6 +25,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Account {
   id: string;
@@ -57,8 +58,7 @@ const Accounts = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
-  const [sortColumn, setSortColumn] = useState<string>("name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("accounts", "name", "asc");
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("accounts-columns", COLUMNS);
 
@@ -113,14 +113,6 @@ const Accounts = () => {
     }
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
 
   const filteredAccounts = accounts.filter(account => {
     const matchesSearch = searchQuery === '' || 

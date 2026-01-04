@@ -20,6 +20,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Expense {
   id: string;
@@ -66,8 +67,7 @@ const AllExpenses = () => {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("date");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("expenses", "date", "desc");
 
   // Bulk selection state
   const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
@@ -169,14 +169,6 @@ const AllExpenses = () => {
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
 
   // Sorted data
   const sortedExpenses = [...filteredExpenses].sort((a, b) => {

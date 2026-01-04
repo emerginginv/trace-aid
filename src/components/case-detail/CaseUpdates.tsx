@@ -14,6 +14,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Update {
   id: string;
@@ -51,8 +52,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const [caseData, setCaseData] = useState<{ title: string; case_number: string; case_manager_id: string | null } | null>(null);
 
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("created_at");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("case-updates", "created_at", "desc");
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewUpdates = hasPermission("view_updates");
@@ -164,14 +164,6 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
     });
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
 
   const filteredUpdates = updates.filter(update => {
     return searchQuery === '' || 
