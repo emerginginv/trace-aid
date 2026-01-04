@@ -29,7 +29,6 @@ import ContactDetail from "./pages/ContactDetail";
 import ContactEdit from "./pages/ContactEdit";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
-import DataImport from "./pages/DataImport";
 import ImportReview from "./pages/ImportReview";
 
 import UserProfile from "./pages/UserProfile";
@@ -272,13 +271,7 @@ const App = () => {
         />
         <Route
           path="/import"
-          element={
-            <ProtectedRoute blockVendors={true}>
-              <DashboardLayout>
-                <DataImport />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
+          element={<Navigate to="/settings?tab=data-import" replace />}
         />
         <Route
           path="/import/review"
