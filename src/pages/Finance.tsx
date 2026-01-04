@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Download, FileSpreadsheet, FileText, LayoutGrid, List, DollarSign } from "lucide-react";
+import { Search, Download, FileSpreadsheet, FileText, LayoutGrid, List, DollarSign, Pencil, Trash2, Loader2, History } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -16,6 +19,8 @@ import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
+import { FinancePageSkeleton } from "@/components/ui/list-page-skeleton";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface RetainerBalance {
   case_id: string;
@@ -23,6 +28,15 @@ interface RetainerBalance {
   case_number: string;
   balance: number;
   last_topup: string | null;
+}
+
+interface RetainerFund {
+  id: string;
+  amount: number;
+  note: string | null;
+  created_at: string;
+  invoice_id: string | null;
+  case_id: string;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -47,6 +61,19 @@ const Finance = () => {
   const { sortColumn, sortDirection, handleSort } = useSortPreference("finance", "case_title", "asc");
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("finance-columns", COLUMNS);
+
+  // History/Edit/Delete dialog states
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<RetainerBalance | null>(null);
+  const [caseFunds, setCaseFunds] = useState<RetainerFund[]>([]);
+  const [loadingFunds, setLoadingFunds] = useState(false);
+  const [editingFund, setEditingFund] = useState<RetainerFund | null>(null);
+  const [fundToDelete, setFundToDelete] = useState<RetainerFund | null>(null);
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // Refetch when organization changes
   useEffect(() => {
@@ -110,6 +137,115 @@ const Finance = () => {
       toast.error("Failed to load retainer data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCaseFunds = async (caseId: string) => {
+    setLoadingFunds(true);
+    try {
+      const { data, error } = await supabase
+        .from("retainer_funds")
+        .select("*")
+        .eq("case_id", caseId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setCaseFunds(data || []);
+    } catch (error) {
+      console.error("Error fetching case funds:", error);
+      toast.error("Failed to load retainer history");
+    } finally {
+      setLoadingFunds(false);
+    }
+  };
+
+  const openHistoryDialog = (balance: RetainerBalance) => {
+    setSelectedCase(balance);
+    setHistoryDialogOpen(true);
+    fetchCaseFunds(balance.case_id);
+  };
+
+  const openEditDialog = (fund: RetainerFund) => {
+    setEditingFund(fund);
+    setAmount(Math.abs(fund.amount).toString());
+    setNote(fund.note || "");
+    setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (fund: RetainerFund) => {
+    setFundToDelete(fund);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleEditFund = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFund) return;
+    
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast.error("Please enter a valid positive amount");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("retainer_funds")
+        .update({
+          amount: amountNum,
+          note: note.trim() || null,
+        })
+        .eq("id", editingFund.id);
+
+      if (error) throw error;
+
+      toast.success("Retainer fund updated successfully");
+
+      setAmount("");
+      setNote("");
+      setEditingFund(null);
+      setEditDialogOpen(false);
+      
+      // Refresh data
+      if (selectedCase) {
+        await fetchCaseFunds(selectedCase.case_id);
+      }
+      await fetchRetainerData();
+    } catch (error) {
+      console.error("Error updating fund:", error);
+      toast.error("Failed to update retainer fund");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteFund = async () => {
+    if (!fundToDelete) return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("retainer_funds")
+        .delete()
+        .eq("id", fundToDelete.id);
+
+      if (error) throw error;
+
+      toast.success("Retainer fund deleted successfully");
+
+      setFundToDelete(null);
+      setDeleteDialogOpen(false);
+      
+      // Refresh data
+      if (selectedCase) {
+        await fetchCaseFunds(selectedCase.case_id);
+      }
+      await fetchRetainerData();
+    } catch (error) {
+      console.error("Error deleting fund:", error);
+      toast.error("Failed to delete retainer fund");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -182,11 +318,7 @@ const Finance = () => {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <FinancePageSkeleton />;
   }
 
   return (
@@ -295,6 +427,19 @@ const Finance = () => {
                       Last top-up: {format(new Date(balance.last_topup), "MMM d, yyyy")}
                     </div>
                   )}
+                  <div className="flex gap-1 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openHistoryDialog(balance);
+                      }}
+                    >
+                      <History className="h-4 w-4 mr-1" />
+                      History
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -323,6 +468,19 @@ const Finance = () => {
                       Last top-up: {format(new Date(balance.last_topup), "MMM d, yyyy")}
                     </div>
                   )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openHistoryDialog(balance);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -371,7 +529,7 @@ const Finance = () => {
                     />
                   )}
                   {isVisible("actions") && (
-                    <th className="text-right p-2">Actions</th>
+                    <TableHead className="text-right">Actions</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -410,7 +568,20 @@ const Finance = () => {
                     )}
                     {isVisible("actions") && (
                       <TableCell className="text-right">
-                        {/* Actions column - row is already clickable */}
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openHistoryDialog(balance);
+                            }}
+                            title="View & Edit History"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -420,6 +591,154 @@ const Finance = () => {
           </Card>
         </>
       )}
+
+      {/* History Dialog */}
+      <Dialog open={historyDialogOpen} onOpenChange={(open) => {
+        setHistoryDialogOpen(open);
+        if (!open) {
+          setSelectedCase(null);
+          setCaseFunds([]);
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Retainer History - {selectedCase?.case_title}
+            </DialogTitle>
+          </DialogHeader>
+          {loadingFunds ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : caseFunds.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No transactions yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {caseFunds.map((fund) => {
+                const isDeduction = Number(fund.amount) < 0;
+                const isLinkedToInvoice = !!fund.invoice_id;
+                return (
+                  <div
+                    key={fund.id}
+                    className="border rounded-lg p-4 space-y-2 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className={`text-lg font-semibold ${isDeduction ? 'text-destructive' : 'text-green-600 dark:text-green-500'}`}>
+                          {isDeduction ? '-' : '+'}${Math.abs(Number(fund.amount)).toLocaleString("en-US", { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                          })}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {format(new Date(fund.created_at), "MMM d, yyyy 'at' h:mm a")}
+                        </div>
+                        {isDeduction && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Applied to invoice
+                          </div>
+                        )}
+                      </div>
+                      {!isLinkedToInvoice && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEditDialog(fund)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => openDeleteDialog(fund)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    {fund.note && (
+                      <p className="text-sm text-muted-foreground mt-2">{fund.note}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open);
+        if (!open) {
+          setEditingFund(null);
+          setAmount("");
+          setNote("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Retainer Fund</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditFund} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-amount">Amount *</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="5000.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-note">Note (Optional)</Label>
+              <Textarea
+                id="edit-note"
+                placeholder="Add any relevant notes..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Retainer Fund"
+        description={`Are you sure you want to delete this $${fundToDelete ? Math.abs(fundToDelete.amount).toFixed(2) : '0.00'} retainer fund entry? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDeleteFund}
+        variant="destructive"
+        loading={submitting}
+      />
 
       <ScrollProgress />
     </div>
