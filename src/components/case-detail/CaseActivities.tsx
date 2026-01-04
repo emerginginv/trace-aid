@@ -33,6 +33,7 @@ interface Activity {
   updated_at: string;
   assigned_user_id: string | null;
   status: string;
+  event_subtype: string | null;
 }
 
 interface User {
@@ -49,6 +50,7 @@ interface CaseActivitiesProps {
 const COLUMNS: ColumnDefinition[] = [
   { key: "checkbox", label: "", hideable: false },
   { key: "title", label: "Title" },
+  { key: "event_subtype", label: "Event Type" },
   { key: "status", label: "Status" },
   { key: "assigned_user_id", label: "Assigned To" },
   { key: "due_date", label: "Due Date" },
@@ -282,6 +284,10 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
         aVal = getUserName(a.assigned_user_id);
         bVal = getUserName(b.assigned_user_id);
         break;
+      case "event_subtype":
+        aVal = a.event_subtype || '';
+        bVal = b.event_subtype || '';
+        break;
       case "due_date":
         aVal = a.due_date ? new Date(a.due_date).getTime() : 0;
         bVal = b.due_date ? new Date(b.due_date).getTime() : 0;
@@ -344,6 +350,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                 <DropdownMenuItem onClick={() => {
                   const exportColumns: ExportColumn[] = [
                     { key: "title", label: "Title" },
+                    ...(activeTab === "events" ? [{ key: "event_subtype", label: "Event Type", format: (v: any) => v || "-" }] : []),
                     { key: "status", label: "Status", format: (v) => v?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '-' },
                     { key: "assigned_user_id", label: "Assigned To", format: (v) => getUserName(v) },
                     { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
@@ -356,6 +363,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                 <DropdownMenuItem onClick={() => {
                   const exportColumns: ExportColumn[] = [
                     { key: "title", label: "Title" },
+                    ...(activeTab === "events" ? [{ key: "event_subtype", label: "Event Type", format: (v: any) => v || "-" }] : []),
                     { key: "status", label: "Status", format: (v) => v?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '-' },
                     { key: "assigned_user_id", label: "Assigned To", format: (v) => getUserName(v) },
                     { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
@@ -472,6 +480,16 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                       className="min-w-[200px] max-w-[300px]"
                     />
                   )}
+                  {isVisible("event_subtype") && activeTab === "events" && (
+                    <SortableTableHead
+                      column="event_subtype"
+                      label="Event Type"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="w-[140px]"
+                    />
+                  )}
                   {isVisible("status") && (
                     <SortableTableHead
                       column="status"
@@ -532,6 +550,17 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                         )}
                       </div>
                     </TableCell>
+                    {isVisible("event_subtype") && activeTab === "events" && (
+                      <TableCell className="align-top">
+                        {activity.event_subtype ? (
+                          <Badge variant="secondary" className="whitespace-nowrap">
+                            {activity.event_subtype}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="align-top">
                       <Badge variant="outline" className={`${getStatusColor(activity.status)} whitespace-nowrap`}>
                         {getStatusLabel(activity.status)}

@@ -19,6 +19,22 @@ export interface UpdateTypeMapping {
   includeAll: boolean;             // If true, ignores updateTypes and includes all
 }
 
+// Event type mapping configuration for event_collection sections
+export interface EventTypeMapping {
+  eventTypes: string[];            // e.g., ['Surveillance Session', 'Canvass Attempt']
+  allowDuplicates: boolean;        // If true, same event can appear in multiple sections
+  includeAll: boolean;             // If true, ignores eventTypes and includes all
+}
+
+// Display configuration for event_collection sections
+export interface EventDisplayConfig {
+  groupBy: 'none' | 'date' | 'type' | 'status';  // How to group events
+  showTime: boolean;               // Whether to show event time
+  showAssignee: boolean;           // Whether to show assigned investigator
+  showStatus: boolean;             // Whether to show event status
+  showDescription: boolean;        // Whether to show description
+}
+
 export interface CollectionConfig {
   sortBy: string;
   sortOrder: 'asc' | 'desc';
@@ -26,6 +42,9 @@ export interface CollectionConfig {
   filters?: Record<string, any>;
   // Update type mapping for update_collection sections
   updateTypeMapping?: UpdateTypeMapping;
+  // Event type mapping for event_collection sections
+  eventTypeMapping?: EventTypeMapping;
+  eventDisplayConfig?: EventDisplayConfig;
 }
 
 // Default update types for reference
@@ -39,6 +58,28 @@ export const DEFAULT_UPDATE_TYPES = [
   'Review',
   'Other'
 ];
+
+// Default event types for reference
+export const DEFAULT_EVENT_TYPES = [
+  'Surveillance Session',
+  'Canvass Attempt',
+  'Records Search',
+  'Field Activity',
+  'Interview Session',
+  'Site Visit',
+  'Background Check',
+  'Database Search',
+  'Court Attendance',
+  'Other'
+];
+
+// Grouping options for events
+export const EVENT_GROUP_OPTIONS = [
+  { value: 'none', label: 'No Grouping (Chronological List)' },
+  { value: 'date', label: 'Group by Date' },
+  { value: 'type', label: 'Group by Event Type' },
+  { value: 'status', label: 'Group by Status' },
+] as const;
 
 export interface TemplateSection {
   id: string;
@@ -441,6 +482,69 @@ export function getDefaultUpdateCollectionConfig(): CollectionConfig {
       updateTypes: [],
       includeAll: true,
       allowDuplicates: false,
+    },
+  };
+}
+
+// ============= Event Type Mapping Helper Functions =============
+
+// Get event types configured for a section
+export function getSectionEventTypes(section: TemplateSection): string[] | null {
+  if (section.sectionType !== 'event_collection') return null;
+  if (!section.collectionConfig?.eventTypeMapping) return null;
+  
+  const mapping = section.collectionConfig.eventTypeMapping;
+  if (mapping.includeAll) return null; // null means "all types"
+  return mapping.eventTypes;
+}
+
+// Check if duplication is allowed for events in a section
+export function isEventDuplicationAllowed(section: TemplateSection): boolean {
+  return section.collectionConfig?.eventTypeMapping?.allowDuplicates ?? false;
+}
+
+// Build event query params for a section (for report generation)
+export interface EventQueryParams {
+  eventTypes: string[] | null;  // null = all types
+  sortOrder: 'asc' | 'desc';
+  limit: number | null;
+  allowDuplicates: boolean;
+  groupBy: 'none' | 'date' | 'type' | 'status';
+}
+
+export function getEventQueryParams(section: TemplateSection): EventQueryParams | null {
+  if (section.sectionType !== 'event_collection') return null;
+  
+  const config = section.collectionConfig;
+  const mapping = config?.eventTypeMapping;
+  const displayConfig = config?.eventDisplayConfig;
+  
+  return {
+    eventTypes: mapping?.includeAll ? null : (mapping?.eventTypes ?? null),
+    sortOrder: config?.sortOrder ?? 'asc',
+    limit: config?.limit ?? null,
+    allowDuplicates: mapping?.allowDuplicates ?? false,
+    groupBy: displayConfig?.groupBy ?? 'none',
+  };
+}
+
+// Get default collection config for event_collection sections
+export function getDefaultEventCollectionConfig(): CollectionConfig {
+  return {
+    sortBy: 'due_date',
+    sortOrder: 'asc',
+    limit: null,
+    eventTypeMapping: {
+      eventTypes: [],
+      includeAll: true,
+      allowDuplicates: false,
+    },
+    eventDisplayConfig: {
+      groupBy: 'none',
+      showTime: true,
+      showAssignee: true,
+      showStatus: true,
+      showDescription: true,
     },
   };
 }
