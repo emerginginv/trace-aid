@@ -147,11 +147,14 @@ const UpdateDetail = () => {
               <FileText className="h-4 w-4" />
               Description
             </div>
-            <div className="prose prose-sm max-w-none">
-              <p className="text-muted-foreground whitespace-pre-wrap">
-                {update.description || "No description provided."}
-              </p>
-            </div>
+            {update.description ? (
+              <div 
+                className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 [&_strong]:text-foreground [&_em]:text-foreground"
+                dangerouslySetInnerHTML={{ __html: update.description }}
+              />
+            ) : (
+              <p className="text-muted-foreground">No description provided.</p>
+            )}
           </div>
         </CardContent>
       </Card>
