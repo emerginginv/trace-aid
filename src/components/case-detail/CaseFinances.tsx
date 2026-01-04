@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FinancesTabSkeleton } from "./CaseTabSkeleton";
+import { FinancesTabSkeleton, ExpensesTabSkeleton, TimeTabSkeleton, InvoicesTabSkeleton, CreateInvoiceTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -442,12 +442,10 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
     { totalHours: 0, totalAmount: 0 }
   );
 
-  if (loading || permissionsLoading) {
-    return <FinancesTabSkeleton />;
-  }
+  const isLoading = loading || permissionsLoading;
 
   // Check view permission
-  if (!canViewFinances) {
+  if (!isLoading && !canViewFinances) {
     return (
       <Card className="border-yellow-500/50 bg-yellow-500/5">
         <CardContent className="flex flex-col items-center justify-center py-12">
@@ -470,6 +468,10 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
         </TabsList>
 
         <TabsContent value="expenses" className="space-y-6 animate-fade-in">
+          {isLoading ? (
+            <ExpensesTabSkeleton />
+          ) : (
+            <>
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Finances</h2>
@@ -842,9 +844,15 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
               </Table>
             </Card>
           )}
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="time" className="space-y-6 animate-fade-in">
+          {isLoading ? (
+            <TimeTabSkeleton />
+          ) : (
+            <>
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Time Tracking</h2>
@@ -1044,9 +1052,15 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
               )}
             </CardContent>
           </Card>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="invoices" className="space-y-6 animate-fade-in">
+          {isLoading ? (
+            <InvoicesTabSkeleton />
+          ) : (
+            <>
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Invoices</h2>
@@ -1206,10 +1220,16 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                 </Table>
               </Card>
             )}
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="create-invoice" className="animate-fade-in">
-          <InvoiceFromExpenses caseId={caseId} />
+          {isLoading ? (
+            <CreateInvoiceTabSkeleton />
+          ) : (
+            <InvoiceFromExpenses caseId={caseId} />
+          )}
         </TabsContent>
       </Tabs>
 
