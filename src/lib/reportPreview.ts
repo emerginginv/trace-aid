@@ -346,65 +346,89 @@ function assemblePreviewHtml(
     })
     .join('\n');
 
-  // Preview indicator styles
+  // Preview-specific styles for multi-page layout
   const previewStyles = `
-    .preview-indicator {
-      position: fixed;
-      top: 8px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: hsl(var(--primary));
-      color: hsl(var(--primary-foreground));
-      padding: 4px 12px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 500;
-      z-index: 100;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .report-document {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #ffffff;
+    }
+    
+    .report-cover-page {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 72px 48px;
+      box-sizing: border-box;
+    }
+    
+    .report-content {
+      padding: 48px;
+      height: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    
+    .report-page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #cbd5e0;
+      margin-bottom: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 9pt;
+      color: #4a5568;
+    }
+    
+    .report-page-footer {
+      position: absolute;
+      bottom: 36px;
+      left: 48px;
+      right: 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid #cbd5e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 8pt;
+      color: #718096;
+    }
+    
+    .preview-page-break {
+      display: none;
     }
     
     .section-placeholder {
-      background: hsl(var(--muted) / 0.5);
-      border: 2px dashed hsl(var(--border));
+      background: #f7fafc;
+      border: 2px dashed #cbd5e0;
       border-radius: 8px;
       padding: 24px;
       text-align: center;
     }
     
     .placeholder-text {
-      color: hsl(var(--muted-foreground));
+      color: #718096;
       font-style: italic;
       font-size: 13px;
       margin: 0;
     }
     
-    .preview-page-break {
-      border-top: 2px dashed hsl(var(--border));
-      text-align: center;
-      padding: 8px;
-      color: hsl(var(--muted-foreground));
-      font-size: 11px;
-      margin: 24px 0;
-      background: repeating-linear-gradient(
-        90deg,
-        transparent,
-        transparent 10px,
-        hsl(var(--muted) / 0.3) 10px,
-        hsl(var(--muted) / 0.3) 20px
-      );
-    }
-    
     [data-section-highlighted="true"] {
-      outline: 3px solid hsl(var(--primary));
+      outline: 3px solid #3182ce;
       outline-offset: 4px;
       border-radius: 4px;
     }
   `;
 
-  // Running header (screen only)
+  // Running header (for content pages)
   const headerHtml = `
-    <div class="report-page-header screen-only">
+    <div class="report-page-header">
       <span class="header-company">${orgProfile?.companyName || 'Company Name'}</span>
       <span class="header-case">${caseVariables?.caseNumber ? `Case #: ${caseVariables.caseNumber}` : 'Case #: INV-2026-PREVIEW'}</span>
     </div>
@@ -420,19 +444,17 @@ function assemblePreviewHtml(
   `;
 
   return `
-    <div class="report-document preview-mode">
-      <style>${styles}</style>
-      <style>${previewStyles}</style>
-      
-      ${coverPageHtml}
-      
-      <div class="preview-page-break">— Page Break —</div>
-      
-      <div class="report-content">
-        ${headerHtml}
-        ${sectionsHtml}
-        ${footerHtml}
-      </div>
+    <style>${styles}</style>
+    <style>${previewStyles}</style>
+    
+    ${coverPageHtml}
+    
+    <div class="preview-page-break">— Page Break —</div>
+    
+    <div class="report-content">
+      ${headerHtml}
+      ${sectionsHtml}
+      ${footerHtml}
     </div>
   `;
 }
