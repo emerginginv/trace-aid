@@ -3,7 +3,7 @@ import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, FileText, ShieldAlert, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, ShieldAlert, Download } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { toast } from "@/hooks/use-toast";
@@ -11,7 +11,6 @@ import { UpdateForm } from "./UpdateForm";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { GenerateReportDialog } from "@/components/templates/GenerateReportDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
@@ -51,8 +50,6 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const [searchQuery, setSearchQuery] = useState('');
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [reportDialogOpen, setReportDialogOpen] = useState(false);
-  const [caseData, setCaseData] = useState<{ title: string; case_number: string; case_manager_id: string | null } | null>(null);
 
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("case-updates", "created_at", "desc");
@@ -62,29 +59,12 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const canAddUpdates = hasPermission("add_updates");
   const canEditUpdates = hasPermission("edit_updates");
   const canDeleteUpdates = hasPermission("delete_updates");
-  const canViewReports = hasPermission("view_reports");
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("case-updates-columns", COLUMNS);
 
   useEffect(() => {
     fetchUpdates();
-    fetchCaseData();
   }, [caseId]);
-
-  const fetchCaseData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("cases")
-        .select("title, case_number, case_manager_id")
-        .eq("id", caseId)
-        .single();
-
-      if (error) throw error;
-      setCaseData(data);
-    } catch (error) {
-      console.error("Error fetching case data:", error);
-    }
-  };
 
   const fetchUpdates = async () => {
     try {
@@ -278,12 +258,6 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {canViewReports && (
-            <Button onClick={() => setReportDialogOpen(true)} variant="outline" className="w-full sm:w-auto" disabled={isClosedCase}>
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Report
-            </Button>
-          )}
           <Button 
             onClick={() => setFormOpen(true)} 
             className="w-full sm:w-auto" 
@@ -445,17 +419,6 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         onSuccess={fetchUpdates}
         editingUpdate={editingUpdate}
       />
-
-      {caseData && (
-        <GenerateReportDialog
-          open={reportDialogOpen}
-          onOpenChange={setReportDialogOpen}
-          caseId={caseId}
-          caseData={caseData}
-          updates={updates}
-          userProfiles={userProfiles}
-        />
-      )}
     </>
   );
 };
