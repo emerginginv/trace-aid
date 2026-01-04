@@ -10,23 +10,13 @@ import { AccountForm } from "@/components/AccountForm";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
-
 interface Account {
   id: string;
   name: string;
@@ -36,20 +26,34 @@ interface Account {
   city: string;
   state: string;
 }
-
-const COLUMNS: ColumnDefinition[] = [
-  { key: "name", label: "Name" },
-  { key: "industry", label: "Industry" },
-  { key: "email", label: "Email" },
-  { key: "phone", label: "Phone" },
-  { key: "location", label: "Location" },
-  { key: "actions", label: "Actions", hideable: false },
-];
-
+const COLUMNS: ColumnDefinition[] = [{
+  key: "name",
+  label: "Name"
+}, {
+  key: "industry",
+  label: "Industry"
+}, {
+  key: "email",
+  label: "Email"
+}, {
+  key: "phone",
+  label: "Phone"
+}, {
+  key: "location",
+  label: "Location"
+}, {
+  key: "actions",
+  label: "Actions",
+  hideable: false
+}];
 const Accounts = () => {
   const navigate = useNavigate();
-  const { hasPermission } = usePermissions();
-  const { organization } = useOrganization();
+  const {
+    hasPermission
+  } = usePermissions();
+  const {
+    organization
+  } = useOrganization();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -58,14 +62,20 @@ const Accounts = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
-  const { sortColumn, sortDirection, handleSort } = useSortPreference("accounts", "name", "asc");
-
-  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("accounts-columns", COLUMNS);
-
+  const {
+    sortColumn,
+    sortDirection,
+    handleSort
+  } = useSortPreference("accounts", "name", "asc");
+  const {
+    visibility,
+    isVisible,
+    toggleColumn,
+    resetToDefaults
+  } = useColumnVisibility("accounts-columns", COLUMNS);
   useEffect(() => {
     fetchAccounts();
   }, [organization?.id]);
-
   const fetchAccounts = async () => {
     try {
       if (!organization?.id) {
@@ -73,13 +83,12 @@ const Accounts = () => {
         setLoading(false);
         return;
       }
-
-      const { data, error } = await supabase
-        .from("accounts")
-        .select("*")
-        .eq("organization_id", organization.id)
-        .order("created_at", { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from("accounts").select("*").eq("organization_id", organization.id).order("created_at", {
+        ascending: false
+      });
       if (error) throw error;
       setAccounts(data || []);
     } catch (error) {
@@ -88,20 +97,14 @@ const Accounts = () => {
       setLoading(false);
     }
   };
-
   const uniqueIndustries = Array.from(new Set(accounts.map(a => a.industry).filter(Boolean)));
-
   const handleDelete = async () => {
     if (!accountToDelete) return;
-
     try {
-      const { error } = await supabase
-        .from("accounts")
-        .delete()
-        .eq("id", accountToDelete);
-
+      const {
+        error
+      } = await supabase.from("accounts").delete().eq("id", accountToDelete);
       if (error) throw error;
-
       toast.success("Account deleted successfully");
       fetchAccounts();
     } catch (error) {
@@ -112,48 +115,30 @@ const Accounts = () => {
       setAccountToDelete(null);
     }
   };
-
-
   const filteredAccounts = accounts.filter(account => {
-    const matchesSearch = searchQuery === '' || 
-      account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      account.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      account.phone?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesSearch = searchQuery === '' || account.name.toLowerCase().includes(searchQuery.toLowerCase()) || account.email?.toLowerCase().includes(searchQuery.toLowerCase()) || account.phone?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesIndustry = industryFilter === 'all' || account.industry === industryFilter;
-    
     return matchesSearch && matchesIndustry;
   });
-
   const sortedAccounts = [...filteredAccounts].sort((a, b) => {
     if (!sortColumn) return 0;
-    
     let aVal: string = "";
     let bVal: string = "";
-    
     if (sortColumn === "location") {
       aVal = [a.city, a.state].filter(Boolean).join(", ");
       bVal = [b.city, b.state].filter(Boolean).join(", ");
     } else {
-      aVal = (a[sortColumn as keyof Account] as string) || "";
-      bVal = (b[sortColumn as keyof Account] as string) || "";
+      aVal = a[sortColumn as keyof Account] as string || "";
+      bVal = b[sortColumn as keyof Account] as string || "";
     }
-    
-    return sortDirection === "asc" 
-      ? aVal.localeCompare(bVal) 
-      : bVal.localeCompare(aVal);
+    return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
   });
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
+    return <div className="flex items-center justify-center py-12">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-4 sm:space-y-6">
+  return <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Accounts</h1>
@@ -170,12 +155,7 @@ const Accounts = () => {
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search accounts by name, email, or phone..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Search accounts by name, email, or phone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
         </div>
         <Select value={industryFilter} onValueChange={setIndustryFilter}>
           <SelectTrigger className="w-full sm:w-48">
@@ -183,32 +163,15 @@ const Accounts = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Industries</SelectItem>
-            {uniqueIndustries.map(industry => (
-              <SelectItem key={industry} value={industry}>{industry}</SelectItem>
-            ))}
+            {uniqueIndustries.map(industry => <SelectItem key={industry} value={industry}>{industry}</SelectItem>)}
           </SelectContent>
         </Select>
-        <ColumnVisibility
-          columns={COLUMNS}
-          visibility={visibility}
-          onToggle={toggleColumn}
-          onReset={resetToDefaults}
-        />
+        <ColumnVisibility columns={COLUMNS} visibility={visibility} onToggle={toggleColumn} onReset={resetToDefaults} />
         <div className="flex gap-1 border rounded-md p-1">
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-8 w-8 p-0">
             <LayoutGrid className="h-4 w-4" />
           </Button>
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-8 w-8 p-0 bg-[#0f69a9]">
             <List className="h-4 w-4" />
           </Button>
         </div>
@@ -219,8 +182,7 @@ const Accounts = () => {
         Showing {sortedAccounts.length} account{sortedAccounts.length !== 1 ? 's' : ''}
       </div>
 
-      {accounts.length === 0 ? (
-        <Card>
+      {accounts.length === 0 ? <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <Building2 className="w-8 h-8 text-muted-foreground" />
@@ -234,29 +196,17 @@ const Accounts = () => {
               Create First Account
             </Button>
           </CardContent>
-        </Card>
-      ) : filteredAccounts.length === 0 ? (
-        <Card>
+        </Card> : filteredAccounts.length === 0 ? <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground">No accounts match your search criteria</p>
           </CardContent>
-        </Card>
-      ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-          {sortedAccounts.map((account) => (
-            <Card 
-              key={account.id} 
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/accounts/${account.id}`)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  navigate(`/accounts/${account.id}`);
-                }
-              }}
-            >
+        </Card> : viewMode === 'grid' ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+          {sortedAccounts.map(account => <Card key={account.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/accounts/${account.id}`)} role="button" tabIndex={0} onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          navigate(`/accounts/${account.id}`);
+        }
+      }}>
               <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-primary" />
@@ -265,201 +215,87 @@ const Accounts = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  {account.industry && (
-                    <p className="text-sm text-muted-foreground">{account.industry}</p>
-                  )}
-                  {account.email && (
-                    <p className="text-sm">{account.email}</p>
-                  )}
-                  {account.phone && (
-                    <p className="text-sm">{account.phone}</p>
-                  )}
-                  {(account.city || account.state) && (
-                    <p className="text-sm text-muted-foreground">
+                  {account.industry && <p className="text-sm text-muted-foreground">{account.industry}</p>}
+                  {account.email && <p className="text-sm">{account.email}</p>}
+                  {account.phone && <p className="text-sm">{account.phone}</p>}
+                  {(account.city || account.state) && <p className="text-sm text-muted-foreground">
                       {[account.city, account.state].filter(Boolean).join(", ")}
-                    </p>
-                  )}
+                    </p>}
                 </div>
                 <div className="flex gap-2 pt-2">
-                  {hasPermission('edit_accounts') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/accounts/${account.id}/edit`);
-                      }}
-                      className="flex-1"
-                    >
+                  {hasPermission('edit_accounts') && <Button variant="ghost" size="sm" onClick={e => {
+              e.stopPropagation();
+              navigate(`/accounts/${account.id}/edit`);
+            }} className="flex-1">
                       <Edit className="w-4 h-4 mr-1" />
                       Edit
-                    </Button>
-                  )}
-                  {hasPermission('delete_accounts') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAccountToDelete(account.id);
-                        setDeleteDialogOpen(true);
-                      }}
-                      className="text-destructive hover:text-destructive"
-                    >
+                    </Button>}
+                  {hasPermission('delete_accounts') && <Button variant="ghost" size="sm" onClick={e => {
+              e.stopPropagation();
+              setAccountToDelete(account.id);
+              setDeleteDialogOpen(true);
+            }} className="text-destructive hover:text-destructive">
                       <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
               </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card className="overflow-hidden">
+            </Card>)}
+        </div> : <Card className="overflow-hidden">
           <div className="overflow-x-auto">
           <Table className="min-w-[700px]">
             <TableHeader>
               <TableRow>
-                {isVisible("name") && (
-                  <SortableTableHead
-                    column="name"
-                    label="Name"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("industry") && (
-                  <SortableTableHead
-                    column="industry"
-                    label="Industry"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("email") && (
-                  <SortableTableHead
-                    column="email"
-                    label="Email"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("phone") && (
-                  <SortableTableHead
-                    column="phone"
-                    label="Phone"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("location") && (
-                  <SortableTableHead
-                    column="location"
-                    label="Location"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
-                {isVisible("actions") && (
-                  <SortableTableHead
-                    column=""
-                    label="Actions"
-                    sortColumn=""
-                    sortDirection="asc"
-                    onSort={() => {}}
-                    className="w-[120px]"
-                  />
-                )}
+                {isVisible("name") && <SortableTableHead column="name" label="Name" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />}
+                {isVisible("industry") && <SortableTableHead column="industry" label="Industry" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />}
+                {isVisible("email") && <SortableTableHead column="email" label="Email" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />}
+                {isVisible("phone") && <SortableTableHead column="phone" label="Phone" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />}
+                {isVisible("location") && <SortableTableHead column="location" label="Location" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />}
+                {isVisible("actions") && <SortableTableHead column="" label="Actions" sortColumn="" sortDirection="asc" onSort={() => {}} className="w-[120px]" />}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedAccounts.map((account) => (
-                <TableRow 
-                  key={account.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => navigate(`/accounts/${account.id}`)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      navigate(`/accounts/${account.id}`);
-                    }
-                  }}
-                >
-                  {isVisible("name") && (
-                    <TableCell className="font-medium">
+              {sortedAccounts.map(account => <TableRow key={account.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/accounts/${account.id}`)} role="button" tabIndex={0} onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(`/accounts/${account.id}`);
+              }
+            }}>
+                  {isVisible("name") && <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-primary" />
                         {account.name}
                       </div>
-                    </TableCell>
-                  )}
-                  {isVisible("industry") && (
-                    <TableCell>{account.industry || '-'}</TableCell>
-                  )}
-                  {isVisible("email") && (
-                    <TableCell>{account.email || '-'}</TableCell>
-                  )}
-                  {isVisible("phone") && (
-                    <TableCell>{account.phone || '-'}</TableCell>
-                  )}
-                  {isVisible("location") && (
-                    <TableCell>
+                    </TableCell>}
+                  {isVisible("industry") && <TableCell>{account.industry || '-'}</TableCell>}
+                  {isVisible("email") && <TableCell>{account.email || '-'}</TableCell>}
+                  {isVisible("phone") && <TableCell>{account.phone || '-'}</TableCell>}
+                  {isVisible("location") && <TableCell>
                       {[account.city, account.state].filter(Boolean).join(", ") || '-'}
-                    </TableCell>
-                  )}
-                  {isVisible("actions") && (
-                    <TableCell>
+                    </TableCell>}
+                  {isVisible("actions") && <TableCell>
                       <div className="flex items-center gap-2">
-                        {hasPermission('edit_accounts') && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/accounts/${account.id}/edit`);
-                            }}
-                            className="h-8 w-8 p-0"
-                          >
+                        {hasPermission('edit_accounts') && <Button variant="ghost" size="sm" onClick={e => {
+                    e.stopPropagation();
+                    navigate(`/accounts/${account.id}/edit`);
+                  }} className="h-8 w-8 p-0">
                             <Edit className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {hasPermission('delete_accounts') && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAccountToDelete(account.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          >
+                          </Button>}
+                        {hasPermission('delete_accounts') && <Button variant="ghost" size="sm" onClick={e => {
+                    e.stopPropagation();
+                    setAccountToDelete(account.id);
+                    setDeleteDialogOpen(true);
+                  }} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
                             <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
+                          </Button>}
                       </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
+                    </TableCell>}
+                </TableRow>)}
             </TableBody>
           </Table>
           </div>
-        </Card>
-      )}
+        </Card>}
 
-      <AccountForm 
-        open={formOpen} 
-        onOpenChange={setFormOpen} 
-        onSuccess={fetchAccounts} 
-      />
+      <AccountForm open={formOpen} onOpenChange={setFormOpen} onSuccess={fetchAccounts} />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -479,8 +315,6 @@ const Accounts = () => {
       </AlertDialog>
 
       <ScrollProgress />
-    </div>
-  );
+    </div>;
 };
-
 export default Accounts;
