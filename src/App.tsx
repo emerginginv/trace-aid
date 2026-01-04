@@ -5,9 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
+import { GlobalLoadingProvider } from "./contexts/GlobalLoadingContext";
+import { GlobalLoadingIndicator } from "./components/ui/global-loading-indicator";
+import { RouteTransitionDetector } from "./hooks/use-route-transition";
 import Auth from "./pages/Auth";
 import { Onboarding } from "./components/Onboarding";
-
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
@@ -50,17 +52,20 @@ const queryClient = new QueryClient({
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider 
-        attribute="class" 
-        defaultTheme="system" 
-        enableSystem
-        disableTransitionOnChange
-      >
-        <OrganizationProvider>
-          <BrowserRouter>
-            <Toaster />
-            <Sonner />
-            <Routes>
+      <GlobalLoadingProvider>
+        <ThemeProvider 
+          attribute="class" 
+          defaultTheme="system" 
+          enableSystem
+          disableTransitionOnChange
+        >
+          <OrganizationProvider>
+            <BrowserRouter>
+              <GlobalLoadingIndicator />
+              <RouteTransitionDetector />
+              <Toaster />
+              <Sonner />
+              <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
             <Route
@@ -297,11 +302,12 @@ const App = () => {
         />
         <Route path="/style-guide" element={<StyleGuide />} />
         <Route path="/premium-showcase" element={<PremiumShowcase />} />
-        <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </OrganizationProvider>
-      </ThemeProvider>
+          <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </OrganizationProvider>
+        </ThemeProvider>
+      </GlobalLoadingProvider>
     </QueryClientProvider>
   );
 };
