@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { 
   User, 
@@ -9,8 +10,15 @@ import {
   Mail, 
   CreditCard, 
   Upload,
-  Database
+  Database,
+  ChevronDown,
+  Menu
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface SettingsNavItem {
   value: string;
@@ -40,11 +48,24 @@ interface SettingsNavProps {
 }
 
 export function SettingsNav({ currentTab, onTabChange, userRole, onUsersClick }: SettingsNavProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  
   const filteredItems = navItems.filter(item => 
     !userRole || item.roles.includes(userRole)
   );
 
-  return (
+  const currentItem = filteredItems.find(item => item.value === currentTab);
+  const CurrentIcon = currentItem?.icon || User;
+
+  const handleTabClick = (value: string) => {
+    onTabChange(value);
+    setIsOpen(false); // Close on mobile after selection
+    if (value === 'users' && onUsersClick) {
+      onUsersClick();
+    }
+  };
+
+  const navContent = (
     <nav className="flex flex-col space-y-1">
       {filteredItems.map((item) => {
         const Icon = item.icon;
@@ -53,12 +74,7 @@ export function SettingsNav({ currentTab, onTabChange, userRole, onUsersClick }:
         return (
           <button
             key={item.value}
-            onClick={() => {
-              onTabChange(item.value);
-              if (item.value === 'users' && onUsersClick) {
-                onUsersClick();
-              }
-            }}
+            onClick={() => handleTabClick(item.value)}
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-left w-full",
               isActive
@@ -72,5 +88,36 @@ export function SettingsNav({ currentTab, onTabChange, userRole, onUsersClick }:
         );
       })}
     </nav>
+  );
+
+  return (
+    <>
+      {/* Mobile collapsible navigation */}
+      <div className="md:hidden">
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger asChild>
+            <button className="flex items-center justify-between w-full px-4 py-3 bg-muted/50 rounded-lg border border-border hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3">
+                <Menu className="h-4 w-4 text-muted-foreground" />
+                <CurrentIcon className="h-4 w-4" />
+                <span className="font-medium">{currentItem?.label || "Settings"}</span>
+              </div>
+              <ChevronDown className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                isOpen && "rotate-180"
+              )} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 bg-card rounded-lg border border-border p-2">
+            {navContent}
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+
+      {/* Desktop vertical navigation */}
+      <div className="hidden md:block">
+        {navContent}
+      </div>
+    </>
   );
 }
