@@ -37,7 +37,11 @@ interface DashboardStats {
   pendingCorrections: number;
 }
 
-export function MigrationDashboard() {
+interface MigrationDashboardProps {
+  onStartNew?: () => void;
+}
+
+export function MigrationDashboard({ onStartNew }: MigrationDashboardProps) {
   const { organization } = useOrganization();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -206,7 +210,7 @@ export function MigrationDashboard() {
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button onClick={() => navigate('/import')}>
+        <Button onClick={onStartNew}>
           <FileDown className="h-4 w-4 mr-2" />
           New Import
         </Button>
@@ -247,7 +251,7 @@ export function MigrationDashboard() {
               <Database className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p className="font-medium">No imports yet</p>
               <p className="text-sm">Start your first migration to see activity here</p>
-              <Button className="mt-4" onClick={() => navigate('/import')}>
+              <Button className="mt-4" onClick={onStartNew}>
                 Start Migration
               </Button>
             </div>
