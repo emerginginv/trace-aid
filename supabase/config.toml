@@ -2,3 +2,6 @@ project_id = "uxmezklevgkqelahibqy"
 
 [functions.execute-import]
 verify_jwt = true
+
+[functions.access-attachment]
+verify_jwt = false
