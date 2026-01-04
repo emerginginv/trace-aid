@@ -99,6 +99,59 @@ export type Database = {
           },
         ]
       }
+      attachment_access: {
+        Row: {
+          access_count: number
+          access_token: string
+          attachment_id: string
+          attachment_type: string
+          created_at: string
+          created_by_user_id: string
+          expires_at: string | null
+          id: string
+          last_accessed_at: string | null
+          organization_id: string
+          revoked_at: string | null
+          revoked_by_user_id: string | null
+        }
+        Insert: {
+          access_count?: number
+          access_token?: string
+          attachment_id: string
+          attachment_type: string
+          created_at?: string
+          created_by_user_id: string
+          expires_at?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          organization_id: string
+          revoked_at?: string | null
+          revoked_by_user_id?: string | null
+        }
+        Update: {
+          access_count?: number
+          access_token?: string
+          attachment_id?: string
+          attachment_type?: string
+          created_at?: string
+          created_by_user_id?: string
+          expires_at?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          organization_id?: string
+          revoked_at?: string | null
+          revoked_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachment_access_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_activities: {
         Row: {
           activity_type: string
@@ -2083,6 +2136,18 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      validate_attachment_access: {
+        Args: { p_token: string }
+        Returns: {
+          attachment_id: string
+          attachment_type: string
+          denial_reason: string
+          file_name: string
+          file_path: string
+          file_type: string
+          is_valid: boolean
+        }[]
       }
     }
     Enums: {
