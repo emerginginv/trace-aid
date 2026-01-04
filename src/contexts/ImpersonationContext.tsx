@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import * as React from "react";
 
 interface ImpersonationContextType {
   impersonatedUserId: string | null;
@@ -10,14 +9,14 @@ interface ImpersonationContextType {
   isImpersonating: boolean;
 }
 
-const ImpersonationContext = createContext<ImpersonationContextType | undefined>(undefined);
+const ImpersonationContext = React.createContext<ImpersonationContextType | undefined>(undefined);
 
-export function ImpersonationProvider({ children }: { children: ReactNode }) {
-  const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(null);
-  const [impersonatedUserEmail, setImpersonatedUserEmail] = useState<string | null>(null);
-  const [impersonatedUserName, setImpersonatedUserName] = useState<string | null>(null);
+export function ImpersonationProvider({ children }: { children: React.ReactNode }) {
+  const [impersonatedUserId, setImpersonatedUserId] = React.useState<string | null>(null);
+  const [impersonatedUserEmail, setImpersonatedUserEmail] = React.useState<string | null>(null);
+  const [impersonatedUserName, setImpersonatedUserName] = React.useState<string | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Load impersonation state from localStorage
     const stored = localStorage.getItem("impersonation");
     if (stored) {
@@ -70,7 +69,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 }
 
 export function useImpersonation() {
-  const context = useContext(ImpersonationContext);
+  const context = React.useContext(ImpersonationContext);
   if (context === undefined) {
     throw new Error("useImpersonation must be used within an ImpersonationProvider");
   }
