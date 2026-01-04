@@ -292,6 +292,19 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
     .section-content {
       font-size: 11pt;
       line-height: 1.7;
+      color: #1a1a1a;
+    }
+
+    /* Force readable content even if template HTML contains muted/opacity classes */
+    .section-content,
+    .section-content * {
+      color: #1a1a1a;
+      opacity: 1;
+    }
+
+    .section-content a {
+      color: ${opts.primaryColor};
+      text-decoration: underline;
     }
 
     .section-content p {
@@ -419,8 +432,24 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
       color: #2d3748;
     }
 
+    /* Force readable rich-text content (remove accidental low opacity / muted colors) */
+    .entry-content,
+    .entry-content * {
+      color: #2d3748;
+      opacity: 1;
+    }
+
+    .entry-content a {
+      color: ${opts.primaryColor};
+      text-decoration: underline;
+    }
+
     .entry-content p {
       margin-bottom: 8px;
+    }
+
+    .entry-content p:last-child {
+      margin-bottom: 0;
     }
 
     .entry-attribution {
