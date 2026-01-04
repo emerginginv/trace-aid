@@ -1,7 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
 import { getCaseVariables, CaseVariables } from "@/lib/caseVariables";
-import { getReportTemplate, ReportTemplate, TemplateSection, SectionType } from "@/lib/reportTemplates";
+import { 
+  getReportTemplate, 
+  ReportTemplate, 
+  TemplateSection, 
+  SectionType,
+  TemplateCustomization,
+  applyCustomizations,
+} from "@/lib/reportTemplates";
 import {
   renderStaticTextSection,
   renderVariableBlockSection,
@@ -16,6 +23,7 @@ export interface ReportInput {
   templateId: string;
   organizationId: string;
   userId: string;
+  customization?: TemplateCustomization;  // Optional template customizations
 }
 
 export interface RenderedSection {
@@ -309,6 +317,12 @@ export async function generateReport(input: ReportInput): Promise<GenerationResu
       return { success: false, error: 'Template not found' };
     }
 
+    // Apply customizations if provided
+    let effectiveTemplate = template;
+    if (input.customization) {
+      effectiveTemplate = applyCustomizations(template, input.customization);
+    }
+
     const updates: CaseUpdate[] = updatesResult.data || [];
     const events: CaseEvent[] = eventsResult.data || [];
     const userProfiles: Record<string, UserProfile> = {};
@@ -317,11 +331,11 @@ export async function generateReport(input: ReportInput): Promise<GenerationResu
       userProfiles[p.id] = p;
     });
 
-    // Step 2: Compute input hash for determinism
+    // Step 2: Compute input hash for determinism (use effective template)
     const inputHash = computeInputHash({
       orgProfile,
       caseVariables,
-      template,
+      template: effectiveTemplate,
       updates,
       events,
     });
@@ -332,7 +346,7 @@ export async function generateReport(input: ReportInput): Promise<GenerationResu
     const renderedEventIds = new Set<string>();
 
     // Sort sections by display order
-    const sortedSections = [...template.sections]
+    const sortedSections = [...effectiveTemplate.sections]
       .filter(s => s.isVisible)
       .sort((a, b) => a.displayOrder - b.displayOrder);
 
@@ -382,11 +396,11 @@ export async function generateReport(input: ReportInput): Promise<GenerationResu
     }
 
     // Step 4: Assemble final HTML
-    const reportTitle = `${caseVariables?.caseNumber || 'Report'} - ${template.name}`;
+    const reportTitle = `${caseVariables?.caseNumber || 'Report'} - ${effectiveTemplate.name}`;
     const renderedHtml = assembleReportHtml(renderedSections, reportTitle, orgProfile);
 
     // Step 5: Save to database
-    // Use type assertion to work around generated types not being synced yet
+    // Store the effective template (with customizations applied) as the snapshot
     const { data: savedReport, error: saveError } = await (supabase
       .from('report_instances' as any)
       .insert({
@@ -400,7 +414,7 @@ export async function generateReport(input: ReportInput): Promise<GenerationResu
         rendered_sections: renderedSections as unknown,
         org_profile_snapshot: orgProfile as unknown,
         case_variables_snapshot: caseVariables as unknown,
-        template_snapshot: template as unknown,
+        template_snapshot: effectiveTemplate as unknown,  // Store customized template
       })
       .select()
       .single() as any);

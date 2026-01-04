@@ -10,10 +10,11 @@ import { toast } from "@/hooks/use-toast";
 import html2pdf from "html2pdf.js";
 import { getCurrentOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
 import { getCaseVariables, formatCaseVariablesForTemplate, CaseVariables } from "@/lib/caseVariables";
-import { getOrganizationTemplates, ReportTemplate } from "@/lib/reportTemplates";
+import { getOrganizationTemplates, getReportTemplate, ReportTemplate, TemplateCustomization } from "@/lib/reportTemplates";
 import { generateReport, ReportInstance } from "@/lib/reportEngine";
 import { ReportInstanceViewer } from "@/components/templates/ReportInstanceViewer";
-import { FileText, Sparkles, FileCode } from "lucide-react";
+import { TemplateCustomizer } from "@/components/templates/TemplateCustomizer";
+import { FileText, Sparkles, FileCode, Settings2 } from "lucide-react";
 
 interface LegacyTemplate {
   id: string;
@@ -70,6 +71,11 @@ export const GenerateReportDialog = ({
   // Preview state
   const [generatedReport, setGeneratedReport] = useState<ReportInstance | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+  
+  // Customization state
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [selectedTemplateForCustomization, setSelectedTemplateForCustomization] = useState<ReportTemplate | null>(null);
+  const [templateCustomization, setTemplateCustomization] = useState<TemplateCustomization | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -276,6 +282,7 @@ export const GenerateReportDialog = ({
         templateId: selectedStructuredTemplateId,
         organizationId,
         userId,
+        customization: templateCustomization || undefined,
       });
 
       if (!result.success || !result.reportInstance) {
@@ -300,6 +307,45 @@ export const GenerateReportDialog = ({
       setGenerating(false);
     }
   };
+
+  const handleOpenCustomizer = async () => {
+    if (!selectedStructuredTemplateId) {
+      toast({
+        title: "Select a template",
+        description: "Please select a template before customizing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Fetch full template with sections
+    const fullTemplate = await getReportTemplate(selectedStructuredTemplateId);
+    if (!fullTemplate) {
+      toast({
+        title: "Error",
+        description: "Failed to load template details",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedTemplateForCustomization(fullTemplate);
+    setCustomizerOpen(true);
+  };
+
+  const handleApplyCustomization = (customization: TemplateCustomization) => {
+    setTemplateCustomization(customization);
+    toast({
+      title: "Customization applied",
+      description: "Your changes will be used when generating the report",
+    });
+  };
+
+  // Clear customization when template changes
+  useEffect(() => {
+    setTemplateCustomization(null);
+    setSelectedTemplateForCustomization(null);
+  }, [selectedStructuredTemplateId]);
 
   const handleGenerate = async () => {
     if (templateType === "legacy") {
@@ -379,10 +425,28 @@ export const GenerateReportDialog = ({
                       </SelectContent>
                     </Select>
                     {selectedStructuredTemplateId && (
-                      <p className="text-xs text-muted-foreground">
-                        {structuredTemplates.find(t => t.id === selectedStructuredTemplateId)?.description || 
-                          "Generates a read-only report using structured sections."}
-                      </p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                          {structuredTemplates.find(t => t.id === selectedStructuredTemplateId)?.description || 
+                            "Generates a read-only report using structured sections."}
+                        </p>
+                        
+                        {/* Customize Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={handleOpenCustomizer}
+                        >
+                          <Settings2 className="h-4 w-4 mr-2" />
+                          Customize Template
+                          {templateCustomization && (
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              Modified
+                            </Badge>
+                          )}
+                        </Button>
+                      </div>
                     )}
                   </div>
 
@@ -477,6 +541,17 @@ export const GenerateReportDialog = ({
         }}
         report={generatedReport}
       />
+
+      {/* Template Customizer */}
+      {selectedTemplateForCustomization && (
+        <TemplateCustomizer
+          open={customizerOpen}
+          onOpenChange={setCustomizerOpen}
+          template={selectedTemplateForCustomization}
+          initialCustomization={templateCustomization || undefined}
+          onApply={handleApplyCustomization}
+        />
+      )}
     </>
   );
 };

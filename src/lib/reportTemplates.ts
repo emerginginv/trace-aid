@@ -548,3 +548,134 @@ export function getDefaultEventCollectionConfig(): CollectionConfig {
     },
   };
 }
+
+// ============= Template Customization Types =============
+
+// Represents per-section customizations applied before report generation
+export interface SectionCustomization {
+  sectionId: string;
+  customTitle?: string;           // Override section title
+  isVisible?: boolean;            // Override visibility
+  displayOrderOverride?: number;  // Override display order
+  collectionConfigOverride?: Partial<CollectionConfig>;  // Override mappings
+}
+
+// Represents full template customization for a report generation
+export interface TemplateCustomization {
+  templateId: string;
+  sectionCustomizations: SectionCustomization[];
+}
+
+// Reordering constraints for sections
+export interface SectionOrderConstraint {
+  minPosition?: number;  // Cannot move above this position
+  maxPosition?: number;  // Cannot move below this position
+  locked?: boolean;      // Cannot be moved at all
+}
+
+/**
+ * Apply customizations to a template, returning a modified copy
+ * Original template is not mutated
+ */
+export function applyCustomizations(
+  template: ReportTemplate,
+  customization: TemplateCustomization
+): ReportTemplate {
+  if (customization.templateId !== template.id) {
+    console.warn('Customization templateId does not match template id');
+    return template;
+  }
+
+  // Create a deep copy of sections
+  const customizedSections = template.sections.map(section => {
+    const sectionCustomization = customization.sectionCustomizations.find(
+      sc => sc.sectionId === section.id
+    );
+
+    if (!sectionCustomization) {
+      return { ...section };
+    }
+
+    // Apply customizations
+    const customizedSection: TemplateSection = {
+      ...section,
+      title: sectionCustomization.customTitle ?? section.title,
+      isVisible: sectionCustomization.isVisible ?? section.isVisible,
+      displayOrder: sectionCustomization.displayOrderOverride ?? section.displayOrder,
+    };
+
+    // Apply collection config overrides for update_collection and event_collection
+    if (sectionCustomization.collectionConfigOverride && section.collectionConfig) {
+      customizedSection.collectionConfig = {
+        ...section.collectionConfig,
+        ...sectionCustomization.collectionConfigOverride,
+        // Deep merge update type mapping if present
+        updateTypeMapping: sectionCustomization.collectionConfigOverride.updateTypeMapping
+          ? {
+              ...section.collectionConfig.updateTypeMapping,
+              ...sectionCustomization.collectionConfigOverride.updateTypeMapping,
+            }
+          : section.collectionConfig.updateTypeMapping,
+        // Deep merge event type mapping if present
+        eventTypeMapping: sectionCustomization.collectionConfigOverride.eventTypeMapping
+          ? {
+              ...section.collectionConfig.eventTypeMapping,
+              ...sectionCustomization.collectionConfigOverride.eventTypeMapping,
+            }
+          : section.collectionConfig.eventTypeMapping,
+        // Deep merge event display config if present
+        eventDisplayConfig: sectionCustomization.collectionConfigOverride.eventDisplayConfig
+          ? {
+              ...section.collectionConfig.eventDisplayConfig,
+              ...sectionCustomization.collectionConfigOverride.eventDisplayConfig,
+            }
+          : section.collectionConfig.eventDisplayConfig,
+      };
+    }
+
+    return customizedSection;
+  });
+
+  // Sort by customized display order
+  customizedSections.sort((a, b) => a.displayOrder - b.displayOrder);
+
+  return {
+    ...template,
+    sections: customizedSections,
+  };
+}
+
+/**
+ * Get reordering constraints for a section based on its type and position
+ */
+export function getSectionOrderConstraints(
+  section: TemplateSection,
+  allSections: TemplateSection[]
+): SectionOrderConstraint {
+  const sortedSections = [...allSections].sort((a, b) => a.displayOrder - b.displayOrder);
+  const sectionIndex = sortedSections.findIndex(s => s.id === section.id);
+  
+  // Default: no constraints for most sections
+  return {
+    minPosition: 1,
+    maxPosition: allSections.length,
+    locked: false,
+  };
+}
+
+/**
+ * Validate that at least one section is visible
+ */
+export function validateCustomization(
+  template: ReportTemplate,
+  customization: TemplateCustomization
+): { valid: boolean; error?: string } {
+  const effectiveTemplate = applyCustomizations(template, customization);
+  const visibleSections = effectiveTemplate.sections.filter(s => s.isVisible);
+  
+  if (visibleSections.length === 0) {
+    return { valid: false, error: 'At least one section must be visible' };
+  }
+  
+  return { valid: true };
+}
