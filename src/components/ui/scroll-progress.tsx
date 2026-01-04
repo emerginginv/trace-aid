@@ -20,13 +20,20 @@ export function ScrollProgress({
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const calculateProgress = () => {
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    let rafId: number | null = null;
 
-      setScrollProgress(Math.min(progress, 100));
-      setIsVisible(scrollTop > threshold);
+    const calculateProgress = () => {
+      if (rafId !== null) return; // Already scheduled
+      
+      rafId = requestAnimationFrame(() => {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+
+        setScrollProgress(Math.min(progress, 100));
+        setIsVisible(scrollTop > threshold);
+        rafId = null;
+      });
     };
 
     calculateProgress();
@@ -34,6 +41,7 @@ export function ScrollProgress({
     window.addEventListener("resize", calculateProgress, { passive: true });
 
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener("scroll", calculateProgress);
       window.removeEventListener("resize", calculateProgress);
     };
@@ -43,12 +51,14 @@ export function ScrollProgress({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // SVG circle properties - thicker stroke for visibility
+  // SVG circle properties - progress arc thicker than track for visibility
   const size = 56;
-  const strokeWidth = 6;
-  const radius = (size - strokeWidth) / 2;
+  const trackStrokeWidth = 6;
+  const progressStrokeWidth = 8;
+  const radius = (size - progressStrokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (scrollProgress / 100) * circumference;
+  const outerSize = size + progressStrokeWidth;
   
   // Glow effect when near complete
   const isNearComplete = scrollProgress > 85;
@@ -93,12 +103,12 @@ export function ScrollProgress({
           )}
         >
           {/* Wrapper for proper positioning - SVG outside button */}
-          <div className="relative" style={{ width: size + 6, height: size + 6 }}>
+          <div className="relative" style={{ width: outerSize, height: outerSize }}>
             {/* SVG Progress Ring - positioned around the button */}
             <svg
-              width={size + 6}
-              height={size + 6}
-              viewBox={`0 0 ${size + 6} ${size + 6}`}
+              width={outerSize}
+              height={outerSize}
+              viewBox={`0 0 ${outerSize} ${outerSize}`}
               className="absolute inset-0 pointer-events-none"
               style={{ 
                 transform: "rotate(-90deg)",
@@ -106,37 +116,37 @@ export function ScrollProgress({
                 filter: isNearComplete ? "drop-shadow(0 0 4px hsl(var(--primary) / 0.5))" : undefined 
               }}
             >
-              {/* Gradient definition - darker blue for visibility */}
+              {/* Gradient definition - prominent darker blue */}
               <defs>
                 <linearGradient id="scroll-progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="hsl(210 95% 40%)" />
-                  <stop offset="50%" stopColor="hsl(220 90% 35%)" />
-                  <stop offset="100%" stopColor="hsl(230 85% 45%)" />
+                  <stop offset="0%" stopColor="hsl(220 100% 38%)" />
+                  <stop offset="60%" stopColor="hsl(215 100% 48%)" />
+                  <stop offset="100%" stopColor="hsl(210 100% 62%)" />
                 </linearGradient>
               </defs>
               
-              {/* Background track circle */}
+              {/* Background track circle - lighter for contrast */}
               <circle
-                cx={(size + 6) / 2}
-                cy={(size + 6) / 2}
+                cx={outerSize / 2}
+                cy={outerSize / 2}
                 r={radius}
                 fill="none"
-                stroke="hsl(var(--muted-foreground) / 0.2)"
-                strokeWidth={strokeWidth}
+                stroke="hsl(210 60% 92% / 0.75)"
+                strokeWidth={trackStrokeWidth}
               />
               
-              {/* Progress arc with gradient */}
+              {/* Progress arc with gradient - thicker than track */}
               <circle
-                cx={(size + 6) / 2}
-                cy={(size + 6) / 2}
+                cx={outerSize / 2}
+                cy={outerSize / 2}
                 r={radius}
                 fill="none"
                 stroke="url(#scroll-progress-gradient)"
-                strokeWidth={strokeWidth}
+                strokeWidth={progressStrokeWidth}
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
-                className="transition-all duration-300 ease-out"
+                className="transition-[stroke-dashoffset] duration-200 ease-linear"
                 style={{
                   willChange: "stroke-dashoffset",
                   filter: scrollProgress > 0 ? "drop-shadow(0 0 3px hsl(210 90% 55% / 0.4))" : undefined
