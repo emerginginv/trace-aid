@@ -21,9 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
+import { DollarSign, Clock, AlertTriangle, TrendingDown, TrendingUp } from "lucide-react";
 
 const adjustmentSchema = z.object({
   adjustment_type: z.enum(["hours", "dollars"]),
@@ -33,15 +42,30 @@ const adjustmentSchema = z.object({
 
 type AdjustmentFormData = z.infer<typeof adjustmentSchema>;
 
+interface BudgetSummaryData {
+  budget_hours_authorized: number;
+  budget_dollars_authorized: number;
+  hours_consumed: number;
+  dollars_consumed: number;
+  hours_remaining: number;
+  dollars_remaining: number;
+  hours_utilization_pct: number;
+  dollars_utilization_pct: number;
+}
+
 interface BudgetAdjustmentFormProps {
   caseId: string;
   onSuccess: () => void;
+  triggerButton?: React.ReactNode;
 }
 
-export function BudgetAdjustmentForm({ caseId, onSuccess }: BudgetAdjustmentFormProps) {
+export function BudgetAdjustmentForm({ caseId, onSuccess, triggerButton }: BudgetAdjustmentFormProps) {
   const { hasPermission, loading: permLoading } = usePermissions();
   const [currentBudget, setCurrentBudget] = useState({ hours: 0, dollars: 0 });
+  const [consumedBudget, setConsumedBudget] = useState({ hours: 0, dollars: 0 });
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [showConfirmReduction, setShowConfirmReduction] = useState(false);
 
   const form = useForm<AdjustmentFormData>({
     resolver: zodResolver(adjustmentSchema),
@@ -56,26 +80,46 @@ export function BudgetAdjustmentForm({ caseId, onSuccess }: BudgetAdjustmentForm
   const newValue = form.watch("new_value");
 
   useEffect(() => {
-    fetchCurrentBudget();
-  }, [caseId]);
+    if (open) {
+      fetchCurrentBudget();
+    }
+  }, [caseId, open]);
 
   const fetchCurrentBudget = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch current budget from case
+      const { data: caseData, error: caseError } = await supabase
         .from("cases")
         .select("budget_hours, budget_dollars")
         .eq("id", caseId)
         .single();
 
-      if (error) throw error;
+      if (caseError) throw caseError;
+
+      const currentHours = caseData?.budget_hours || 0;
+      const currentDollars = caseData?.budget_dollars || 0;
 
       setCurrentBudget({
-        hours: data?.budget_hours || 0,
-        dollars: data?.budget_dollars || 0,
+        hours: currentHours,
+        dollars: currentDollars,
       });
 
+      // Fetch consumed amounts from RPC
+      const { data: summaryData, error: summaryError } = await supabase.rpc(
+        "get_case_budget_summary",
+        { p_case_id: caseId }
+      );
+
+      if (!summaryError && summaryData && summaryData.length > 0) {
+        const summary = summaryData[0] as BudgetSummaryData;
+        setConsumedBudget({
+          hours: summary.hours_consumed || 0,
+          dollars: summary.dollars_consumed || 0,
+        });
+      }
+
       // Set initial new_value based on current
-      form.setValue("new_value", data?.budget_dollars || 0);
+      form.setValue("new_value", currentDollars);
     } catch (error) {
       console.error("Error fetching current budget:", error);
     } finally {
@@ -93,9 +137,23 @@ export function BudgetAdjustmentForm({ caseId, onSuccess }: BudgetAdjustmentForm
   }, [adjustmentType, currentBudget]);
 
   const currentValue = adjustmentType === "hours" ? currentBudget.hours : currentBudget.dollars;
+  const consumedValue = adjustmentType === "hours" ? consumedBudget.hours : consumedBudget.dollars;
   const adjustmentAmount = newValue - currentValue;
 
+  // Validation warnings
+  const isZeroBudget = newValue === 0 && currentValue > 0;
+  const isBelowConsumed = newValue < consumedValue && consumedValue > 0;
+  const isSignificantReduction = adjustmentAmount < 0 && 
+    currentValue > 0 && 
+    Math.abs(adjustmentAmount) / currentValue > 0.25;
+
   const onSubmit = async (data: AdjustmentFormData) => {
+    // If significant reduction and not confirmed, show confirmation
+    if (isSignificantReduction && !showConfirmReduction) {
+      setShowConfirmReduction(true);
+      return;
+    }
+
     try {
       // Update the case budget field (trigger will log the adjustment)
       const updateData = data.adjustment_type === "hours"
@@ -123,6 +181,8 @@ export function BudgetAdjustmentForm({ caseId, onSuccess }: BudgetAdjustmentForm
         reason: "",
       });
       
+      setShowConfirmReduction(false);
+      setOpen(false);
       onSuccess();
     } catch (error) {
       console.error("Error updating budget:", error);
@@ -130,7 +190,15 @@ export function BudgetAdjustmentForm({ caseId, onSuccess }: BudgetAdjustmentForm
     }
   };
 
-  if (permLoading || loading) {
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
+      setShowConfirmReduction(false);
+      form.reset();
+    }
+  };
+
+  if (permLoading) {
     return null;
   }
 
@@ -138,95 +206,199 @@ export function BudgetAdjustmentForm({ caseId, onSuccess }: BudgetAdjustmentForm
     return null;
   }
 
+  const defaultTrigger = (
+    <Button variant="outline" size="sm">
+      <DollarSign className="h-4 w-4 mr-2" />
+      Adjust Budget
+    </Button>
+  );
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Adjust Budget</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="adjustment_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        {triggerButton || defaultTrigger}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Adjust Budget</DialogTitle>
+          <DialogDescription>
+            Update the authorized budget for this case. All changes are logged.
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="py-6 text-center text-muted-foreground">Loading...</div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="adjustment_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="hours">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Hours
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="dollars">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Dollars
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Current values display */}
+              <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-md text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Current Authorized</p>
+                  <p className="font-medium">
+                    {adjustmentType === "hours" 
+                      ? `${currentBudget.hours} hrs` 
+                      : `$${currentBudget.dollars.toLocaleString()}`}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Already Consumed</p>
+                  <p className="font-medium">
+                    {adjustmentType === "hours" 
+                      ? `${consumedBudget.hours} hrs` 
+                      : `$${consumedBudget.dollars.toLocaleString()}`}
+                  </p>
+                </div>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="new_value"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New {adjustmentType === "hours" ? "Hours" : "Dollars"}</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <div className="relative">
+                        {adjustmentType === "dollars" && (
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        )}
+                        <Input 
+                          type="number" 
+                          step={adjustmentType === "hours" ? "0.5" : "1"}
+                          {...field} 
+                          className={adjustmentType === "dollars" ? "pl-6" : ""}
+                        />
+                      </div>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="hours">Hours</SelectItem>
-                      <SelectItem value="dollars">Dollars</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Adjustment preview */}
+              <div className={`flex items-center gap-2 text-sm font-medium p-2 rounded-md ${
+                adjustmentAmount > 0 
+                  ? 'text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-950/30' 
+                  : adjustmentAmount < 0 
+                    ? 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-950/30' 
+                    : 'text-muted-foreground bg-muted/50'
+              }`}>
+                {adjustmentAmount > 0 ? (
+                  <TrendingUp className="h-4 w-4" />
+                ) : adjustmentAmount < 0 ? (
+                  <TrendingDown className="h-4 w-4" />
+                ) : null}
+                <span>
+                  Adjustment: {adjustmentAmount > 0 ? '+' : ''}
+                  {adjustmentType === "hours" 
+                    ? `${adjustmentAmount} hrs`
+                    : `$${adjustmentAmount.toLocaleString()}`}
+                </span>
+              </div>
+
+              {/* Warning: Zero budget */}
+              {isZeroBudget && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Setting budget to zero will remove all budget limits for this case.
+                  </AlertDescription>
+                </Alert>
               )}
-            />
 
-            <div className="text-sm text-muted-foreground">
-              Current: {adjustmentType === "hours" 
-                ? `${currentBudget.hours} hrs` 
-                : `$${currentBudget.dollars.toLocaleString()}`}
-            </div>
+              {/* Warning: Below consumed */}
+              {isBelowConsumed && (
+                <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-700 dark:text-yellow-400">
+                    New budget is below already consumed amount. This will show as over-budget.
+                  </AlertDescription>
+                </Alert>
+              )}
 
-            <FormField
-              control={form.control}
-              name="new_value"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New {adjustmentType === "hours" ? "Hours" : "Dollars"}</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      {adjustmentType === "dollars" && (
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      )}
-                      <Input 
-                        type="number" 
-                        step={adjustmentType === "hours" ? "0.5" : "1"}
+              {/* Confirmation for significant reduction */}
+              {showConfirmReduction && (
+                <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950/30">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-orange-700 dark:text-orange-400">
+                    This is a significant reduction (&gt;25%). Click "Confirm Reduction" to proceed.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <FormField
+                control={form.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason *</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Explain reason for adjustment..."
                         {...field} 
-                        className={adjustmentType === "dollars" ? "pl-6" : ""}
                       />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className={`text-sm font-medium ${adjustmentAmount > 0 ? 'text-green-600' : adjustmentAmount < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-              Adjustment: {adjustmentAmount > 0 ? '+' : ''}{adjustmentType === "hours" 
-                ? `${adjustmentAmount} hrs`
-                : `$${adjustmentAmount.toLocaleString()}`}
-            </div>
-
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reason *</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Explain reason for adjustment..."
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button type="submit" disabled={form.formState.isSubmitting || adjustmentAmount === 0}>
-              {form.formState.isSubmitting ? "Saving..." : "Update Budget"}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => handleOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={form.formState.isSubmitting || adjustmentAmount === 0}
+                  variant={showConfirmReduction ? "destructive" : "default"}
+                >
+                  {form.formState.isSubmitting 
+                    ? "Saving..." 
+                    : showConfirmReduction 
+                      ? "Confirm Reduction" 
+                      : "Update Budget"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
