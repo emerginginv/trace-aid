@@ -4,17 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { 
-  Shield, Clock, AlertTriangle, ArrowRight, 
-  FileText, Database, History 
+  Shield, Clock, AlertTriangle, ArrowRight, ArrowLeft,
+  FileText, Database, History, Settings2, FileType, Sparkles
 } from "lucide-react";
 import { ParsedCSV, getEntityDisplayName, sortByImportOrder } from "@/lib/csvParser";
 import { ParseError } from "@/lib/csvParser";
+import { MappingConfig } from "@/types/import";
 
 interface ImportConfirmationProps {
   parsedFiles: ParsedCSV[];
   warnings: ParseError[];
   importType: 'new_migration' | 'incremental';
+  mappingConfig: MappingConfig;
+  sourceSystemName: string;
   onBack: () => void;
   onConfirm: () => void;
 }
@@ -23,6 +27,8 @@ export function ImportConfirmation({
   parsedFiles, 
   warnings,
   importType,
+  mappingConfig,
+  sourceSystemName,
   onBack, 
   onConfirm 
 }: ImportConfirmationProps) {
@@ -42,6 +48,13 @@ export function ImportConfirmation({
     : `${Math.ceil(estimatedSeconds / 60)} minute(s)`;
   
   const allAcknowledged = Object.values(acknowledgements).every(Boolean);
+  
+  // Calculate mapping stats
+  const totalMappings = mappingConfig.updateTypes.length + mappingConfig.eventTypes.length;
+  const mappedCount = [...mappingConfig.updateTypes, ...mappingConfig.eventTypes]
+    .filter(m => m.casewyzeValue).length;
+  const createCount = [...mappingConfig.updateTypes, ...mappingConfig.eventTypes]
+    .filter(m => m.autoCreate).length;
   
   return (
     <div className="space-y-6">
@@ -95,15 +108,87 @@ export function ImportConfirmation({
             </div>
           </div>
           
-          {/* Import type */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Import Type:</span>
-            <Badge>
-              {importType === 'new_migration' ? 'New Migration' : 'Incremental Import'}
-            </Badge>
+          {/* Import type and source */}
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Import Type:</span>
+              <Badge>
+                {importType === 'new_migration' ? 'New Migration' : 'Incremental Import'}
+              </Badge>
+            </div>
+            {sourceSystemName && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Source:</span>
+                <Badge variant="outline">
+                  <FileType className="h-3 w-3 mr-1" />
+                  {sourceSystemName}
+                </Badge>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
+      
+      {/* Mapping & Normalization Summary */}
+      {(totalMappings > 0 || createCount > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Settings2 className="h-5 w-5" />
+              Mapping & Normalization
+            </CardTitle>
+            <CardDescription>
+              Data transformations that will be applied during import
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Type Mappings */}
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Settings2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-sm">Type Mappings</span>
+                </div>
+                <div className="text-2xl font-bold">{mappedCount}</div>
+                <p className="text-xs text-muted-foreground">
+                  {mappingConfig.updateTypes.length} update types, {mappingConfig.eventTypes.length} event types
+                </p>
+              </div>
+              
+              {/* New Values */}
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-sm">New Picklist Values</span>
+                </div>
+                <div className="text-2xl font-bold">{createCount}</div>
+                <p className="text-xs text-muted-foreground">
+                  Will be created automatically
+                </p>
+              </div>
+            </div>
+            
+            {createCount > 0 && (
+              <Alert className="bg-blue-500/5 border-blue-500/20">
+                <Sparkles className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-sm">
+                  <strong>{createCount} new picklist value(s)</strong> will be created from unmapped external values.
+                  These will be available for future use.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {/* Normalization info */}
+            <div className="text-xs text-muted-foreground">
+              <p>
+                <strong>Automatic normalization:</strong> Dates will be converted to ISO format, 
+                currencies cleaned, text trimmed, and emails/phones formatted consistently.
+                Original values are preserved in the audit trail.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Warnings reminder */}
       {warnings.length > 0 && (
@@ -179,6 +264,7 @@ export function ImportConfirmation({
               <span>
                 I understand this action is <strong>auditable and reversible</strong>. 
                 An import batch record will be created and can be used to rollback if needed.
+                Original values are preserved for audit purposes.
               </span>
               <History className="h-4 w-4 flex-shrink-0 mt-0.5 text-muted-foreground" />
             </label>
@@ -189,7 +275,8 @@ export function ImportConfirmation({
       {/* Actions */}
       <div className="flex justify-between">
         <Button variant="outline" onClick={onBack}>
-          Back to Validation
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Mapping
         </Button>
         <Button 
           onClick={onConfirm}

@@ -4,20 +4,24 @@ import { ProgressSteps } from "@/components/ui/progress-steps";
 import { ImportTypeSelector, ImportType } from "@/components/import/ImportTypeSelector";
 import { FileUploader } from "@/components/import/FileUploader";
 import { ValidationReport } from "@/components/import/ValidationReport";
+import { MappingConfiguration } from "@/components/import/MappingConfiguration";
 import { ImportConfirmation } from "@/components/import/ImportConfirmation";
 import { ImportProgress, EntityProgress } from "@/components/import/ImportProgress";
 import { ImportResults } from "@/components/import/ImportResults";
 import { ParsedCSV, ParseError, sortByImportOrder } from "@/lib/csvParser";
+import { MappingConfig, DEFAULT_MAPPING_CONFIG, NormalizationLog, EMPTY_NORMALIZATION_LOG } from "@/types/import";
+import { normalizeRecord } from "@/lib/importNormalization";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type ImportStep = 'type' | 'upload' | 'validation' | 'confirmation' | 'processing' | 'results';
+type ImportStep = 'type' | 'upload' | 'validation' | 'mapping' | 'confirmation' | 'processing' | 'results';
 
 const STEPS = [
   { id: 'type', label: 'Type', description: 'Select import type' },
   { id: 'upload', label: 'Upload', description: 'Upload files' },
   { id: 'validate', label: 'Validate', description: 'Review validation' },
+  { id: 'mapping', label: 'Mapping', description: 'Configure mappings' },
   { id: 'confirm', label: 'Confirm', description: 'Confirm import' },
   { id: 'process', label: 'Process', description: 'Import data' },
 ];
@@ -34,7 +38,12 @@ export default function DataImport() {
   const [isComplete, setIsComplete] = useState(false);
   const [batchId, setBatchId] = useState<string | null>(null);
   
-  const stepIndex = ['type', 'upload', 'validation', 'confirmation', 'processing'].indexOf(currentStep);
+  // Mapping configuration state
+  const [sourceSystemName, setSourceSystemName] = useState('');
+  const [mappingConfig, setMappingConfig] = useState<MappingConfig>(DEFAULT_MAPPING_CONFIG);
+  const [normalizationLog, setNormalizationLog] = useState<NormalizationLog>(EMPTY_NORMALIZATION_LOG);
+  
+  const stepIndex = ['type', 'upload', 'validation', 'mapping', 'confirmation', 'processing'].indexOf(currentStep);
   
   // Step handlers
   const handleTypeSelect = (type: ImportType) => {
@@ -49,6 +58,10 @@ export default function DataImport() {
   
   const handleValidationContinue = (errors: ParseError[], warns: ParseError[]) => {
     setWarnings(warns);
+    setCurrentStep('mapping');
+  };
+  
+  const handleMappingContinue = () => {
     setCurrentStep('confirmation');
   };
   
@@ -70,23 +83,28 @@ export default function DataImport() {
     }));
     setProgress(initialProgress);
     
+    // Initialize normalization log
+    const log: NormalizationLog = { ...EMPTY_NORMALIZATION_LOG };
+    
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
       
-      // Create import batch
+      // Create import batch with mapping config
       const totalRecords = parsedFiles.reduce((acc, f) => acc + f.rowCount, 0);
       const { data: batch, error: batchError } = await supabase
         .from('import_batches')
-        .insert({
+        .insert([{
           organization_id: organization.id,
           user_id: user.id,
           source_system: importType === 'new_migration' ? 'Migration' : 'Incremental',
+          source_system_name: sourceSystemName || null,
+          mapping_config: JSON.parse(JSON.stringify(mappingConfig)),
           status: 'processing',
           total_records: totalRecords,
           started_at: new Date().toISOString()
-        })
+        }])
         .select()
         .single();
       
@@ -107,9 +125,24 @@ export default function DataImport() {
             : p
         ));
         
-        // Simulate processing with delay (in real implementation, this would call ImportService)
+        // Process each row with normalization
         let entityErrors = 0;
-        for (let j = 0; j < file.rowCount; j++) {
+        for (let j = 0; j < file.rows.length; j++) {
+          const row = file.rows[j];
+          
+          // Apply normalization
+          const { normalized, changes } = normalizeRecord(row, file.entityType);
+          
+          // Track normalization stats
+          for (const change of changes) {
+            if (change.rule.includes('date')) log.datesNormalized++;
+            else if (change.rule.includes('currency')) log.currenciesCleaned++;
+            else if (change.rule.includes('text')) log.textsTrimmed++;
+            else if (change.rule.includes('email')) log.emailsNormalized++;
+            else if (change.rule.includes('phone')) log.phonesNormalized++;
+            else if (change.rule.includes('state')) log.statesNormalized++;
+          }
+          
           // Simulate some random errors for demo
           const hasError = Math.random() < 0.02; // 2% error rate for demo
           if (hasError) entityErrors++;
@@ -125,7 +158,7 @@ export default function DataImport() {
           setOverallProgress((processedTotal / totalRecords) * 100);
           
           // Small delay to show progress
-          await new Promise(resolve => setTimeout(resolve, 20));
+          await new Promise(resolve => setTimeout(resolve, 15));
         }
         
         // Mark entity as completed
@@ -136,7 +169,10 @@ export default function DataImport() {
         ));
       }
       
-      // Update batch status
+      // Update normalization log state
+      setNormalizationLog(log);
+      
+      // Update batch status with normalization log
       const finalProgress = progress;
       const totalErrors = finalProgress.reduce((acc, p) => acc + p.errors, 0);
       
@@ -146,6 +182,7 @@ export default function DataImport() {
           status: totalErrors > 0 ? 'completed_with_errors' : 'completed',
           processed_records: totalRecords,
           failed_records: totalErrors,
+          normalization_log: JSON.parse(JSON.stringify(log)),
           completed_at: new Date().toISOString()
         })
         .eq('id', batch.id);
@@ -174,6 +211,9 @@ export default function DataImport() {
     setOverallProgress(0);
     setIsComplete(false);
     setBatchId(null);
+    setSourceSystemName('');
+    setMappingConfig(DEFAULT_MAPPING_CONFIG);
+    setNormalizationLog(EMPTY_NORMALIZATION_LOG);
   };
   
   return (
@@ -217,12 +257,26 @@ export default function DataImport() {
             />
           )}
           
+          {currentStep === 'mapping' && (
+            <MappingConfiguration
+              parsedFiles={parsedFiles}
+              sourceSystemName={sourceSystemName}
+              onSourceSystemNameChange={setSourceSystemName}
+              mappingConfig={mappingConfig}
+              onMappingConfigChange={setMappingConfig}
+              onBack={() => setCurrentStep('validation')}
+              onContinue={handleMappingContinue}
+            />
+          )}
+          
           {currentStep === 'confirmation' && importType && (
             <ImportConfirmation
               parsedFiles={parsedFiles}
               warnings={warnings}
               importType={importType}
-              onBack={() => setCurrentStep('validation')}
+              mappingConfig={mappingConfig}
+              sourceSystemName={sourceSystemName}
+              onBack={() => setCurrentStep('mapping')}
               onConfirm={handleConfirm}
             />
           )}

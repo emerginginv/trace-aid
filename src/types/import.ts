@@ -372,10 +372,132 @@ export interface ImportConfig {
   dryRun: boolean;
   /** Default hourly rate for time entries without rate */
   defaultHourlyRate?: number;
+  /** Mapping configuration for type transformations */
+  mappingConfig?: MappingConfig;
+  /** Human-readable name for the source system */
+  sourceSystemName?: string;
+  /** Always preserve original values for audit */
+  preserveOriginalValues?: boolean;
 }
 
 export const DEFAULT_IMPORT_CONFIG: ImportConfig = {
   createMissingPicklists: true,
   skipOnError: true,
   dryRun: false,
+  preserveOriginalValues: true,
 };
+
+// ============================================
+// Mapping & Normalization Types
+// ============================================
+
+/**
+ * Single type mapping from external value to CaseWyze value
+ */
+export interface TypeMapping {
+  /** Value from external system */
+  externalValue: string;
+  /** Mapped CaseWyze picklist value */
+  casewyzeValue: string;
+  /** Create picklist value if doesn't exist */
+  autoCreate: boolean;
+}
+
+/**
+ * Complete mapping configuration for an import batch
+ */
+export interface MappingConfig {
+  updateTypes: TypeMapping[];
+  eventTypes: TypeMapping[];
+  /** What to do with unmapped values */
+  unmappedAction: 'skip' | 'use_original' | 'use_default';
+  /** Default update type for unmapped values */
+  defaultUpdateType?: string;
+  /** Default event type for unmapped values */
+  defaultEventType?: string;
+}
+
+export const DEFAULT_MAPPING_CONFIG: MappingConfig = {
+  updateTypes: [],
+  eventTypes: [],
+  unmappedAction: 'use_original',
+};
+
+/**
+ * Result of mapping resolution
+ */
+export interface MappingResult {
+  /** Final CaseWyze value */
+  value: string;
+  /** Whether a new picklist was created */
+  wasCreated: boolean;
+  /** Original external value */
+  originalValue: string;
+  /** How the value was resolved */
+  matchType: 'exact' | 'mapped' | 'fuzzy' | 'created' | 'default' | 'original';
+}
+
+/**
+ * Single normalization change record
+ */
+export interface NormalizationChange {
+  field: string;
+  originalValue: unknown;
+  normalizedValue: unknown;
+  rule: string;
+}
+
+/**
+ * Result of normalizing a value
+ */
+export interface NormalizationResult<T> {
+  /** Normalized value */
+  normalized: T;
+  /** Original value before normalization */
+  original: unknown;
+  /** List of changes made */
+  changes: NormalizationChange[];
+}
+
+/**
+ * Summary of normalizations applied to a batch
+ */
+export interface NormalizationLog {
+  datesNormalized: number;
+  currenciesCleaned: number;
+  textsTrimmed: number;
+  emailsNormalized: number;
+  phonesNormalized: number;
+  statesNormalized: number;
+  typesMapped: {
+    update_type: number;
+    event_type: number;
+  };
+  typesCreated: string[];
+}
+
+export const EMPTY_NORMALIZATION_LOG: NormalizationLog = {
+  datesNormalized: 0,
+  currenciesCleaned: 0,
+  textsTrimmed: 0,
+  emailsNormalized: 0,
+  phonesNormalized: 0,
+  statesNormalized: 0,
+  typesMapped: { update_type: 0, event_type: 0 },
+  typesCreated: [],
+};
+
+/**
+ * Stored mapping configuration for reuse
+ */
+export interface SavedTypeMapping {
+  id: string;
+  organization_id: string;
+  name: string;
+  source_system: string;
+  mapping_type: 'update_type' | 'event_type';
+  mappings: TypeMapping[];
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}

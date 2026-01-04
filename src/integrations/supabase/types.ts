@@ -861,9 +861,12 @@ export type Database = {
           error_log: Json | null
           failed_records: number
           id: string
+          mapping_config: Json | null
+          normalization_log: Json | null
           organization_id: string
           processed_records: number
           source_system: string
+          source_system_name: string | null
           started_at: string | null
           status: string
           total_records: number
@@ -875,9 +878,12 @@ export type Database = {
           error_log?: Json | null
           failed_records?: number
           id?: string
+          mapping_config?: Json | null
+          normalization_log?: Json | null
           organization_id: string
           processed_records?: number
           source_system: string
+          source_system_name?: string | null
           started_at?: string | null
           status?: string
           total_records?: number
@@ -889,9 +895,12 @@ export type Database = {
           error_log?: Json | null
           failed_records?: number
           id?: string
+          mapping_config?: Json | null
+          normalization_log?: Json | null
           organization_id?: string
           processed_records?: number
           source_system?: string
+          source_system_name?: string | null
           started_at?: string | null
           status?: string
           total_records?: number
@@ -954,6 +963,50 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_type_mappings: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean | null
+          mapping_type: string
+          mappings: Json
+          name: string
+          organization_id: string
+          source_system: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          mapping_type: string
+          mappings?: Json
+          name: string
+          organization_id: string
+          source_system: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          mapping_type?: string
+          mappings?: Json
+          name?: string
+          organization_id?: string
+          source_system?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_type_mappings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
