@@ -4,11 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Loader2, Search, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
+import { InvoiceFromExpenses } from "@/components/case-detail/InvoiceFromExpenses";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -29,18 +33,32 @@ interface Invoice {
   total_paid?: number;
 }
 
+interface Case {
+  id: string;
+  title: string;
+  case_number: string;
+}
+
 const AllInvoices = () => {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [cases, setCases] = useState<Case[]>([]);
   const [retainerMap, setRetainerMap] = useState<Record<string, number>>({});
   
   // Filter states
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [showPayModal, setShowPayModal] = useState<Invoice | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<string | null>(null);
+  
+  // Create invoice dialog states
+  const [showCreateInvoiceDialog, setShowCreateInvoiceDialog] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState<string>("");
+  const [showInvoiceFromExpenses, setShowInvoiceFromExpenses] = useState(false);
   
   // Pagination states
   const [invoicePage, setInvoicePage] = useState(1);
@@ -60,14 +78,16 @@ const AllInvoices = () => {
       setLoading(true);
       const orgId = organization.id;
 
-      // Fetch all cases first (needed for joins)
+      // Fetch all cases first (needed for joins and dropdown)
       const { data: casesData, error: casesError } = await supabase
         .from("cases")
         .select("id, title, case_number")
-        .eq("organization_id", orgId);
+        .eq("organization_id", orgId)
+        .order("case_number", { ascending: false });
 
       if (casesError) throw casesError;
 
+      setCases(casesData || []);
       const casesMap = new Map(casesData?.map(c => [c.id, c]) || []);
 
       // Fetch retainer balances for payment modal
@@ -136,7 +156,12 @@ const AllInvoices = () => {
       invoiceStatusFilter === "all" ||
       invoice.status === invoiceStatusFilter;
     
-    return matchesSearch && matchesStatus;
+    // Date range filter
+    const invoiceDate = new Date(invoice.date);
+    const matchesDateFrom = !dateFrom || invoiceDate >= dateFrom;
+    const matchesDateTo = !dateTo || invoiceDate <= dateTo;
+    
+    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
   // Paginated data
@@ -244,11 +269,17 @@ const AllInvoices = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Invoices</h1>
-        <p className="text-muted-foreground">
-          System-wide invoice overview
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Invoices</h1>
+          <p className="text-muted-foreground">
+            System-wide invoice overview
+          </p>
+        </div>
+        <Button onClick={() => setShowCreateInvoiceDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Invoice
+        </Button>
       </div>
 
       {/* Invoices List */}
@@ -288,6 +319,59 @@ const AllInvoices = () => {
                 <SelectItem value="paid">Paid</SelectItem>
               </SelectContent>
             </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={(date) => {
+                    setDateFrom(date);
+                    setInvoicePage(1);
+                  }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, "MMM d, yyyy") : "To date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={(date) => {
+                    setDateTo(date);
+                    setInvoicePage(1);
+                  }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {(dateFrom || dateTo) && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => {
+                  setDateFrom(undefined);
+                  setDateTo(undefined);
+                }}
+                title="Clear date filters"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
             <Select value={invoicePageSize.toString()} onValueChange={(v) => {
               setInvoicePageSize(parseInt(v));
               setInvoicePage(1);
@@ -507,6 +591,65 @@ const AllInvoices = () => {
           onSuccess={fetchInvoiceData}
         />
       )}
+
+      {/* Case Selection Dialog for Create Invoice */}
+      <Dialog open={showCreateInvoiceDialog} onOpenChange={setShowCreateInvoiceDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Invoice</DialogTitle>
+            <DialogDescription>
+              Select a case to create an invoice for. You'll be able to select 
+              approved time and expense entries to include.
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a case..." />
+            </SelectTrigger>
+            <SelectContent>
+              {cases.map(c => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.case_number} - {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateInvoiceDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              disabled={!selectedCaseId}
+              onClick={() => {
+                setShowCreateInvoiceDialog(false);
+                setShowInvoiceFromExpenses(true);
+              }}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice From Expenses Dialog */}
+      <Dialog open={showInvoiceFromExpenses} onOpenChange={setShowInvoiceFromExpenses}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Invoice</DialogTitle>
+            <DialogDescription>
+              Select approved time and expense entries to include in the invoice
+            </DialogDescription>
+          </DialogHeader>
+          <InvoiceFromExpenses 
+            caseId={selectedCaseId} 
+            onSuccess={() => {
+              setShowInvoiceFromExpenses(false);
+              setSelectedCaseId("");
+              fetchInvoiceData();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

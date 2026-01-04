@@ -32,7 +32,12 @@ interface Activity {
   title: string;
 }
 
-export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
+interface InvoiceFromExpensesProps {
+  caseId: string;
+  onSuccess?: () => void;
+}
+
+export const InvoiceFromExpenses = ({ caseId, onSuccess }: InvoiceFromExpensesProps) => {
   const [billableItems, setBillableItems] = useState<BillableItem[]>([]);
   const [subjects, setSubjects] = useState<Record<string, Subject>>({});
   const [activities, setActivities] = useState<Record<string, Activity>>({});
@@ -259,6 +264,11 @@ export const InvoiceFromExpenses = ({ caseId }: { caseId: string }) => {
       setSelectedItems(new Set());
       setRetainerUsed(0);
       fetchBillableItems();
+
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
 
     } catch (error) {
       console.error("Error creating invoice:", error);

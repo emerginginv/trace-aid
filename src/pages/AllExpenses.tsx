@@ -4,10 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Search, Pencil, Trash2, ChevronLeft, ChevronRight, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, Search, Pencil, Trash2, ChevronLeft, ChevronRight, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon } from "lucide-react";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -43,6 +45,8 @@ const AllExpenses = () => {
   // Filter states
   const [expenseSearch, setExpenseSearch] = useState("");
   const [expenseStatusFilter, setExpenseStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [editingExpense, setEditingExpense] = useState<any>(null);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   
@@ -69,7 +73,7 @@ const AllExpenses = () => {
   // Clear selection when filters change
   useEffect(() => {
     setSelectedExpenses(new Set());
-  }, [expenseSearch, expenseStatusFilter, expensePage]);
+  }, [expenseSearch, expenseStatusFilter, expensePage, dateFrom, dateTo]);
 
   const fetchExpenseData = async () => {
     if (!organization?.id) return;
@@ -140,7 +144,12 @@ const AllExpenses = () => {
       (expenseStatusFilter === "rejected" && expense.status === "rejected") ||
       (expenseStatusFilter === "pending" && !expense.invoiced && expense.status === "pending");
     
-    return matchesSearch && matchesStatus;
+    // Date range filter
+    const expenseDate = new Date(expense.date);
+    const matchesDateFrom = !dateFrom || expenseDate >= dateFrom;
+    const matchesDateTo = !dateTo || expenseDate <= dateTo;
+    
+    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
   // Paginated data
@@ -443,6 +452,59 @@ const AllExpenses = () => {
                 <SelectItem value="100">100 per page</SelectItem>
               </SelectContent>
             </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={(date) => {
+                    setDateFrom(date);
+                    setExpensePage(1);
+                  }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, "MMM d, yyyy") : "To date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={(date) => {
+                    setDateTo(date);
+                    setExpensePage(1);
+                  }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {(dateFrom || dateTo) && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => {
+                  setDateFrom(undefined);
+                  setDateTo(undefined);
+                }}
+                title="Clear date filters"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon">
