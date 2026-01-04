@@ -1,22 +1,29 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import type { User } from "@supabase/supabase-js";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: 'admin' | 'manager' | 'investigator' | 'vendor';
   requiresAnyRole?: ('admin' | 'manager' | 'investigator' | 'vendor')[];
-  blockVendors?: boolean; // Explicitly block vendor access
+  blockVendors?: boolean;
 }
 
 const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors = false }: ProtectedRouteProps) => {
   const navigate = useNavigate();
+  const { organization, loading: orgLoading } = useOrganization();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
+    // CRITICAL: Wait for organization context to finish loading
+    if (orgLoading) {
+      return;
+    }
+
     const checkAuth = async (session: any) => {
       if (!session) {
         navigate("/auth");
@@ -25,29 +32,34 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
 
       setUser(session.user);
 
-      // If no role requirement, just check authentication
-      if (!requiredRole && !requiresAnyRole) {
+      // If no role requirement and not blocking vendors, just check authentication
+      if (!requiredRole && !requiresAnyRole && !blockVendors) {
         setAuthorized(true);
         setLoading(false);
         return;
       }
 
-      // Check user's role
+      // Check user's role from organization_members for current org
       try {
-        const { data, error } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+        let userRole: string | null = null;
 
-        if (error) {
-          console.error("Error checking user role:", error);
-          navigate("/");
-          return;
+        if (organization?.id) {
+          const { data: orgMember, error: orgError } = await supabase
+            .from("organization_members")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("organization_id", organization.id)
+            .maybeSingle();
+
+          if (!orgError && orgMember?.role) {
+            userRole = orgMember.role;
+          }
         }
 
-        const userRole = data?.role;
-        console.log("[ProtectedRoute] User role:", userRole, "Required role:", requiredRole, "Requires any role:", requiresAnyRole, "Block vendors:", blockVendors);
+        console.log("[ProtectedRoute] User role:", userRole, 
+                    "Org:", organization?.name,
+                    "Required:", requiredRole, 
+                    "Block vendors:", blockVendors);
 
         // Block vendors if explicitly requested
         if (blockVendors && userRole === 'vendor') {
@@ -84,7 +96,7 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
       (event, session) => {
         if (!session) {
           navigate("/auth");
-        } else {
+        } else if (!orgLoading) {
           checkAuth(session);
         }
       }
@@ -99,9 +111,9 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, requiredRole, requiresAnyRole, blockVendors]);
+  }, [navigate, requiredRole, requiresAnyRole, blockVendors, organization?.id, orgLoading]);
 
-  if (loading) {
+  if (loading || orgLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -113,13 +125,7 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
   }
 
   if (!authorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Checking permissions...</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return user ? <>{children}</> : null;
