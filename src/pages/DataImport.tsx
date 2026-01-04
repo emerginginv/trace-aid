@@ -1,11 +1,14 @@
 import { useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProgressSteps } from "@/components/ui/progress-steps";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MigrationWelcome } from "@/components/import/MigrationWelcome";
 import { MigrationPreparation } from "@/components/import/MigrationPreparation";
+import { MigrationDashboard } from "@/components/import/MigrationDashboard";
 import { ImportTypeSelector, ImportType } from "@/components/import/ImportTypeSelector";
 import { FileUploader } from "@/components/import/FileUploader";
 import { ValidationReport } from "@/components/import/ValidationReport";
+import { ColumnMappingStep } from "@/components/import/ColumnMappingStep";
 import { MappingConfiguration } from "@/components/import/MappingConfiguration";
 import { DryRunProgress } from "@/components/import/DryRunProgress";
 import { DryRunResults } from "@/components/import/DryRunResults";
@@ -20,16 +23,19 @@ import { ImportExecutionEngine } from "@/lib/importExecutionEngine";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { LayoutDashboard, Upload } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
-type ImportStep = 'welcome' | 'prepare' | 'type' | 'upload' | 'validation' | 'mapping' | 'dry-run' | 'dry-run-results' | 'confirmation' | 'processing' | 'results';
+type ImportStep = 'welcome' | 'prepare' | 'type' | 'upload' | 'column-mapping' | 'validation' | 'mapping' | 'dry-run' | 'dry-run-results' | 'confirmation' | 'processing' | 'results';
 
 const STEPS = [
   { id: 'welcome', label: 'Welcome', description: 'Get started' },
   { id: 'prepare', label: 'Prepare', description: 'Download templates' },
   { id: 'type', label: 'Type', description: 'Select import type' },
   { id: 'upload', label: 'Upload', description: 'Upload files' },
+  { id: 'column-mapping', label: 'Columns', description: 'Map columns' },
   { id: 'validate', label: 'Validate', description: 'Review validation' },
-  { id: 'mapping', label: 'Mapping', description: 'Configure mappings' },
+  { id: 'mapping', label: 'Types', description: 'Map types' },
   { id: 'dry-run', label: 'Dry Run', description: 'Simulate import' },
   { id: 'confirm', label: 'Confirm', description: 'Confirm import' },
   { id: 'process', label: 'Process', description: 'Import data' },
@@ -37,6 +43,8 @@ const STEPS = [
 
 export default function DataImport() {
   const { organization } = useOrganization();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'dashboard');
   const [currentStep, setCurrentStep] = useState<ImportStep>('welcome');
   const [importType, setImportType] = useState<ImportType | null>(null);
   const [parsedFiles, setParsedFiles] = useState<ParsedCSV[]>([]);
@@ -61,7 +69,7 @@ export default function DataImport() {
   // Execution result state
   const [executionResult, setExecutionResult] = useState<ImportExecutionResult | null>(null);
   
-  const stepIndex = ['welcome', 'prepare', 'type', 'upload', 'validation', 'mapping', 'dry-run', 'confirmation', 'processing'].indexOf(currentStep);
+  const stepIndex = ['welcome', 'prepare', 'type', 'upload', 'column-mapping', 'validation', 'mapping', 'dry-run', 'confirmation', 'processing'].indexOf(currentStep);
   
   // Step handlers
   const handleTypeSelect = (type: ImportType) => {
@@ -71,6 +79,11 @@ export default function DataImport() {
   
   const handleFilesValidated = (files: ParsedCSV[]) => {
     setParsedFiles(sortByImportOrder(files));
+    setCurrentStep('column-mapping');
+  };
+  
+  const handleColumnMappingContinue = (mappedFiles: ParsedCSV[]) => {
+    setParsedFiles(sortByImportOrder(mappedFiles));
     setCurrentStep('validation');
   };
   
@@ -282,6 +295,16 @@ export default function DataImport() {
     setCurrentStep('welcome');
   };
   
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSearchParams(tab === 'dashboard' ? {} : { tab });
+  };
+
+  const handleStartNewFromDashboard = () => {
+    setActiveTab('wizard');
+    setCurrentStep('welcome');
+  };
+  
   return (
     <div className="container max-w-5xl py-8 space-y-8">
       {/* Header */}
@@ -291,115 +314,143 @@ export default function DataImport() {
           Import data from external systems using CaseWyze templates
         </p>
       </div>
-      
-      {/* Progress Steps */}
-      {currentStep !== 'results' && (
-        <ProgressSteps
-          steps={STEPS}
-          currentStep={stepIndex}
-          orientation="horizontal"
-        />
-      )}
-      
-      {/* Step Content */}
-      <Card className="border-0 shadow-none bg-transparent">
-        <CardContent className="p-0">
-          {currentStep === 'welcome' && (
-            <MigrationWelcome onBegin={handleWelcomeBegin} />
-          )}
-          
-          {currentStep === 'prepare' && (
-            <MigrationPreparation 
-              onBack={handlePreparationBack}
-              onContinue={handlePreparationContinue}
+
+      {/* Dashboard / Wizard Tabs */}
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="dashboard" className="gap-2">
+            <LayoutDashboard className="h-4 w-4" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="wizard" className="gap-2">
+            <Upload className="h-4 w-4" />
+            New Import
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard" className="mt-6">
+          <MigrationDashboard />
+        </TabsContent>
+
+        <TabsContent value="wizard" className="mt-6 space-y-6">
+          {/* Progress Steps */}
+          {currentStep !== 'results' && (
+            <ProgressSteps
+              steps={STEPS}
+              currentStep={stepIndex}
+              orientation="horizontal"
             />
           )}
           
-          {currentStep === 'type' && (
-            <ImportTypeSelector 
-              onSelect={handleTypeSelect} 
-              onBack={() => setCurrentStep('prepare')}
-            />
-          )}
-          
-          {currentStep === 'upload' && importType && (
-            <FileUploader 
-              importType={importType}
-              onFilesValidated={handleFilesValidated}
-            />
-          )}
-          
-          {currentStep === 'validation' && (
-            <ValidationReport
-              parsedFiles={parsedFiles}
-              onBack={() => setCurrentStep('upload')}
-              onContinue={handleValidationContinue}
-            />
-          )}
-          
-          {currentStep === 'mapping' && (
-            <MappingConfiguration
-              parsedFiles={parsedFiles}
-              sourceSystemName={sourceSystemName}
-              onSourceSystemNameChange={setSourceSystemName}
-              mappingConfig={mappingConfig}
-              onMappingConfigChange={setMappingConfig}
-              onBack={() => setCurrentStep('validation')}
-              onContinue={handleMappingContinue}
-            />
-          )}
-          
-          {currentStep === 'dry-run' && (
-            <DryRunProgress
-              progress={dryRunProgress}
-              message={dryRunMessage}
-              isComplete={isDryRunComplete}
-              hasErrors={dryRunResult ? !dryRunResult.success : false}
-            />
-          )}
-          
-          {currentStep === 'dry-run-results' && dryRunResult && (
-            <DryRunResults
-              result={dryRunResult}
-              onBack={() => setCurrentStep('mapping')}
-              onContinue={handleDryRunContinue}
-            />
-          )}
-          
-          {currentStep === 'confirmation' && importType && (
-            <ImportConfirmation
-              parsedFiles={parsedFiles}
-              warnings={warnings}
-              importType={importType}
-              mappingConfig={mappingConfig}
-              sourceSystemName={sourceSystemName}
-              dryRunResult={dryRunResult}
-              onBack={() => setCurrentStep('dry-run-results')}
-              onConfirm={handleConfirm}
-            />
-          )}
-          
-          {currentStep === 'processing' && (
-            <ImportProgress
-              parsedFiles={parsedFiles}
-              progress={progress}
-              currentEntity={currentEntity}
-              overallProgress={overallProgress}
-              isComplete={isComplete}
-              onComplete={handleProcessingComplete}
-            />
-          )}
-          
-          {currentStep === 'results' && (
-            <ImportResults
-              batchId={batchId}
-              progress={progress}
-              onStartNew={handleStartNew}
-              executionResult={executionResult}
-            />
-          )}
-        </CardContent>
-      </Card>
+          {/* Step Content */}
+          <Card className="border-0 shadow-none bg-transparent">
+            <CardContent className="p-0">
+              {currentStep === 'welcome' && (
+                <MigrationWelcome onBegin={handleWelcomeBegin} />
+              )}
+              
+              {currentStep === 'prepare' && (
+                <MigrationPreparation 
+                  onBack={handlePreparationBack}
+                  onContinue={handlePreparationContinue}
+                />
+              )}
+              
+              {currentStep === 'type' && (
+                <ImportTypeSelector 
+                  onSelect={handleTypeSelect} 
+                  onBack={() => setCurrentStep('prepare')}
+                />
+              )}
+              
+              {currentStep === 'upload' && importType && (
+                <FileUploader 
+                  importType={importType}
+                  onFilesValidated={handleFilesValidated}
+                />
+              )}
+              
+              {currentStep === 'column-mapping' && (
+                <ColumnMappingStep
+                  parsedFiles={parsedFiles}
+                  onBack={() => setCurrentStep('upload')}
+                  onContinue={handleColumnMappingContinue}
+                />
+              )}
+              
+              {currentStep === 'validation' && (
+                <ValidationReport
+                  parsedFiles={parsedFiles}
+                  onBack={() => setCurrentStep('column-mapping')}
+                  onContinue={handleValidationContinue}
+                />
+              )}
+              
+              {currentStep === 'mapping' && (
+                <MappingConfiguration
+                  parsedFiles={parsedFiles}
+                  sourceSystemName={sourceSystemName}
+                  onSourceSystemNameChange={setSourceSystemName}
+                  mappingConfig={mappingConfig}
+                  onMappingConfigChange={setMappingConfig}
+                  onBack={() => setCurrentStep('validation')}
+                  onContinue={handleMappingContinue}
+                />
+              )}
+              
+              {currentStep === 'dry-run' && (
+                <DryRunProgress
+                  progress={dryRunProgress}
+                  message={dryRunMessage}
+                  isComplete={isDryRunComplete}
+                  hasErrors={dryRunResult ? !dryRunResult.success : false}
+                />
+              )}
+              
+              {currentStep === 'dry-run-results' && dryRunResult && (
+                <DryRunResults
+                  result={dryRunResult}
+                  onBack={() => setCurrentStep('mapping')}
+                  onContinue={handleDryRunContinue}
+                />
+              )}
+              
+              {currentStep === 'confirmation' && importType && (
+                <ImportConfirmation
+                  parsedFiles={parsedFiles}
+                  warnings={warnings}
+                  importType={importType}
+                  mappingConfig={mappingConfig}
+                  sourceSystemName={sourceSystemName}
+                  dryRunResult={dryRunResult}
+                  onBack={() => setCurrentStep('dry-run-results')}
+                  onConfirm={handleConfirm}
+                />
+              )}
+              
+              {currentStep === 'processing' && (
+                <ImportProgress
+                  parsedFiles={parsedFiles}
+                  progress={progress}
+                  currentEntity={currentEntity}
+                  overallProgress={overallProgress}
+                  isComplete={isComplete}
+                  onComplete={handleProcessingComplete}
+                />
+              )}
+              
+              {currentStep === 'results' && (
+                <ImportResults
+                  batchId={batchId}
+                  progress={progress}
+                  onStartNew={handleStartNew}
+                  executionResult={executionResult}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
