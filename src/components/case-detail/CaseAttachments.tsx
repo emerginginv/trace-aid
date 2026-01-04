@@ -1224,6 +1224,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
           onOpenChange={setEmailDialogOpen}
           attachments={selectedAttachments}
           caseNumber={caseNumber}
+          caseId={caseId}
           attachmentType="case"
           onSuccess={handleBulkShareSuccess}
         />
