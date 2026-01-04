@@ -326,15 +326,15 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold">Case Activities</h3>
-            <p className="text-sm text-muted-foreground mt-1">
+            <h2 className="text-2xl font-bold">Case Activities</h2>
+            <p className="text-muted-foreground">
               Showing {sortedActivities.length} {activeTab === "tasks" ? "task" : "event"}{sortedActivities.length !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="flex gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline">
                   <Download className="mr-2 h-4 w-4" />
                   Export
                 </Button>
@@ -367,10 +367,9 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
             </DropdownMenu>
             <Button 
               onClick={() => setFormOpen(true)} 
-              size="sm"
               disabled={!canAddActivities || isClosedCase}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="h-4 w-4 mr-2" />
               Add {activeTab === "tasks" ? "Task" : "Event"}
             </Button>
           </div>
