@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History } from "lucide-react";
 import { useConfirmation } from "@/components/ui/confirmation-dialog";
 import { RevokeMode } from "./RevokeAccessDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -27,6 +27,8 @@ import { AttachmentSelectionBar } from "./AttachmentSelectionBar";
 import { BulkShareAttachmentDialog } from "./BulkShareAttachmentDialog";
 import { EmailAttachmentsDialog } from "./EmailAttachmentsDialog";
 import { RevokeAccessDialog } from "./RevokeAccessDialog";
+import { AttachmentAccessLogDialog } from "./AttachmentAccessLogDialog";
+import { CaseAccessAuditPanel } from "./CaseAccessAuditPanel";
 
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
@@ -98,6 +100,10 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [revokeMode, setRevokeMode] = useState<RevokeMode>("bulk");
   const [singleRevokeAttachment, setSingleRevokeAttachment] = useState<Attachment | null>(null);
+  
+  // Access log dialog state
+  const [accessLogDialogOpen, setAccessLogDialogOpen] = useState(false);
+  const [accessLogAttachment, setAccessLogAttachment] = useState<Attachment | null>(null);
   
   // Confirmation hook for single revoke
   const { confirm, ConfirmDialog } = useConfirmation();
@@ -579,6 +585,13 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     setRevokeDialogOpen(true);
   };
 
+  // Handle viewing access log for a single attachment
+  const handleViewAccessLog = (attachment: Attachment, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setAccessLogAttachment(attachment);
+    setAccessLogDialogOpen(true);
+  };
+
   const renderPreviewContent = () => {
     if (!previewAttachment) return null;
 
@@ -1056,6 +1069,17 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                           <span className="hidden sm:inline">Revoke</span>
                         </Button>
                       )}
+                      {isShared && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleViewAccessLog(attachment, e)}
+                          className="h-7 sm:h-8 text-xs px-2"
+                        >
+                          <History className="h-3 w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Log</span>
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1236,6 +1260,22 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                             <TooltipContent>Revoke share links</TooltipContent>
                           </Tooltip>
                         )}
+                        {isShared && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => handleViewAccessLog(attachment, e)}
+                                className="h-7 w-7 sm:h-8 sm:w-8"
+                                title="View Access Log"
+                              >
+                                <History className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>View access log</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1365,6 +1405,19 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
           mode={revokeMode}
           allCaseAttachmentIds={revokeMode === "case" ? attachments.map(a => a.id) : undefined}
           onSuccess={handleRevokeSuccess}
+        />
+
+        <AttachmentAccessLogDialog
+          open={accessLogDialogOpen}
+          onOpenChange={setAccessLogDialogOpen}
+          attachment={accessLogAttachment}
+        />
+
+        {/* Access Audit Panel - collapsible at bottom */}
+        <CaseAccessAuditPanel
+          caseId={caseId}
+          attachments={attachments}
+          canExport={canEditAttachments}
         />
       </div>
     </TooltipProvider>
