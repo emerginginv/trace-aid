@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -94,26 +94,59 @@ const Contacts = () => {
     }
   };
 
+  // Pending deletion tracking for undo functionality
+  const pendingDeletions = useRef<Map<string, { item: Contact; timeoutId: NodeJS.Timeout }>>(new Map());
+  const UNDO_DELAY = 5000;
+
   const handleDelete = async () => {
     if (!contactToDelete) return;
-
-    try {
-      const { error } = await supabase
-        .from("contacts")
-        .delete()
-        .eq("id", contactToDelete);
-
-      if (error) throw error;
-
-      toast.success("Contact deleted successfully");
-      fetchContacts();
-    } catch (error) {
-      toast.error("Failed to delete contact");
-      console.error(error);
-    } finally {
-      setDeleteDialogOpen(false);
-      setContactToDelete(null);
-    }
+    
+    const contactItem = contacts.find(c => c.id === contactToDelete);
+    if (!contactItem) return;
+    
+    // Close dialog and clear state immediately
+    setDeleteDialogOpen(false);
+    const deletedId = contactToDelete;
+    setContactToDelete(null);
+    
+    // Optimistically remove from UI
+    setContacts(prev => prev.filter(c => c.id !== deletedId));
+    
+    // Show toast with undo action
+    toast("Contact deleted", {
+      description: "Click undo to restore",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const pending = pendingDeletions.current.get(deletedId);
+          if (pending) {
+            clearTimeout(pending.timeoutId);
+            setContacts(prev => [...prev, pending.item]);
+            pendingDeletions.current.delete(deletedId);
+            toast.success("Contact restored");
+          }
+        },
+      },
+      duration: UNDO_DELAY,
+    });
+    
+    // Schedule actual deletion
+    const timeoutId = setTimeout(async () => {
+      const { error } = await supabase.from("contacts").delete().eq("id", deletedId);
+      if (error) {
+        const pending = pendingDeletions.current.get(deletedId);
+        if (pending) {
+          setContacts(prev => [...prev, pending.item]);
+          toast.error("Failed to delete contact. Item restored.");
+        }
+      }
+      pendingDeletions.current.delete(deletedId);
+    }, UNDO_DELAY);
+    
+    pendingDeletions.current.set(deletedId, {
+      item: contactItem,
+      timeoutId,
+    });
   };
 
   const getInitials = (firstName: string, lastName: string) => {

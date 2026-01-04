@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -94,26 +94,59 @@ const Accounts = () => {
 
   const uniqueIndustries = Array.from(new Set(accounts.map(a => a.industry).filter(Boolean)));
 
+  // Pending deletion tracking for undo functionality
+  const pendingDeletions = useRef<Map<string, { item: Account; timeoutId: NodeJS.Timeout }>>(new Map());
+  const UNDO_DELAY = 5000;
+
   const handleDelete = async () => {
     if (!accountToDelete) return;
-
-    try {
-      const { error } = await supabase
-        .from("accounts")
-        .delete()
-        .eq("id", accountToDelete);
-
-      if (error) throw error;
-
-      toast.success("Account deleted successfully");
-      fetchAccounts();
-    } catch (error) {
-      toast.error("Failed to delete account");
-      console.error(error);
-    } finally {
-      setDeleteDialogOpen(false);
-      setAccountToDelete(null);
-    }
+    
+    const accountItem = accounts.find(a => a.id === accountToDelete);
+    if (!accountItem) return;
+    
+    // Close dialog and clear state immediately
+    setDeleteDialogOpen(false);
+    const deletedId = accountToDelete;
+    setAccountToDelete(null);
+    
+    // Optimistically remove from UI
+    setAccounts(prev => prev.filter(a => a.id !== deletedId));
+    
+    // Show toast with undo action
+    toast("Account deleted", {
+      description: "Click undo to restore",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const pending = pendingDeletions.current.get(deletedId);
+          if (pending) {
+            clearTimeout(pending.timeoutId);
+            setAccounts(prev => [...prev, pending.item]);
+            pendingDeletions.current.delete(deletedId);
+            toast.success("Account restored");
+          }
+        },
+      },
+      duration: UNDO_DELAY,
+    });
+    
+    // Schedule actual deletion
+    const timeoutId = setTimeout(async () => {
+      const { error } = await supabase.from("accounts").delete().eq("id", deletedId);
+      if (error) {
+        const pending = pendingDeletions.current.get(deletedId);
+        if (pending) {
+          setAccounts(prev => [...prev, pending.item]);
+          toast.error("Failed to delete account. Item restored.");
+        }
+      }
+      pendingDeletions.current.delete(deletedId);
+    }, UNDO_DELAY);
+    
+    pendingDeletions.current.set(deletedId, {
+      item: accountItem,
+      timeoutId,
+    });
   };
 
 

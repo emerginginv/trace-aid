@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -140,19 +140,59 @@ const Cases = () => {
     setDeleteDialogOpen(true);
   };
 
+  // Pending deletion tracking for undo functionality
+  const pendingDeletions = useRef<Map<string, { item: Case; timeoutId: NodeJS.Timeout }>>(new Map());
+  const UNDO_DELAY = 5000;
+
   const handleDeleteConfirm = async () => {
     if (!caseToDelete) return;
-    try {
-      const { error } = await supabase.from("cases").delete().eq("id", caseToDelete);
-      if (error) throw error;
-      toast.success("Case deleted successfully");
-      fetchCases();
-    } catch (error) {
-      toast.error("Error deleting case");
-    } finally {
-      setDeleteDialogOpen(false);
-      setCaseToDelete(null);
-    }
+    
+    const caseItem = cases.find(c => c.id === caseToDelete);
+    if (!caseItem) return;
+    
+    // Close dialog and clear state immediately
+    setDeleteDialogOpen(false);
+    const deletedId = caseToDelete;
+    setCaseToDelete(null);
+    
+    // Optimistically remove from UI
+    setCases(prev => prev.filter(c => c.id !== deletedId));
+    
+    // Show toast with undo action
+    toast("Case deleted", {
+      description: "Click undo to restore",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const pending = pendingDeletions.current.get(deletedId);
+          if (pending) {
+            clearTimeout(pending.timeoutId);
+            setCases(prev => [...prev, pending.item]);
+            pendingDeletions.current.delete(deletedId);
+            toast.success("Case restored");
+          }
+        },
+      },
+      duration: UNDO_DELAY,
+    });
+    
+    // Schedule actual deletion
+    const timeoutId = setTimeout(async () => {
+      const { error } = await supabase.from("cases").delete().eq("id", deletedId);
+      if (error) {
+        const pending = pendingDeletions.current.get(deletedId);
+        if (pending) {
+          setCases(prev => [...prev, pending.item]);
+          toast.error("Failed to delete case. Item restored.");
+        }
+      }
+      pendingDeletions.current.delete(deletedId);
+    }, UNDO_DELAY);
+    
+    pendingDeletions.current.set(deletedId, {
+      item: caseItem,
+      timeoutId,
+    });
   };
 
 

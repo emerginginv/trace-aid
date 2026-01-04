@@ -290,6 +290,18 @@ const Dashboard = () => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
     const newStatus = task.status === "completed" ? "pending" : "completed";
+    const previousTasks = [...tasks];
+
+    // Optimistic update - instant feedback
+    setTasks(prev => prev.map(t => t.id === taskId ? {
+      ...t,
+      status: newStatus
+    } : t));
+    
+    toast({
+      title: newStatus === "completed" ? "Task completed!" : "Task reopened",
+      description: task.title
+    });
 
     // Update in database
     const {
@@ -297,24 +309,16 @@ const Dashboard = () => {
     } = await supabase.from("case_activities").update({
       completed: newStatus === "completed"
     }).eq("id", taskId);
+    
     if (error) {
+      // Rollback on error
+      setTasks(previousTasks);
       toast({
         title: "Error",
-        description: "Failed to update task",
+        description: "Failed to update task. Change reverted.",
         variant: "destructive"
       });
-      return;
     }
-
-    // Update local state
-    setTasks(prev => prev.map(t => t.id === taskId ? {
-      ...t,
-      status: newStatus
-    } : t));
-    toast({
-      title: newStatus === "completed" ? "Task completed!" : "Task reopened",
-      description: task.title
-    });
   };
 
   // Sort and filter tasks

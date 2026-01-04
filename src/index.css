@@ -2320,7 +2320,62 @@
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .global-progress-shimmer,
-  .global-progress-glow {
+  .global-progress-glow,
+  .animate-header-progress,
+  .optimistic-fade-out,
+  .optimistic-complete,
+  .optimistic-rollback {
     animation: none;
   }
+}
+
+/* ===== HEADER PROGRESS INDICATOR ===== */
+@keyframes header-progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.animate-header-progress {
+  animation: header-progress 1.2s ease-in-out infinite;
+}
+
+/* ===== OPTIMISTIC UPDATE ANIMATIONS ===== */
+@keyframes optimistic-remove {
+  0% { 
+    opacity: 1; 
+    transform: translateX(0);
+    max-height: 100px;
+  }
+  100% { 
+    opacity: 0; 
+    transform: translateX(-20px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+
+.optimistic-fade-out {
+  animation: optimistic-remove 300ms ease-out forwards;
+}
+
+@keyframes optimistic-check {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.optimistic-complete {
+  animation: optimistic-check 400ms ease-out;
+}
+
+/* Rollback flash animation */
+@keyframes rollback-flash {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: hsl(var(--destructive) / 0.1); }
+}
+
+.optimistic-rollback {
+  animation: rollback-flash 500ms ease-out;
 }
