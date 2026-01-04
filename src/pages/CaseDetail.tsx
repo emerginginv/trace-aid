@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Edit, Trash2, Info } from "lucide-react";
+import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CaseDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { toast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -27,10 +28,10 @@ import { BudgetAdjustmentForm } from "@/components/case-detail/BudgetAdjustmentF
 import { BudgetAdjustmentsHistory } from "@/components/case-detail/BudgetAdjustmentsHistory";
 import { BudgetConsumptionSnapshot } from "@/components/case-detail/BudgetConsumptionSnapshot";
 import { CaseBudgetWidget } from "@/components/case-detail/CaseBudgetWidget";
-import { Mail } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useIsMobile } from "@/hooks/use-mobile";
 interface Case {
   id: string;
   case_number: string;
@@ -63,6 +64,7 @@ const CaseDetail = () => {
     id
   } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const {
     isVendor,
     isAdmin,
@@ -569,59 +571,116 @@ const CaseDetail = () => {
           </AlertDescription>
         </Alert>}
       
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-        <Button variant="ghost" size="icon" asChild className="self-start sm:self-auto">
-          <Link to="/cases">
-            <ChevronLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-            <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold break-words ${isClosed ? 'text-muted-foreground' : ''}`}>
+      {/* Mobile-optimized header layout */}
+      <div className="flex flex-col gap-3">
+        {/* Row 1: Back button + Title + Mobile actions */}
+        <div className="flex items-start gap-2 sm:gap-4">
+          <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
+            <Link to="/cases">
+              <ChevronLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold break-words leading-tight ${isClosed ? 'text-muted-foreground' : ''}`}>
               {caseData.title}
             </h1>
-            {!isVendor && <div className="flex items-center gap-2">
-                <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-                  <SelectTrigger className={`w-full sm:w-[140px] h-8 sm:h-7 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {caseStatuses.map(status => <SelectItem key={status.id} value={status.value}>
-                        {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {caseStatuses.find(s => s.value === caseData.status)?.status_type && <span className="text-xs">
-                    {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
-                  </span>}
-              </div>}
-            {isVendor && <div className="flex items-center gap-2">
-                <Badge className="border" style={getStatusStyle(caseData.status)}>
-                  {caseData.status}
-                </Badge>
-                {caseStatuses.find(s => s.value === caseData.status)?.status_type && <span className="text-xs">
-                    {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
-                  </span>}
-              </div>}
+            <p className={`text-sm mt-1 ${isClosed ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
+              Case #{caseData.case_number}
+            </p>
           </div>
-          <p className={`text-sm sm:text-base ${isClosed ? 'text-muted-foreground' : 'text-slate-500'}`}>
-            Case #{caseData.case_number}
-          </p>
+          
+          {/* Mobile action menu (visible only on mobile) */}
+          {!isVendor && isMobile && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="shrink-0 h-10 w-10">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </DropdownMenuItem>
+                {hasPermission('edit_cases') && (
+                  <DropdownMenuItem onClick={() => setEditFormOpen(true)} disabled={isClosed}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Case
+                  </DropdownMenuItem>
+                )}
+                {hasPermission('delete_cases') && (
+                  <DropdownMenuItem 
+                    onClick={handleDelete} 
+                    disabled={deleting}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {deleting ? "Deleting..." : "Delete Case"}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
-        {!isVendor && <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={() => setEmailComposerOpen(true)} disabled={isClosed} className="w-full sm:w-auto text-gray-950 bg-gray-300 hover:bg-gray-200">
-              <Mail className="h-4 w-4 mr-2" />
-              <span className="sm:inline">Send Email</span>
-            </Button>
-            {hasPermission('edit_cases') && <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed} className="bg-white dark:bg-white w-full sm:w-auto">
-                <Edit className="h-4 w-4 mr-2 text-slate-950" />
-                <span className="sm:inline text-slate-950">Edit</span>
-              </Button>}
-            {hasPermission('delete_cases') && <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-red-600 bg-red-300 hover:bg-red-200 w-full sm:w-auto">
-                <Trash2 className="h-4 w-4 mr-2" />
-                <span className="sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
-              </Button>}
-          </div>}
+        
+        {/* Row 2: Status dropdown (full width on mobile) */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {!isVendor && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
+                <SelectTrigger className={`w-full sm:w-[160px] h-10 sm:h-9 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {caseStatuses.map(status => (
+                    <SelectItem key={status.id} value={status.value}>
+                      {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {caseStatuses.find(s => s.value === caseData.status)?.status_type && (
+                <span className="text-xs">
+                  {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
+                </span>
+              )}
+            </div>
+          )}
+          {isVendor && (
+            <div className="flex items-center gap-2">
+              <Badge className="border" style={getStatusStyle(caseData.status)}>
+                {caseData.status}
+              </Badge>
+              {caseStatuses.find(s => s.value === caseData.status)?.status_type && (
+                <span className="text-xs">
+                  {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
+                </span>
+              )}
+            </div>
+          )}
+          
+          {/* Desktop action buttons (hidden on mobile) */}
+          {!isVendor && !isMobile && (
+            <div className="flex items-center gap-2 ml-auto">
+              <Button variant="outline" onClick={() => setEmailComposerOpen(true)} disabled={isClosed} className="text-foreground bg-muted hover:bg-muted/80">
+                <Mail className="h-4 w-4 mr-2" />
+                Send Email
+              </Button>
+              {hasPermission('edit_cases') && (
+                <Button variant="outline" onClick={() => setEditFormOpen(true)} disabled={isClosed}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              {hasPermission('delete_cases') && (
+                <Button variant="outline" onClick={handleDelete} disabled={deleting} className="text-destructive hover:bg-destructive/10">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleting ? "Deleting..." : "Delete"}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
@@ -669,17 +728,21 @@ const CaseDetail = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full gap-1" style={{
-        gridTemplateColumns: isVendor ? 'repeat(2, 1fr)' : 'repeat(4, 1fr) repeat(3, 1fr)'
-      }}>
-          {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-2 sm:px-3">Subjects</TabsTrigger>}
-          <TabsTrigger value="updates" className="text-xs sm:text-sm px-2 sm:px-3">Updates</TabsTrigger>
-          {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-2 sm:px-3">Activities</TabsTrigger>}
-          {!isVendor && <TabsTrigger value="calendar" className="text-xs sm:text-sm px-2 sm:px-3">Calendar</TabsTrigger>}
-          {!isVendor && <TabsTrigger value="finances" className="text-xs sm:text-sm px-2 sm:px-3">Finances</TabsTrigger>}
-          {!isVendor && <TabsTrigger value="budget" className="text-xs sm:text-sm px-2 sm:px-3">Budget</TabsTrigger>}
-          <TabsTrigger value="attachments" className="text-xs sm:text-sm px-2 sm:px-3">Attachments</TabsTrigger>
-        </TabsList>
+        {/* Mobile: horizontal scroll, Desktop: grid layout */}
+        <div className="overflow-x-auto -mx-1 px-1 scrollbar-hide">
+          <TabsList className={`
+            inline-flex sm:grid w-auto sm:w-full gap-1
+            ${isVendor ? 'sm:grid-cols-2' : 'sm:grid-cols-7'}
+          `}>
+            {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Subjects</TabsTrigger>}
+            <TabsTrigger value="updates" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Updates</TabsTrigger>
+            {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Activities</TabsTrigger>}
+            {!isVendor && <TabsTrigger value="calendar" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Calendar</TabsTrigger>}
+            {!isVendor && <TabsTrigger value="finances" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Finances</TabsTrigger>}
+            {!isVendor && <TabsTrigger value="budget" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Budget</TabsTrigger>}
+            <TabsTrigger value="attachments" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Attachments</TabsTrigger>
+          </TabsList>
+        </div>
 
         {!isVendor && <TabsContent value="subjects" className="mt-4 sm:mt-6">
             <CaseSubjects caseId={id!} isClosedCase={isClosed} />
