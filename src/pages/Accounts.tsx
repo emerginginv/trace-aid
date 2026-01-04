@@ -28,6 +28,7 @@ import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
+import { AccountsPageSkeleton } from "@/components/ui/list-page-skeleton";
 
 interface Account {
   id: string;
@@ -160,11 +161,7 @@ const Accounts = () => {
   const handleExportPDF = () => exportToPDF(sortedAccounts, EXPORT_COLUMNS, "Accounts Report", "accounts");
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <AccountsPageSkeleton />;
   }
 
   return (

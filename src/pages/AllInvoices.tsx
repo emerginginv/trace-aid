@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck } from "lucide-react";
+import { Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
 import { InvoiceFromExpenses } from "@/components/case-detail/InvoiceFromExpenses";
@@ -24,6 +24,7 @@ import { TableHeader, TableRow as TRow } from "@/components/ui/table";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
+import { InvoicesPageSkeleton } from "@/components/ui/list-page-skeleton";
 
 interface Invoice {
   id: string;
@@ -356,11 +357,7 @@ const AllInvoices = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <InvoicesPageSkeleton />;
   }
 
   return (
