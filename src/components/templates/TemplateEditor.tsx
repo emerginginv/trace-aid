@@ -22,7 +22,14 @@ interface TemplateEditorProps {
   template?: Template;
 }
 
-const DEFAULT_TEMPLATE = `<h1>Case Update Report: {{case_title}}</h1>
+const DEFAULT_TEMPLATE = `<div style="text-align: center; margin-bottom: 20px;">
+{{company_logo}}
+<h2>{{company_name}}</h2>
+<p>{{company_address}}</p>
+<p>Phone: {{company_phone}} | Email: {{company_email}}</p>
+</div>
+<hr>
+<h1>Case Update Report: {{case_title}}</h1>
 <p><strong>Case Number:</strong> {{case_number}}</p>
 <p><strong>Case Manager:</strong> {{case_manager}}</p>
 <p><strong>Generated:</strong> {{current_date}}</p>
@@ -110,6 +117,18 @@ export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: Temp
   };
 
   const mockPreview = body
+    // Organization placeholders
+    .replace(/\{\{company_name\}\}/g, "Acme Investigations LLC")
+    .replace(/\{\{company_logo\}\}/g, `<img src="https://via.placeholder.com/150x50?text=LOGO" alt="Company Logo" style="max-height: 50px;" />`)
+    .replace(/\{\{company_address\}\}/g, "123 Main Street, Suite 100, New York, NY 10001")
+    .replace(/\{\{company_street\}\}/g, "123 Main Street, Suite 100")
+    .replace(/\{\{company_city\}\}/g, "New York")
+    .replace(/\{\{company_state\}\}/g, "NY")
+    .replace(/\{\{company_zip\}\}/g, "10001")
+    .replace(/\{\{company_phone\}\}/g, "(555) 123-4567")
+    .replace(/\{\{company_email\}\}/g, "info@acmeinvestigations.com")
+    .replace(/\{\{company_website\}\}/g, "https://www.acmeinvestigations.com")
+    // Case placeholders
     .replace(/\{\{case_title\}\}/g, "Sample Investigation Case")
     .replace(/\{\{case_number\}\}/g, "CASE-2024-001")
     .replace(/\{\{case_manager\}\}/g, "John Doe")
@@ -164,6 +183,18 @@ Case is progressing well. Waiting for additional information.</p>`
               <Card>
                 <CardContent className="p-4">
                   <h4 className="text-sm font-semibold mb-2">Available Placeholders:</h4>
+                  
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">Organization Branding:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
+                    <div><code className="bg-muted px-1 rounded">{"{{company_name}}"}</code> - Company name</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{company_logo}}"}</code> - Company logo image</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{company_address}}"}</code> - Full address</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{company_phone}}"}</code> - Phone number</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{company_email}}"}</code> - Email address</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{company_website}}"}</code> - Website URL</div>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">Case Information:</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     <div><code className="bg-muted px-1 rounded">{"{{case_title}}"}</code> - Case title</div>
                     <div><code className="bg-muted px-1 rounded">{"{{case_number}}"}</code> - Case number</div>

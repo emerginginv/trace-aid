@@ -988,9 +988,11 @@ export type Database = {
           address: string | null
           agency_license_number: string | null
           billing_email: string | null
+          city: string | null
           company_name: string | null
           created_at: string | null
           default_currency: string | null
+          email: string | null
           email_signature: string | null
           fein_number: string | null
           id: string
@@ -1002,18 +1004,23 @@ export type Database = {
           signature_name: string | null
           signature_phone: string | null
           signature_title: string | null
+          state: string | null
           terms: string | null
           timezone: string | null
           updated_at: string | null
           user_id: string
+          website_url: string | null
+          zip_code: string | null
         }
         Insert: {
           address?: string | null
           agency_license_number?: string | null
           billing_email?: string | null
+          city?: string | null
           company_name?: string | null
           created_at?: string | null
           default_currency?: string | null
+          email?: string | null
           email_signature?: string | null
           fein_number?: string | null
           id?: string
@@ -1025,18 +1032,23 @@ export type Database = {
           signature_name?: string | null
           signature_phone?: string | null
           signature_title?: string | null
+          state?: string | null
           terms?: string | null
           timezone?: string | null
           updated_at?: string | null
           user_id: string
+          website_url?: string | null
+          zip_code?: string | null
         }
         Update: {
           address?: string | null
           agency_license_number?: string | null
           billing_email?: string | null
+          city?: string | null
           company_name?: string | null
           created_at?: string | null
           default_currency?: string | null
+          email?: string | null
           email_signature?: string | null
           fein_number?: string | null
           id?: string
@@ -1048,10 +1060,13 @@ export type Database = {
           signature_name?: string | null
           signature_phone?: string | null
           signature_title?: string | null
+          state?: string | null
           terms?: string | null
           timezone?: string | null
           updated_at?: string | null
           user_id?: string
+          website_url?: string | null
+          zip_code?: string | null
         }
         Relationships: [
           {
