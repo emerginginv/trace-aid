@@ -92,22 +92,14 @@ export function ScrollProgress({
               : "opacity-0 translate-y-4 pointer-events-none"
           )}
         >
-          {/* Button container with progress ring */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={scrollToTop}
-            className={cn(
-              "h-14 w-14 rounded-full bg-background/95 shadow-lg border-border/60 hover:bg-muted relative overflow-visible",
-              isNearComplete && "ring-2 ring-primary/40"
-            )}
-            aria-label={`Scroll to top - ${Math.round(scrollProgress)}% scrolled`}
-          >
-            {/* SVG Progress Ring */}
+          {/* Wrapper for proper positioning - SVG outside button */}
+          <div className="relative" style={{ width: size + 4, height: size + 4 }}>
+            {/* SVG Progress Ring - positioned around the button */}
             <svg
-              width={size}
-              height={size}
-              className="absolute inset-0"
+              width={size + 4}
+              height={size + 4}
+              viewBox={`0 0 ${size + 4} ${size + 4}`}
+              className="absolute inset-0 pointer-events-none"
               style={{ 
                 transform: "rotate(-90deg)",
                 transformOrigin: "center center",
@@ -125,8 +117,8 @@ export function ScrollProgress({
               
               {/* Background track circle */}
               <circle
-                cx={size / 2}
-                cy={size / 2}
+                cx={(size + 4) / 2}
+                cy={(size + 4) / 2}
                 r={radius}
                 fill="none"
                 stroke="hsl(var(--muted-foreground) / 0.2)"
@@ -135,8 +127,8 @@ export function ScrollProgress({
               
               {/* Progress arc with gradient */}
               <circle
-                cx={size / 2}
-                cy={size / 2}
+                cx={(size + 4) / 2}
+                cy={(size + 4) / 2}
                 r={radius}
                 fill="none"
                 stroke="url(#scroll-progress-gradient)"
@@ -151,9 +143,20 @@ export function ScrollProgress({
               />
             </svg>
             
-            {/* Chevron icon centered */}
-            <ChevronUp className="h-5 w-5 relative z-10" />
-          </Button>
+            {/* Button centered inside the wrapper */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={scrollToTop}
+              className={cn(
+                "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-14 w-14 rounded-full bg-background/95 shadow-lg border-border/60 hover:bg-muted",
+                isNearComplete && "ring-2 ring-primary/40"
+              )}
+              aria-label={`Scroll to top - ${Math.round(scrollProgress)}% scrolled`}
+            >
+              <ChevronUp className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       )}
     </>
