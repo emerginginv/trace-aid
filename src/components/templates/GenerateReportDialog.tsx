@@ -550,6 +550,8 @@ export const GenerateReportDialog = ({
           template={selectedTemplateForCustomization}
           initialCustomization={templateCustomization || undefined}
           onApply={handleApplyCustomization}
+          orgProfile={orgProfile}
+          caseVariables={caseVariables}
         />
       )}
     </>
