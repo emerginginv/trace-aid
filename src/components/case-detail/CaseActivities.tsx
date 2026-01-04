@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -304,7 +305,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   });
 
   if (permissionsLoading || loading) {
-    return <p className="text-muted-foreground">Loading activities...</p>;
+    return <CaseTabSkeleton title="Case Activities" subtitle="Loading activities..." rows={5} columns={5} />;
   }
 
   if (!canViewActivities) {

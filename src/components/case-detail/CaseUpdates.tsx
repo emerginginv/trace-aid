@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -219,7 +220,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   });
 
   if (permissionsLoading || loading) {
-    return <p className="text-muted-foreground">Loading updates...</p>;
+    return <CaseTabSkeleton title="Case Updates" subtitle="Loading updates..." rows={5} columns={5} />;
   }
 
   if (!canViewUpdates) {
