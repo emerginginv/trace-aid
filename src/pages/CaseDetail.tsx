@@ -120,8 +120,20 @@ const CaseDetail = () => {
       const {
         data,
         error
-      } = await supabase.from("cases").select("*").eq("id", id).single();
+      } = await supabase.from("cases").select("*").eq("id", id).maybeSingle();
+      
       if (error) throw error;
+
+      // Handle case not found
+      if (!data) {
+        toast({
+          title: "Not Found",
+          description: "The case you're looking for doesn't exist or you don't have access to it.",
+          variant: "destructive"
+        });
+        navigate("/cases");
+        return;
+      }
 
       // Verify access: user owns the case, is in investigator_ids, or is in same org
       const hasAccess = 
@@ -130,7 +142,13 @@ const CaseDetail = () => {
         (data.organization_id && userOrgIds.includes(data.organization_id));
       
       if (!hasAccess) {
-        throw new Error("Access denied");
+        toast({
+          title: "Access Denied",
+          description: "You don't have permission to view this case.",
+          variant: "destructive"
+        });
+        navigate("/cases");
+        return;
       }
       setCaseData(data);
 
@@ -138,7 +156,7 @@ const CaseDetail = () => {
       if (data.account_id) {
         const {
           data: accountData
-        } = await supabase.from("accounts").select("id, name").eq("id", data.account_id).single();
+        } = await supabase.from("accounts").select("id, name").eq("id", data.account_id).maybeSingle();
         if (accountData) setAccount(accountData);
       }
 
@@ -146,16 +164,17 @@ const CaseDetail = () => {
       if (data.contact_id) {
         const {
           data: contactData
-        } = await supabase.from("contacts").select("id, first_name, last_name").eq("id", data.contact_id).single();
+        } = await supabase.from("contacts").select("id, first_name, last_name").eq("id", data.contact_id).maybeSingle();
         if (contactData) setContact(contactData);
       }
     } catch (error) {
       console.error("Error fetching case:", error);
       toast({
         title: "Error",
-        description: "Failed to load case details",
+        description: "Failed to load case details. Please try again.",
         variant: "destructive"
       });
+      navigate("/cases");
     } finally {
       setLoading(false);
     }
