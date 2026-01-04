@@ -90,6 +90,7 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
+          event_subtype: string | null
           id: string
           organization_id: string | null
           status: string
@@ -106,6 +107,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          event_subtype?: string | null
           id?: string
           organization_id?: string | null
           status?: string
@@ -122,6 +124,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          event_subtype?: string | null
           id?: string
           organization_id?: string | null
           status?: string

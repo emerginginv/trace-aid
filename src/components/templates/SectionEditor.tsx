@@ -20,11 +20,15 @@ import {
   type VariableLayout,
   type CollectionConfig,
   type UpdateTypeMapping,
+  type EventTypeMapping,
+  type EventDisplayConfig,
   SECTION_TYPE_LABELS,
   AVAILABLE_CASE_VARIABLES,
   getDefaultUpdateCollectionConfig,
+  getDefaultEventCollectionConfig,
 } from "@/lib/reportTemplates";
 import { UpdateTypeMappingEditor } from "./UpdateTypeMappingEditor";
+import { EventTypeMappingEditor } from "./EventTypeMappingEditor";
 
 interface SectionEditorProps {
   section: TemplateSection;
@@ -65,15 +69,14 @@ export function SectionEditor({
       updates.content = null;
       updates.variableConfig = null;
       updates.collectionConfig = getDefaultUpdateCollectionConfig();
-    } else {
-      // event_collection
+    } else if (sectionType === 'event_collection') {
       updates.content = null;
       updates.variableConfig = null;
-      updates.collectionConfig = {
-        sortBy: 'created_at',
-        sortOrder: 'desc',
-        limit: null,
-      };
+      updates.collectionConfig = getDefaultEventCollectionConfig();
+    } else {
+      updates.content = null;
+      updates.variableConfig = null;
+      updates.collectionConfig = null;
     }
     
     onUpdate(updates);
@@ -148,7 +151,10 @@ export function SectionEditor({
   };
 
   const handleSortOrderChange = (sortOrder: 'asc' | 'desc') => {
-    const currentConfig = section.collectionConfig || getDefaultUpdateCollectionConfig();
+    const defaultConfig = section.sectionType === 'event_collection' 
+      ? getDefaultEventCollectionConfig() 
+      : getDefaultUpdateCollectionConfig();
+    const currentConfig = section.collectionConfig || defaultConfig;
     onUpdate({
       collectionConfig: {
         ...currentConfig,
@@ -158,11 +164,35 @@ export function SectionEditor({
   };
 
   const handleLimitChange = (limit: number | null) => {
-    const currentConfig = section.collectionConfig || getDefaultUpdateCollectionConfig();
+    const defaultConfig = section.sectionType === 'event_collection' 
+      ? getDefaultEventCollectionConfig() 
+      : getDefaultUpdateCollectionConfig();
+    const currentConfig = section.collectionConfig || defaultConfig;
     onUpdate({
       collectionConfig: {
         ...currentConfig,
         limit,
+      },
+    });
+  };
+
+  // Event collection config handlers
+  const handleEventMappingChange = (eventTypeMapping: EventTypeMapping) => {
+    const currentConfig = section.collectionConfig || getDefaultEventCollectionConfig();
+    onUpdate({
+      collectionConfig: {
+        ...currentConfig,
+        eventTypeMapping,
+      },
+    });
+  };
+
+  const handleEventDisplayConfigChange = (eventDisplayConfig: EventDisplayConfig) => {
+    const currentConfig = section.collectionConfig || getDefaultEventCollectionConfig();
+    onUpdate({
+      collectionConfig: {
+        ...currentConfig,
+        eventDisplayConfig,
       },
     });
   };
@@ -377,12 +407,21 @@ export function SectionEditor({
           )}
 
           {section.sectionType === 'event_collection' && (
-            <div className="bg-muted p-4 rounded-md text-center">
-              <p className="text-sm text-muted-foreground">
-                Activities/Events will be inserted here when generating the report.
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Event collection configuration coming soon.
+            <div className="space-y-3">
+              <Label className="text-xs font-medium">Event Type Mapping</Label>
+              <EventTypeMappingEditor
+                mapping={section.collectionConfig?.eventTypeMapping || null}
+                displayConfig={section.collectionConfig?.eventDisplayConfig || null}
+                sortOrder={section.collectionConfig?.sortOrder || 'asc'}
+                limit={section.collectionConfig?.limit || null}
+                onMappingChange={handleEventMappingChange}
+                onDisplayConfigChange={handleEventDisplayConfigChange}
+                onSortOrderChange={handleSortOrderChange}
+                onLimitChange={handleLimitChange}
+                isReadOnly={isReadOnly}
+              />
+              <p className="text-xs text-muted-foreground">
+                Selected events will be inserted as structured records when generating reports.
               </p>
             </div>
           )}
