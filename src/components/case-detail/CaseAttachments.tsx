@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
@@ -18,6 +18,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { getPlanLimits } from "@/lib/planLimits";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ShareAttachmentDialog } from "./ShareAttachmentDialog";
 
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
@@ -74,6 +75,8 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
   const [isDragging, setIsDragging] = useState(false);
   const [editingAttachment, setEditingAttachment] = useState<Attachment | null>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "", tags: "" });
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [selectedAttachmentForShare, setSelectedAttachmentForShare] = useState<Attachment | null>(null);
   
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("case-attachments", "created_at", "desc");
@@ -424,6 +427,11 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
 
   const handlePreview = async (attachment: Attachment) => {
     setPreviewAttachment(attachment);
+  };
+
+  const handleShare = (attachment: Attachment) => {
+    setSelectedAttachmentForShare(attachment);
+    setShareDialogOpen(true);
   };
 
   const renderPreviewContent = () => {
@@ -799,6 +807,20 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                         <span className="hidden sm:inline">Edit</span>
                       </Button>
                     )}
+                    {canEditAttachments && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShare(attachment);
+                        }}
+                        className="h-7 sm:h-8 text-xs px-2"
+                      >
+                        <Share2 className="h-3 w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Share</span>
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -919,6 +941,20 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                           <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       )}
+                      {canEditAttachments && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShare(attachment);
+                          }}
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          title="Share"
+                        >
+                          <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -1014,6 +1050,13 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
           </div>
         </DialogContent>
       </Dialog>
+
+      <ShareAttachmentDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        attachment={selectedAttachmentForShare}
+        attachmentType="case"
+      />
     </div>
   );
 };
