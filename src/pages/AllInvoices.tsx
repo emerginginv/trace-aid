@@ -4,14 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Search, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import html2pdf from "html2pdf.js";
 
 interface Invoice {
   id: string;
@@ -144,6 +146,94 @@ const AllInvoices = () => {
   );
   const invoiceTotalPages = Math.ceil(filteredInvoices.length / invoicePageSize);
 
+  // Export functions
+  const exportToCSV = () => {
+    const headers = ["Invoice #", "Case Number", "Case Title", "Date", "Due Date", "Total", "Paid", "Balance Due", "Status"];
+    const rows = filteredInvoices.map(inv => [
+      inv.invoice_number || "",
+      inv.case_number,
+      inv.case_title,
+      format(new Date(inv.date), "yyyy-MM-dd"),
+      inv.due_date ? format(new Date(inv.due_date), "yyyy-MM-dd") : "",
+      inv.amount.toFixed(2),
+      (inv.total_paid || 0).toFixed(2),
+      (inv.balance_due !== undefined ? inv.balance_due : inv.amount - (inv.total_paid || 0)).toFixed(2),
+      inv.status || "Draft"
+    ]);
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(","))
+      .join("\n");
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoices-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Invoices exported to CSV");
+  };
+
+  const exportToPDF = () => {
+    const printContent = document.createElement("div");
+    printContent.innerHTML = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h1 style="margin-bottom: 8px; font-size: 24px;">Invoices Report</h1>
+        <p style="margin-bottom: 20px; color: #666; font-size: 14px;">Generated: ${format(new Date(), "MMMM d, yyyy")}</p>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Invoice #</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Case</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Due Date</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Paid</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Balance</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredInvoices.map(inv => `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">${inv.invoice_number || "N/A"}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${inv.case_number} - ${inv.case_title}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${format(new Date(inv.date), "MMM d, yyyy")}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${inv.due_date ? format(new Date(inv.due_date), "MMM d, yyyy") : "-"}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${inv.amount.toFixed(2)}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${(inv.total_paid || 0).toFixed(2)}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${(inv.balance_due !== undefined ? inv.balance_due : inv.amount - (inv.total_paid || 0)).toFixed(2)}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${inv.status || "Draft"}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+          <tfoot>
+            <tr style="background: #f3f4f6; font-weight: bold;">
+              <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Totals:</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${filteredInvoices.reduce((sum, i) => sum + i.amount, 0).toFixed(2)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${filteredInvoices.reduce((sum, i) => sum + (i.total_paid || 0), 0).toFixed(2)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${filteredInvoices.reduce((sum, i) => sum + (i.balance_due !== undefined ? i.balance_due : i.amount - (i.total_paid || 0)), 0).toFixed(2)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    `;
+    
+    html2pdf()
+      .set({
+        margin: 10,
+        filename: `invoices-${format(new Date(), "yyyy-MM-dd")}.pdf`,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
+      })
+      .from(printContent)
+      .save();
+    
+    toast.success("Invoices exported to PDF");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -166,12 +256,12 @@ const AllInvoices = () => {
         <CardHeader>
           <CardTitle>All Invoices</CardTitle>
           <CardDescription>
-            System-wide invoice overview
+            {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''} found
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex gap-4">
-            <div className="relative flex-1">
+          <div className="mb-4 flex flex-wrap gap-4">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by invoice #, case..."
@@ -187,7 +277,7 @@ const AllInvoices = () => {
               setInvoiceStatusFilter(v);
               setInvoicePage(1);
             }}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -212,6 +302,23 @@ const AllInvoices = () => {
                 <SelectItem value="100">100 per page</SelectItem>
               </SelectContent>
             </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Download className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportToCSV}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export to CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           {filteredInvoices.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
