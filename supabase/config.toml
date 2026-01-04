@@ -1,1 +1,4 @@
 project_id = "uxmezklevgkqelahibqy"
+
+[functions.execute-import]
+verify_jwt = true
