@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase, Users, Building2, TrendingUp, CheckCircle2, Calendar, Bell, DollarSign, Clock, AlertCircle, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Briefcase, Users, Building2, TrendingUp, CheckCircle2, Calendar, Bell, DollarSign, Clock, AlertCircle, X, ChevronDown, ChevronUp, Wallet, Receipt, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -73,6 +73,11 @@ const Dashboard = () => {
     closedCases: 0,
     totalContacts: 0,
     totalAccounts: 0
+  });
+  const [financialSummary, setFinancialSummary] = useState({
+    totalRetainerFunds: 0,
+    outstandingExpenses: 0,
+    unpaidInvoices: 0
   });
 
   useEffect(() => {
@@ -241,6 +246,38 @@ const Dashboard = () => {
           full_name: u.full_name
         })));
       }
+
+      // Fetch financial summary data
+      const [retainerResult, pendingExpensesResult, unpaidInvoicesResult] = await Promise.all([
+        supabase
+          .from("retainer_funds")
+          .select("amount")
+          .eq("organization_id", orgId),
+        supabase
+          .from("case_finances")
+          .select("amount")
+          .eq("organization_id", orgId)
+          .eq("finance_type", "expense")
+          .eq("status", "pending"),
+        supabase
+          .from("invoices")
+          .select("balance_due")
+          .eq("organization_id", orgId)
+          .gt("balance_due", 0)
+      ]);
+
+      const totalRetainer = retainerResult.data?.reduce((sum, r) => 
+        sum + parseFloat(String(r.amount) || '0'), 0) || 0;
+      const outstandingExpenses = pendingExpensesResult.data?.reduce((sum, e) => 
+        sum + parseFloat(String(e.amount) || '0'), 0) || 0;
+      const unpaidInvoicesTotal = unpaidInvoicesResult.data?.reduce((sum, i) => 
+        sum + parseFloat(String(i.balance_due) || '0'), 0) || 0;
+
+      setFinancialSummary({
+        totalRetainerFunds: totalRetainer,
+        outstandingExpenses: outstandingExpenses,
+        unpaidInvoices: unpaidInvoicesTotal
+      });
     };
 
     fetchDashboardData();
@@ -393,6 +430,54 @@ const Dashboard = () => {
             </Card>;
       })}
       </div>
+
+      {/* Financial Summary Card */}
+      <Card className="border-border/50 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 shadow-lg">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <Wallet className="w-5 h-5 text-emerald-500" />
+            </div>
+            <span className="text-lg font-semibold">Financial Summary</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Retainer Funds */}
+            <div className="p-4 rounded-xl bg-card/80 border border-border/50">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <Wallet className="w-4 h-4" />
+                <span>Retainer Funds</span>
+              </div>
+              <p className="text-2xl font-bold text-emerald-500">
+                ${financialSummary.totalRetainerFunds.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            
+            {/* Outstanding Expenses */}
+            <div className="p-4 rounded-xl bg-card/80 border border-border/50">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <Receipt className="w-4 h-4" />
+                <span>Outstanding Expenses</span>
+              </div>
+              <p className="text-2xl font-bold text-amber-500">
+                ${financialSummary.outstandingExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            
+            {/* Unpaid Invoices */}
+            <div className="p-4 rounded-xl bg-card/80 border border-border/50">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <FileText className="w-4 h-4" />
+                <span>Unpaid Invoices</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-500">
+                ${financialSummary.unpaidInvoices.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Dashboard Grid with Enhanced Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
