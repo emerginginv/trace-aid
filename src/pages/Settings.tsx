@@ -182,6 +182,12 @@ const Settings = () => {
   const { organization, subscriptionStatus, checkSubscription, refreshOrganization } = useOrganization();
   const [billingLoading, setBillingLoading] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Active tab state - must be declared with other hooks
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    return tabParam || 'preferences';
+  });
 
   // Import pricing tiers from planLimits - removed local definition
 
@@ -1377,11 +1383,6 @@ const Settings = () => {
       </div>
     );
   }
-
-  const [activeTab, setActiveTab] = useState(() => {
-    const tabParam = searchParams.get('tab');
-    return tabParam || 'preferences';
-  });
 
   // Handle tab changes with URL sync
   const handleTabChange = (value: string) => {
