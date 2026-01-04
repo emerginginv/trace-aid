@@ -5,10 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Upload, FileText, X, AlertCircle, CheckCircle2, 
-  ArrowUp, ArrowDown, Download 
+  ArrowUp, ArrowDown, HelpCircle, Lightbulb
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ParsedCSV, parseCSVFile, detectEntityType, getEntityDisplayName, IMPORT_ORDER } from "@/lib/csvParser";
+import { DelayedTooltip } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { getEntityDefinition } from "@/lib/templateColumnDefinitions";
 
 interface FileUploaderProps {
   onFilesValidated: (files: ParsedCSV[]) => void;
@@ -25,6 +28,7 @@ interface UploadedFile {
 export function FileUploader({ onFilesValidated, importType }: FileUploaderProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleFiles = useCallback(async (files: FileList | null) => {
@@ -219,9 +223,16 @@ export function FileUploader({ onFilesValidated, importType }: FileUploaderProps
                     <div className="flex items-center gap-2">
                       <p className="font-medium truncate">{uploadedFile.file.name}</p>
                       {uploadedFile.entityType && (
-                        <Badge variant="secondary" className="text-xs">
-                          {getEntityDisplayName(uploadedFile.entityType)}
-                        </Badge>
+                        <>
+                          <Badge variant="secondary" className="text-xs">
+                            {getEntityDisplayName(uploadedFile.entityType)}
+                          </Badge>
+                          <DelayedTooltip 
+                            content={getEntityDefinition(uploadedFile.entityType)?.description || ''}
+                          >
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </DelayedTooltip>
+                        </>
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -281,16 +292,27 @@ export function FileUploader({ onFilesValidated, importType }: FileUploaderProps
         </Alert>
       )}
       
-      {/* Template Downloads */}
-      <div className="flex flex-wrap gap-2 justify-center">
-        <span className="text-sm text-muted-foreground self-center">Need templates?</span>
-        <Button variant="link" size="sm" asChild className="h-auto p-0">
-          <a href="/import-templates/README.md" download>
-            <Download className="h-3 w-3 mr-1" />
-            Download All
-          </a>
-        </Button>
-      </div>
+      {/* Help Section */}
+      <Collapsible open={showHelp} onOpenChange={setShowHelp}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full flex items-center justify-center gap-2">
+            <Lightbulb className="h-4 w-4" />
+            Having trouble?
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <Alert className="mt-3">
+            <AlertDescription className="space-y-2">
+              <p><strong>File not recognized?</strong> Make sure your file name includes the entity type (e.g., "clients.csv", "cases.csv").</p>
+              <p><strong>Too many errors?</strong> Check that your columns match the template headers exactly.</p>
+              <p><strong>Missing required columns?</strong> Download a fresh template from the Prepare step.</p>
+              <p className="text-sm text-muted-foreground">
+                Tip: Start with a small test file (5-10 rows) to verify your format before importing everything.
+              </p>
+            </AlertDescription>
+          </Alert>
+        </CollapsibleContent>
+      </Collapsible>
       
       {/* Continue Button */}
       {allParsed && validFiles.length > 0 && (

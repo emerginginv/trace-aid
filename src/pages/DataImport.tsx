@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProgressSteps } from "@/components/ui/progress-steps";
+import { MigrationWelcome } from "@/components/import/MigrationWelcome";
+import { MigrationPreparation } from "@/components/import/MigrationPreparation";
 import { ImportTypeSelector, ImportType } from "@/components/import/ImportTypeSelector";
 import { FileUploader } from "@/components/import/FileUploader";
 import { ValidationReport } from "@/components/import/ValidationReport";
@@ -19,9 +21,11 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type ImportStep = 'type' | 'upload' | 'validation' | 'mapping' | 'dry-run' | 'dry-run-results' | 'confirmation' | 'processing' | 'results';
+type ImportStep = 'welcome' | 'prepare' | 'type' | 'upload' | 'validation' | 'mapping' | 'dry-run' | 'dry-run-results' | 'confirmation' | 'processing' | 'results';
 
 const STEPS = [
+  { id: 'welcome', label: 'Welcome', description: 'Get started' },
+  { id: 'prepare', label: 'Prepare', description: 'Download templates' },
   { id: 'type', label: 'Type', description: 'Select import type' },
   { id: 'upload', label: 'Upload', description: 'Upload files' },
   { id: 'validate', label: 'Validate', description: 'Review validation' },
@@ -33,7 +37,7 @@ const STEPS = [
 
 export default function DataImport() {
   const { organization } = useOrganization();
-  const [currentStep, setCurrentStep] = useState<ImportStep>('type');
+  const [currentStep, setCurrentStep] = useState<ImportStep>('welcome');
   const [importType, setImportType] = useState<ImportType | null>(null);
   const [parsedFiles, setParsedFiles] = useState<ParsedCSV[]>([]);
   const [warnings, setWarnings] = useState<ParseError[]>([]);
@@ -57,7 +61,7 @@ export default function DataImport() {
   // Execution result state
   const [executionResult, setExecutionResult] = useState<ImportExecutionResult | null>(null);
   
-  const stepIndex = ['type', 'upload', 'validation', 'mapping', 'dry-run', 'confirmation', 'processing'].indexOf(currentStep);
+  const stepIndex = ['welcome', 'prepare', 'type', 'upload', 'validation', 'mapping', 'dry-run', 'confirmation', 'processing'].indexOf(currentStep);
   
   // Step handlers
   const handleTypeSelect = (type: ImportType) => {
@@ -247,7 +251,7 @@ export default function DataImport() {
   };
   
   const handleStartNew = () => {
-    setCurrentStep('type');
+    setCurrentStep('welcome');
     setImportType(null);
     setParsedFiles([]);
     setWarnings([]);
@@ -264,6 +268,18 @@ export default function DataImport() {
     setDryRunMessage('');
     setIsDryRunComplete(false);
     setExecutionResult(null);
+  };
+  
+  const handleWelcomeBegin = () => {
+    setCurrentStep('prepare');
+  };
+  
+  const handlePreparationContinue = () => {
+    setCurrentStep('type');
+  };
+  
+  const handlePreparationBack = () => {
+    setCurrentStep('welcome');
   };
   
   return (
@@ -288,8 +304,22 @@ export default function DataImport() {
       {/* Step Content */}
       <Card className="border-0 shadow-none bg-transparent">
         <CardContent className="p-0">
+          {currentStep === 'welcome' && (
+            <MigrationWelcome onBegin={handleWelcomeBegin} />
+          )}
+          
+          {currentStep === 'prepare' && (
+            <MigrationPreparation 
+              onBack={handlePreparationBack}
+              onContinue={handlePreparationContinue}
+            />
+          )}
+          
           {currentStep === 'type' && (
-            <ImportTypeSelector onSelect={handleTypeSelect} />
+            <ImportTypeSelector 
+              onSelect={handleTypeSelect} 
+              onBack={() => setCurrentStep('prepare')}
+            />
           )}
           
           {currentStep === 'upload' && importType && (
