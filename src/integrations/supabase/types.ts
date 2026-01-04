@@ -1296,6 +1296,50 @@ export type Database = {
         }
         Relationships: []
       }
+      report_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_system_template: boolean | null
+          name: string
+          organization_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_template?: boolean | null
+          name: string
+          organization_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_template?: boolean | null
+          name?: string
+          organization_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retainer_funds: {
         Row: {
           amount: number
@@ -1400,6 +1444,56 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_sections: {
+        Row: {
+          collection_config: Json | null
+          content: string | null
+          created_at: string | null
+          display_order: number
+          id: string
+          is_visible: boolean | null
+          section_type: string
+          template_id: string
+          title: string
+          updated_at: string | null
+          variable_config: Json | null
+        }
+        Insert: {
+          collection_config?: Json | null
+          content?: string | null
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_visible?: boolean | null
+          section_type: string
+          template_id: string
+          title: string
+          updated_at?: string | null
+          variable_config?: Json | null
+        }
+        Update: {
+          collection_config?: Json | null
+          content?: string | null
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_visible?: boolean | null
+          section_type?: string
+          template_id?: string
+          title?: string
+          updated_at?: string | null
+          variable_config?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_sections_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
             referencedColumns: ["id"]
           },
         ]
