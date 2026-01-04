@@ -22,6 +22,9 @@ import { NotificationHelpers } from "@/lib/notifications";
 import { CaseTeamManager } from "@/components/case-detail/CaseTeamManager";
 import { EmailComposer } from "@/components/EmailComposer";
 import { RelatedCases } from "@/components/case-detail/RelatedCases";
+import { BudgetSummary } from "@/components/case-detail/BudgetSummary";
+import { BudgetAdjustmentForm } from "@/components/case-detail/BudgetAdjustmentForm";
+import { BudgetAdjustmentsHistory } from "@/components/case-detail/BudgetAdjustmentsHistory";
 import { Mail } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -81,6 +84,7 @@ const CaseDetail = () => {
   }>>([]);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
   useEffect(() => {
     fetchCaseData();
     fetchCaseStatuses();
@@ -644,13 +648,14 @@ const CaseDetail = () => {
 
       <Tabs defaultValue={isVendor ? "updates" : "subjects"} className="w-full">
         <TabsList className="grid w-full gap-1" style={{
-        gridTemplateColumns: isVendor ? 'repeat(2, 1fr)' : 'repeat(3, 1fr) repeat(3, 1fr)'
+        gridTemplateColumns: isVendor ? 'repeat(2, 1fr)' : 'repeat(4, 1fr) repeat(3, 1fr)'
       }}>
           {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-2 sm:px-3">Subjects</TabsTrigger>}
           <TabsTrigger value="updates" className="text-xs sm:text-sm px-2 sm:px-3">Updates</TabsTrigger>
           {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-2 sm:px-3">Activities</TabsTrigger>}
           {!isVendor && <TabsTrigger value="calendar" className="text-xs sm:text-sm px-2 sm:px-3">Calendar</TabsTrigger>}
           {!isVendor && <TabsTrigger value="finances" className="text-xs sm:text-sm px-2 sm:px-3">Finances</TabsTrigger>}
+          {!isVendor && <TabsTrigger value="budget" className="text-xs sm:text-sm px-2 sm:px-3">Budget</TabsTrigger>}
           <TabsTrigger value="attachments" className="text-xs sm:text-sm px-2 sm:px-3">Attachments</TabsTrigger>
         </TabsList>
 
@@ -673,6 +678,18 @@ const CaseDetail = () => {
 
         <TabsContent value="finances" className="mt-4 sm:mt-6">
           <CaseFinances caseId={id!} isClosedCase={isClosed} />
+        </TabsContent>
+
+        <TabsContent value="budget" className="mt-4 sm:mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <BudgetSummary caseId={id!} refreshKey={budgetRefreshKey} />
+              <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} />
+            </div>
+            <div>
+              <BudgetAdjustmentForm caseId={id!} onSuccess={() => setBudgetRefreshKey(k => k + 1)} />
+            </div>
+          </div>
         </TabsContent>
           </>}
 

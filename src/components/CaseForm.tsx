@@ -54,6 +54,9 @@ const caseSchema = z.object({
   start_date: z.date(),
   due_date: z.date().optional(),
   use_primary_subject_as_title: z.boolean().default(false),
+  budget_hours: z.coerce.number().min(0).optional().nullable(),
+  budget_dollars: z.coerce.number().min(0).optional().nullable(),
+  budget_notes: z.string().max(500).optional().nullable(),
 });
 
 type CaseFormData = z.infer<typeof caseSchema>;
@@ -73,6 +76,9 @@ interface CaseFormProps {
     start_date: string;
     due_date: string | null;
     use_primary_subject_as_title?: boolean;
+    budget_hours?: number | null;
+    budget_dollars?: number | null;
+    budget_notes?: string | null;
   };
 }
 
@@ -110,6 +116,9 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       contact_id: "",
       start_date: new Date(),
       use_primary_subject_as_title: false,
+      budget_hours: null,
+      budget_dollars: null,
+      budget_notes: null,
     },
   });
 
@@ -132,6 +141,9 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           start_date: new Date(editingCase.start_date),
           due_date: editingCase.due_date ? new Date(editingCase.due_date) : undefined,
           use_primary_subject_as_title: editingCase.use_primary_subject_as_title || false,
+          budget_hours: editingCase.budget_hours ?? null,
+          budget_dollars: editingCase.budget_dollars ?? null,
+          budget_notes: editingCase.budget_notes ?? null,
         });
         // @ts-ignore - case_manager_id and investigator_ids exist on editingCase
         setCaseManagerId(editingCase.case_manager_id || "");
@@ -149,6 +161,9 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           contact_id: "",
           start_date: new Date(),
           use_primary_subject_as_title: false,
+          budget_hours: null,
+          budget_dollars: null,
+          budget_notes: null,
         });
         setCaseManagerId("");
         setInvestigators([]);
@@ -370,6 +385,9 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         case_manager_id: caseManagerId || null,
         investigator_ids: investigators,
         use_primary_subject_as_title: data.use_primary_subject_as_title,
+        budget_hours: data.budget_hours || null,
+        budget_dollars: data.budget_dollars || null,
+        budget_notes: data.budget_notes || null,
       };
 
       if (editingCase) {
@@ -790,6 +808,81 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Budget Authorization */}
+            <div className="border-t pt-4 space-y-4">
+              <h3 className="text-sm font-semibold">Budget Authorization</h3>
+              <p className="text-xs text-muted-foreground">
+                Set authorization limits for this case. This is NOT a retainer or payment.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="budget_hours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Budget Hours</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.5"
+                          placeholder="0"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="budget_dollars"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Budget Dollars</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                          <Input 
+                            type="number" 
+                            step="1"
+                            placeholder="0"
+                            className="pl-6"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="budget_notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Budget Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Notes about the budget authorization..."
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
