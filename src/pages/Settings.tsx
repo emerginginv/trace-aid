@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive, Palette, GripVertical, Eye, EyeOff } from "lucide-react";
+import { Loader2, Save, Upload, X, UserPlus, Search, Users as UsersIcon, Edit2, Trash2, MoreVertical, Plus, List, Mail, CreditCard, Check, AlertTriangle, HardDrive, Palette, GripVertical, Eye, EyeOff, Shield } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
@@ -27,6 +27,7 @@ import { TemplateList } from "@/components/templates/TemplateList";
 import { EmailTestForm } from "@/components/EmailTestForm";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSearchParams } from "react-router-dom";
+import { OrgIsolationAudit } from "@/components/OrgIsolationAudit";
 import {
   DndContext,
   closestCenter,
@@ -1370,7 +1371,7 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className={`grid w-full gap-1 p-1 ${(currentUserRole === 'investigator' || currentUserRole === 'vendor') ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8'} h-auto`}>
+        <TabsList className={`grid w-full gap-1 p-1 ${(currentUserRole === 'investigator' || currentUserRole === 'vendor') ? 'grid-cols-1' : currentUserRole === 'admin' ? 'grid-cols-2 sm:grid-cols-5 lg:grid-cols-9' : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8'} h-auto`}>
           <TabsTrigger value="preferences" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Preferences</TabsTrigger>
           {currentUserRole !== 'investigator' && currentUserRole !== 'vendor' && (
             <>
@@ -1384,10 +1385,16 @@ const Settings = () => {
                 <span className="hidden sm:inline">Email</span>
               </TabsTrigger>
               {currentUserRole === 'admin' && (
-                <TabsTrigger value="billing" className="text-xs sm:text-sm px-2 py-2 sm:px-3 flex items-center justify-center gap-1">
-                  <CreditCard className="w-3 h-3" />
-                  <span className="hidden sm:inline">Billing</span>
-                </TabsTrigger>
+                <>
+                  <TabsTrigger value="billing" className="text-xs sm:text-sm px-2 py-2 sm:px-3 flex items-center justify-center gap-1">
+                    <CreditCard className="w-3 h-3" />
+                    <span className="hidden sm:inline">Billing</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="data-integrity" className="text-xs sm:text-sm px-2 py-2 sm:px-3 flex items-center justify-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    <span className="hidden sm:inline">Data Integrity</span>
+                  </TabsTrigger>
+                </>
               )}
             </>
           )}
@@ -2855,6 +2862,23 @@ const Settings = () => {
                 ))}
               </div>
             </div>
+          </TabsContent>
+        )}
+
+        {/* Data Integrity Tab - Admin Only */}
+        {currentUserRole === 'admin' && (
+          <TabsContent value="data-integrity">
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Integrity</CardTitle>
+                <CardDescription>
+                  Audit and fix organization data isolation issues
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <OrgIsolationAudit />
+              </CardContent>
+            </Card>
           </TabsContent>
         )}
       </Tabs>
