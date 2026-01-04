@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase, Users, Building2, TrendingUp, CheckCircle2, Calendar, Bell, DollarSign, Clock, AlertCircle, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Briefcase, Users, Building2, TrendingUp, CheckCircle2, Calendar, Bell, DollarSign, Clock, AlertCircle, X, ChevronDown, ChevronUp, Wallet, Receipt, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,6 +14,7 @@ import { ActivityForm } from "@/components/case-detail/ActivityForm";
 import { UpdateForm } from "@/components/case-detail/UpdateForm";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { useOrganization } from "@/contexts/OrganizationContext";
+
 interface Task {
   id: string;
   title: string;
@@ -50,16 +51,9 @@ interface Expense {
   financeData: any;
 }
 const Dashboard = () => {
-  const {
-    toast
-  } = useToast();
-  const {
-    isVendor,
-    loading: roleLoading
-  } = useUserRole();
-  const {
-    organization
-  } = useOrganization();
+  const { toast } = useToast();
+  const { isVendor, loading: roleLoading } = useUserRole();
+  const { organization } = useOrganization();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -80,38 +74,42 @@ const Dashboard = () => {
     totalContacts: 0,
     totalAccounts: 0
   });
+  const [financialSummary, setFinancialSummary] = useState({
+    totalRetainerFunds: 0,
+    outstandingExpenses: 0,
+    unpaidInvoices: 0
+  });
+
   useEffect(() => {
     if (!organization?.id) return;
+
     const fetchDashboardData = async () => {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
       const orgId = organization.id;
 
       // Fetch stats filtered by organization
-      const [casesResult, contactsResult, accountsResult] = await Promise.all([supabase.from("cases").select("*", {
-        count: "exact",
-        head: true
-      }).eq("organization_id", orgId), supabase.from("contacts").select("*", {
-        count: "exact",
-        head: true
-      }).eq("organization_id", orgId), supabase.from("accounts").select("*", {
-        count: "exact",
-        head: true
-      }).eq("organization_id", orgId)]);
+      const [casesResult, contactsResult, accountsResult] = await Promise.all([
+        supabase.from("cases").select("*", { count: "exact", head: true }).eq("organization_id", orgId),
+        supabase.from("contacts").select("*", { count: "exact", head: true }).eq("organization_id", orgId),
+        supabase.from("accounts").select("*", { count: "exact", head: true }).eq("organization_id", orgId)
+      ]);
 
       // Fetch all cases to categorize by status_type
-      const {
-        data: allCases
-      } = await supabase.from("cases").select("status").eq("organization_id", orgId);
+      const { data: allCases } = await supabase
+        .from("cases")
+        .select("status")
+        .eq("organization_id", orgId);
 
       // Fetch status picklists filtered by organization
-      const {
-        data: statusPicklists
-      } = await supabase.from("picklists").select("value, status_type").eq("type", "case_status").eq("is_active", true).or(`organization_id.eq.${orgId},organization_id.is.null`);
+      const { data: statusPicklists } = await supabase
+        .from("picklists")
+        .select("value, status_type")
+        .eq("type", "case_status")
+        .eq("is_active", true)
+        .or(`organization_id.eq.${orgId},organization_id.is.null`);
+
       let openCasesCount = 0;
       let closedCasesCount = 0;
       if (allCases && statusPicklists) {
@@ -124,10 +122,13 @@ const Dashboard = () => {
           }
         });
       }
-      const activeCasesResult = await supabase.from("cases").select("*", {
-        count: "exact",
-        head: true
-      }).eq("organization_id", orgId).eq("status", "open");
+
+      const activeCasesResult = await supabase
+        .from("cases")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", orgId)
+        .eq("status", "open");
+
       setStats({
         totalCases: casesResult.count || 0,
         activeCases: activeCasesResult.count || 0,
@@ -138,13 +139,15 @@ const Dashboard = () => {
       });
 
       // Fetch tasks from case_activities (pending tasks only) filtered by organization
-      const {
-        data: activitiesData,
-        error: tasksError
-      } = await supabase.from("case_activities").select("*").eq("organization_id", orgId).eq("activity_type", "task").eq("completed", false).order("due_date", {
-        ascending: true,
-        nullsFirst: false
-      }).limit(10);
+      const { data: activitiesData, error: tasksError } = await supabase
+        .from("case_activities")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("activity_type", "task")
+        .eq("completed", false)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(10);
+
       if (activitiesData) {
         const tasksData: Task[] = activitiesData.map(activity => ({
           id: activity.id,
@@ -163,11 +166,18 @@ const Dashboard = () => {
       today.setHours(0, 0, 0, 0);
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
-      const {
-        data: eventsData
-      } = await supabase.from("case_activities").select("*").eq("organization_id", orgId).eq("activity_type", "event").not("due_date", "is", null).gte("due_date", today.toISOString().split('T')[0]).lte("due_date", futureDate.toISOString().split('T')[0]).order("due_date", {
-        ascending: true
-      }).limit(10);
+
+      const { data: eventsData } = await supabase
+        .from("case_activities")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("activity_type", "event")
+        .not("due_date", "is", null)
+        .gte("due_date", today.toISOString().split('T')[0])
+        .lte("due_date", futureDate.toISOString().split('T')[0])
+        .order("due_date", { ascending: true })
+        .limit(10);
+
       if (eventsData) {
         const calendarEvents: CalendarEvent[] = eventsData.map(event => ({
           id: event.id,
@@ -182,11 +192,13 @@ const Dashboard = () => {
       }
 
       // Fetch recent updates from case_updates filtered by organization
-      const {
-        data: updatesData
-      } = await supabase.from("case_updates").select("*").eq("organization_id", orgId).order("created_at", {
-        ascending: false
-      }).limit(5);
+      const { data: updatesData } = await supabase
+        .from("case_updates")
+        .select("*")
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
       if (updatesData) {
         const recentUpdates: Update[] = updatesData.map(update => ({
           id: update.id,
@@ -200,11 +212,14 @@ const Dashboard = () => {
       }
 
       // Fetch recent expenses from case_finances filtered by organization
-      const {
-        data: expensesData
-      } = await supabase.from("case_finances").select("*").eq("organization_id", orgId).eq("finance_type", "expense").order("date", {
-        ascending: false
-      }).limit(5);
+      const { data: expensesData } = await supabase
+        .from("case_finances")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("finance_type", "expense")
+        .order("date", { ascending: false })
+        .limit(5);
+
       if (expensesData) {
         const recentExpenses: Expense[] = expensesData.map(expense => ({
           id: expense.id,
@@ -219,9 +234,11 @@ const Dashboard = () => {
       }
 
       // Fetch users for assignments filtered by organization
-      const {
-        data: orgUsers
-      } = await supabase.from('profiles').select('id, email, full_name').in('id', (await supabase.from('organization_members').select('user_id').eq('organization_id', orgId)).data?.map(m => m.user_id) || []);
+      const { data: orgUsers } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .in('id', (await supabase.from('organization_members').select('user_id').eq('organization_id', orgId)).data?.map(m => m.user_id) || []);
+
       if (orgUsers) {
         setUsers(orgUsers.map(u => ({
           id: u.id,
@@ -229,7 +246,40 @@ const Dashboard = () => {
           full_name: u.full_name
         })));
       }
+
+      // Fetch financial summary data
+      const [retainerResult, pendingExpensesResult, unpaidInvoicesResult] = await Promise.all([
+        supabase
+          .from("retainer_funds")
+          .select("amount")
+          .eq("organization_id", orgId),
+        supabase
+          .from("case_finances")
+          .select("amount")
+          .eq("organization_id", orgId)
+          .eq("finance_type", "expense")
+          .eq("status", "pending"),
+        supabase
+          .from("invoices")
+          .select("balance_due")
+          .eq("organization_id", orgId)
+          .gt("balance_due", 0)
+      ]);
+
+      const totalRetainer = retainerResult.data?.reduce((sum, r) => 
+        sum + parseFloat(String(r.amount) || '0'), 0) || 0;
+      const outstandingExpenses = pendingExpensesResult.data?.reduce((sum, e) => 
+        sum + parseFloat(String(e.amount) || '0'), 0) || 0;
+      const unpaidInvoicesTotal = unpaidInvoicesResult.data?.reduce((sum, i) => 
+        sum + parseFloat(String(i.balance_due) || '0'), 0) || 0;
+
+      setFinancialSummary({
+        totalRetainerFunds: totalRetainer,
+        outstandingExpenses: outstandingExpenses,
+        unpaidInvoices: unpaidInvoicesTotal
+      });
     };
+
     fetchDashboardData();
   }, [organization?.id]);
   const handleTaskToggle = async (taskId: string) => {
@@ -381,10 +431,104 @@ const Dashboard = () => {
       })}
       </div>
 
+      {/* Financial Summary Card */}
+      <Card className="border-border/50 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 shadow-lg">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <Wallet className="w-5 h-5 text-emerald-500" />
+            </div>
+            <span className="text-lg font-semibold">Financial Summary</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Retainer Funds */}
+            <div className="p-4 rounded-xl bg-card/80 border border-border/50">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <Wallet className="w-4 h-4" />
+                <span>Retainer Funds</span>
+              </div>
+              <p className="text-2xl font-bold text-emerald-500">
+                ${financialSummary.totalRetainerFunds.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            
+            {/* Outstanding Expenses */}
+            <div className="p-4 rounded-xl bg-card/80 border border-border/50">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <Receipt className="w-4 h-4" />
+                <span>Outstanding Expenses</span>
+              </div>
+              <p className="text-2xl font-bold text-amber-500">
+                ${financialSummary.outstandingExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            
+            {/* Unpaid Invoices */}
+            <div className="p-4 rounded-xl bg-card/80 border border-border/50">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <FileText className="w-4 h-4" />
+                <span>Unpaid Invoices</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-500">
+                ${financialSummary.unpaidInvoices.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Main Dashboard Grid with Enhanced Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Due Tasks */}
-        
+        <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
+          <CardHeader className="pb-4 border-b border-border/50">
+            <CardTitle className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <CheckCircle2 className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-lg font-semibold">Due Tasks</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-6">
+            {dueTasks.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="p-4 rounded-full bg-muted mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No pending tasks</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">You're all caught up!</p>
+              </div> : dueTasks.map(task => {
+            const taskDate = parseISO(task.dueDate);
+            const isOverdue = isPast(taskDate) && !isToday(taskDate);
+            return <div key={task.id} onClick={() => setEditingTask(task)} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 hover:border-primary/20 transition-all hover:shadow-md cursor-pointer bg-muted/30 hover:bg-muted/50">
+                    <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-1" onClick={e => e.stopPropagation()} />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-sm leading-tight">{task.title}</p>
+                        <Badge variant={getPriorityColor(task.priority) as any} className="text-xs shrink-0">
+                          {task.priority}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {isOverdue ? <span className="flex items-center gap-1.5 text-destructive font-medium bg-destructive/10 px-2 py-1 rounded-md">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            Overdue by {formatDistanceToNow(taskDate)}
+                          </span> : isToday(taskDate) ? <span className="flex items-center gap-1.5 text-warning bg-warning/10 px-2 py-1 rounded-md">
+                            <Clock className="w-3.5 h-3.5" />
+                            Due today
+                          </span> : <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <Clock className="w-3.5 h-3.5" />
+                            Due {formatDistanceToNow(taskDate, {
+                      addSuffix: true
+                    })}
+                          </span>}
+                      </div>
+                    </div>
+                  </div>;
+          })}
+          </CardContent>
+        </Card>
 
         {/* Calendar Events */}
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
