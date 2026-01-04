@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AttachmentsTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2 } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
@@ -14,11 +14,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { getPlanLimits } from "@/lib/planLimits";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ShareAttachmentDialog } from "./ShareAttachmentDialog";
+import { AttachmentSelectionBar } from "./AttachmentSelectionBar";
+import { BulkShareAttachmentDialog } from "./BulkShareAttachmentDialog";
+import { EmailAttachmentsDialog } from "./EmailAttachmentsDialog";
+import { RevokeAccessDialog } from "./RevokeAccessDialog";
 
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
@@ -48,10 +54,12 @@ interface UploadingFile {
 
 interface CaseAttachmentsProps {
   caseId: string;
+  caseNumber?: string;
   isClosedCase?: boolean;
 }
 
 const COLUMNS: ColumnDefinition[] = [
+  { key: "select", label: "", hideable: false },
   { key: "name", label: "Name" },
   { key: "file_type", label: "Type" },
   { key: "file_size", label: "Size" },
@@ -60,7 +68,7 @@ const COLUMNS: ColumnDefinition[] = [
   { key: "actions", label: "Actions", hideable: false },
 ];
 
-export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachmentsProps) => {
+export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false }: CaseAttachmentsProps) => {
   const { organization } = useOrganization();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +86,15 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedAttachmentForShare, setSelectedAttachmentForShare] = useState<Attachment | null>(null);
   
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sharedAttachmentIds, setSharedAttachmentIds] = useState<Set<string>>(new Set());
+  
+  // Bulk actions dialogs
+  const [bulkShareDialogOpen, setBulkShareDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("case-attachments", "created_at", "desc");
 
@@ -92,6 +109,12 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
   useEffect(() => {
     fetchAttachments();
   }, [caseId]);
+
+  useEffect(() => {
+    if (attachments.length > 0) {
+      fetchSharedStatus();
+    }
+  }, [attachments]);
 
   useEffect(() => {
     // Generate signed URLs for all attachments
@@ -154,6 +177,48 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchSharedStatus = useCallback(async () => {
+    try {
+      const attachmentIds = attachments.map(a => a.id);
+      
+      const { data, error } = await supabase
+        .from("attachment_access")
+        .select("attachment_id")
+        .in("attachment_id", attachmentIds)
+        .eq("attachment_type", "case")
+        .is("revoked_at", null)
+        .or("expires_at.is.null,expires_at.gt.now()");
+
+      if (error) throw error;
+
+      const sharedIds = new Set(data?.map(d => d.attachment_id) || []);
+      setSharedAttachmentIds(sharedIds);
+    } catch (error) {
+      console.error("Error fetching shared status:", error);
+    }
+  }, [attachments]);
+
+  const toggleSelection = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredAttachments.map(a => a.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
   };
 
   const uploadFiles = async (files: FileList | File[]) => {
@@ -506,6 +571,21 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
     return matchesSearch && matchesType && matchesTag;
   });
 
+  // Calculate selection state
+  const selectedAttachments = filteredAttachments.filter(a => selectedIds.has(a.id));
+  const hasSharedSelected = selectedAttachments.some(a => sharedAttachmentIds.has(a.id));
+  const allSelected = filteredAttachments.length > 0 && filteredAttachments.every(a => selectedIds.has(a.id));
+
+  const handleBulkShareSuccess = () => {
+    fetchSharedStatus();
+    clearSelection();
+  };
+
+  const handleRevokeSuccess = () => {
+    fetchSharedStatus();
+    clearSelection();
+  };
+
   if (permissionsLoading || loading) {
     return <AttachmentsTabSkeleton />;
   }
@@ -525,355 +605,238 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
   }
 
   return (
-    <div className="space-y-4">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Attachments</h2>
-          <p className="text-muted-foreground">
-            {filteredAttachments.length} file{filteredAttachments.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => {
-                const exportColumns: ExportColumn[] = [
-                  { key: "name", label: "Name", format: (v, row) => v || row.file_name },
-                  { key: "file_type", label: "Type", format: (v) => getFileTypeCategory(v) },
-                  { key: "file_size", label: "Size", format: (v) => formatFileSize(v) },
-                  { key: "created_at", label: "Uploaded", format: (v) => format(new Date(v), "MMM d, yyyy") },
-                  { key: "tags", label: "Tags", format: (v) => v?.join(", ") || "-" },
-                  { key: "description", label: "Description", format: (v) => v || "-" },
-                ];
-                exportToCSV(filteredAttachments, exportColumns, "case-attachments");
-              }}>
-                Export to CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                const exportColumns: ExportColumn[] = [
-                  { key: "name", label: "Name", format: (v, row) => v || row.file_name },
-                  { key: "file_type", label: "Type", format: (v) => getFileTypeCategory(v) },
-                  { key: "file_size", label: "Size", format: (v) => formatFileSize(v) },
-                  { key: "created_at", label: "Uploaded", format: (v) => format(new Date(v), "MMM d, yyyy") },
-                  { key: "tags", label: "Tags", format: (v) => v?.join(", ") || "-" },
-                ];
-                exportToPDF(filteredAttachments, exportColumns, "case-attachments", "Case Attachments");
-              }}>
-                Export to PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {canAddAttachments && !isClosedCase && (
-            <Button onClick={() => document.getElementById('file-upload')?.click()}>
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Files
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Drag-and-Drop Zone - only show if user can add attachments */}
-      {canAddAttachments && !isClosedCase && (
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => document.getElementById('file-upload')?.click()}
-          className={`w-full border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
-            isDragging
-              ? 'border-primary bg-primary/5'
-              : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
-          }`}
-        >
-          <Upload className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground mb-1">
-            Drag and drop files here, or{' '}
-            <span className="text-primary font-medium underline">click to upload</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Supports images, videos, audio, PDF, DOC, and more
-          </p>
-        </div>
-      )}
-
-      {/* Uploading Files Preview */}
-      {uploadingFiles.length > 0 && (
-        <div className="space-y-2">
-          {uploadingFiles.map((uploadingFile) => (
-            <Card key={uploadingFile.id}>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 flex-shrink-0">
-                    {uploadingFile.file.type.startsWith('image/') ? (
-                      <img
-                        src={uploadingFile.preview}
-                        alt={uploadingFile.file.name}
-                        className="h-10 w-10 object-cover rounded"
-                      />
-                    ) : uploadingFile.file.type.startsWith('video/') ? (
-                      <video
-                        src={uploadingFile.preview}
-                        className="h-10 w-10 object-cover rounded"
-                        muted
-                      />
-                    ) : (
-                      getFileIcon(uploadingFile.file.type, uploadingFile.file.name)
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{uploadingFile.file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {uploadingFile.status === 'uploading' && 'Uploading...'}
-                      {uploadingFile.status === 'complete' && '✓ Uploaded'}
-                      {uploadingFile.status === 'error' && '✗ Upload failed'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search files..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="flex-1 sm:w-32">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50">
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="image">Images</SelectItem>
-              <SelectItem value="video">Videos</SelectItem>
-              <SelectItem value="audio">Audio</SelectItem>
-              <SelectItem value="document">Documents</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={tagFilter} onValueChange={setTagFilter}>
-            <SelectTrigger className="flex-1 sm:w-32">
-              <SelectValue placeholder="Tags" />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50">
-              <SelectItem value="all">All Tags</SelectItem>
-              {allTags.length === 0 ? (
-                <SelectItem value="none" disabled>No tags</SelectItem>
-              ) : (
-                allTags.map((tag) => (
-                  <SelectItem key={tag} value={tag}>
-                    {tag}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-          <div className="flex gap-1 border rounded-md p-0.5">
-            <Button 
-              variant={viewMode === "list" ? "secondary" : "ghost"} 
-              size="icon"
-              onClick={() => setViewMode("list")}
-              className="h-9 w-9"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant={viewMode === "card" ? "secondary" : "ghost"} 
-              size="icon"
-              onClick={() => setViewMode("card")}
-              className="h-9 w-9"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-          </div>
-          <ColumnVisibility
-            columns={COLUMNS}
-            visibility={visibility}
-            onToggle={toggleColumn}
-            onReset={resetToDefaults}
-          />
-        </div>
-        <input
-          id="file-upload"
-          type="file"
-          multiple
-          onChange={handleFileUpload}
-          className="hidden"
+    <TooltipProvider>
+      <div className="space-y-4">
+        {/* Selection Bar */}
+        <AttachmentSelectionBar
+          selectedCount={selectedIds.size}
+          hasSharedSelected={hasSharedSelected}
+          canEditAttachments={canEditAttachments}
+          onGenerateLinks={() => setBulkShareDialogOpen(true)}
+          onEmailAttachments={() => setEmailDialogOpen(true)}
+          onRevokeAccess={() => setRevokeDialogOpen(true)}
+          onClearSelection={clearSelection}
         />
-      </div>
 
-      {attachments.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <h3 className="font-semibold text-lg mb-2">No attachments yet</h3>
-            <p className="text-muted-foreground text-center">
-              Upload files to get started
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold">Attachments</h2>
+            <p className="text-muted-foreground">
+              {filteredAttachments.length} file{filteredAttachments.length !== 1 ? 's' : ''}
             </p>
-          </CardContent>
-        </Card>
-      ) : filteredAttachments.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">No files match your search criteria</p>
-          </CardContent>
-        </Card>
-      ) : viewMode === "card" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-          {filteredAttachments.map((attachment) => {
-            const signedUrl = previewUrls[attachment.id];
+          </div>
+          <div className="flex gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  const exportColumns: ExportColumn[] = [
+                    { key: "name", label: "Name", format: (v, row) => v || row.file_name },
+                    { key: "file_type", label: "Type", format: (v) => getFileTypeCategory(v) },
+                    { key: "file_size", label: "Size", format: (v) => formatFileSize(v) },
+                    { key: "created_at", label: "Uploaded", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                    { key: "tags", label: "Tags", format: (v) => v?.join(", ") || "-" },
+                    { key: "description", label: "Description", format: (v) => v || "-" },
+                  ];
+                  exportToCSV(filteredAttachments, exportColumns, "case-attachments");
+                }}>
+                  Export to CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  const exportColumns: ExportColumn[] = [
+                    { key: "name", label: "Name", format: (v, row) => v || row.file_name },
+                    { key: "file_type", label: "Type", format: (v) => getFileTypeCategory(v) },
+                    { key: "file_size", label: "Size", format: (v) => formatFileSize(v) },
+                    { key: "created_at", label: "Uploaded", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                    { key: "tags", label: "Tags", format: (v) => v?.join(", ") || "-" },
+                  ];
+                  exportToPDF(filteredAttachments, exportColumns, "case-attachments", "Case Attachments");
+                }}>
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {canAddAttachments && !isClosedCase && (
+              <Button onClick={() => document.getElementById('file-upload')?.click()}>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Files
+              </Button>
+            )}
+          </div>
+        </div>
 
-            return (
-              <Card 
-                key={attachment.id} 
-                className="overflow-hidden cursor-pointer hover:shadow-lg transition-all"
-                onClick={() => handlePreview(attachment)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handlePreview(attachment);
-                  }
-                }}
-              >
+        {/* Drag-and-Drop Zone - only show if user can add attachments */}
+        {canAddAttachments && !isClosedCase && (
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById('file-upload')?.click()}
+            className={`w-full border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
+              isDragging
+                ? 'border-primary bg-primary/5'
+                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+            }`}
+          >
+            <Upload className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground mb-1">
+              Drag and drop files here, or{' '}
+              <span className="text-primary font-medium underline">click to upload</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Supports images, videos, audio, PDF, DOC, and more
+            </p>
+          </div>
+        )}
+
+        {/* Uploading Files Preview */}
+        {uploadingFiles.length > 0 && (
+          <div className="space-y-2">
+            {uploadingFiles.map((uploadingFile) => (
+              <Card key={uploadingFile.id}>
                 <CardContent className="p-3">
-                  <div className="w-full h-40 bg-muted rounded overflow-hidden flex items-center justify-center">
-                    {attachment.file_type.startsWith("image/") && signedUrl ? (
-                      <img 
-                        src={signedUrl} 
-                        alt={attachment.file_name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : attachment.file_type.startsWith("video/") && signedUrl ? (
-                      <video 
-                        src={signedUrl} 
-                        className="w-full h-full object-cover"
-                        muted
-                      />
-                    ) : (
-                      getFileIcon(attachment.file_type, attachment.file_name)
-                    )}
-                  </div>
-                  <div className="mt-2">
-                    <div className="text-sm font-medium truncate" title={attachment.name || attachment.file_name}>
-                      {attachment.name || attachment.file_name}
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 flex-shrink-0">
+                      {uploadingFile.file.type.startsWith('image/') ? (
+                        <img
+                          src={uploadingFile.preview}
+                          alt={uploadingFile.file.name}
+                          className="h-10 w-10 object-cover rounded"
+                        />
+                      ) : uploadingFile.file.type.startsWith('video/') ? (
+                        <video
+                          src={uploadingFile.preview}
+                          className="h-10 w-10 object-cover rounded"
+                          muted
+                        />
+                      ) : (
+                        getFileIcon(uploadingFile.file.type, uploadingFile.file.name)
+                      )}
                     </div>
-                    {attachment.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {attachment.description}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{uploadingFile.file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {uploadingFile.status === 'uploading' && 'Uploading...'}
+                        {uploadingFile.status === 'complete' && '✓ Uploaded'}
+                        {uploadingFile.status === 'error' && '✗ Upload failed'}
                       </p>
-                    )}
-                    {attachment.tags && attachment.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {attachment.tags.map((tag, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {formatFileSize(attachment.file_size)} • {new Date(attachment.created_at).toLocaleDateString()}
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-1 sm:gap-2 mt-3">
-                    {canEditAttachments && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(attachment);
-                        }}
-                        disabled={isClosedCase}
-                        className="h-7 sm:h-8 text-xs px-2"
-                      >
-                        <Pencil className="h-3 w-3 sm:mr-1" />
-                        <span className="hidden sm:inline">Edit</span>
-                      </Button>
-                    )}
-                    {canEditAttachments && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShare(attachment);
-                        }}
-                        className="h-7 sm:h-8 text-xs px-2"
-                      >
-                        <Share2 className="h-3 w-3 sm:mr-1" />
-                        <span className="hidden sm:inline">Share</span>
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownload(attachment);
-                      }}
-                      className="h-7 sm:h-8 text-xs px-2"
-                    >
-                      <Download className="h-3 w-3 sm:mr-1" />
-                      <span className="hidden sm:inline">Download</span>
-                    </Button>
-                    {canDeleteAttachments && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(attachment);
-                        }}
-                        disabled={isClosedCase}
-                        className="h-7 sm:h-8 text-xs px-2 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3 sm:mr-1" />
-                        <span className="hidden sm:inline">Delete</span>
-                      </Button>
-                    )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            );
-          })}
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="flex-1 sm:w-32">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="image">Images</SelectItem>
+                <SelectItem value="video">Videos</SelectItem>
+                <SelectItem value="audio">Audio</SelectItem>
+                <SelectItem value="document">Documents</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={tagFilter} onValueChange={setTagFilter}>
+              <SelectTrigger className="flex-1 sm:w-32">
+                <SelectValue placeholder="Tags" />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                <SelectItem value="all">All Tags</SelectItem>
+                {allTags.length === 0 ? (
+                  <SelectItem value="none" disabled>No tags</SelectItem>
+                ) : (
+                  allTags.map((tag) => (
+                    <SelectItem key={tag} value={tag}>
+                      {tag}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <div className="flex gap-1 border rounded-md p-0.5">
+              <Button 
+                variant={viewMode === "list" ? "secondary" : "ghost"} 
+                size="icon"
+                onClick={() => setViewMode("list")}
+                className="h-9 w-9"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant={viewMode === "card" ? "secondary" : "ghost"} 
+                size="icon"
+                onClick={() => setViewMode("card")}
+                className="h-9 w-9"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </div>
+            <ColumnVisibility
+              columns={COLUMNS}
+              visibility={visibility}
+              onToggle={toggleColumn}
+              onReset={resetToDefaults}
+            />
+          </div>
+          <input
+            id="file-upload"
+            type="file"
+            multiple
+            onChange={handleFileUpload}
+            className="hidden"
+          />
         </div>
-      ) : (
-        <div className="border rounded-lg overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-12 sm:w-16 py-2">Preview</TableHead>
-                <TableHead className="py-2 min-w-[150px]">File Name</TableHead>
-                <TableHead className="py-2 hidden sm:table-cell">Size</TableHead>
-                <TableHead className="py-2 hidden md:table-cell">Uploaded</TableHead>
-                <TableHead className="text-right py-2 min-w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAttachments.map((attachment) => {
-                const signedUrl = previewUrls[attachment.id];
-                
-                return (
-                <TableRow 
+
+        {attachments.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <h3 className="font-semibold text-lg mb-2">No attachments yet</h3>
+              <p className="text-muted-foreground text-center">
+                Upload files to get started
+              </p>
+            </CardContent>
+          </Card>
+        ) : filteredAttachments.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground">No files match your search criteria</p>
+            </CardContent>
+          </Card>
+        ) : viewMode === "card" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+            {filteredAttachments.map((attachment) => {
+              const signedUrl = previewUrls[attachment.id];
+              const isSelected = selectedIds.has(attachment.id);
+              const isShared = sharedAttachmentIds.has(attachment.id);
+
+              return (
+                <Card 
                   key={attachment.id} 
-                  className="text-sm cursor-pointer hover:bg-muted/50"
+                  className={`overflow-hidden cursor-pointer hover:shadow-lg transition-all relative ${
+                    isSelected ? 'ring-2 ring-primary' : ''
+                  }`}
                   onClick={() => handlePreview(attachment)}
                   role="button"
                   tabIndex={0}
@@ -884,35 +847,62 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                     }
                   }}
                 >
-                  <TableCell className="py-1.5">
-                    <div className="flex items-center justify-center">
+                  <CardContent className="p-3">
+                    {/* Selection checkbox */}
+                    <div 
+                      className="absolute top-2 left-2 z-10"
+                      onClick={(e) => toggleSelection(attachment.id, e)}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        className="bg-background/80 backdrop-blur-sm"
+                      />
+                    </div>
+                    
+                    {/* Shared indicator */}
+                    {isShared && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge 
+                            variant="outline" 
+                            className="absolute top-2 right-2 z-10 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 gap-1"
+                          >
+                            <Link2 className="h-3 w-3" />
+                            Shared
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>This file has active share links</TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    <div className="w-full h-40 bg-muted rounded overflow-hidden flex items-center justify-center">
                       {attachment.file_type.startsWith("image/") && signedUrl ? (
                         <img 
                           src={signedUrl} 
                           alt={attachment.file_name}
-                          className="h-10 w-10 object-cover rounded"
+                          className="w-full h-full object-cover"
                         />
                       ) : attachment.file_type.startsWith("video/") && signedUrl ? (
                         <video 
                           src={signedUrl} 
-                          className="h-10 w-10 object-cover rounded"
+                          className="w-full h-full object-cover"
                           muted
                         />
                       ) : (
                         getFileIcon(attachment.file_type, attachment.file_name)
                       )}
                     </div>
-                  </TableCell>
-                  <TableCell className="py-1.5">
-                    <div>
-                      <div className="font-medium">{attachment.name || attachment.file_name}</div>
+                    <div className="mt-2">
+                      <div className="text-sm font-medium truncate" title={attachment.name || attachment.file_name}>
+                        {attachment.name || attachment.file_name}
+                      </div>
                       {attachment.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                           {attachment.description}
                         </p>
                       )}
                       {attachment.tags && attachment.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
+                        <div className="flex flex-wrap gap-1 mt-2">
                           {attachment.tags.map((tag, idx) => (
                             <Badge key={idx} variant="secondary" className="text-xs">
                               {tag}
@@ -921,142 +911,331 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                         </div>
                       )}
                     </div>
-                  </TableCell>
-                  <TableCell className="py-1.5 hidden sm:table-cell">{formatFileSize(attachment.file_size)}</TableCell>
-                  <TableCell className="py-1.5 hidden md:table-cell">{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right py-1.5">
-                    <div className="flex justify-end gap-1">
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {formatFileSize(attachment.file_size)} • {new Date(attachment.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-1 sm:gap-2 mt-3">
                       {canEditAttachments && (
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEdit(attachment);
                           }}
                           disabled={isClosedCase}
-                          className="h-7 w-7 sm:h-8 sm:w-8"
-                          title="Edit"
+                          className="h-7 sm:h-8 text-xs px-2"
                         >
-                          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Pencil className="h-3 w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Edit</span>
                         </Button>
                       )}
                       {canEditAttachments && (
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleShare(attachment);
                           }}
-                          className="h-7 w-7 sm:h-8 sm:w-8"
-                          title="Share"
+                          className="h-7 sm:h-8 text-xs px-2"
                         >
-                          <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Share2 className="h-3 w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Share</span>
                         </Button>
                       )}
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDownload(attachment);
                         }}
-                        className="h-7 w-7 sm:h-8 sm:w-8"
-                        title="Download"
+                        className="h-7 sm:h-8 text-xs px-2"
                       >
-                        <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <Download className="h-3 w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Download</span>
                       </Button>
                       {canDeleteAttachments && (
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(attachment);
                           }}
                           disabled={isClosedCase}
-                          className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
-                          title="Delete"
+                          className="h-7 sm:h-8 text-xs px-2 text-destructive hover:text-destructive"
                         >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Trash2 className="h-3 w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Delete</span>
                         </Button>
                       )}
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </CardContent>
+                </Card>
               );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      <Dialog open={!!previewAttachment} onOpenChange={() => setPreviewAttachment(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{previewAttachment?.name || previewAttachment?.file_name}</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center justify-center">
-            {renderPreviewContent()}
+            })}
           </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!editingAttachment} onOpenChange={() => setEditingAttachment(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Attachment</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Name</label>
-              <Input
-                type="text"
-                placeholder="Attachment name"
-                value={editForm.name}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                className="text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Description</label>
-              <Textarea
-                placeholder="Add a description..."
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                className="text-sm resize-none"
-                rows={3}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Tags</label>
-              <Input
-                type="text"
-                placeholder="Tags (comma separated)"
-                value={editForm.tags}
-                onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
-                className="text-sm"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setEditingAttachment(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveEdit}>
-                Save Changes
-              </Button>
-            </div>
+        ) : (
+          <div className="border rounded-lg overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10 py-2">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          selectAll();
+                        } else {
+                          clearSelection();
+                        }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead className="w-12 sm:w-16 py-2">Preview</TableHead>
+                  <TableHead className="py-2 min-w-[150px]">File Name</TableHead>
+                  <TableHead className="py-2 hidden sm:table-cell">Size</TableHead>
+                  <TableHead className="py-2 hidden md:table-cell">Uploaded</TableHead>
+                  <TableHead className="text-right py-2 min-w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAttachments.map((attachment) => {
+                  const signedUrl = previewUrls[attachment.id];
+                  const isSelected = selectedIds.has(attachment.id);
+                  const isShared = sharedAttachmentIds.has(attachment.id);
+                  
+                  return (
+                  <TableRow 
+                    key={attachment.id} 
+                    className={`text-sm cursor-pointer hover:bg-muted/50 ${isSelected ? 'bg-primary/5' : ''}`}
+                    onClick={() => handlePreview(attachment)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handlePreview(attachment);
+                      }
+                    }}
+                  >
+                    <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelection(attachment.id)}
+                      />
+                    </TableCell>
+                    <TableCell className="py-1.5">
+                      <div className="flex items-center justify-center">
+                        {attachment.file_type.startsWith("image/") && signedUrl ? (
+                          <img 
+                            src={signedUrl} 
+                            alt={attachment.file_name}
+                            className="h-10 w-10 object-cover rounded"
+                          />
+                        ) : attachment.file_type.startsWith("video/") && signedUrl ? (
+                          <video 
+                            src={signedUrl} 
+                            className="h-10 w-10 object-cover rounded"
+                            muted
+                          />
+                        ) : (
+                          getFileIcon(attachment.file_type, attachment.file_name)
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-1.5">
+                      <div>
+                        <div className="font-medium flex items-center gap-2">
+                          {attachment.name || attachment.file_name}
+                          {isShared && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link2 className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                              </TooltipTrigger>
+                              <TooltipContent>This file has active share links</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                        {attachment.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {attachment.description}
+                          </p>
+                        )}
+                        {attachment.tags && attachment.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {attachment.tags.map((tag, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-1.5 hidden sm:table-cell">{formatFileSize(attachment.file_size)}</TableCell>
+                    <TableCell className="py-1.5 hidden md:table-cell">{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right py-1.5">
+                      <div className="flex justify-end gap-1">
+                        {canEditAttachments && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(attachment);
+                            }}
+                            disabled={isClosedCase}
+                            className="h-7 w-7 sm:h-8 sm:w-8"
+                            title="Edit"
+                          >
+                            <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        )}
+                        {canEditAttachments && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShare(attachment);
+                            }}
+                            className="h-7 w-7 sm:h-8 sm:w-8"
+                            title="Share"
+                          >
+                            <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(attachment);
+                          }}
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          title="Download"
+                        >
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                        {canDeleteAttachments && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(attachment);
+                            }}
+                            disabled={isClosedCase}
+                            className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+                })}
+              </TableBody>
+            </Table>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
 
-      <ShareAttachmentDialog
-        open={shareDialogOpen}
-        onOpenChange={setShareDialogOpen}
-        attachment={selectedAttachmentForShare}
-        attachmentType="case"
-      />
-    </div>
+        <Dialog open={!!previewAttachment} onOpenChange={() => setPreviewAttachment(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{previewAttachment?.name || previewAttachment?.file_name}</DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-center">
+              {renderPreviewContent()}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!editingAttachment} onOpenChange={() => setEditingAttachment(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Attachment</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Name</label>
+                <Input
+                  type="text"
+                  placeholder="Attachment name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Description</label>
+                <Textarea
+                  placeholder="Add a description..."
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="text-sm resize-none"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Tags</label>
+                <Input
+                  type="text"
+                  placeholder="Tags (comma separated)"
+                  value={editForm.tags}
+                  onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                  className="text-sm"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setEditingAttachment(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveEdit}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <ShareAttachmentDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          attachment={selectedAttachmentForShare}
+          attachmentType="case"
+        />
+
+        <BulkShareAttachmentDialog
+          open={bulkShareDialogOpen}
+          onOpenChange={setBulkShareDialogOpen}
+          attachments={selectedAttachments}
+          attachmentType="case"
+          onSuccess={handleBulkShareSuccess}
+        />
+
+        <EmailAttachmentsDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          attachments={selectedAttachments}
+          caseNumber={caseNumber}
+          attachmentType="case"
+          onSuccess={handleBulkShareSuccess}
+        />
+
+        <RevokeAccessDialog
+          open={revokeDialogOpen}
+          onOpenChange={setRevokeDialogOpen}
+          attachments={selectedAttachments}
+          attachmentType="case"
+          onSuccess={handleRevokeSuccess}
+        />
+      </div>
+    </TooltipProvider>
   );
 };
