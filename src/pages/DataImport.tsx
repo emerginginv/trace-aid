@@ -329,7 +329,7 @@ export default function DataImport() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
-          <MigrationDashboard />
+          <MigrationDashboard onStartNew={handleStartNewFromDashboard} />
         </TabsContent>
 
         <TabsContent value="wizard" className="mt-6 space-y-6">
