@@ -14,6 +14,8 @@ import { format } from "date-fns";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface Activity {
   id: string;
@@ -40,6 +42,15 @@ interface CaseActivitiesProps {
   isClosedCase?: boolean;
 }
 
+const COLUMNS: ColumnDefinition[] = [
+  { key: "checkbox", label: "", hideable: false },
+  { key: "title", label: "Title" },
+  { key: "status", label: "Status" },
+  { key: "assigned_user_id", label: "Assigned To" },
+  { key: "due_date", label: "Due Date" },
+  { key: "actions", label: "Actions", hideable: false },
+];
+
 export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -59,6 +70,8 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const canAddActivities = hasPermission("add_activities");
   const canEditActivities = hasPermission("edit_activities");
   const canDeleteActivities = hasPermission("delete_activities");
+
+  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("case-activities-columns", COLUMNS);
 
   useEffect(() => {
     fetchUsers();
@@ -396,6 +409,12 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
               )}
             </SelectContent>
           </Select>
+          <ColumnVisibility
+            columns={COLUMNS}
+            visibility={visibility}
+            onToggle={toggleColumn}
+            onReset={resetToDefaults}
+          />
         </div>
 
         {sortedActivities.length === 0 ? (
@@ -411,40 +430,52 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
             <Table>
               <TableHeader>
                 <TableRow>
-                  <th className="w-[50px] p-2"></th>
-                  <SortableTableHead
-                    column="title"
-                    label="Title"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    className="min-w-[200px] max-w-[300px]"
-                  />
-                  <SortableTableHead
-                    column="status"
-                    label="Status"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    className="w-[120px]"
-                  />
-                  <SortableTableHead
-                    column="assigned_user_id"
-                    label="Assigned To"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    className="w-[140px] hidden md:table-cell"
-                  />
-                  <SortableTableHead
-                    column="due_date"
-                    label={activeTab === "tasks" ? "Due Date" : "Date"}
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    className="w-[120px]"
-                  />
-                  <th className="w-[100px] p-2">Actions</th>
+                  {isVisible("checkbox") && (
+                    <th className="w-[50px] p-2"></th>
+                  )}
+                  {isVisible("title") && (
+                    <SortableTableHead
+                      column="title"
+                      label="Title"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="min-w-[200px] max-w-[300px]"
+                    />
+                  )}
+                  {isVisible("status") && (
+                    <SortableTableHead
+                      column="status"
+                      label="Status"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="w-[120px]"
+                    />
+                  )}
+                  {isVisible("assigned_user_id") && (
+                    <SortableTableHead
+                      column="assigned_user_id"
+                      label="Assigned To"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="w-[140px] hidden md:table-cell"
+                    />
+                  )}
+                  {isVisible("due_date") && (
+                    <SortableTableHead
+                      column="due_date"
+                      label={activeTab === "tasks" ? "Due Date" : "Date"}
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="w-[120px]"
+                    />
+                  )}
+                  {isVisible("actions") && (
+                    <th className="w-[100px] p-2">Actions</th>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>

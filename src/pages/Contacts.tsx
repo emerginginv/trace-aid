@@ -24,6 +24,8 @@ import {
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface Contact {
   id: string;
@@ -34,6 +36,14 @@ interface Contact {
   city: string;
   state: string;
 }
+
+const COLUMNS: ColumnDefinition[] = [
+  { key: "name", label: "Name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "location", label: "Location" },
+  { key: "actions", label: "Actions", hideable: false },
+];
 
 const Contacts = () => {
   const navigate = useNavigate();
@@ -51,6 +61,8 @@ const Contacts = () => {
   const [emailSubject, setEmailSubject] = useState<string>("");
   const [sortColumn, setSortColumn] = useState<string>("first_name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("contacts-columns", COLUMNS);
 
   useEffect(() => {
     fetchContacts();
@@ -177,6 +189,12 @@ const Contacts = () => {
             className="pl-9"
           />
         </div>
+        <ColumnVisibility
+          columns={COLUMNS}
+          visibility={visibility}
+          onToggle={toggleColumn}
+          onReset={resetToDefaults}
+        />
         <div className="flex gap-1 border rounded-md p-1">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
@@ -321,42 +339,52 @@ const Contacts = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableTableHead
-                  column="first_name"
-                  label="Name"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="email"
-                  label="Email"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="phone"
-                  label="Phone"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="location"
-                  label="Location"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column=""
-                  label="Actions"
-                  sortColumn=""
-                  sortDirection="asc"
-                  onSort={() => {}}
-                  className="w-[120px]"
-                />
+                {isVisible("name") && (
+                  <SortableTableHead
+                    column="first_name"
+                    label="Name"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("email") && (
+                  <SortableTableHead
+                    column="email"
+                    label="Email"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("phone") && (
+                  <SortableTableHead
+                    column="phone"
+                    label="Phone"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("location") && (
+                  <SortableTableHead
+                    column="location"
+                    label="Location"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("actions") && (
+                  <SortableTableHead
+                    column=""
+                    label="Actions"
+                    sortColumn=""
+                    sortDirection="asc"
+                    onSort={() => {}}
+                    className="w-[120px]"
+                  />
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -374,67 +402,77 @@ const Contacts = () => {
                     }
                   }}
                 >
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                          {getInitials(contact.first_name, contact.last_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      {contact.first_name} {contact.last_name}
-                    </div>
-                  </TableCell>
-                  <TableCell>{contact.email || '-'}</TableCell>
-                  <TableCell>{contact.phone || '-'}</TableCell>
-                  <TableCell>
-                    {[contact.city, contact.state].filter(Boolean).join(", ") || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {contact.email && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedContactEmail(contact.email);
-                            setEmailSubject(`Message for ${contact.first_name} ${contact.last_name}`);
-                            setEmailComposerOpen(true);
-                          }}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Mail className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {hasPermission('edit_contacts') && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/contacts/${contact.id}/edit`);
-                          }}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {hasPermission('delete_contacts') && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setContactToDelete(contact.id);
-                            setDeleteDialogOpen(true);
-                          }}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+                  {isVisible("name") && (
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                            {getInitials(contact.first_name, contact.last_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {contact.first_name} {contact.last_name}
+                      </div>
+                    </TableCell>
+                  )}
+                  {isVisible("email") && (
+                    <TableCell>{contact.email || '-'}</TableCell>
+                  )}
+                  {isVisible("phone") && (
+                    <TableCell>{contact.phone || '-'}</TableCell>
+                  )}
+                  {isVisible("location") && (
+                    <TableCell>
+                      {[contact.city, contact.state].filter(Boolean).join(", ") || '-'}
+                    </TableCell>
+                  )}
+                  {isVisible("actions") && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {contact.email && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedContactEmail(contact.email);
+                              setEmailSubject(`Message for ${contact.first_name} ${contact.last_name}`);
+                              setEmailComposerOpen(true);
+                            }}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {hasPermission('edit_contacts') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/contacts/${contact.id}/edit`);
+                            }}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {hasPermission('delete_contacts') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setContactToDelete(contact.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

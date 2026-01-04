@@ -26,6 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface OrgUser {
   id: string;
@@ -42,6 +44,16 @@ const inviteSchema = z.object({
   role: z.enum(["admin", "manager", "investigator", "vendor"]),
 });
 
+const COLUMNS: ColumnDefinition[] = [
+  { key: "color", label: "Color", hideable: false },
+  { key: "full_name", label: "Name" },
+  { key: "email", label: "Email" },
+  { key: "role", label: "Role" },
+  { key: "status", label: "Status" },
+  { key: "created_at", label: "Joined" },
+  { key: "actions", label: "Actions", hideable: false },
+];
+
 const Users = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<OrgUser[]>([]);
@@ -56,6 +68,8 @@ const Users = () => {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { isAdmin } = useUserRole();
+
+  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("users-columns", COLUMNS);
 
   const colorPalette = [
     "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", 
@@ -434,6 +448,12 @@ const Users = () => {
                 <SelectItem value="vendor">Vendor</SelectItem>
               </SelectContent>
           </Select>
+          <ColumnVisibility
+            columns={COLUMNS}
+            visibility={visibility}
+            onToggle={toggleColumn}
+            onReset={resetToDefaults}
+          />
         </div>
 
         {/* Entry count */}
@@ -445,56 +465,70 @@ const Users = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableTableHead
-                  column=""
-                  label="Color"
-                  sortColumn=""
-                  sortDirection="asc"
-                  onSort={() => {}}
-                />
-                <SortableTableHead
-                  column="full_name"
-                  label="Name"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="email"
-                  label="Email"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="role"
-                  label="Role"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="status"
-                  label="Status"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="created_at"
-                  label="Joined"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column=""
-                  label="Actions"
-                  sortColumn=""
-                  sortDirection="asc"
-                  onSort={() => {}}
-                  className="text-right"
-                />
+                {isVisible("color") && (
+                  <SortableTableHead
+                    column=""
+                    label="Color"
+                    sortColumn=""
+                    sortDirection="asc"
+                    onSort={() => {}}
+                  />
+                )}
+                {isVisible("full_name") && (
+                  <SortableTableHead
+                    column="full_name"
+                    label="Name"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("email") && (
+                  <SortableTableHead
+                    column="email"
+                    label="Email"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("role") && (
+                  <SortableTableHead
+                    column="role"
+                    label="Role"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("status") && (
+                  <SortableTableHead
+                    column="status"
+                    label="Status"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("created_at") && (
+                  <SortableTableHead
+                    column="created_at"
+                    label="Joined"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("actions") && (
+                  <SortableTableHead
+                    column=""
+                    label="Actions"
+                    sortColumn=""
+                    sortDirection="asc"
+                    onSort={() => {}}
+                    className="text-right"
+                  />
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -507,92 +541,106 @@ const Users = () => {
               ) : (
                 sortedUsers.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell>
-                      {user.status === 'active' && isAdmin ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            setSelectedUserForColor(user);
-                            setColorDialogOpen(true);
-                          }}
-                        >
+                    {isVisible("color") && (
+                      <TableCell>
+                        {user.status === 'active' && isAdmin ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              setSelectedUserForColor(user);
+                              setColorDialogOpen(true);
+                            }}
+                          >
+                            <div 
+                              className="w-6 h-6 rounded-full border-2 border-border"
+                              style={{ backgroundColor: user.color || "#6366f1" }}
+                            />
+                          </Button>
+                        ) : user.status === 'active' ? (
                           <div 
-                            className="w-6 h-6 rounded-full border-2 border-border"
+                            className="w-6 h-6 rounded-full border-2 border-border ml-2"
                             style={{ backgroundColor: user.color || "#6366f1" }}
                           />
-                        </Button>
-                      ) : user.status === 'active' ? (
-                        <div 
-                          className="w-6 h-6 rounded-full border-2 border-border ml-2"
-                          style={{ backgroundColor: user.color || "#6366f1" }}
-                        />
-                      ) : (
-                        <div className="w-6 h-6" />
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {user.full_name || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {user.email}
-                        {user.status === 'pending' && (
-                          <Mail className="h-3 w-3 text-muted-foreground" />
+                        ) : (
+                          <div className="w-6 h-6" />
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {isAdmin && user.status === 'active' ? (
-                        <Select
-                          value={user.role}
-                          onValueChange={(value) => handleRoleChange(user.id, value as 'admin' | 'manager' | 'investigator' | 'vendor')}
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Case Manager</SelectItem>
-                            <SelectItem value="investigator">Investigator</SelectItem>
-                            <SelectItem value="vendor">Vendor</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <RoleBadge role={user.role} />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                        {user.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {user.status === 'active' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/users/${user.id}`)}
+                      </TableCell>
+                    )}
+                    {isVisible("full_name") && (
+                      <TableCell className="font-medium">
+                        {user.full_name || "—"}
+                      </TableCell>
+                    )}
+                    {isVisible("email") && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {user.email}
+                          {user.status === 'pending' && (
+                            <Mail className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+                    {isVisible("role") && (
+                      <TableCell>
+                        {isAdmin && user.status === 'active' ? (
+                          <Select
+                            value={user.role}
+                            onValueChange={(value) => handleRoleChange(user.id, value as 'admin' | 'manager' | 'investigator' | 'vendor')}
                           >
-                            View
-                          </Button>
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="manager">Case Manager</SelectItem>
+                              <SelectItem value="investigator">Investigator</SelectItem>
+                              <SelectItem value="vendor">Vendor</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <RoleBadge role={user.role} />
                         )}
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setUserToRemove(user)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+                      </TableCell>
+                    )}
+                    {isVisible("status") && (
+                      <TableCell>
+                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                          {user.status}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    {isVisible("created_at") && (
+                      <TableCell>
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </TableCell>
+                    )}
+                    {isVisible("actions") && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {user.status === 'active' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/users/${user.id}`)}
+                            >
+                              View
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setUserToRemove(user)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}

@@ -18,6 +18,8 @@ import { Info } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface Case {
   id: string;
@@ -29,6 +31,15 @@ interface Case {
   due_date: string;
   created_at: string;
 }
+
+const COLUMNS: ColumnDefinition[] = [
+  { key: "case_number", label: "Case Number" },
+  { key: "title", label: "Title" },
+  { key: "status", label: "Status" },
+  { key: "start_date", label: "Start Date" },
+  { key: "due_date", label: "Due Date" },
+  { key: "actions", label: "Actions", hideable: false },
+];
 
 const Cases = () => {
   const navigate = useNavigate();
@@ -52,6 +63,8 @@ const Cases = () => {
   const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
   const [sortColumn, setSortColumn] = useState<string>("case_number");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("cases-columns", COLUMNS);
 
   // Refetch when organization changes
   useEffect(() => {
@@ -225,6 +238,12 @@ const Cases = () => {
             {statusPicklists.map(status => <SelectItem key={status.id} value={status.value}>{status.value}</SelectItem>)}
           </SelectContent>
         </Select>
+        <ColumnVisibility
+          columns={COLUMNS}
+          visibility={visibility}
+          onToggle={toggleColumn}
+          onReset={resetToDefaults}
+        />
         <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-7 w-7 p-0">
             <LayoutGrid className="h-3.5 w-3.5" />
@@ -352,49 +371,61 @@ const Cases = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead
-                    column="case_number"
-                    label="Case Number"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="title"
-                    label="Title"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="status"
-                    label="Status"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="start_date"
-                    label="Start Date"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="due_date"
-                    label="Due Date"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column=""
-                    label="Actions"
-                    sortColumn=""
-                    sortDirection="asc"
-                    onSort={() => {}}
-                    className="text-right"
-                  />
+                  {isVisible("case_number") && (
+                    <SortableTableHead
+                      column="case_number"
+                      label="Case Number"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("title") && (
+                    <SortableTableHead
+                      column="title"
+                      label="Title"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("status") && (
+                    <SortableTableHead
+                      column="status"
+                      label="Status"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("start_date") && (
+                    <SortableTableHead
+                      column="start_date"
+                      label="Start Date"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("due_date") && (
+                    <SortableTableHead
+                      column="due_date"
+                      label="Due Date"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("actions") && (
+                    <SortableTableHead
+                      column=""
+                      label="Actions"
+                      sortColumn=""
+                      sortDirection="asc"
+                      onSort={() => {}}
+                      className="text-right"
+                    />
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -413,42 +444,54 @@ const Cases = () => {
                     }
                   }}
                 >
-                    <TableCell className={`font-medium ${isClosed ? 'text-muted-foreground' : ''}`}>
-                      {caseItem.case_number}
-                    </TableCell>
-                    <TableCell className={isClosed ? 'text-muted-foreground' : ''}>
-                      <div className="flex items-center gap-2">
-                        {caseItem.title}
-                        {isClosed && <Badge variant="secondary" className="text-xs">
-                            Closed
-                          </Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="border" style={getStatusStyle(caseItem.status)}>
-                        {caseItem.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className={isClosed ? 'text-muted-foreground' : ''}>
-                      {new Date(caseItem.start_date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className={isClosed ? 'text-muted-foreground' : ''}>
-                      {caseItem.due_date ? new Date(caseItem.due_date).toLocaleDateString() : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {hasPermission('delete_cases') && <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(caseItem.id);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>}
-                      </div>
-                    </TableCell>
+                    {isVisible("case_number") && (
+                      <TableCell className={`font-medium ${isClosed ? 'text-muted-foreground' : ''}`}>
+                        {caseItem.case_number}
+                      </TableCell>
+                    )}
+                    {isVisible("title") && (
+                      <TableCell className={isClosed ? 'text-muted-foreground' : ''}>
+                        <div className="flex items-center gap-2">
+                          {caseItem.title}
+                          {isClosed && <Badge variant="secondary" className="text-xs">
+                              Closed
+                            </Badge>}
+                        </div>
+                      </TableCell>
+                    )}
+                    {isVisible("status") && (
+                      <TableCell>
+                        <Badge className="border" style={getStatusStyle(caseItem.status)}>
+                          {caseItem.status}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    {isVisible("start_date") && (
+                      <TableCell>{new Date(caseItem.start_date).toLocaleDateString()}</TableCell>
+                    )}
+                    {isVisible("due_date") && (
+                      <TableCell>
+                        {caseItem.due_date ? new Date(caseItem.due_date).toLocaleDateString() : "-"}
+                      </TableCell>
+                    )}
+                    {isVisible("actions") && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {hasPermission('delete_cases') && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(caseItem.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>;
             })}
               </TableBody>
@@ -456,9 +499,19 @@ const Cases = () => {
           </Card>
         </>}
 
-      <CaseForm open={formOpen} onOpenChange={setFormOpen} onSuccess={fetchCases} />
-      
-      <ConfirmationDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete Case" description="Are you sure you want to delete this case? This action cannot be undone." confirmLabel="Delete" cancelLabel="Cancel" onConfirm={handleDeleteConfirm} variant="destructive" />
+      <CaseForm 
+        open={formOpen} 
+        onOpenChange={setFormOpen} 
+        onSuccess={fetchCases} 
+      />
+
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Case"
+        description="Are you sure you want to delete this case? This action cannot be undone."
+      />
 
       <ScrollProgress />
     </div>

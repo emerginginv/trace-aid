@@ -18,6 +18,8 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import html2pdf from "html2pdf.js";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface Expense {
   id: string;
@@ -37,6 +39,17 @@ interface Case {
   title: string;
   case_number: string;
 }
+
+const COLUMNS: ColumnDefinition[] = [
+  { key: "select", label: "Select", hideable: false },
+  { key: "date", label: "Date" },
+  { key: "case", label: "Case" },
+  { key: "category", label: "Category" },
+  { key: "quantity", label: "Quantity" },
+  { key: "amount", label: "Amount" },
+  { key: "status", label: "Status" },
+  { key: "actions", label: "Actions", hideable: false },
+];
 
 const AllExpenses = () => {
   const { organization } = useOrganization();
@@ -64,6 +77,8 @@ const AllExpenses = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [financeFormType, setFinanceFormType] = useState<"expense" | "time">("expense");
+
+  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("expenses-columns", COLUMNS);
 
   // Refetch when organization changes
   useEffect(() => {
@@ -534,6 +549,12 @@ const AllExpenses = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <ColumnVisibility
+              columns={COLUMNS}
+              visibility={visibility}
+              onToggle={toggleColumn}
+              onReset={resetToDefaults}
+            />
           </div>
           {/* Entry count */}
           <div className="text-sm text-muted-foreground mb-4">
@@ -548,65 +569,81 @@ const AllExpenses = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead
-                    column=""
-                    label=""
-                    sortColumn=""
-                    sortDirection="asc"
-                    onSort={() => {}}
-                    className="w-[40px]"
-                  />
-                  <SortableTableHead
-                    column="date"
-                    label="Date"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="case"
-                    label="Case"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="category"
-                    label="Category"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="quantity"
-                    label="Quantity"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="amount"
-                    label="Amount"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    className="text-right"
-                  />
-                  <SortableTableHead
-                    column="status"
-                    label="Status"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column=""
-                    label="Actions"
-                    sortColumn=""
-                    sortDirection="asc"
-                    onSort={() => {}}
-                    className="text-right"
-                  />
+                  {isVisible("select") && (
+                    <SortableTableHead
+                      column=""
+                      label=""
+                      sortColumn=""
+                      sortDirection="asc"
+                      onSort={() => {}}
+                      className="w-[40px]"
+                    />
+                  )}
+                  {isVisible("date") && (
+                    <SortableTableHead
+                      column="date"
+                      label="Date"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("case") && (
+                    <SortableTableHead
+                      column="case"
+                      label="Case"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("category") && (
+                    <SortableTableHead
+                      column="category"
+                      label="Category"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("quantity") && (
+                    <SortableTableHead
+                      column="quantity"
+                      label="Quantity"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("amount") && (
+                    <SortableTableHead
+                      column="amount"
+                      label="Amount"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="text-right"
+                    />
+                  )}
+                  {isVisible("status") && (
+                    <SortableTableHead
+                      column="status"
+                      label="Status"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("actions") && (
+                    <SortableTableHead
+                      column=""
+                      label="Actions"
+                      sortColumn=""
+                      sortDirection="asc"
+                      onSort={() => {}}
+                      className="text-right"
+                    />
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>

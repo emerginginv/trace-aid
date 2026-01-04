@@ -15,6 +15,8 @@ import { getPlanLimits } from "@/lib/planLimits";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface Attachment {
   id: string;
@@ -43,6 +45,15 @@ interface CaseAttachmentsProps {
   isClosedCase?: boolean;
 }
 
+const COLUMNS: ColumnDefinition[] = [
+  { key: "name", label: "Name" },
+  { key: "file_type", label: "Type" },
+  { key: "file_size", label: "Size" },
+  { key: "created_at", label: "Uploaded" },
+  { key: "tags", label: "Tags" },
+  { key: "actions", label: "Actions", hideable: false },
+];
+
 export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachmentsProps) => {
   const { organization } = useOrganization();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -68,6 +79,8 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
   const canAddAttachments = hasPermission("add_attachments");
   const canEditAttachments = hasPermission("edit_attachments");
   const canDeleteAttachments = hasPermission("delete_attachments");
+
+  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("case-attachments-columns", COLUMNS);
 
   useEffect(() => {
     fetchAttachments();
@@ -623,6 +636,12 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
+          <ColumnVisibility
+            columns={COLUMNS}
+            visibility={visibility}
+            onToggle={toggleColumn}
+            onReset={resetToDefaults}
+          />
         </div>
         <input
           id="file-upload"
