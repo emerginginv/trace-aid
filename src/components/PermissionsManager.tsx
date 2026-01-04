@@ -54,7 +54,9 @@ const featureGroups: FeatureGroup[] = [
     name: "Finances",
     features: [
       { key: "view_finances", label: "View Finances" },
+      { key: "add_finances", label: "Add Finances" },
       { key: "edit_finances", label: "Edit Finances" },
+      { key: "delete_finances", label: "Delete Finances" },
     ],
   },
   {
