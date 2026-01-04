@@ -12,13 +12,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Search, Trash2, Mail, Loader2, Palette } from "lucide-react";
+import { UserPlus, Search, Trash2, Mail, Loader2, Palette, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -29,6 +30,8 @@ import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
+import { format } from "date-fns";
 
 interface OrgUser {
   id: string;
@@ -330,6 +333,18 @@ const Users = () => {
       : bVal.localeCompare(aVal);
   });
 
+  // Export columns definition
+  const EXPORT_COLUMNS: ExportColumn[] = [
+    { key: "full_name", label: "Name" },
+    { key: "email", label: "Email" },
+    { key: "role", label: "Role" },
+    { key: "status", label: "Status" },
+    { key: "created_at", label: "Joined", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+  ];
+
+  const handleExportCSV = () => exportToCSV(sortedUsers, EXPORT_COLUMNS, "users");
+  const handleExportPDF = () => exportToPDF(sortedUsers, EXPORT_COLUMNS, "Users Report", "users");
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -446,6 +461,24 @@ const Users = () => {
             onToggle={toggleColumn}
             onReset={resetToDefaults}
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCSV}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export to CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export to PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Entry count */}

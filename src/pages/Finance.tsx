@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -13,6 +15,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 
 interface RetainerBalance {
   case_id: string;
@@ -161,6 +164,23 @@ const Finance = () => {
       : (bVal as number) - (aVal as number);
   });
 
+  // Export columns definition
+  const EXPORT_COLUMNS: ExportColumn[] = [
+    { key: "case_title", label: "Case" },
+    { key: "case_number", label: "Case Number" },
+    { key: "balance", label: "Balance", format: (v) => `$${(v || 0).toFixed(2)}`, align: "right" },
+    { key: "last_topup", label: "Last Top-Up", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+  ];
+
+  const handleExportCSV = () => exportToCSV(sortedRetainerBalances, EXPORT_COLUMNS, "retainers");
+  const handleExportPDF = () => exportToPDF(
+    sortedRetainerBalances, 
+    EXPORT_COLUMNS, 
+    "Retainer Funds Report", 
+    "retainers",
+    [{ label: "Total", value: `$${sortedRetainerBalances.reduce((sum, r) => sum + r.balance, 0).toFixed(2)}` }]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -203,6 +223,24 @@ const Finance = () => {
               onToggle={toggleColumn}
               onReset={resetToDefaults}
             />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export to CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           {sortedRetainerBalances.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">

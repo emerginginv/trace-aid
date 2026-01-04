@@ -4,12 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, LayoutGrid, List, Trash2 } from "lucide-react";
+import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -21,6 +22,8 @@ import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
+import { format } from "date-fns";
 
 interface Case {
   id: string;
@@ -178,6 +181,18 @@ const Cases = () => {
     return 0;
   });
 
+  // Export columns definition
+  const EXPORT_COLUMNS: ExportColumn[] = [
+    { key: "case_number", label: "Case Number" },
+    { key: "title", label: "Title" },
+    { key: "status", label: "Status" },
+    { key: "start_date", label: "Start Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+    { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+  ];
+
+  const handleExportCSV = () => exportToCSV(sortedCases, EXPORT_COLUMNS, "cases");
+  const handleExportPDF = () => exportToPDF(sortedCases, EXPORT_COLUMNS, "Cases Report", "cases");
+
   if (loading) {
     return <div className="flex items-center justify-center py-12">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -236,6 +251,24 @@ const Cases = () => {
           onToggle={toggleColumn}
           onReset={resetToDefaults}
         />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-7 w-7 p-0">
             <LayoutGrid className="h-3.5 w-3.5" />
