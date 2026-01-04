@@ -53,117 +53,166 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 1.5in 1in;
+      padding: 72px 72px;
       page-break-after: always;
       background: #ffffff;
+      box-sizing: border-box;
     }
 
     .cover-header {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 24px;
     }
 
     .cover-logo {
-      max-width: 200px;
-      max-height: 100px;
-      object-fit: contain;
+      max-width: 150px !important;
+      max-height: 80px !important;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain !important;
+      display: block !important;
+      margin: 0 auto 16px auto !important;
     }
 
     .cover-logo-placeholder {
       font-family: ${opts.fontSans};
-      font-size: 24pt;
+      font-size: 20pt;
       font-weight: 700;
-      color: ${opts.primaryColor};
+      color: #1a1a1a;
       letter-spacing: -0.5px;
+    }
+
+    .cover-company-name {
+      font-family: ${opts.fontSans};
+      font-size: 14pt;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-top: 8px;
+      letter-spacing: 0.5px;
     }
 
     .cover-title-block {
       text-align: center;
-      margin: 3rem 0;
+      margin: 48px 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .cover-title {
       font-family: ${opts.fontSans};
-      font-size: 28pt;
+      font-size: 42pt;
       font-weight: 700;
-      color: ${opts.primaryColor};
-      letter-spacing: 2px;
-      margin-bottom: 1rem;
+      color: #1a1a1a;
+      letter-spacing: 4px;
+      line-height: 1.1;
+      margin: 0;
     }
 
     .cover-subtitle {
       font-family: ${opts.fontSans};
       font-size: 14pt;
-      font-weight: 400;
-      color: #4a5568;
-      margin-top: 0.5rem;
+      font-weight: 500;
+      color: #2d3748;
+      margin-top: 16px;
     }
 
     .cover-divider {
-      width: 120px;
-      height: 3px;
-      background: ${opts.primaryColor};
-      margin: 1.5rem auto;
+      width: 80px;
+      height: 4px;
+      background: #1a1a1a;
+      margin: 24px auto;
     }
 
-    .cover-case-info {
-      margin: 2rem auto;
+    .cover-meta-block {
+      margin: 32px auto;
       max-width: 400px;
     }
 
-    .cover-info-table {
+    .cover-meta-table {
       width: 100%;
       border-collapse: collapse;
       font-family: ${opts.fontSans};
       font-size: 11pt;
     }
 
-    .cover-info-table td {
-      padding: 8px 12px;
+    .cover-meta-table tr {
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .cover-meta-table td {
+      padding: 10px 0;
       vertical-align: top;
     }
 
-    .cover-info-table td:first-child {
+    .cover-meta-table .meta-label {
       font-weight: 600;
       color: #4a5568;
       width: 140px;
-      text-align: right;
-      padding-right: 16px;
+      text-align: left;
     }
 
-    .cover-info-table td:last-child {
+    .cover-meta-table .meta-value {
       color: #1a1a1a;
       font-weight: 500;
+      text-align: left;
     }
 
-    .cover-confidential {
-      text-align: center;
-      margin: 3rem 0;
-      padding: 1.5rem;
-      border: 2px solid ${opts.primaryColor};
-      max-width: 300px;
-      margin-left: auto;
-      margin-right: auto;
+    .cover-prepared-section {
+      margin: 32px 0;
+      text-align: left;
     }
 
-    .cover-confidential-label {
-      font-family: ${opts.fontSans};
-      font-size: 14pt;
-      font-weight: 700;
-      color: ${opts.primaryColor};
-      letter-spacing: 3px;
-      margin-bottom: 0.5rem;
-    }
-
-    .cover-confidential-text {
+    .cover-prepared-label {
       font-family: ${opts.fontSans};
       font-size: 10pt;
       color: #4a5568;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .cover-prepared-name {
+      font-family: ${opts.fontSans};
+      font-size: 14pt;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+    }
+
+    .cover-prepared-contact {
+      font-family: ${opts.fontSans};
+      font-size: 10pt;
+      color: #2d3748;
+      margin-bottom: 2px;
+    }
+
+    .cover-confidential-badge {
+      display: inline-block;
+      padding: 8px 24px;
+      border: 2px solid #1a1a1a;
+      margin-bottom: 16px;
+    }
+
+    .confidential-text {
+      font-family: ${opts.fontSans};
+      font-size: 11pt;
+      font-weight: 700;
+      color: #1a1a1a;
+      letter-spacing: 3px;
+    }
+
+    .cover-client-text {
+      font-family: ${opts.fontSans};
+      font-size: 10pt;
+      color: #4a5568;
+      margin-bottom: 16px;
     }
 
     .cover-footer {
       text-align: center;
-      padding-top: 2rem;
+      padding-top: 24px;
       border-top: 1px solid #e2e8f0;
       margin-top: auto;
     }
@@ -172,13 +221,14 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
       font-family: ${opts.fontSans};
       font-size: 9pt;
       color: #4a5568;
-      line-height: 1.8;
+      line-height: 1.6;
+      margin-top: 12px;
     }
 
-    .cover-company-name {
+    .cover-company-footer {
       font-weight: 600;
       font-size: 10pt;
-      color: ${opts.primaryColor};
+      color: #1a1a1a;
       margin-bottom: 4px;
     }
 

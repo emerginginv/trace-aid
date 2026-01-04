@@ -25,10 +25,14 @@ export function renderCoverPage(
   clientName?: string
 ): string {
   const companyName = orgProfile?.companyName || 'Investigation Services';
-  const logoHtml = orgProfile?.logoUrl 
-    ? `<img src="${orgProfile.logoUrl}" alt="${companyName}" class="cover-logo" />`
-    : `<div class="cover-logo-placeholder">${companyName}</div>`;
   
+  // Logo with inline styles to guarantee sizing
+  const logoHtml = orgProfile?.logoUrl 
+    ? `<img src="${orgProfile.logoUrl}" alt="${companyName}" class="cover-logo" 
+        style="max-width: 150px; max-height: 80px; width: auto; height: auto; display: block; margin: 0 auto; object-fit: contain;" />`
+    : `<div class="cover-logo-placeholder">${escapeHtml(companyName)}</div>`;
+  
+  // Address formatting
   const addressParts: string[] = [];
   if (orgProfile?.streetAddress) addressParts.push(orgProfile.streetAddress);
   const cityStateZip = [
@@ -38,43 +42,52 @@ export function renderCoverPage(
   ].filter(Boolean).join(', ');
   if (cityStateZip) addressParts.push(cityStateZip);
   
+  // Contact information
   const contactParts: string[] = [];
   if (orgProfile?.phone) contactParts.push(orgProfile.phone);
+  if (orgProfile?.email) contactParts.push(orgProfile.email);
   if (orgProfile?.websiteUrl) contactParts.push(orgProfile.websiteUrl);
 
   const caseInfo = caseVariables ? formatCaseVariablesForTemplate(caseVariables) : {};
+  const investigatorName = caseVariables?.investigatorList || orgProfile?.companyName || 'Investigator';
   
   return `
     <div class="report-cover-page">
       <div class="cover-header">
         ${logoHtml}
+        <p class="cover-company-name">${escapeHtml(companyName)}</p>
       </div>
       
       <div class="cover-title-block">
-        <h1 class="cover-title">INVESTIGATION REPORT</h1>
+        <h1 class="cover-title">INVESTIGATION</h1>
+        <h1 class="cover-title">REPORT</h1>
         <div class="cover-divider"></div>
         <p class="cover-subtitle">${escapeHtml(reportTitle)}</p>
       </div>
       
-      <div class="cover-case-info">
-        <table class="cover-info-table">
-          ${caseInfo.case_number ? `<tr><td>Case Number:</td><td>${escapeHtml(caseInfo.case_number)}</td></tr>` : ''}
-          ${caseInfo.case_title ? `<tr><td>Case Title:</td><td>${escapeHtml(caseInfo.case_title)}</td></tr>` : ''}
-          ${caseInfo.start_date ? `<tr><td>Start Date:</td><td>${escapeHtml(caseInfo.start_date)}</td></tr>` : ''}
-          <tr><td>Report Date:</td><td>${formatReportDate(generatedAt)}</td></tr>
+      <div class="cover-meta-block">
+        <table class="cover-meta-table">
+          ${caseInfo.case_number ? `<tr><td class="meta-label">Case Reference:</td><td class="meta-value">${escapeHtml(caseInfo.case_number)}</td></tr>` : ''}
+          <tr><td class="meta-label">Date:</td><td class="meta-value">${formatReportDate(generatedAt)}</td></tr>
+          <tr><td class="meta-label">Investigator:</td><td class="meta-value">${escapeHtml(investigatorName)}</td></tr>
         </table>
       </div>
       
-      <div class="cover-confidential">
-        <p class="cover-confidential-label">CONFIDENTIAL</p>
-        ${clientName ? `<p class="cover-confidential-text">Prepared for: ${escapeHtml(clientName)}</p>` : ''}
+      <div class="cover-prepared-section">
+        <p class="cover-prepared-label">Prepared by:</p>
+        <p class="cover-prepared-name">${escapeHtml(investigatorName)}</p>
+        ${orgProfile?.email ? `<p class="cover-prepared-contact">${escapeHtml(orgProfile.email)}</p>` : ''}
+        ${contactParts.length > 0 ? `<p class="cover-prepared-contact">${escapeHtml(contactParts.join(' | '))}</p>` : ''}
       </div>
       
       <div class="cover-footer">
+        <div class="cover-confidential-badge">
+          <span class="confidential-text">CONFIDENTIAL</span>
+        </div>
+        ${clientName ? `<p class="cover-client-text">Prepared for: ${escapeHtml(clientName)}</p>` : ''}
         <div class="cover-company-info">
-          <p class="cover-company-name">${escapeHtml(companyName)}</p>
+          <p class="cover-company-footer">${escapeHtml(companyName)}</p>
           ${addressParts.map(line => `<p>${escapeHtml(line)}</p>`).join('')}
-          ${contactParts.length > 0 ? `<p>${escapeHtml(contactParts.join(' | '))}</p>` : ''}
         </div>
       </div>
     </div>
