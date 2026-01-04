@@ -43,9 +43,9 @@ export function ScrollProgress({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // SVG circle properties - increased size for better visibility
+  // SVG circle properties - thicker stroke for visibility
   const size = 56;
-  const strokeWidth = 4;
+  const strokeWidth = 6;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (scrollProgress / 100) * circumference;
@@ -93,12 +93,12 @@ export function ScrollProgress({
           )}
         >
           {/* Wrapper for proper positioning - SVG outside button */}
-          <div className="relative" style={{ width: size + 4, height: size + 4 }}>
+          <div className="relative" style={{ width: size + 6, height: size + 6 }}>
             {/* SVG Progress Ring - positioned around the button */}
             <svg
-              width={size + 4}
-              height={size + 4}
-              viewBox={`0 0 ${size + 4} ${size + 4}`}
+              width={size + 6}
+              height={size + 6}
+              viewBox={`0 0 ${size + 6} ${size + 6}`}
               className="absolute inset-0 pointer-events-none"
               style={{ 
                 transform: "rotate(-90deg)",
@@ -117,8 +117,8 @@ export function ScrollProgress({
               
               {/* Background track circle */}
               <circle
-                cx={(size + 4) / 2}
-                cy={(size + 4) / 2}
+                cx={(size + 6) / 2}
+                cy={(size + 6) / 2}
                 r={radius}
                 fill="none"
                 stroke="hsl(var(--muted-foreground) / 0.2)"
@@ -127,8 +127,8 @@ export function ScrollProgress({
               
               {/* Progress arc with gradient */}
               <circle
-                cx={(size + 4) / 2}
-                cy={(size + 4) / 2}
+                cx={(size + 6) / 2}
+                cy={(size + 6) / 2}
                 r={radius}
                 fill="none"
                 stroke="url(#scroll-progress-gradient)"
@@ -136,9 +136,10 @@ export function ScrollProgress({
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
-                className="transition-all duration-150"
+                className="transition-all duration-300 ease-out"
                 style={{
-                  filter: scrollProgress > 0 ? "drop-shadow(0 0 2px hsl(var(--primary) / 0.3))" : undefined
+                  willChange: "stroke-dashoffset",
+                  filter: scrollProgress > 0 ? "drop-shadow(0 0 3px hsl(210 90% 55% / 0.4))" : undefined
                 }}
               />
             </svg>
