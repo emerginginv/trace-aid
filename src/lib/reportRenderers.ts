@@ -10,6 +10,76 @@ import {
 import { OrganizationProfile } from "@/lib/organizationProfile";
 import { CaseVariables, formatCaseVariablesForTemplate } from "@/lib/caseVariables";
 import type { RenderedSection, CaseUpdate, CaseEvent, UserProfile } from "@/lib/reportEngine";
+import { formatReportDate } from "@/lib/reportStyles";
+
+// ============= Cover Page Generator =============
+
+/**
+ * Generate a professional branded cover page
+ */
+export function renderCoverPage(
+  orgProfile: OrganizationProfile | null,
+  caseVariables: CaseVariables | null,
+  reportTitle: string,
+  generatedAt: Date,
+  clientName?: string
+): string {
+  const companyName = orgProfile?.companyName || 'Investigation Services';
+  const logoHtml = orgProfile?.logoUrl 
+    ? `<img src="${orgProfile.logoUrl}" alt="${companyName}" class="cover-logo" />`
+    : `<div class="cover-logo-placeholder">${companyName}</div>`;
+  
+  const addressParts: string[] = [];
+  if (orgProfile?.streetAddress) addressParts.push(orgProfile.streetAddress);
+  const cityStateZip = [
+    orgProfile?.city,
+    orgProfile?.state,
+    orgProfile?.zipCode
+  ].filter(Boolean).join(', ');
+  if (cityStateZip) addressParts.push(cityStateZip);
+  
+  const contactParts: string[] = [];
+  if (orgProfile?.phone) contactParts.push(orgProfile.phone);
+  if (orgProfile?.websiteUrl) contactParts.push(orgProfile.websiteUrl);
+
+  const caseInfo = caseVariables ? formatCaseVariablesForTemplate(caseVariables) : {};
+  
+  return `
+    <div class="report-cover-page">
+      <div class="cover-header">
+        ${logoHtml}
+      </div>
+      
+      <div class="cover-title-block">
+        <h1 class="cover-title">INVESTIGATION REPORT</h1>
+        <div class="cover-divider"></div>
+        <p class="cover-subtitle">${escapeHtml(reportTitle)}</p>
+      </div>
+      
+      <div class="cover-case-info">
+        <table class="cover-info-table">
+          ${caseInfo.case_number ? `<tr><td>Case Number:</td><td>${escapeHtml(caseInfo.case_number)}</td></tr>` : ''}
+          ${caseInfo.case_title ? `<tr><td>Case Title:</td><td>${escapeHtml(caseInfo.case_title)}</td></tr>` : ''}
+          ${caseInfo.start_date ? `<tr><td>Start Date:</td><td>${escapeHtml(caseInfo.start_date)}</td></tr>` : ''}
+          <tr><td>Report Date:</td><td>${formatReportDate(generatedAt)}</td></tr>
+        </table>
+      </div>
+      
+      <div class="cover-confidential">
+        <p class="cover-confidential-label">CONFIDENTIAL</p>
+        ${clientName ? `<p class="cover-confidential-text">Prepared for: ${escapeHtml(clientName)}</p>` : ''}
+      </div>
+      
+      <div class="cover-footer">
+        <div class="cover-company-info">
+          <p class="cover-company-name">${escapeHtml(companyName)}</p>
+          ${addressParts.map(line => `<p>${escapeHtml(line)}</p>`).join('')}
+          ${contactParts.length > 0 ? `<p>${escapeHtml(contactParts.join(' | '))}</p>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
 
 // ============= Static Text Renderer =============
 
@@ -26,7 +96,7 @@ export function renderStaticTextSection(
   // Replace organization placeholders
   if (orgProfile) {
     const logoHtml = orgProfile.logoUrl 
-      ? `<img src="${orgProfile.logoUrl}" alt="${orgProfile.companyName || 'Company'} Logo" />`
+      ? `<img src="${orgProfile.logoUrl}" alt="${orgProfile.companyName || 'Company'} Logo" class="section-logo" />`
       : '';
     
     content = content
@@ -54,9 +124,15 @@ export function renderStaticTextSection(
   // Replace current date
   content = content.replace(/\{\{current_date\}\}/g, format(new Date(), 'MMMM d, yyyy'));
 
+  // Wrap paragraphs properly
+  const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+  const wrappedContent = paragraphs.length > 1 
+    ? paragraphs.map(p => `<p>${p.trim()}</p>`).join('\n')
+    : content;
+
   const htmlContent = `
-    <h2>${escapeHtml(section.title)}</h2>
-    <div class="static-content">${content}</div>
+    <h2 class="section-title">${escapeHtml(section.title)}</h2>
+    <div class="section-content">${wrappedContent}</div>
   `;
 
   return {
@@ -72,7 +148,7 @@ export function renderStaticTextSection(
 // ============= Variable Block Renderer =============
 
 /**
- * Render a case variable block section
+ * Render a case variable block section with professional styling
  */
 export function renderVariableBlockSection(
   section: TemplateSection,
@@ -94,12 +170,12 @@ export function renderVariableBlockSection(
   switch (layout) {
     case 'table':
       contentHtml = `
-        <table class="variable-table">
+        <table class="section-table section-table-striped">
           <tbody>
             ${variableKeys.map(key => `
               <tr>
-                ${showLabels ? `<td>${escapeHtml(variableMeta[key] || key)}</td>` : ''}
-                <td>${escapeHtml(vars[key] || '')}</td>
+                ${showLabels ? `<td class="table-label">${escapeHtml(variableMeta[key] || key)}</td>` : ''}
+                <td class="table-value">${escapeHtml(vars[key] || '—')}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -112,8 +188,8 @@ export function renderVariableBlockSection(
         <ul class="variable-list">
           ${variableKeys.map(key => `
             <li>
-              ${showLabels ? `<strong>${escapeHtml(variableMeta[key] || key)}:</strong> ` : ''}
-              ${escapeHtml(vars[key] || '')}
+              ${showLabels ? `<span class="text-emphasis">${escapeHtml(variableMeta[key] || key)}:</span> ` : ''}
+              ${escapeHtml(vars[key] || '—')}
             </li>
           `).join('')}
         </ul>
@@ -126,7 +202,7 @@ export function renderVariableBlockSection(
           ${variableKeys.map(key => `
             <span class="variable-item">
               ${showLabels ? `<span class="variable-label">${escapeHtml(variableMeta[key] || key)}:</span>` : ''}
-              <span class="variable-value">${escapeHtml(vars[key] || '')}</span>
+              <span class="variable-value">${escapeHtml(vars[key] || '—')}</span>
             </span>
           `).join('')}
         </div>
@@ -135,8 +211,8 @@ export function renderVariableBlockSection(
   }
 
   const htmlContent = `
-    <h2>${escapeHtml(section.title)}</h2>
-    ${contentHtml}
+    <h2 class="section-title">${escapeHtml(section.title)}</h2>
+    <div class="section-content no-break">${contentHtml}</div>
   `;
 
   return {
@@ -152,7 +228,7 @@ export function renderVariableBlockSection(
 // ============= Update Collection Renderer =============
 
 /**
- * Render an update collection section
+ * Render an update collection section with professional narrative styling
  */
 export function renderUpdateCollectionSection(
   section: TemplateSection,
@@ -198,20 +274,24 @@ export function renderUpdateCollectionSection(
         const dateStr = formatDate(update.created_at);
         
         return `
-          <div class="update-item">
-            <div class="update-header">${escapeHtml(update.title)}</div>
-            <div class="update-meta">
-              ${escapeHtml(dateStr)} | ${escapeHtml(update.update_type)} | By: ${escapeHtml(author)}
+          <div class="entry-item">
+            <div class="entry-header">
+              <span class="entry-title">${escapeHtml(update.title)}</span>
+              <span class="entry-meta">${escapeHtml(dateStr)}</span>
             </div>
-            ${update.description ? `<div class="update-content">${escapeHtml(update.description)}</div>` : ''}
+            <div class="entry-meta">
+              <span class="entry-type-badge">${escapeHtml(update.update_type)}</span>
+            </div>
+            ${update.description ? `<div class="entry-content"><p>${escapeHtml(update.description)}</p></div>` : ''}
+            <div class="entry-attribution">— ${escapeHtml(author)}</div>
           </div>
         `;
       }).join('')
-    : '<p class="no-data">No updates available for this section.</p>';
+    : '<p class="text-muted">No updates available for this section.</p>';
 
   const htmlContent = `
-    <h2>${escapeHtml(section.title)}</h2>
-    ${updatesHtml}
+    <h2 class="section-title">${escapeHtml(section.title)}</h2>
+    <div class="section-content">${updatesHtml}</div>
   `;
 
   return {
@@ -227,7 +307,7 @@ export function renderUpdateCollectionSection(
 // ============= Event Collection Renderer =============
 
 /**
- * Render an event collection section
+ * Render an event collection section with professional styling
  */
 export function renderEventCollectionSection(
   section: TemplateSection,
@@ -270,19 +350,19 @@ export function renderEventCollectionSection(
   let eventsHtml = '';
 
   if (filteredEvents.length === 0) {
-    eventsHtml = '<p class="no-data">No events available for this section.</p>';
+    eventsHtml = '<p class="text-muted">No events available for this section.</p>';
   } else if (groupBy === 'none') {
     // Chronological list
     eventsHtml = filteredEvents.map(event => 
       renderEventItem(event, userProfiles, displayConfig)
     ).join('');
   } else {
-    // Grouped rendering
+    // Grouped rendering with professional group headers
     const groups = groupEvents(filteredEvents, groupBy);
     eventsHtml = Object.entries(groups)
       .map(([groupKey, groupEvents]) => `
-        <div class="event-group">
-          <div class="event-group-header">${escapeHtml(groupKey)}</div>
+        <div class="entry-group">
+          <h3 class="entry-group-header">${escapeHtml(groupKey)}</h3>
           ${groupEvents.map(event => renderEventItem(event, userProfiles, displayConfig)).join('')}
         </div>
       `)
@@ -290,8 +370,8 @@ export function renderEventCollectionSection(
   }
 
   const htmlContent = `
-    <h2>${escapeHtml(section.title)}</h2>
-    ${eventsHtml}
+    <h2 class="section-title">${escapeHtml(section.title)}</h2>
+    <div class="section-content">${eventsHtml}</div>
   `;
 
   return {
@@ -328,17 +408,18 @@ function renderEventItem(
       'Unassigned'
     : '';
 
-  const metaParts: string[] = [];
-  if (timeStr) metaParts.push(timeStr);
-  if (event.event_subtype) metaParts.push(event.event_subtype);
-  if (showStatus && event.status) metaParts.push(`Status: ${event.status}`);
-  if (assignee) metaParts.push(`Assigned: ${assignee}`);
-
   return `
-    <div class="event-item">
-      <div class="event-title">${escapeHtml(event.title)}</div>
-      ${metaParts.length > 0 ? `<div class="event-meta">${escapeHtml(metaParts.join(' | '))}</div>` : ''}
-      ${showDescription && event.description ? `<div class="event-description">${escapeHtml(event.description)}</div>` : ''}
+    <div class="entry-item">
+      <div class="entry-header">
+        <span class="entry-title">${escapeHtml(event.title)}</span>
+        ${timeStr ? `<span class="entry-meta">${escapeHtml(timeStr)}</span>` : ''}
+      </div>
+      <div class="entry-meta">
+        ${event.event_subtype ? `<span class="entry-type-badge">${escapeHtml(event.event_subtype)}</span>` : ''}
+        ${showStatus && event.status ? `<span>Status: ${escapeHtml(event.status)}</span>` : ''}
+      </div>
+      ${showDescription && event.description ? `<div class="entry-content"><p>${escapeHtml(event.description)}</p></div>` : ''}
+      ${assignee ? `<div class="entry-attribution">Assigned to: ${escapeHtml(assignee)}</div>` : ''}
     </div>
   `;
 }
