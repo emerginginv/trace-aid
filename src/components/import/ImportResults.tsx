@@ -308,10 +308,18 @@ export function ImportResults({ batchId, progress, onStartNew, executionResult }
       {/* Actions */}
       <div className="flex flex-wrap gap-3 justify-center">
         {(totalErrors > 0 || rollbackPerformed) && (
-          <Button variant="outline" onClick={handleDownloadErrorLog}>
-            <Download className="h-4 w-4 mr-2" />
-            Download Error Log
-          </Button>
+          <>
+            <Button variant="outline" onClick={handleDownloadErrorLog}>
+              <Download className="h-4 w-4 mr-2" />
+              Download Error Log
+            </Button>
+            {batchId && (
+              <Button variant="outline" onClick={() => navigate(`/import/review?batch=${batchId}`)}>
+                <AlertCircle className="h-4 w-4 mr-2" />
+                Review & Correct
+              </Button>
+            )}
+          </>
         )}
         
         {!rollbackPerformed && successCount > 0 && (
