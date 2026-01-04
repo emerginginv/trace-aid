@@ -76,20 +76,20 @@ export function MigrationWelcome({ onBegin }: MigrationWelcomeProps) {
       <Card className="bg-muted/30">
         <CardContent className="py-8">
           <h2 className="text-lg font-semibold text-center mb-6">Your Migration Journey</h2>
-          <div className="flex items-center justify-center gap-2 flex-wrap">
+          <div className="flex items-start justify-center gap-2 flex-wrap">
             {JOURNEY_STEPS.map((step, index) => (
-              <div key={step.number} className="flex items-center">
-                <div className="flex flex-col items-center text-center min-w-[100px]">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center font-bold text-primary mb-2">
+              <div key={step.number} className="flex items-start">
+                <div className="flex flex-col items-center text-center w-[120px]">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center font-bold text-primary flex-shrink-0">
                     {step.number}
                   </div>
-                  <p className="font-medium text-sm">{step.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 max-w-[120px]">
+                  <p className="font-medium text-sm mt-2">{step.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {step.description}
                   </p>
                 </div>
                 {index < JOURNEY_STEPS.length - 1 && (
-                  <ArrowRight className="h-5 w-5 text-muted-foreground/50 mx-2 flex-shrink-0 hidden sm:block" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground/50 mx-2 flex-shrink-0 hidden sm:block mt-2.5" />
                 )}
               </div>
             ))}
