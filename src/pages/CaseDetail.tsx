@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Edit, Trash2, Info } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CaseDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { toast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { CaseForm } from "@/components/CaseForm";
@@ -494,10 +494,7 @@ const CaseDetail = () => {
     }
   };
   if (loading) {
-    return <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-64 w-full" />
-      </div>;
+    return <CaseDetailSkeleton />;
   }
   if (!caseData) {
     return <div className="text-center py-12">
