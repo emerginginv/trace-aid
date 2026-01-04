@@ -33,9 +33,10 @@ interface Profile {
 interface BudgetAdjustmentsHistoryProps {
   caseId: string;
   refreshKey?: number;
+  highlight?: boolean;
 }
 
-export function BudgetAdjustmentsHistory({ caseId, refreshKey }: BudgetAdjustmentsHistoryProps) {
+export function BudgetAdjustmentsHistory({ caseId, refreshKey, highlight }: BudgetAdjustmentsHistoryProps) {
   const [adjustments, setAdjustments] = useState<BudgetAdjustment[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
@@ -134,9 +135,12 @@ export function BudgetAdjustmentsHistory({ caseId, refreshKey }: BudgetAdjustmen
   }
 
   return (
-    <Card>
+    <Card className={`transition-all duration-500 ${highlight ? "ring-2 ring-primary ring-offset-2 ring-offset-background animate-pulse" : ""}`}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Adjustment History</CardTitle>
+        <CardTitle className="text-base flex items-center gap-2">
+          Adjustment History
+          {highlight && <span className="text-xs font-normal text-primary animate-fade-in">← You're here</span>}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border overflow-hidden">
