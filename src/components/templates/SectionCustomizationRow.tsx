@@ -30,6 +30,8 @@ interface SectionCustomizationRowProps {
   customization: SectionCustomization | undefined;
   onCustomizationChange: (customization: SectionCustomization) => void;
   isDragging?: boolean;
+  onHover?: (sectionId: string | null) => void;
+  isHighlighted?: boolean;
 }
 
 export function SectionCustomizationRow({
@@ -37,9 +39,14 @@ export function SectionCustomizationRow({
   customization,
   onCustomizationChange,
   isDragging,
+  onHover,
+  isHighlighted,
 }: SectionCustomizationRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+
+  const handleMouseEnter = () => onHover?.(section.id);
+  const handleMouseLeave = () => onHover?.(null);
 
   const {
     attributes,
@@ -169,7 +176,11 @@ export function SectionCustomizationRow({
       style={style}
       className={`border rounded-lg bg-card transition-all ${
         isDragging ? 'shadow-lg ring-2 ring-primary/50' : ''
-      } ${!effectiveVisible ? 'opacity-60' : ''}`}
+      } ${!effectiveVisible ? 'opacity-60' : ''} ${
+        isHighlighted ? 'ring-2 ring-primary' : ''
+      }`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <div className="flex items-center gap-2 p-3">
