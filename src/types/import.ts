@@ -595,3 +595,141 @@ export interface DryRunWarning {
   /** How the system will automatically resolve this */
   autoResolution?: string;
 }
+
+// ============================================
+// Import Execution Engine Types
+// ============================================
+
+/**
+ * Event types for import logging timeline
+ */
+export type ImportLogEventType = 
+  | 'started' 
+  | 'entity_started' 
+  | 'entity_completed' 
+  | 'record_success' 
+  | 'record_failed' 
+  | 'completed' 
+  | 'failed' 
+  | 'rolled_back';
+
+/**
+ * Error codes for categorizing import failures
+ */
+export type ImportErrorCode = 
+  | 'VALIDATION_FAILED'
+  | 'REFERENCE_NOT_FOUND'
+  | 'DUPLICATE_RECORD'
+  | 'DATABASE_ERROR'
+  | 'CONSTRAINT_VIOLATION'
+  | 'TRANSACTION_FAILED'
+  | 'ROLLBACK_FAILED'
+  | 'UNKNOWN_ERROR';
+
+/**
+ * Log entry for import timeline tracking
+ */
+export interface ImportLogEntry {
+  id: string;
+  batch_id: string;
+  event_type: ImportLogEventType;
+  entity_type?: ImportEntityType;
+  external_record_id?: string;
+  message: string;
+  details?: Record<string, unknown>;
+  created_at: string;
+}
+
+/**
+ * Error entry for detailed failure tracking
+ */
+export interface ImportErrorEntry {
+  id: string;
+  batch_id: string;
+  record_id?: string;
+  entity_type: ImportEntityType;
+  external_record_id?: string;
+  error_code: ImportErrorCode;
+  error_message: string;
+  error_details?: Record<string, unknown>;
+  created_at: string;
+}
+
+/**
+ * Result of import execution
+ */
+export interface ImportExecutionResult {
+  success: boolean;
+  batchId: string;
+  status: ImportBatchStatus;
+  totalRecords: number;
+  successfulRecords: number;
+  failedRecords: number;
+  skippedRecords: number;
+  errors: ImportErrorEntry[];
+  logs: ImportLogEntry[];
+  rollbackPerformed: boolean;
+  durationMs: number;
+  referenceMap?: {
+    clients: Record<string, string>;
+    contacts: Record<string, string>;
+    cases: Record<string, string>;
+    subjects: Record<string, string>;
+    activities: Record<string, string>;
+  };
+}
+
+/**
+ * Request payload for the execute-import edge function
+ */
+export interface ExecuteImportRequest {
+  batchId: string;
+  organizationId: string;
+  userId: string;
+  sourceSystemName: string;
+  entities: ExecuteImportEntity[];
+  mappingConfig: MappingConfig;
+}
+
+/**
+ * Entity data for execution
+ */
+export interface ExecuteImportEntity {
+  entityType: ImportEntityType;
+  records: ExecuteImportRecord[];
+}
+
+/**
+ * Individual record for execution
+ */
+export interface ExecuteImportRecord {
+  externalRecordId: string;
+  data: Record<string, unknown>;
+  sourceData: Record<string, unknown>;
+}
+
+/**
+ * Response from the execute-import edge function
+ */
+export interface ExecuteImportResponse {
+  success: boolean;
+  batchId: string;
+  successCount: number;
+  failedCount: number;
+  skippedCount: number;
+  errors: Array<{
+    entityType: string;
+    externalRecordId: string;
+    errorCode: string;
+    errorMessage: string;
+    errorDetails?: Record<string, unknown>;
+  }>;
+  referenceMap: {
+    clients: Record<string, string>;
+    contacts: Record<string, string>;
+    cases: Record<string, string>;
+    subjects: Record<string, string>;
+    activities: Record<string, string>;
+  };
+  rollbackPerformed: boolean;
+}

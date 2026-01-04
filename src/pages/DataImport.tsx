@@ -11,9 +11,10 @@ import { ImportConfirmation } from "@/components/import/ImportConfirmation";
 import { ImportProgress, EntityProgress } from "@/components/import/ImportProgress";
 import { ImportResults } from "@/components/import/ImportResults";
 import { ParsedCSV, ParseError, sortByImportOrder } from "@/lib/csvParser";
-import { MappingConfig, DEFAULT_MAPPING_CONFIG, NormalizationLog, EMPTY_NORMALIZATION_LOG, DryRunResult } from "@/types/import";
+import { MappingConfig, DEFAULT_MAPPING_CONFIG, NormalizationLog, EMPTY_NORMALIZATION_LOG, DryRunResult, ImportExecutionResult } from "@/types/import";
 import { normalizeRecord } from "@/lib/importNormalization";
 import { performDryRun } from "@/lib/importService";
+import { ImportExecutionEngine } from "@/lib/importExecutionEngine";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -52,6 +53,9 @@ export default function DataImport() {
   const [dryRunMessage, setDryRunMessage] = useState('');
   const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
   const [isDryRunComplete, setIsDryRunComplete] = useState(false);
+  
+  // Execution result state
+  const [executionResult, setExecutionResult] = useState<ImportExecutionResult | null>(null);
   
   const stepIndex = ['type', 'upload', 'validation', 'mapping', 'dry-run', 'confirmation', 'processing'].indexOf(currentStep);
   
@@ -125,6 +129,11 @@ export default function DataImport() {
       return;
     }
     
+    if (!dryRunResult) {
+      toast.error('Dry-run must complete before importing');
+      return;
+    }
+    
     setCurrentStep('processing');
     
     // Initialize progress for each entity
@@ -137,16 +146,13 @@ export default function DataImport() {
     }));
     setProgress(initialProgress);
     
-    // Initialize normalization log
-    const log: NormalizationLog = { ...EMPTY_NORMALIZATION_LOG };
-    
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
       
-      // Create import batch with mapping config
-      const totalRecords = parsedFiles.reduce((acc, f) => acc + f.rowCount, 0);
+      // Create import batch
+      const totalRecords = dryRunResult.recordsToCreate;
       const { data: batch, error: batchError } = await supabase
         .from('import_batches')
         .insert([{
@@ -155,9 +161,8 @@ export default function DataImport() {
           source_system: importType === 'new_migration' ? 'Migration' : 'Incremental',
           source_system_name: sourceSystemName || null,
           mapping_config: JSON.parse(JSON.stringify(mappingConfig)),
-          status: 'processing',
+          status: 'pending',
           total_records: totalRecords,
-          started_at: new Date().toISOString()
         }])
         .select()
         .single();
@@ -165,89 +170,75 @@ export default function DataImport() {
       if (batchError) throw batchError;
       setBatchId(batch.id);
       
-      // Process each entity type
-      let processedTotal = 0;
+      // Update progress to show processing started
+      setProgress(prev => prev.map(p => ({ ...p, status: 'processing' as const })));
+      setOverallProgress(10);
       
-      for (let i = 0; i < parsedFiles.length; i++) {
-        const file = parsedFiles[i];
-        setCurrentEntity(file.entityType);
-        
-        // Update progress to processing
-        setProgress(prev => prev.map(p => 
-          p.entityType === file.entityType 
-            ? { ...p, status: 'processing' as const }
-            : p
-        ));
-        
-        // Process each row with normalization
-        let entityErrors = 0;
-        for (let j = 0; j < file.rows.length; j++) {
-          const row = file.rows[j];
-          
-          // Apply normalization
-          const { normalized, changes } = normalizeRecord(row, file.entityType);
-          
-          // Track normalization stats
-          for (const change of changes) {
-            if (change.rule.includes('date')) log.datesNormalized++;
-            else if (change.rule.includes('currency')) log.currenciesCleaned++;
-            else if (change.rule.includes('text')) log.textsTrimmed++;
-            else if (change.rule.includes('email')) log.emailsNormalized++;
-            else if (change.rule.includes('phone')) log.phonesNormalized++;
-            else if (change.rule.includes('state')) log.statesNormalized++;
-          }
-          
-          // Simulate some random errors for demo
-          const hasError = Math.random() < 0.02; // 2% error rate for demo
-          if (hasError) entityErrors++;
-          
-          // Update entity progress
-          setProgress(prev => prev.map(p => 
-            p.entityType === file.entityType 
-              ? { ...p, processed: j + 1, errors: entityErrors }
-              : p
-          ));
-          
-          processedTotal++;
-          setOverallProgress((processedTotal / totalRecords) * 100);
-          
-          // Small delay to show progress
-          await new Promise(resolve => setTimeout(resolve, 15));
+      // Create and run the execution engine
+      const engine = new ImportExecutionEngine(
+        organization.id,
+        user.id,
+        batch.id,
+        sourceSystemName || (importType === 'new_migration' ? 'Migration' : 'Incremental'),
+        mappingConfig
+      );
+      
+      setOverallProgress(20);
+      
+      // Execute the import
+      const result = await engine.execute(parsedFiles, dryRunResult);
+      
+      setExecutionResult(result);
+      
+      // Update progress based on result
+      if (result.success) {
+        setProgress(prev => prev.map(p => ({
+          ...p,
+          status: 'completed' as const,
+          processed: p.total,
+          errors: 0
+        })));
+        setOverallProgress(100);
+        toast.success(`Import completed successfully! ${result.successfulRecords} records imported.`);
+      } else {
+        // Calculate errors per entity from the result
+        const errorsByEntity: Record<string, number> = {};
+        for (const error of result.errors) {
+          const entityType = error.entity_type;
+          errorsByEntity[entityType] = (errorsByEntity[entityType] || 0) + 1;
         }
         
-        // Mark entity as completed
-        setProgress(prev => prev.map(p => 
-          p.entityType === file.entityType 
-            ? { ...p, status: entityErrors > 0 ? 'failed' as const : 'completed' as const }
-            : p
-        ));
+        setProgress(prev => prev.map(p => ({
+          ...p,
+          status: result.rollbackPerformed ? 'failed' as const : (errorsByEntity[p.entityType] ? 'failed' as const : 'completed' as const),
+          processed: p.total,
+          errors: errorsByEntity[p.entityType] || 0
+        })));
+        setOverallProgress(100);
+        
+        if (result.rollbackPerformed) {
+          toast.error(`Import failed. All changes have been rolled back. ${result.errors.length} error(s).`);
+        } else {
+          toast.error(`Import completed with ${result.failedRecords} error(s).`);
+        }
       }
-      
-      // Update normalization log state
-      setNormalizationLog(log);
-      
-      // Update batch status with normalization log
-      const finalProgress = progress;
-      const totalErrors = finalProgress.reduce((acc, p) => acc + p.errors, 0);
-      
-      await supabase
-        .from('import_batches')
-        .update({
-          status: totalErrors > 0 ? 'completed_with_errors' : 'completed',
-          processed_records: totalRecords,
-          failed_records: totalErrors,
-          normalization_log: JSON.parse(JSON.stringify(log)),
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', batch.id);
       
       setCurrentEntity(null);
       setIsComplete(true);
       
     } catch (error) {
       console.error('Import error:', error);
-      toast.error('Import failed. Please try again.');
-      setCurrentStep('confirmation');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Import failed: ${errorMessage}`);
+      
+      // Mark all as failed
+      setProgress(prev => prev.map(p => ({
+        ...p,
+        status: 'failed' as const,
+        errors: p.total
+      })));
+      setOverallProgress(100);
+      setIsComplete(true);
     }
   };
   
@@ -272,6 +263,7 @@ export default function DataImport() {
     setDryRunProgress(0);
     setDryRunMessage('');
     setIsDryRunComplete(false);
+    setExecutionResult(null);
   };
   
   return (
@@ -373,6 +365,7 @@ export default function DataImport() {
               batchId={batchId}
               progress={progress}
               onStartNew={handleStartNew}
+              executionResult={executionResult}
             />
           )}
         </CardContent>
