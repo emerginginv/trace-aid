@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, FileText, ShieldAlert } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { UpdateForm } from "./UpdateForm";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { GenerateReportDialog } from "@/components/templates/GenerateReportDialog";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Update {
   id: string;
@@ -35,6 +36,13 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [caseData, setCaseData] = useState<{ title: string; case_number: string; case_manager_id: string | null } | null>(null);
+
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const canViewUpdates = hasPermission("view_updates");
+  const canAddUpdates = hasPermission("add_updates");
+  const canEditUpdates = hasPermission("edit_updates");
+  const canDeleteUpdates = hasPermission("delete_updates");
+  const canViewReports = hasPermission("view_reports");
 
   useEffect(() => {
     fetchUpdates();
@@ -144,8 +152,22 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
       update.update_type.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  if (loading) {
+  if (permissionsLoading || loading) {
     return <p className="text-muted-foreground">Loading updates...</p>;
+  }
+
+  if (!canViewUpdates) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
+          <p className="text-muted-foreground text-center">
+            You don't have permission to view updates. Contact your administrator for access.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -156,11 +178,17 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
           <p className="text-muted-foreground">Activity log and progress notes</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={() => setReportDialogOpen(true)} variant="outline" className="w-full sm:w-auto" disabled={isClosedCase}>
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
-          <Button onClick={() => setFormOpen(true)} className="w-full sm:w-auto" disabled={isClosedCase}>
+          {canViewReports && (
+            <Button onClick={() => setReportDialogOpen(true)} variant="outline" className="w-full sm:w-auto" disabled={isClosedCase}>
+              <FileText className="h-4 w-4 mr-2" />
+              Generate Report
+            </Button>
+          )}
+          <Button 
+            onClick={() => setFormOpen(true)} 
+            className="w-full sm:w-auto" 
+            disabled={isClosedCase || !canAddUpdates}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Update
           </Button>
@@ -181,10 +209,12 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground mb-4">No updates yet</p>
-            <Button onClick={() => setFormOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Add First Update
-            </Button>
+            {canAddUpdates && (
+              <Button onClick={() => setFormOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Add First Update
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : filteredUpdates.length === 0 ? (
@@ -236,12 +266,16 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                       <TableCell>{format(new Date(update.created_at), "MMM dd, yyyy")}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(update)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(update.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {canEditUpdates && (
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(update)} disabled={isClosedCase}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDeleteUpdates && (
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(update.id)} disabled={isClosedCase}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
