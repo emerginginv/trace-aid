@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { AccountForm } from "@/components/AccountForm";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { usePermissions } from "@/hooks/usePermissions";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface Account {
   id: string;
@@ -44,6 +46,8 @@ const Accounts = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
+  const [sortColumn, setSortColumn] = useState<string>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     fetchAccounts();
@@ -96,6 +100,15 @@ const Accounts = () => {
     }
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   const filteredAccounts = accounts.filter(account => {
     const matchesSearch = searchQuery === '' || 
       account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -105,6 +118,25 @@ const Accounts = () => {
     const matchesIndustry = industryFilter === 'all' || account.industry === industryFilter;
     
     return matchesSearch && matchesIndustry;
+  });
+
+  const sortedAccounts = [...filteredAccounts].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    let aVal: string = "";
+    let bVal: string = "";
+    
+    if (sortColumn === "location") {
+      aVal = [a.city, a.state].filter(Boolean).join(", ");
+      bVal = [b.city, b.state].filter(Boolean).join(", ");
+    } else {
+      aVal = (a[sortColumn as keyof Account] as string) || "";
+      bVal = (b[sortColumn as keyof Account] as string) || "";
+    }
+    
+    return sortDirection === "asc" 
+      ? aVal.localeCompare(bVal) 
+      : bVal.localeCompare(aVal);
   });
 
   if (loading) {
@@ -171,6 +203,11 @@ const Accounts = () => {
         </div>
       </div>
 
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {sortedAccounts.length} account{sortedAccounts.length !== 1 ? 's' : ''}
+      </div>
+
       {accounts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -195,7 +232,7 @@ const Accounts = () => {
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-          {filteredAccounts.map((account) => (
+          {sortedAccounts.map((account) => (
             <Card 
               key={account.id} 
               className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -272,16 +309,53 @@ const Accounts = () => {
           <Table className="min-w-[700px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Industry</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
+                <SortableTableHead
+                  column="name"
+                  label="Name"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="industry"
+                  label="Industry"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="email"
+                  label="Email"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="phone"
+                  label="Phone"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="location"
+                  label="Location"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column=""
+                  label="Actions"
+                  sortColumn=""
+                  sortDirection="asc"
+                  onSort={() => {}}
+                  className="w-[120px]"
+                />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAccounts.map((account) => (
+              {sortedAccounts.map((account) => (
                 <TableRow 
                   key={account.id}
                   className="cursor-pointer hover:bg-muted/50"
@@ -368,6 +442,8 @@ const Accounts = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ScrollProgress />
     </div>
   );
 };

@@ -1,21 +1,23 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Search, Pencil, Trash2, ChevronLeft, ChevronRight, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon } from "lucide-react";
+import { Loader2, Search, Pencil, Trash2, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon } from "lucide-react";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import html2pdf from "html2pdf.js";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface Expense {
   id: string;
@@ -50,9 +52,9 @@ const AllExpenses = () => {
   const [editingExpense, setEditingExpense] = useState<any>(null);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   
-  // Pagination states
-  const [expensePage, setExpensePage] = useState(1);
-  const [expensePageSize, setExpensePageSize] = useState(15);
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<string>("date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Bulk selection state
   const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
@@ -73,7 +75,7 @@ const AllExpenses = () => {
   // Clear selection when filters change
   useEffect(() => {
     setSelectedExpenses(new Set());
-  }, [expenseSearch, expenseStatusFilter, expensePage, dateFrom, dateTo]);
+  }, [expenseSearch, expenseStatusFilter, dateFrom, dateTo]);
 
   const fetchExpenseData = async () => {
     if (!organization?.id) return;
@@ -152,22 +154,58 @@ const AllExpenses = () => {
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
-  // Paginated data
-  const paginatedExpenses = filteredExpenses.slice(
-    (expensePage - 1) * expensePageSize,
-    expensePage * expensePageSize
-  );
-  const expenseTotalPages = Math.ceil(filteredExpenses.length / expensePageSize);
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
 
-  // Get pending expenses on current page for bulk selection
-  const pendingExpensesOnPage = paginatedExpenses.filter(exp => exp.status === "pending" && !exp.invoiced);
-  const allPendingSelected = pendingExpensesOnPage.length > 0 && 
-    pendingExpensesOnPage.every(exp => selectedExpenses.has(exp.id));
-  const somePendingSelected = pendingExpensesOnPage.some(exp => selectedExpenses.has(exp.id));
+  // Sorted data
+  const sortedExpenses = [...filteredExpenses].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    let aVal: any = a[sortColumn as keyof Expense];
+    let bVal: any = b[sortColumn as keyof Expense];
+    
+    if (sortColumn === "case") {
+      aVal = a.case_title;
+      bVal = b.case_title;
+    }
+    
+    if (aVal == null) return sortDirection === "asc" ? 1 : -1;
+    if (bVal == null) return sortDirection === "asc" ? -1 : 1;
+    
+    if (sortColumn === "date") {
+      return sortDirection === "asc"
+        ? new Date(aVal).getTime() - new Date(bVal).getTime()
+        : new Date(bVal).getTime() - new Date(aVal).getTime();
+    }
+    
+    if (typeof aVal === "number" && typeof bVal === "number") {
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return sortDirection === "asc" 
+        ? aVal.localeCompare(bVal) 
+        : bVal.localeCompare(aVal);
+    }
+    
+    return 0;
+  });
+
+  // Get pending expenses for bulk selection
+  const pendingExpenses = sortedExpenses.filter(exp => exp.status === "pending" && !exp.invoiced);
+  const allPendingSelected = pendingExpenses.length > 0 && 
+    pendingExpenses.every(exp => selectedExpenses.has(exp.id));
+  const somePendingSelected = pendingExpenses.some(exp => selectedExpenses.has(exp.id));
 
   const handleSelectAll = (checked: boolean) => {
     const newSelected = new Set(selectedExpenses);
-    pendingExpensesOnPage.forEach(exp => {
+    pendingExpenses.forEach(exp => {
       if (checked) {
         newSelected.add(exp.id);
       } else {
@@ -416,17 +454,11 @@ const AllExpenses = () => {
               <Input
                 placeholder="Search by case, category..."
                 value={expenseSearch}
-                onChange={(e) => {
-                  setExpenseSearch(e.target.value);
-                  setExpensePage(1);
-                }}
+                onChange={(e) => setExpenseSearch(e.target.value)}
                 className="pl-8"
               />
             </div>
-            <Select value={expenseStatusFilter} onValueChange={(v) => {
-              setExpenseStatusFilter(v);
-              setExpensePage(1);
-            }}>
+            <Select value={expenseStatusFilter} onValueChange={setExpenseStatusFilter}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -436,20 +468,6 @@ const AllExpenses = () => {
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
                 <SelectItem value="invoiced">Invoiced</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={expensePageSize.toString()} onValueChange={(v) => {
-              setExpensePageSize(parseInt(v));
-              setExpensePage(1);
-            }}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 per page</SelectItem>
-                <SelectItem value="25">25 per page</SelectItem>
-                <SelectItem value="50">50 per page</SelectItem>
-                <SelectItem value="100">100 per page</SelectItem>
               </SelectContent>
             </Select>
             <Popover>
@@ -463,10 +481,7 @@ const AllExpenses = () => {
                 <Calendar
                   mode="single"
                   selected={dateFrom}
-                  onSelect={(date) => {
-                    setDateFrom(date);
-                    setExpensePage(1);
-                  }}
+                  onSelect={setDateFrom}
                   initialFocus
                   className="pointer-events-auto"
                 />
@@ -483,10 +498,7 @@ const AllExpenses = () => {
                 <Calendar
                   mode="single"
                   selected={dateTo}
-                  onSelect={(date) => {
-                    setDateTo(date);
-                    setExpensePage(1);
-                  }}
+                  onSelect={setDateTo}
                   initialFocus
                   className="pointer-events-auto"
                 />
@@ -523,7 +535,12 @@ const AllExpenses = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {filteredExpenses.length === 0 ? (
+          {/* Entry count */}
+          <div className="text-sm text-muted-foreground mb-4">
+            Showing {sortedExpenses.length} expense{sortedExpenses.length !== 1 ? 's' : ''}
+          </div>
+
+          {sortedExpenses.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
               No matching expenses found
             </p>
@@ -531,25 +548,69 @@ const AllExpenses = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      checked={allPendingSelected}
-                      onCheckedChange={handleSelectAll}
-                      disabled={pendingExpensesOnPage.length === 0}
-                      className={somePendingSelected && !allPendingSelected ? "opacity-50" : ""}
-                    />
-                  </TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Case</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <SortableTableHead
+                    column=""
+                    label=""
+                    sortColumn=""
+                    sortDirection="asc"
+                    onSort={() => {}}
+                    className="w-[40px]"
+                  />
+                  <SortableTableHead
+                    column="date"
+                    label="Date"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="case"
+                    label="Case"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="category"
+                    label="Category"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="quantity"
+                    label="Quantity"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="amount"
+                    label="Amount"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="text-right"
+                  />
+                  <SortableTableHead
+                    column="status"
+                    label="Status"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column=""
+                    label="Actions"
+                    sortColumn=""
+                    sortDirection="asc"
+                    onSort={() => {}}
+                    className="text-right"
+                  />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedExpenses.map((expense) => {
+                {sortedExpenses.map((expense) => {
                   const isPending = expense.status === "pending" && !expense.invoiced;
                   return (
                     <TableRow key={expense.id}>
@@ -696,36 +757,6 @@ const AllExpenses = () => {
               </TableBody>
             </Table>
           )}
-          {filteredExpenses.length > 0 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {((expensePage - 1) * expensePageSize) + 1} to {Math.min(expensePage * expensePageSize, filteredExpenses.length)} of {filteredExpenses.length} entries
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setExpensePage(p => Math.max(1, p - 1))}
-                  disabled={expensePage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <div className="text-sm">
-                  Page {expensePage} of {expenseTotalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setExpensePage(p => Math.min(expenseTotalPages, p + 1))}
-                  disabled={expensePage === expenseTotalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -788,6 +819,8 @@ const AllExpenses = () => {
           defaultFinanceType={financeFormType}
         />
       )}
+
+      <ScrollProgress />
     </div>
   );
 };

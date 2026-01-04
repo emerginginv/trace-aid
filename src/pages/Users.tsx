@@ -6,7 +6,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -25,6 +24,8 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { RoleBadge } from "@/components/RoleBadge";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface OrgUser {
   id: string;
@@ -50,6 +51,8 @@ const Users = () => {
   const [userToRemove, setUserToRemove] = useState<OrgUser | null>(null);
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [selectedUserForColor, setSelectedUserForColor] = useState<OrgUser | null>(null);
+  const [sortColumn, setSortColumn] = useState<string>("full_name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { isAdmin } = useUserRole();
@@ -282,11 +285,43 @@ const Users = () => {
     }
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     return matchesSearch && matchesRole;
+  });
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    let aVal: string = "";
+    let bVal: string = "";
+    
+    if (sortColumn === "full_name") {
+      aVal = a.full_name || "";
+      bVal = b.full_name || "";
+    } else if (sortColumn === "created_at") {
+      return sortDirection === "asc"
+        ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    } else {
+      aVal = String(a[sortColumn as keyof OrgUser] || "");
+      bVal = String(b[sortColumn as keyof OrgUser] || "");
+    }
+    
+    return sortDirection === "asc" 
+      ? aVal.localeCompare(bVal) 
+      : bVal.localeCompare(aVal);
   });
 
   if (loading) {
@@ -401,28 +436,76 @@ const Users = () => {
           </Select>
         </div>
 
+        {/* Entry count */}
+        <div className="text-sm text-muted-foreground mb-4">
+          Showing {sortedUsers.length} user{sortedUsers.length !== 1 ? 's' : ''}
+        </div>
+
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Color</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <SortableTableHead
+                  column=""
+                  label="Color"
+                  sortColumn=""
+                  sortDirection="asc"
+                  onSort={() => {}}
+                />
+                <SortableTableHead
+                  column="full_name"
+                  label="Name"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="email"
+                  label="Email"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="role"
+                  label="Role"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="status"
+                  label="Status"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="created_at"
+                  label="Joined"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column=""
+                  label="Actions"
+                  sortColumn=""
+                  sortDirection="asc"
+                  onSort={() => {}}
+                  className="text-right"
+                />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.length === 0 ? (
+              {sortedUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     No users found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                sortedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       {user.status === 'active' && isAdmin ? (
@@ -560,6 +643,8 @@ const Users = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ScrollProgress />
     </div>
   );
 };

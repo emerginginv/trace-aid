@@ -10,12 +10,15 @@ import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 interface Case {
   id: string;
   case_number: string;
@@ -26,6 +29,7 @@ interface Case {
   due_date: string;
   created_at: string;
 }
+
 const Cases = () => {
   const navigate = useNavigate();
   const { isVendor } = useUserRole();
@@ -46,6 +50,8 @@ const Cases = () => {
     status_type?: string;
   }>>([]);
   const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
+  const [sortColumn, setSortColumn] = useState<string>("case_number");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Refetch when organization changes
   useEffect(() => {
@@ -54,11 +60,11 @@ const Cases = () => {
       fetchPicklists();
     }
   }, [organization?.id]);
+
   const fetchPicklists = async () => {
     if (!organization?.id) return;
     
     try {
-      // Fetch status picklists for selected organization
       const { data: statusData } = await supabase
         .from("picklists")
         .select("id, value, color, status_type")
@@ -74,12 +80,12 @@ const Cases = () => {
       console.error("Error fetching picklists:", error);
     }
   };
+
   const fetchCases = async () => {
     if (!organization?.id) return;
     
     setLoading(true);
     try {
-      // Filter cases by the selected organization
       const { data, error } = await supabase
         .from("cases")
         .select("*")
@@ -94,6 +100,7 @@ const Cases = () => {
       setLoading(false);
     }
   };
+
   const getStatusStyle = (status: string) => {
     const statusItem = statusPicklists.find(s => s.value === status);
     if (statusItem?.color) {
@@ -105,20 +112,21 @@ const Cases = () => {
     }
     return {};
   };
+
   const isClosedCase = (status: string) => {
     const statusItem = statusPicklists.find(s => s.value === status);
     return statusItem?.status_type === 'closed';
   };
+
   const handleDeleteClick = (caseId: string) => {
     setCaseToDelete(caseId);
     setDeleteDialogOpen(true);
   };
+
   const handleDeleteConfirm = async () => {
     if (!caseToDelete) return;
     try {
-      const {
-        error
-      } = await supabase.from("cases").delete().eq("id", caseToDelete);
+      const { error } = await supabase.from("cases").delete().eq("id", caseToDelete);
       if (error) throw error;
       toast.success("Case deleted successfully");
       fetchCases();
@@ -129,21 +137,50 @@ const Cases = () => {
       setCaseToDelete(null);
     }
   };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   const filteredCases = cases.filter(caseItem => {
     const matchesSearch = searchQuery === '' || caseItem.title.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.case_number.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || caseItem.status === statusFilter;
-
-    // Match status type (open/closed)
     const statusPicklist = statusPicklists.find(s => s.value === caseItem.status);
     const matchesStatusType = statusTypeFilter === 'all' || statusPicklist?.status_type === statusTypeFilter;
     return matchesSearch && matchesStatus && matchesStatusType;
   });
+
+  const sortedCases = [...filteredCases].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    let aVal = a[sortColumn as keyof Case];
+    let bVal = b[sortColumn as keyof Case];
+    
+    if (aVal == null) return sortDirection === "asc" ? 1 : -1;
+    if (bVal == null) return sortDirection === "asc" ? -1 : 1;
+    
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return sortDirection === "asc" 
+        ? aVal.localeCompare(bVal) 
+        : bVal.localeCompare(aVal);
+    }
+    
+    return 0;
+  });
+
   if (loading) {
     return <div className="flex items-center justify-center py-12">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>;
   }
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
       {isVendor && <Alert className="bg-muted/50 border-primary/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
@@ -198,6 +235,11 @@ const Cases = () => {
         </div>
       </div>
 
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {sortedCases.length} case{sortedCases.length !== 1 ? 's' : ''}
+      </div>
+
       {cases.length === 0 ? <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -217,7 +259,7 @@ const Cases = () => {
             <p className="text-muted-foreground">No cases match your search criteria</p>
           </CardContent>
         </Card> : viewMode === 'grid' ? <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredCases.map(caseItem => <Card key={caseItem.id} className="hover:shadow-lg transition-shadow">
+          {sortedCases.map(caseItem => <Card key={caseItem.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -254,7 +296,7 @@ const Cases = () => {
         </div> : <>
           {/* Mobile Card View */}
           <div className="block sm:hidden space-y-4">
-          {filteredCases.map(caseItem => {
+          {sortedCases.map(caseItem => {
           const isClosed = isClosedCase(caseItem.status);
           return <Card key={caseItem.id} className={`p-4 ${isClosed ? 'opacity-60' : ''} cursor-pointer hover:shadow-md transition-all`}
                   onClick={() => navigate(`/cases/${caseItem.id}`)}
@@ -310,16 +352,53 @@ const Cases = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Case Number</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <SortableTableHead
+                    column="case_number"
+                    label="Case Number"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="title"
+                    label="Title"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="status"
+                    label="Status"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="start_date"
+                    label="Start Date"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="due_date"
+                    label="Due Date"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column=""
+                    label="Actions"
+                    sortColumn=""
+                    sortDirection="asc"
+                    onSort={() => {}}
+                    className="text-right"
+                  />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCases.map(caseItem => {
+                {sortedCases.map(caseItem => {
               const isClosed = isClosedCase(caseItem.status);
               return <TableRow 
                   key={caseItem.id} 
@@ -380,6 +459,10 @@ const Cases = () => {
       <CaseForm open={formOpen} onOpenChange={setFormOpen} onSuccess={fetchCases} />
       
       <ConfirmationDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete Case" description="Are you sure you want to delete this case? This action cannot be undone." confirmLabel="Delete" cancelLabel="Cancel" onConfirm={handleDeleteConfirm} variant="destructive" />
-    </div>;
+
+      <ScrollProgress />
+    </div>
+  );
 };
+
 export default Cases;

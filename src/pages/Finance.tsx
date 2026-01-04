@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface RetainerBalance {
   case_id: string;
