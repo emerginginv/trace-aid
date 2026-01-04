@@ -426,9 +426,10 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                     {isExpanded && update.description && (
                       <TableRow key={`${update.id}-desc`}>
                         <TableCell colSpan={6} className="py-3 bg-muted/30 border-0">
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-10">
-                            {update.description}
-                          </p>
+                          <div 
+                            className="prose prose-sm max-w-none text-muted-foreground pl-10 dark:prose-invert [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:text-foreground [&_em]:text-foreground"
+                            dangerouslySetInnerHTML={{ __html: update.description }}
+                          />
                         </TableCell>
                       </TableRow>
                     )}
