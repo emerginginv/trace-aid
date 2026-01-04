@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Search, ShieldAlert } from "lucide-react";
+import { Plus, Edit, Trash2, Search, ShieldAlert, Download } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { ActivityForm } from "./ActivityForm";
@@ -329,14 +331,49 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
               Showing {sortedActivities.length} {activeTab === "tasks" ? "task" : "event"}{sortedActivities.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <Button 
-            onClick={() => setFormOpen(true)} 
-            size="sm"
-            disabled={!canAddActivities || isClosedCase}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add {activeTab === "tasks" ? "Task" : "Event"}
-          </Button>
+          <div className="flex gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  const exportColumns: ExportColumn[] = [
+                    { key: "title", label: "Title" },
+                    { key: "status", label: "Status", format: (v) => v?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '-' },
+                    { key: "assigned_user_id", label: "Assigned To", format: (v) => getUserName(v) },
+                    { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+                    { key: "description", label: "Description", format: (v) => v || "-" },
+                  ];
+                  exportToCSV(sortedActivities, exportColumns, `case-${activeTab}`);
+                }}>
+                  Export to CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  const exportColumns: ExportColumn[] = [
+                    { key: "title", label: "Title" },
+                    { key: "status", label: "Status", format: (v) => v?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '-' },
+                    { key: "assigned_user_id", label: "Assigned To", format: (v) => getUserName(v) },
+                    { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+                  ];
+                  exportToPDF(sortedActivities, exportColumns, `Case ${activeTab === "tasks" ? "Tasks" : "Events"}`, `case-${activeTab}`);
+                }}>
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button 
+              onClick={() => setFormOpen(true)} 
+              size="sm"
+              disabled={!canAddActivities || isClosedCase}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add {activeTab === "tasks" ? "Task" : "Event"}
+            </Button>
+          </div>
         </div>
 
         <div className="flex border-b">

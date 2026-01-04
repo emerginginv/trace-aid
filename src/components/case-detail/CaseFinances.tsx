@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical, Lock } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical, Lock, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
 import { InvoiceDetail } from "./InvoiceDetail";
 import { usePermissions } from "@/hooks/usePermissions";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
+import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -472,13 +474,52 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
               <h2 className="text-2xl font-bold">Finances</h2>
               <p className="text-muted-foreground">Retainers, expenses, and invoices</p>
             </div>
-            <Button onClick={() => {
-              setDefaultFinanceType("expense");
-              setFormOpen(true);
-            }} disabled={!canAddFinances}>
-              <Plus className="h-4 w-4" />
-              Add Transaction
-            </Button>
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    const exportColumns: ExportColumn[] = [
+                      { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                      { key: "category", label: "Category", format: (v) => v || "-" },
+                      { key: "description", label: "Description" },
+                      { key: "amount", label: "Amount", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
+                      { key: "status", label: "Status", format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || "-" },
+                    ];
+                    exportToCSV(expenseFinances, exportColumns, "case-expenses");
+                  }}>
+                    Export to CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    const exportColumns: ExportColumn[] = [
+                      { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                      { key: "category", label: "Category", format: (v) => v || "-" },
+                      { key: "description", label: "Description" },
+                      { key: "amount", label: "Amount", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
+                      { key: "status", label: "Status", format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || "-" },
+                    ];
+                    const expenseTotal = expenseFinances.reduce((sum, f) => sum + Number(f.amount), 0);
+                    exportToPDF(expenseFinances, exportColumns, "Case Expenses", "case-expenses", [
+                      { label: "Total", value: `$${expenseTotal.toFixed(2)}` }
+                    ]);
+                  }}>
+                    Export to PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={() => {
+                setDefaultFinanceType("expense");
+                setFormOpen(true);
+              }} disabled={!canAddFinances}>
+                <Plus className="h-4 w-4" />
+                Add Transaction
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
@@ -828,13 +869,53 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Time Entries</CardTitle>
-                <Button onClick={() => {
-                  setDefaultFinanceType("time");
-                  setFormOpen(true);
-                }} disabled={!canAddFinances}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Log Time
-                </Button>
+                <div className="flex gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => {
+                        const exportColumns: ExportColumn[] = [
+                          { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                          { key: "description", label: "Description" },
+                          { key: "hours", label: "Hours", format: (v) => v?.toFixed(2) || "0", align: "right" },
+                          { key: "hourly_rate", label: "Rate", format: (v) => v ? `$${Number(v).toFixed(2)}` : "-", align: "right" },
+                          { key: "amount", label: "Total", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
+                          { key: "status", label: "Status", format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || "-" },
+                        ];
+                        exportToCSV(timeFinances, exportColumns, "case-time-entries");
+                      }}>
+                        Export to CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {
+                        const exportColumns: ExportColumn[] = [
+                          { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                          { key: "description", label: "Description" },
+                          { key: "hours", label: "Hours", format: (v) => v?.toFixed(2) || "0", align: "right" },
+                          { key: "hourly_rate", label: "Rate", format: (v) => v ? `$${Number(v).toFixed(2)}` : "-", align: "right" },
+                          { key: "amount", label: "Total", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
+                        ];
+                        exportToPDF(timeFinances, exportColumns, "Case Time Entries", "case-time-entries", [
+                          { label: "Total Hours", value: timeMetrics.totalHours.toFixed(2) },
+                          { label: "Total Amount", value: `$${timeMetrics.totalAmount.toFixed(2)}` }
+                        ]);
+                      }}>
+                        Export to PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button onClick={() => {
+                    setDefaultFinanceType("time");
+                    setFormOpen(true);
+                  }} disabled={!canAddFinances}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Log Time
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
