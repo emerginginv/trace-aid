@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, User, Mail, Phone, MapPin, Edit, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { ContactDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 
 interface Contact {
   id: string;
@@ -70,11 +71,7 @@ const ContactDetail = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <ContactDetailSkeleton />;
   }
 
   if (!contact) {

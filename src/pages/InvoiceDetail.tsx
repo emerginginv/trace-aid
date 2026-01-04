@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Edit, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import html2pdf from "html2pdf.js";
 import { EditInvoiceItemsDialog } from "@/components/case-detail/EditInvoiceItemsDialog";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { InvoiceDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 
 interface Invoice {
   id: string;
@@ -227,11 +228,7 @@ export default function InvoiceDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <InvoiceDetailSkeleton />;
   }
 
   if (!invoice || !caseInfo) {

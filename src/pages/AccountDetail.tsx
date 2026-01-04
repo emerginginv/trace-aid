@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Building2, Mail, Phone, MapPin, Edit, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AccountDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 
 interface Account {
   id: string;
@@ -84,11 +85,7 @@ const AccountDetail = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <AccountDetailSkeleton />;
   }
 
   if (!account) {
