@@ -227,22 +227,22 @@ const Accounts = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <div className="flex gap-1 border rounded-md p-1">
+        <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('grid')}
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0"
           >
-            <LayoutGrid className="h-4 w-4" />
+            <LayoutGrid className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('list')}
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0"
           >
-            <List className="h-4 w-4" />
+            <List className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>

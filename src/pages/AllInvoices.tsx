@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X } from "lucide-react";
+import { Loader2, Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
 import { InvoiceFromExpenses } from "@/components/case-detail/InvoiceFromExpenses";
@@ -64,6 +64,7 @@ const AllInvoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [retainerMap, setRetainerMap] = useState<Record<string, number>>({});
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   
   // Filter states
   const [invoiceSearch, setInvoiceSearch] = useState("");
@@ -97,7 +98,6 @@ const AllInvoices = () => {
       setLoading(true);
       const orgId = organization.id;
 
-      // Fetch all cases first (needed for joins and dropdown)
       const { data: casesData, error: casesError } = await supabase
         .from("cases")
         .select("id, title, case_number")
@@ -109,7 +109,6 @@ const AllInvoices = () => {
       setCases(casesData || []);
       const casesMap = new Map(casesData?.map(c => [c.id, c]) || []);
 
-      // Fetch retainer balances for payment modal
       const { data: retainerData, error: retainerError } = await supabase
         .from("retainer_funds")
         .select("case_id, amount")
@@ -117,7 +116,6 @@ const AllInvoices = () => {
 
       if (retainerError) throw retainerError;
 
-      // Aggregate retainer balances by case
       const caseRetainerMap: Record<string, number> = {};
       retainerData?.forEach((fund: any) => {
         const caseId = fund.case_id;
@@ -128,7 +126,6 @@ const AllInvoices = () => {
       });
       setRetainerMap(caseRetainerMap);
 
-      // Fetch all invoices from invoices table
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
         .select("id, case_id, invoice_number, date, total, status, due_date, balance_due, total_paid")
@@ -163,8 +160,6 @@ const AllInvoices = () => {
     }
   };
 
-
-  // Filter functions
   const filteredInvoices = invoices.filter((invoice) => {
     const searchLower = invoiceSearch.toLowerCase();
     const matchesSearch =
@@ -176,7 +171,6 @@ const AllInvoices = () => {
       invoiceStatusFilter === "all" ||
       invoice.status === invoiceStatusFilter;
     
-    // Date range filter
     const invoiceDate = new Date(invoice.date);
     const matchesDateFrom = !dateFrom || invoiceDate >= dateFrom;
     const matchesDateTo = !dateTo || invoiceDate <= dateTo;
@@ -184,7 +178,6 @@ const AllInvoices = () => {
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
-  // Sort data
   const sortedInvoices = [...filteredInvoices].sort((a, b) => {
     if (!sortColumn) return 0;
     
@@ -242,7 +235,6 @@ const AllInvoices = () => {
       : (bVal as number) - (aVal as number);
   });
 
-  // Export functions
   const exportToCSV = () => {
     const headers = ["Invoice #", "Case Number", "Case Title", "Date", "Due Date", "Total", "Paid", "Balance Due", "Status"];
     const rows = filteredInvoices.map(inv => [
@@ -334,13 +326,11 @@ const AllInvoices = () => {
     if (!confirm("Are you sure you want to delete this invoice?")) return;
     
     try {
-      // First delete linked case_finances items
       await supabase
         .from("case_finances")
         .delete()
         .eq("invoice_id", invoiceId);
       
-      // Delete the invoice
       const { error } = await supabase
         .from("invoices")
         .delete()
@@ -378,7 +368,7 @@ const AllInvoices = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Invoices</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-2">
             System-wide invoice overview
           </p>
         </div>
@@ -388,113 +378,268 @@ const AllInvoices = () => {
         </Button>
       </div>
 
-      {/* Invoices List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Invoices</CardTitle>
-          <CardDescription>
-            Showing {sortedInvoices.length} invoice{sortedInvoices.length !== 1 ? 's' : ''}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-wrap gap-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by invoice #, case..."
-                value={invoiceSearch}
-                onChange={(e) => setInvoiceSearch(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="partial">Partial</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-              </SelectContent>
-            </Select>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateFrom}
-                  onSelect={setDateFrom}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateTo ? format(dateTo, "MMM d, yyyy") : "To date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateTo}
-                  onSelect={setDateTo}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            {(dateFrom || dateTo) && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => {
-                  setDateFrom(undefined);
-                  setDateTo(undefined);
-                }}
-                title="Clear date filters"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={exportToCSV}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Export to CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToPDF}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Export to PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <ColumnVisibility
-              columns={COLUMNS}
-              visibility={visibility}
-              onToggle={toggleColumn}
-              onReset={resetToDefaults}
+      {/* Search and Filters - Outside Card */}
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by invoice #, case..."
+            value={invoiceSearch}
+            onChange={(e) => setInvoiceSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[140px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="partial">Partial</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+          </SelectContent>
+        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-[140px] justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateFrom}
+              onSelect={setDateFrom}
+              initialFocus
+              className="pointer-events-auto"
             />
-          </div>
-          {sortedInvoices.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No matching invoices found
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-[140px] justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateTo ? format(dateTo, "MMM d, yyyy") : "To date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateTo}
+              onSelect={setDateTo}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+        {(dateFrom || dateTo) && (
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => {
+              setDateFrom(undefined);
+              setDateTo(undefined);
+            }}
+            title="Clear date filters"
+            className="h-10 w-10"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+        <ColumnVisibility
+          columns={COLUMNS}
+          visibility={visibility}
+          onToggle={toggleColumn}
+          onReset={resetToDefaults}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={exportToCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={exportToPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <div className="flex gap-1 border rounded-md p-1 h-10">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-7 w-7 p-0"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="h-7 w-7 p-0"
+          >
+            <List className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {sortedInvoices.length} invoice{sortedInvoices.length !== 1 ? 's' : ''}
+      </div>
+
+      {invoices.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <FileCheck className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">No invoices yet</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Create your first invoice to get started
             </p>
-          ) : (
+            <Button className="gap-2" onClick={() => setShowCreateInvoiceDialog(true)}>
+              <Plus className="w-4 h-4" />
+              Create First Invoice
+            </Button>
+          </CardContent>
+        </Card>
+      ) : filteredInvoices.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">No invoices match your search criteria</p>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sortedInvoices.map((invoice) => {
+            const balanceDue = invoice.balance_due !== undefined 
+              ? invoice.balance_due 
+              : invoice.amount - (invoice.total_paid || 0);
+            
+            return (
+              <Card 
+                key={invoice.id} 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate(`/invoices/${invoice.id}`)}
+              >
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-semibold">{invoice.invoice_number || "N/A"}</div>
+                      <div className="text-sm text-muted-foreground">{invoice.case_number}</div>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                      invoice.status === "paid"
+                        ? "bg-green-100 text-green-700"
+                        : invoice.status === "partial"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : invoice.status === "sent"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}>
+                      {invoice.status || "Draft"}
+                    </span>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Date</span>
+                      <span>{format(new Date(invoice.date), "MMM d, yyyy")}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-medium">${invoice.amount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Balance Due</span>
+                      <span className="font-medium">${balanceDue.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4 pt-4 border-t" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPayModal(invoice)}
+                    >
+                      <CircleDollarSign className="h-4 w-4 mr-1" />
+                      Pay
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingInvoice(invoice.id)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteInvoice(invoice.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <>
+          {/* Mobile Card View */}
+          <div className="block sm:hidden space-y-4">
+            {sortedInvoices.map((invoice) => {
+              const balanceDue = invoice.balance_due !== undefined 
+                ? invoice.balance_due 
+                : invoice.amount - (invoice.total_paid || 0);
+              
+              return (
+                <Card 
+                  key={invoice.id} 
+                  className="p-4 cursor-pointer hover:shadow-md transition-all"
+                  onClick={() => navigate(`/invoices/${invoice.id}`)}
+                >
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">{invoice.invoice_number || "N/A"}</div>
+                        <div className="text-sm text-muted-foreground">{invoice.case_number} - {invoice.case_title}</div>
+                      </div>
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                        invoice.status === "paid"
+                          ? "bg-green-100 text-green-700"
+                          : invoice.status === "partial"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : invoice.status === "sent"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-700"
+                      }`}>
+                        {invoice.status || "Draft"}
+                      </span>
+                    </div>
+                    <div className="text-sm space-y-1">
+                      <div>Date: {format(new Date(invoice.date), "MMM d, yyyy")}</div>
+                      <div>Total: ${invoice.amount.toFixed(2)}</div>
+                      <div className="font-medium">Balance: ${balanceDue.toFixed(2)}</div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table View */}
+          <Card className="hidden sm:block">
             <Table>
               <TableHeader>
                 <TRow>
@@ -662,9 +807,9 @@ const AllInvoices = () => {
                 })}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+          </Card>
+        </>
+      )}
 
       {/* Create Invoice Dialog */}
       <Dialog open={showCreateInvoiceDialog} onOpenChange={setShowCreateInvoiceDialog}>
@@ -700,7 +845,6 @@ const AllInvoices = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Invoice from Expenses - render inline when case is selected */}
       {showInvoiceFromExpenses && selectedCaseId && (
         <Dialog open={showInvoiceFromExpenses} onOpenChange={(open) => {
           setShowInvoiceFromExpenses(open);
@@ -719,7 +863,6 @@ const AllInvoices = () => {
         </Dialog>
       )}
 
-      {/* Record Payment Modal */}
       {showPayModal && (
         <RecordPaymentModal
           invoice={{
@@ -741,7 +884,6 @@ const AllInvoices = () => {
         />
       )}
 
-      {/* Edit Invoice Dialog */}
       {editingInvoice && (
         <EditInvoiceDialog
           invoiceId={editingInvoice}
