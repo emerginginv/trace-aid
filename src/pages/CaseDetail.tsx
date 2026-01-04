@@ -584,8 +584,8 @@ const CaseDetail = () => {
             <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold break-words leading-tight ${isClosed ? 'text-muted-foreground' : ''}`}>
               {caseData.title}
             </h1>
-            <p className={`text-sm mt-1 ${isClosed ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
-              Case #{caseData.case_number}
+            <p className={`text-xs mt-0.5 font-medium ${isClosed ? 'text-muted-foreground' : 'text-primary'}`}>
+              {caseData.case_number}
             </p>
           </div>
           
