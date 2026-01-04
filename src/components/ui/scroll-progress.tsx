@@ -107,8 +107,12 @@ export function ScrollProgress({
             <svg
               width={size}
               height={size}
-              className="absolute inset-0 -rotate-90"
-              style={{ filter: isNearComplete ? "drop-shadow(0 0 4px hsl(var(--primary) / 0.5))" : undefined }}
+              className="absolute inset-0"
+              style={{ 
+                transform: "rotate(-90deg)",
+                transformOrigin: "center center",
+                filter: isNearComplete ? "drop-shadow(0 0 4px hsl(var(--primary) / 0.5))" : undefined 
+              }}
             >
               {/* Gradient definition */}
               <defs>
