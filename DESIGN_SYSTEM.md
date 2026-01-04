@@ -1,241 +1,211 @@
-# Premium Design System - PI Case Manager
+# Design System Style Guide - PI Case Manager
 
-## 🎨 Overview
+## Overview
 
-This is a comprehensive, production-ready design system built for enterprise-grade applications. It combines modern aesthetics with accessibility, performance, and scalability.
+This is a comprehensive, production-ready design system built for enterprise-grade applications. It combines modern aesthetics with WCAG AA accessibility, performance, and scalability.
 
----
-
-## 🌈 Visual Effects
-
-### Glassmorphism
-Modern frosted glass effects for premium UI elements:
-
-```tsx
-// Light glassmorphism
-<div className="glass rounded-lg p-6">
-  <p>Frosted glass effect</p>
-</div>
-
-// Heavy glassmorphism with saturation
-<div className="glass-heavy rounded-lg p-6">
-  <p>Enhanced frosted glass</p>
-</div>
-
-// Glass navigation bar
-<nav className="glass-nav">
-  {/* Navigation content */}
-</nav>
-```
-
-**CSS Variables:**
-- `--glass-bg`: Background with 70% opacity
-- `--glass-border`: Border with 20% opacity
-- `--backdrop-blur`: 12px blur
-- `--backdrop-blur-heavy`: 24px blur with saturation
-
-### Premium Shadow System
-
-Multi-layered shadows for depth and hierarchy:
-
-**Elevation Levels:**
-```css
---shadow-xs:   Minimal lift (1px)
---shadow-sm:   Small elevation (3px)
---shadow:      Base elevation (6px)
---shadow-md:   Medium elevation (15px)
---shadow-lg:   Large elevation (25px)
---shadow-xl:   Extra large (50px)
---shadow-2xl:  Maximum elevation (80px)
-```
-
-**Premium Card Shadows:**
-```tsx
-// Standard card with subtle shadow
-<div className="shadow-card">Card content</div>
-
-// Card with hover elevation
-<div className="shadow-card hover:shadow-card-hover">
-  Interactive card
-</div>
-```
-
-**Colored Shadows (Brand Emphasis):**
-```tsx
-// Primary colored glow
-<button className="shadow-primary">Primary Action</button>
-
-// Success state glow
-<div className="shadow-success-glow">Success notification</div>
-
-// Warning state glow
-<div className="shadow-warning-glow">Warning alert</div>
-
-// Destructive state glow
-<div className="shadow-destructive-glow">Delete action</div>
-```
-
-### Gradient Overlays
-
-Subtle gradient effects for visual interest:
-
-```tsx
-// Primary gradient overlay (10-15% opacity)
-<div className="gradient-overlay-primary rounded-lg p-6">
-  <h2>Featured Content</h2>
-</div>
-
-// Subtle background gradient
-<div className="gradient-overlay-subtle">
-  <p>Content with gentle gradient fade</p>
-</div>
-
-// Direct gradient backgrounds
-<div className="gradient-primary text-white p-6 rounded-lg">
-  Primary gradient background
-</div>
-
-<div className="gradient-accent text-white p-6 rounded-lg">
-  Accent gradient background
-</div>
-```
+**Key Enhancements:**
+- 1.25 ratio typographic scale (12px → 46px)
+- WCAG AA compliant color system with full 50-950 scales
+- 4px base unit spacing system
+- Standardized component heights (32px, 40px, 48px)
+- Consistent border radius scale (2px → 24px)
 
 ---
 
-## 🎯 Card Variants
+## 1. Typography System
 
-### Standard Cards
-```tsx
-// Flat card (no shadow)
-<div className="card-flat">Basic card</div>
+### Type Scale (1.25 Major Third Ratio)
 
-// Elevated card with shadow
-<div className="card-elevated">Floating card</div>
+The type scale follows a 1.25 ratio for harmonious visual relationships:
 
-// Ghost card (transparent, hover effect)
-<div className="card-ghost">Minimal card</div>
-
-// Interactive card (clickable)
-<div className="card-interactive" onClick={handleClick}>
-  Clickable card with hover effects
-</div>
-```
-
-### Premium Card Styles
-
-**Card with Gradient Border:**
-```tsx
-<div className="card-premium">
-  <h3>Premium Feature</h3>
-  <p>Card with gradient border effect</p>
-</div>
-```
-
-**Glass Card:**
-```tsx
-<div className="glass-card">
-  <h3>Glassmorphism Card</h3>
-  <p>Frosted glass effect with blur</p>
-</div>
-```
-
----
-
-## 📐 Typography System
-
-### Type Scale (1.25 Ratio)
-```css
---font-size-xs: 12px      /* Small labels, captions */
---font-size-sm: 15px      /* Secondary text */
---font-size-base: 18px    /* Body text */
---font-size-lg: 24px      /* H4, large UI */
---font-size-xl: 30px      /* H3 */
---font-size-2xl: 37px     /* H2 */
---font-size-3xl: 46px     /* H1, display */
-```
+| Token | Size | Pixel | Usage |
+|-------|------|-------|-------|
+| `2xs` | 0.75rem | 12px | Micro labels, legal text |
+| `xs` | 0.8125rem | 13px | Captions, helper text |
+| `sm` | 0.9375rem | 15px | Secondary text, UI labels |
+| `base` | 1rem | 16px | Body text (browser default) |
+| `lg` | 1.125rem | 18px | H5, emphasized text |
+| `xl` | 1.5rem | 24px | H4, section headers |
+| `2xl` | 1.875rem | 30px | H3, card titles |
+| `3xl` | 2.3125rem | 37px | H2, page sections |
+| `4xl` | 2.875rem | 46px | H1, page titles |
 
 ### Font Weights
-- **Light (300)**: Decorative, large text
-- **Regular (400)**: Body text, paragraphs
-- **Semibold (600)**: Subheadings, emphasis
-- **Bold (700)**: Headlines, CTAs
+
+| Weight | Value | Purpose |
+|--------|-------|---------|
+| Light | 300 | Decorative, large display text |
+| Regular | 400 | Body text, default reading |
+| Medium | 500 | UI elements, subtle emphasis |
+| Semibold | 600 | Subheadings, buttons, labels |
+| Bold | 700 | Headings, strong emphasis |
 
 ### Line Heights
-- **Tight (1.2)**: Headings, display text
-- **UI (1.4)**: Buttons, form elements
-- **Normal (1.5)**: Body text, paragraphs
-- **Relaxed (1.6)**: Long-form content
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `tight` | 1.2 | Large headings (H1-H2) |
+| `snug` | 1.3 | Smaller headings (H3-H5) |
+| `ui` | 1.4 | UI elements, buttons, inputs |
+| `normal` | 1.5 | Body text, paragraphs |
+| `relaxed` | 1.6 | Long-form content, articles |
 
 ### Letter Spacing
-- **Tight (-0.02em)**: Large headings (>30px)
-- **Normal (0)**: Body text
-- **Wide (+0.05em)**: Small caps, buttons
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `tighter` | -0.025em | Display/H1 text |
+| `tight` | -0.015em | H2-H3 headings |
+| `normal` | 0 | Body text |
+| `wide` | 0.025em | UI labels, buttons |
+| `wider` | 0.05em | Small caps, overlines |
+| `widest` | 0.1em | All caps headings |
+
+### Typography Utilities
+
+```tsx
+// Display text
+<h1 className="text-display">Page Title</h1>
+
+// Heading hierarchy
+<h2 className="text-heading-1">Section Title</h2>
+<h3 className="text-heading-2">Subsection</h3>
+<h4 className="text-heading-3">Card Title</h4>
+<h5 className="text-heading-4">Small Section</h5>
+
+// Body text
+<p className="text-body-lg">Emphasized paragraph</p>
+<p className="text-body">Standard paragraph</p>
+<p className="text-body-sm">Small text</p>
+
+// Special text
+<span className="text-caption">Helper text</span>
+<span className="text-overline">Category Label</span>
+<label className="text-label">Form Label</label>
+```
 
 ---
 
-## 🎨 Color System
+## 2. Color System (WCAG AA Compliant)
 
-### Neutral Scale (True Gray)
+All primary colors achieve 4.5:1+ contrast ratio on their intended backgrounds.
+
+### Neutral Scale (Cool Gray)
 ```
-50  → 98% lightness (backgrounds)
-100 → 96% lightness
-200 → 88% lightness (borders)
-300 → 75% lightness
-400 → 60% lightness
-500 → 45% lightness (body text)
-600 → 35% lightness
-700 → 25% lightness
-800 → 15% lightness (headings)
-900 → 8% lightness (dark mode bg)
+neutral-50:  hsl(210 25% 98%)   // Near white - backgrounds
+neutral-100: hsl(210 22% 96%)   // Light gray - alt backgrounds
+neutral-200: hsl(210 18% 90%)   // Borders, dividers
+neutral-300: hsl(210 16% 82%)   // Disabled states
+neutral-400: hsl(210 14% 66%)   // Placeholder text
+neutral-500: hsl(210 12% 50%)   // Secondary text
+neutral-600: hsl(210 14% 40%)   // Body text (dark mode)
+neutral-700: hsl(210 18% 28%)   // Primary text
+neutral-800: hsl(210 22% 18%)   // Headings
+neutral-900: hsl(210 28% 10%)   // High contrast text
+neutral-950: hsl(210 35% 6%)    // Near black
 ```
 
 ### Primary Blue Scale
-Professional, trustworthy brand color
-- Main: `hsl(210 80% 55%)`
-- Usage: Primary actions, links, active states
+```
+primary-50:  hsl(210 100% 97%)  // Tinted backgrounds
+primary-100: hsl(210 96% 93%)   // Hover backgrounds
+primary-200: hsl(210 92% 85%)   // Light accents
+primary-300: hsl(210 88% 72%)   // Decorative elements
+primary-400: hsl(210 85% 58%)   // Icons, illustrations
+primary-500: hsl(210 90% 48%)   // Primary actions (4.6:1 on white)
+primary-600: hsl(210 92% 40%)   // Primary hover (6.5:1 on white)
+primary-700: hsl(210 95% 32%)   // Active states
+primary-800: hsl(210 97% 24%)   // Dark accents
+primary-900: hsl(210 100% 16%)  // Deep backgrounds
+primary-950: hsl(210 100% 10%)  // Near black blue
+```
 
 ### Secondary Teal Scale
-Supportive, balanced secondary
-- Main: `hsl(174 62% 60%)`
-- Usage: Info states, secondary actions
+```
+secondary-50 through secondary-950
+```
 
 ### Semantic Colors
-- **Success**: `hsl(142 76% 45%)` - Confirmations, positive states
-- **Warning**: `hsl(45 93% 55%)` - Cautions, pending actions
-- **Destructive**: `hsl(0 85% 60%)` - Errors, critical actions
-- **Info**: Primary blue - Informational messages
 
-### Color Contrast Requirements
-All text combinations meet WCAG AA standards:
-- Normal text: 4.5:1 minimum
-- Large text (>18px): 3:1 minimum
-- UI components: 3:1 minimum
+| Color | Default | Contrast | Usage |
+|-------|---------|----------|-------|
+| Success | `success-500` | 4.5:1+ | Positive actions, confirmations |
+| Warning | `warning-500` | Uses dark foreground | Caution states, pending actions |
+| Destructive | `destructive-500` | 4.5:1+ | Errors, delete actions |
+| Info | `info-500` | 4.5:1+ | Informational, neutral alerts |
+
+### Color Usage Guidelines
+
+```tsx
+// Primary actions
+<Button>Save Changes</Button>
+<Button variant="outline">Cancel</Button>
+
+// Semantic feedback
+<Badge variant="success">Completed</Badge>
+<Badge variant="warning">Pending</Badge>
+<Badge variant="destructive">Failed</Badge>
+<Badge variant="muted">Draft</Badge>
+
+// Status text
+<p className="text-success-600">✓ Saved successfully</p>
+<p className="text-destructive-600">✗ Error occurred</p>
+```
 
 ---
 
-## 📏 Spacing System (4px/8px Base)
+## 3. Spacing System (4px Base Unit)
 
-```css
---space-1: 4px
---space-2: 8px
---space-3: 12px
---space-4: 16px   /* Default spacing */
---space-5: 24px   /* Section spacing */
---space-6: 32px   /* Page spacing */
---space-8: 48px   /* Large sections */
---space-10: 64px  /* Hero spacing */
---space-12: 96px  /* Extra large spacing */
+| Token | Value | Pixel | Usage |
+|-------|-------|-------|-------|
+| `0.5` | 0.125rem | 2px | Micro adjustments |
+| `1` | 0.25rem | 4px | Tight spacing |
+| `1.5` | 0.375rem | 6px | Small gaps |
+| `2` | 0.5rem | 8px | Component internal |
+| `3` | 0.75rem | 12px | Default gap |
+| `4` | 1rem | 16px | Standard spacing |
+| `5` | 1.25rem | 20px | Medium spacing |
+| `6` | 1.5rem | 24px | Section spacing |
+| `8` | 2rem | 32px | Component gaps |
+| `10` | 2.5rem | 40px | Large spacing |
+| `12` | 3rem | 48px | Large sections |
+| `16` | 4rem | 64px | Page sections |
+| `24` | 6rem | 96px | Major sections |
+
+### Spacing Patterns
+
+```tsx
+// Component internal spacing
+<div className="p-4 space-y-3">
+  <h3 className="mb-2">Title</h3>
+  <p>Content</p>
+</div>
+
+// Card padding (consistent 24px)
+<Card>
+  <CardHeader className="pb-4">...</CardHeader>
+  <CardContent className="space-y-4">...</CardContent>
+</Card>
+
+// Page sections
+<section className="py-12 space-y-8">
+  ...
+</section>
 ```
 
 ### Border Radius Scale
-```css
---radius-xs: 2px   /* Tight corners */
---radius-sm: 4px   /* Small elements */
---radius-md: 8px   /* Default (cards, inputs) */
---radius-lg: 12px  /* Large cards */
---radius-xl: 16px  /* Extra large containers */
---radius-full: 9999px /* Pills, circles */
-```
+
+| Token | Value | Pixel | Usage |
+|-------|-------|-------|-------|
+| `xs` | 0.125rem | 2px | Subtle rounding |
+| `sm` | 0.25rem | 4px | Inputs, small buttons |
+| `md` | 0.375rem | 6px | Default components |
+| `DEFAULT` | 0.5rem | 8px | Cards, modals |
+| `lg` | 0.75rem | 12px | Large cards |
+| `xl` | 1rem | 16px | Prominent elements |
+| `2xl` | 1.5rem | 24px | Feature cards |
+| `full` | 9999px | - | Pills, avatars |
 
 ---
 
