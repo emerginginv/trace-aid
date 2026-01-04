@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { ZoomIn, ZoomOut, RotateCcw, FileText, Eye } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { ZoomIn, ZoomOut, RotateCcw, FileText, Eye, Maximize, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,6 +10,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PreviewResult } from "@/lib/reportPreview";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +29,11 @@ interface ReportPreviewPanelProps {
 }
 
 const ZOOM_LEVELS = [50, 75, 100, 125, 150];
+const PAGE_WIDTH_INCHES = 8.5;
+const PAGE_HEIGHT_INCHES = 11;
+const DPI = 96;
+
+type ZoomMode = "manual" | "fit-width" | "fit-page";
 
 export function ReportPreviewPanel({
   preview,
@@ -31,7 +43,52 @@ export function ReportPreviewPanel({
   className,
 }: ReportPreviewPanelProps) {
   const [zoomLevel, setZoomLevel] = useState(75);
+  const [zoomMode, setZoomMode] = useState<ZoomMode>("manual");
   const previewRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate fit-to-width zoom
+  const calculateFitWidth = useCallback(() => {
+    if (!containerRef.current) return 75;
+    const containerWidth = containerRef.current.clientWidth - 32; // Account for padding
+    const pageWidth = PAGE_WIDTH_INCHES * DPI;
+    return Math.min(150, Math.max(50, Math.floor((containerWidth / pageWidth) * 100)));
+  }, []);
+
+  // Calculate fit-to-page zoom
+  const calculateFitPage = useCallback(() => {
+    if (!containerRef.current) return 75;
+    const containerWidth = containerRef.current.clientWidth - 32;
+    const containerHeight = containerRef.current.clientHeight - 32;
+    const pageWidth = PAGE_WIDTH_INCHES * DPI;
+    const pageHeight = PAGE_HEIGHT_INCHES * DPI;
+    
+    const widthRatio = containerWidth / pageWidth;
+    const heightRatio = containerHeight / pageHeight;
+    const fitRatio = Math.min(widthRatio, heightRatio);
+    
+    return Math.min(150, Math.max(50, Math.floor(fitRatio * 100)));
+  }, []);
+
+  // Update zoom when mode changes or container resizes
+  useEffect(() => {
+    const updateZoom = () => {
+      if (zoomMode === "fit-width") {
+        setZoomLevel(calculateFitWidth());
+      } else if (zoomMode === "fit-page") {
+        setZoomLevel(calculateFitPage());
+      }
+    };
+
+    updateZoom();
+
+    // Add resize observer for responsive fit modes
+    if (containerRef.current && zoomMode !== "manual") {
+      const resizeObserver = new ResizeObserver(updateZoom);
+      resizeObserver.observe(containerRef.current);
+      return () => resizeObserver.disconnect();
+    }
+  }, [zoomMode, calculateFitWidth, calculateFitPage]);
 
   // Scroll to highlighted section
   useEffect(() => {
@@ -41,12 +98,10 @@ export function ReportPreviewPanel({
       );
       if (sectionEl) {
         sectionEl.scrollIntoView({ behavior: "smooth", block: "center" });
-        // Add highlight attribute
         sectionEl.setAttribute("data-section-highlighted", "true");
       }
     }
 
-    // Cleanup previous highlight
     return () => {
       if (previewRef.current) {
         const highlighted = previewRef.current.querySelector(
@@ -60,21 +115,40 @@ export function ReportPreviewPanel({
   }, [highlightedSectionId]);
 
   const handleZoomIn = () => {
+    setZoomMode("manual");
     const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
     if (currentIndex < ZOOM_LEVELS.length - 1) {
       setZoomLevel(ZOOM_LEVELS[currentIndex + 1]);
+    } else if (zoomLevel < ZOOM_LEVELS[ZOOM_LEVELS.length - 1]) {
+      // Handle non-standard zoom levels from fit modes
+      const nextLevel = ZOOM_LEVELS.find(l => l > zoomLevel);
+      if (nextLevel) setZoomLevel(nextLevel);
     }
   };
 
   const handleZoomOut = () => {
+    setZoomMode("manual");
     const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
     if (currentIndex > 0) {
       setZoomLevel(ZOOM_LEVELS[currentIndex - 1]);
+    } else if (zoomLevel > ZOOM_LEVELS[0]) {
+      // Handle non-standard zoom levels from fit modes
+      const prevLevel = [...ZOOM_LEVELS].reverse().find(l => l < zoomLevel);
+      if (prevLevel) setZoomLevel(prevLevel);
     }
   };
 
   const handleResetZoom = () => {
+    setZoomMode("manual");
     setZoomLevel(75);
+  };
+
+  const handleFitWidth = () => {
+    setZoomMode("fit-width");
+  };
+
+  const handleFitPage = () => {
+    setZoomMode("fit-page");
   };
 
   // Handle section clicks
@@ -144,6 +218,55 @@ export function ReportPreviewPanel({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Fit options dropdown */}
+          <DropdownMenu>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant={zoomMode !== "manual" ? "secondary" : "ghost"}
+                      size="icon"
+                      className="h-7 w-7"
+                    >
+                      {zoomMode === "fit-width" ? (
+                        <ArrowLeftRight className="h-3.5 w-3.5" />
+                      ) : zoomMode === "fit-page" ? (
+                        <Maximize className="h-3.5 w-3.5" />
+                      ) : (
+                        <Maximize className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Fit options</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleFitWidth}>
+                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                Fit to width
+                {zoomMode === "fit-width" && (
+                  <Badge variant="secondary" className="ml-auto text-xs">Active</Badge>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleFitPage}>
+                <Maximize className="h-4 w-4 mr-2" />
+                Fit to page
+                {zoomMode === "fit-page" && (
+                  <Badge variant="secondary" className="ml-auto text-xs">Active</Badge>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleResetZoom}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset to 75%
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="h-4 w-px bg-border mx-1" />
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -152,7 +275,7 @@ export function ReportPreviewPanel({
                   size="icon"
                   className="h-7 w-7"
                   onClick={handleZoomOut}
-                  disabled={zoomLevel === ZOOM_LEVELS[0]}
+                  disabled={zoomLevel <= ZOOM_LEVELS[0]}
                 >
                   <ZoomOut className="h-3.5 w-3.5" />
                 </Button>
@@ -161,7 +284,7 @@ export function ReportPreviewPanel({
             </Tooltip>
           </TooltipProvider>
 
-          <span className="text-xs text-muted-foreground w-10 text-center">
+          <span className="text-xs text-muted-foreground w-12 text-center tabular-nums">
             {zoomLevel}%
           </span>
 
@@ -173,7 +296,7 @@ export function ReportPreviewPanel({
                   size="icon"
                   className="h-7 w-7"
                   onClick={handleZoomIn}
-                  disabled={zoomLevel === ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
+                  disabled={zoomLevel >= ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
                 >
                   <ZoomIn className="h-3.5 w-3.5" />
                 </Button>
@@ -181,33 +304,17 @@ export function ReportPreviewPanel({
               <TooltipContent>Zoom in</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={handleResetZoom}
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Reset zoom</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
       </div>
 
       {/* Preview content */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1" ref={containerRef}>
         <div className="p-4 bg-muted/20 min-h-full">
           <div
             ref={previewRef}
             className="bg-background shadow-lg rounded-lg mx-auto overflow-hidden transition-all duration-200"
             style={{
-              width: `${8.5 * (zoomLevel / 100) * 96}px`, // 8.5" at 96dpi
+              width: `${PAGE_WIDTH_INCHES * (zoomLevel / 100) * DPI}px`,
               transformOrigin: "top center",
             }}
             onClick={handlePreviewClick}
