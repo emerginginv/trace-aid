@@ -2379,3 +2379,26 @@
 .optimistic-rollback {
   animation: rollback-flash 500ms ease-out;
 }
+
+/* ===== INLINE EDIT CELL STYLES ===== */
+.inline-edit-trigger {
+  @apply transition-all duration-150 cursor-pointer;
+}
+
+.inline-edit-trigger:hover {
+  @apply bg-muted/50 rounded;
+}
+
+.inline-edit-trigger:focus-visible {
+  @apply outline-none ring-2 ring-primary/50 rounded;
+}
+
+/* Success flash for inline edits */
+@keyframes inline-edit-success {
+  0% { background-color: hsl(var(--primary) / 0.2); }
+  100% { background-color: transparent; }
+}
+
+.inline-edit-success {
+  animation: inline-edit-success 600ms ease-out;
+}

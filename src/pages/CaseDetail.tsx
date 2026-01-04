@@ -202,12 +202,36 @@ const CaseDetail = () => {
     const statusItem = caseStatuses.find(s => s.value === caseData.status);
     return statusItem?.status_type === 'closed';
   };
-  const handleStatusChange = async (newStatus: string) => {
-    if (!caseData) return;
+  const handleStatusChange = async (newStatus: string): Promise<boolean> => {
+    if (!caseData) return false;
 
     // Don't log if status hasn't actually changed
     const oldStatus = caseData.status;
-    if (oldStatus === newStatus) return;
+    if (oldStatus === newStatus) return true;
+    
+    // Store previous state for rollback
+    const previousCaseData = { ...caseData };
+    
+    // Optimistic update - update UI immediately
+    const newStatusItem = caseStatuses.find(s => s.value === newStatus);
+    const isClosing = newStatusItem?.status_type === 'closed';
+    const oldStatusItem = caseStatuses.find(s => s.value === oldStatus);
+    const wasOpen = oldStatusItem?.status_type === 'open';
+    
+    setCaseData({
+      ...caseData,
+      status: newStatus,
+      ...(isClosing && wasOpen ? {
+        closed_by_user_id: "pending",
+        closed_at: new Date().toISOString()
+      } : {})
+    });
+    
+    toast({
+      title: "Status updated",
+      description: isClosing && wasOpen ? "Case closed" : `Status changed to ${newStatus}`
+    });
+    
     setUpdatingStatus(true);
     try {
       const {
@@ -222,12 +246,6 @@ const CaseDetail = () => {
         data: profile
       } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
-
-      // Check if the new status is a "closed" type
-      const newStatusItem = caseStatuses.find(s => s.value === newStatus);
-      const isClosing = newStatusItem?.status_type === 'closed';
-      const oldStatusItem = caseStatuses.find(s => s.value === oldStatus);
-      const wasOpen = oldStatusItem?.status_type === 'open';
 
       // Prepare update data
       const updateData: any = {
@@ -268,26 +286,27 @@ const CaseDetail = () => {
       // Create notification
       await NotificationHelpers.caseStatusChanged(caseData.case_number, newStatus, id!);
 
-      // Update local state
-      setCaseData({
-        ...caseData,
+      // Update local state with correct user id
+      setCaseData(prev => prev ? {
+        ...prev,
         status: newStatus,
         ...(isClosing && wasOpen ? {
           closed_by_user_id: user.id,
           closed_at: new Date().toISOString()
         } : {})
-      });
-      toast({
-        title: "Success",
-        description: isClosing && wasOpen ? "Case closed successfully" : "Case status updated successfully"
-      });
+      } : null);
+      
+      return true;
     } catch (error) {
       console.error("Error updating status:", error);
+      // Rollback to previous state
+      setCaseData(previousCaseData);
       toast({
         title: "Error",
-        description: "Failed to update case status",
+        description: "Failed to update case status. Change reverted.",
         variant: "destructive"
       });
+      return false;
     } finally {
       setUpdatingStatus(false);
     }
