@@ -29,6 +29,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 const contactSchema = z.object({
   first_name: z.string().min(1, "First name is required").max(100),
@@ -154,15 +155,20 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Contact</DialogTitle>
-          <DialogDescription>
-            Add a new individual contact to your system
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
+    <>
+      <LoadingOverlay 
+        show={form.formState.isSubmitting} 
+        message="Creating contact..." 
+      />
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Contact</DialogTitle>
+            <DialogDescription>
+              Add a new individual contact to your system
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -337,9 +343,10 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
                 {form.formState.isSubmitting ? "Creating..." : "Create Contact"}
               </Button>
             </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

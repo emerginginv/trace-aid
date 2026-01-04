@@ -42,6 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 const caseSchema = z.object({
   title: z.string().max(200).optional(),
@@ -441,15 +442,20 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{editingCase ? "Edit Case" : "Create New Case"}</DialogTitle>
-          <DialogDescription>
-            {editingCase ? "Update case details" : "Start a new investigation case"}
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
+    <>
+      <LoadingOverlay 
+        show={form.formState.isSubmitting} 
+        message={editingCase ? "Updating case..." : "Creating case..."} 
+      />
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingCase ? "Edit Case" : "Create New Case"}</DialogTitle>
+            <DialogDescription>
+              {editingCase ? "Update case details" : "Start a new investigation case"}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -805,5 +811,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         </Form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
