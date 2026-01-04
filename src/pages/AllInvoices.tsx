@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import html2pdf from "html2pdf.js";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface Invoice {
   id: string;

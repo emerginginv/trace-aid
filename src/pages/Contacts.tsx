@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ContactForm } from "@/components/ContactForm";
 import { EmailComposer } from "@/components/EmailComposer";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +22,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { usePermissions } from "@/hooks/usePermissions";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface Contact {
   id: string;
@@ -47,6 +49,8 @@ const Contacts = () => {
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [selectedContactEmail, setSelectedContactEmail] = useState<string>("");
   const [emailSubject, setEmailSubject] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<string>("first_name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     fetchContacts();
@@ -101,12 +105,43 @@ const Contacts = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   const filteredContacts = contacts.filter(contact => {
     return searchQuery === '' || 
       contact.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const sortedContacts = [...filteredContacts].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    let aVal: string = "";
+    let bVal: string = "";
+    
+    if (sortColumn === "name" || sortColumn === "first_name") {
+      aVal = `${a.first_name} ${a.last_name}`;
+      bVal = `${b.first_name} ${b.last_name}`;
+    } else if (sortColumn === "location") {
+      aVal = [a.city, a.state].filter(Boolean).join(", ");
+      bVal = [b.city, b.state].filter(Boolean).join(", ");
+    } else {
+      aVal = (a[sortColumn as keyof Contact] as string) || "";
+      bVal = (b[sortColumn as keyof Contact] as string) || "";
+    }
+    
+    return sortDirection === "asc" 
+      ? aVal.localeCompare(bVal) 
+      : bVal.localeCompare(aVal);
   });
 
   if (loading) {
@@ -162,6 +197,11 @@ const Contacts = () => {
         </div>
       </div>
 
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {sortedContacts.length} contact{sortedContacts.length !== 1 ? 's' : ''}
+      </div>
+
       {contacts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -186,7 +226,7 @@ const Contacts = () => {
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredContacts.map((contact) => (
+          {sortedContacts.map((contact) => (
             <Card 
               key={contact.id} 
               className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -281,15 +321,46 @@ const Contacts = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
+                <SortableTableHead
+                  column="first_name"
+                  label="Name"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="email"
+                  label="Email"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="phone"
+                  label="Phone"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="location"
+                  label="Location"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column=""
+                  label="Actions"
+                  sortColumn=""
+                  sortDirection="asc"
+                  onSort={() => {}}
+                  className="w-[120px]"
+                />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredContacts.map((contact) => (
+              {sortedContacts.map((contact) => (
                 <TableRow 
                   key={contact.id}
                   className="cursor-pointer hover:bg-muted/50"
@@ -400,6 +471,8 @@ const Contacts = () => {
         defaultTo={selectedContactEmail}
         defaultSubject={emailSubject}
       />
+
+      <ScrollProgress />
     </div>
   );
 };
