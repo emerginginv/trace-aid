@@ -493,24 +493,30 @@ export const CaseCalendar = forwardRef<
 
       {/* Calendar View - Left Side */}
       <div className="flex-1 space-y-4">
-        {/* Calendar Header */}
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold">Calendar</h2>
+            <p className="text-muted-foreground">Events and activities timeline</p>
+          </div>
+        </div>
+
+        {/* Calendar Navigation */}
         <div className="flex items-center justify-between bg-card border rounded-lg p-4">
           <Button
             variant="outline"
-            size="sm"
             onClick={() => setCurrentDate(subMonths(currentDate, 1))}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           
-          <h2 className="text-xl font-semibold">
+          <h3 className="text-xl font-semibold">
             {format(currentDate, "MMMM yyyy")}
-          </h2>
+          </h3>
 
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
               onClick={() => setCurrentDate(addMonths(currentDate, 1))}
             >
               <ChevronRight className="h-4 w-4" />
@@ -518,7 +524,6 @@ export const CaseCalendar = forwardRef<
             
             <Button
               variant="outline"
-              size="sm"
               onClick={toggleTaskList}
               title={showTaskList ? "Hide task list" : "Show task list"}
               className="hidden lg:flex"

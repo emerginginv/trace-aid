@@ -517,6 +517,59 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
 
   return (
     <div className="space-y-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Attachments</h2>
+          <p className="text-muted-foreground">
+            {filteredAttachments.length} file{filteredAttachments.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => {
+                const exportColumns: ExportColumn[] = [
+                  { key: "name", label: "Name", format: (v, row) => v || row.file_name },
+                  { key: "file_type", label: "Type", format: (v) => getFileTypeCategory(v) },
+                  { key: "file_size", label: "Size", format: (v) => formatFileSize(v) },
+                  { key: "created_at", label: "Uploaded", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                  { key: "tags", label: "Tags", format: (v) => v?.join(", ") || "-" },
+                  { key: "description", label: "Description", format: (v) => v || "-" },
+                ];
+                exportToCSV(filteredAttachments, exportColumns, "case-attachments");
+              }}>
+                Export to CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const exportColumns: ExportColumn[] = [
+                  { key: "name", label: "Name", format: (v, row) => v || row.file_name },
+                  { key: "file_type", label: "Type", format: (v) => getFileTypeCategory(v) },
+                  { key: "file_size", label: "Size", format: (v) => formatFileSize(v) },
+                  { key: "created_at", label: "Uploaded", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                  { key: "tags", label: "Tags", format: (v) => v?.join(", ") || "-" },
+                ];
+                exportToPDF(filteredAttachments, exportColumns, "case-attachments", "Case Attachments");
+              }}>
+                Export to PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {canAddAttachments && !isClosedCase && (
+            <Button onClick={() => document.getElementById('file-upload')?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Files
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Drag-and-Drop Zone - only show if user can add attachments */}
       {canAddAttachments && !isClosedCase && (
         <div
@@ -621,40 +674,6 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
               )}
             </SelectContent>
           </Select>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => {
-                const exportColumns: ExportColumn[] = [
-                  { key: "name", label: "Name", format: (v, row) => v || row.file_name },
-                  { key: "file_type", label: "Type", format: (v) => getFileTypeCategory(v) },
-                  { key: "file_size", label: "Size", format: (v) => formatFileSize(v) },
-                  { key: "created_at", label: "Uploaded", format: (v) => format(new Date(v), "MMM d, yyyy") },
-                  { key: "tags", label: "Tags", format: (v) => v?.join(", ") || "-" },
-                  { key: "description", label: "Description", format: (v) => v || "-" },
-                ];
-                exportToCSV(filteredAttachments, exportColumns, "case-attachments");
-              }}>
-                Export to CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                const exportColumns: ExportColumn[] = [
-                  { key: "name", label: "Name", format: (v, row) => v || row.file_name },
-                  { key: "file_type", label: "Type", format: (v) => getFileTypeCategory(v) },
-                  { key: "file_size", label: "Size", format: (v) => formatFileSize(v) },
-                  { key: "created_at", label: "Uploaded", format: (v) => format(new Date(v), "MMM d, yyyy") },
-                ];
-                exportToPDF(filteredAttachments, exportColumns, "Case Attachments", "case-attachments");
-              }}>
-                Export to PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <div className="flex gap-1 border rounded-md p-0.5">
             <Button 
               variant={viewMode === "list" ? "secondary" : "ghost"} 
