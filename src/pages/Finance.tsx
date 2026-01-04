@@ -5,15 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Loader2, DollarSign, Receipt, Wallet, Search, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, ChevronDown, Check, X } from "lucide-react";
-import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
-import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
-import { FinanceForm } from "@/components/case-detail/FinanceForm";
+import { Loader2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useOrganization } from "@/contexts/OrganizationContext";
+
 interface RetainerBalance {
   case_id: string;
   case_title: string;
@@ -22,77 +19,27 @@ interface RetainerBalance {
   last_topup: string | null;
 }
 
-interface Expense {
-  id: string;
-  case_id: string;
-  date: string;
-  case_title: string;
-  case_number: string;
-  category: string | null;
-  amount: number;
-  status: string | null;
-  invoiced: boolean;
-  quantity: number | null;
-}
-
-interface Invoice {
-  id: string;
-  invoice_number: string | null;
-  case_title: string;
-  case_number: string;
-  case_id: string;
-  date: string;
-  amount: number;
-  status: string | null;
-  due_date: string | null;
-  balance_due?: number;
-  total_paid?: number;
-}
-
 const Finance = () => {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
-  const [totalRetainerBalance, setTotalRetainerBalance] = useState(0);
-  const [totalOutstandingExpenses, setTotalOutstandingExpenses] = useState(0);
-  const [totalUnpaidInvoices, setTotalUnpaidInvoices] = useState(0);
   const [retainerBalances, setRetainerBalances] = useState<RetainerBalance[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   
   // Filter states
   const [retainerSearch, setRetainerSearch] = useState("");
-  const [expenseSearch, setExpenseSearch] = useState("");
-  const [expenseStatusFilter, setExpenseStatusFilter] = useState("all");
-  const [invoiceSearch, setInvoiceSearch] = useState("");
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all");
-  const [showPayModal, setShowPayModal] = useState<Invoice | null>(null);
-  const [editingInvoice, setEditingInvoice] = useState<string | null>(null);
-  const [retainerMap, setRetainerMap] = useState<Record<string, number>>({});
-  const [editingExpense, setEditingExpense] = useState<any>(null);
-  const [showExpenseForm, setShowExpenseForm] = useState(false);
   
   // Pagination states
   const [retainerPage, setRetainerPage] = useState(1);
   const [retainerPageSize, setRetainerPageSize] = useState(15);
-  const [expensePage, setExpensePage] = useState(1);
-  const [expensePageSize, setExpensePageSize] = useState(15);
-  const [invoicePage, setInvoicePage] = useState(1);
-  const [invoicePageSize, setInvoicePageSize] = useState(15);
-  
-  // Collapsible states
-  const [retainerOpen, setRetainerOpen] = useState(true);
-  const [expensesOpen, setExpensesOpen] = useState(true);
-  const [invoicesOpen, setInvoicesOpen] = useState(true);
 
   // Refetch when organization changes
   useEffect(() => {
     if (organization?.id) {
-      fetchFinanceData();
+      fetchRetainerData();
     }
   }, [organization?.id]);
 
-  const fetchFinanceData = async () => {
+  const fetchRetainerData = async () => {
     if (!organization?.id) return;
 
     try {
@@ -142,83 +89,9 @@ const Finance = () => {
 
       const balances = Array.from(balanceMap.values());
       setRetainerBalances(balances);
-      setTotalRetainerBalance(balances.reduce((sum, b) => sum + b.balance, 0));
-      
-      // Create retainer map for quick lookup by case_id
-      const caseRetainerMap: Record<string, number> = {};
-      balances.forEach(b => {
-        caseRetainerMap[b.case_id] = b.balance;
-      });
-      setRetainerMap(caseRetainerMap);
-
-      // Fetch all expenses
-      const { data: expenseData, error: expenseError } = await supabase
-        .from("case_finances")
-        .select("id, case_id, date, amount, category, status, invoiced, quantity")
-        .eq("organization_id", orgId)
-        .eq("finance_type", "expense")
-        .order("date", { ascending: false });
-
-      if (expenseError) throw expenseError;
-
-      const formattedExpenses: Expense[] = expenseData?.map((exp: any) => {
-        const caseInfo = casesMap.get(exp.case_id);
-        return {
-          id: exp.id,
-          case_id: exp.case_id,
-          date: exp.date,
-          case_title: caseInfo?.title || "Unknown",
-          case_number: caseInfo?.case_number || "N/A",
-          category: exp.category,
-          amount: parseFloat(exp.amount),
-          status: exp.status,
-          invoiced: exp.invoiced,
-          quantity: exp.quantity ? parseFloat(exp.quantity) : null,
-        };
-      }) || [];
-
-      setExpenses(formattedExpenses);
-      setTotalOutstandingExpenses(
-        formattedExpenses
-          .filter((e) => !e.invoiced && (e.status === "approved" || e.status === "pending"))
-          .reduce((sum, e) => sum + e.amount, 0)
-      );
-
-      // Fetch all invoices from new invoices table
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from("invoices")
-        .select("id, case_id, invoice_number, date, total, status, due_date, balance_due, total_paid")
-        .eq("organization_id", orgId)
-        .order("date", { ascending: false });
-
-      if (invoiceError) throw invoiceError;
-
-      const formattedInvoices: Invoice[] = invoiceData?.map((inv: any) => {
-        const caseInfo = casesMap.get(inv.case_id);
-        return {
-          id: inv.id,
-          invoice_number: inv.invoice_number,
-          case_title: caseInfo?.title || "Unknown",
-          case_number: caseInfo?.case_number || "N/A",
-          case_id: inv.case_id,
-          date: inv.date,
-          amount: parseFloat(inv.total),
-          status: inv.status,
-          due_date: inv.due_date,
-          balance_due: inv.balance_due ? parseFloat(inv.balance_due) : undefined,
-          total_paid: inv.total_paid ? parseFloat(inv.total_paid) : 0,
-        };
-      }) || [];
-
-      setInvoices(formattedInvoices);
-      setTotalUnpaidInvoices(
-        formattedInvoices
-          .filter((i) => i.status === "unpaid")
-          .reduce((sum, i) => sum + i.amount, 0)
-      );
     } catch (error: any) {
-      console.error("Error fetching finance data:", error);
-      toast.error("Failed to load finance data");
+      console.error("Error fetching retainer data:", error);
+      toast.error("Failed to load retainer data");
     } finally {
       setLoading(false);
     }
@@ -233,54 +106,12 @@ const Finance = () => {
     );
   });
 
-  const filteredExpenses = expenses.filter((expense) => {
-    const searchLower = expenseSearch.toLowerCase();
-    const matchesSearch =
-      expense.case_title.toLowerCase().includes(searchLower) ||
-      expense.case_number.toLowerCase().includes(searchLower) ||
-      (expense.category?.toLowerCase().includes(searchLower) ?? false);
-    
-    const matchesStatus =
-      expenseStatusFilter === "all" ||
-      (expenseStatusFilter === "invoiced" && expense.invoiced) ||
-      (expenseStatusFilter === "approved" && !expense.invoiced && expense.status === "approved") ||
-      (expenseStatusFilter === "pending" && !expense.invoiced && expense.status === "pending");
-    
-    return matchesSearch && matchesStatus;
-  });
-
-  const filteredInvoices = invoices.filter((invoice) => {
-    const searchLower = invoiceSearch.toLowerCase();
-    const matchesSearch =
-      invoice.case_title.toLowerCase().includes(searchLower) ||
-      invoice.case_number.toLowerCase().includes(searchLower) ||
-      (invoice.invoice_number?.toLowerCase().includes(searchLower) ?? false);
-    
-    const matchesStatus =
-      invoiceStatusFilter === "all" ||
-      invoice.status === invoiceStatusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
-
   // Paginated data
   const paginatedRetainerBalances = filteredRetainerBalances.slice(
     (retainerPage - 1) * retainerPageSize,
     retainerPage * retainerPageSize
   );
   const retainerTotalPages = Math.ceil(filteredRetainerBalances.length / retainerPageSize);
-
-  const paginatedExpenses = filteredExpenses.slice(
-    (expensePage - 1) * expensePageSize,
-    expensePage * expensePageSize
-  );
-  const expenseTotalPages = Math.ceil(filteredExpenses.length / expensePageSize);
-
-  const paginatedInvoices = filteredInvoices.slice(
-    (invoicePage - 1) * invoicePageSize,
-    invoicePage * invoicePageSize
-  );
-  const invoiceTotalPages = Math.ceil(filteredInvoices.length / invoicePageSize);
 
   if (loading) {
     return (
@@ -293,82 +124,21 @@ const Finance = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Finance Overview</h1>
+        <h1 className="text-3xl font-bold">Retainers</h1>
         <p className="text-muted-foreground">
-          Monitor financial health across all cases
+          Manage retainer funds across all cases
         </p>
       </div>
 
-      {/* Summary Widgets */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-blue-50 border-blue-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-600">
-              Total Retainer Funds Available
-            </CardTitle>
-            <Wallet className="h-4 w-4 text-blue-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              ${totalRetainerBalance.toFixed(2)}
-            </div>
-            <p className="text-xs text-blue-500">
-              Across {retainerBalances.length} case{retainerBalances.length !== 1 ? "s" : ""}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-red-50 border-red-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-600">
-              Billable Expenses
-            </CardTitle>
-            <Receipt className="h-4 w-4 text-red-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              ${totalOutstandingExpenses.toFixed(2)}
-            </div>
-            <p className="text-xs text-red-500">
-              Approved & unbilled
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-green-50 border-green-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-600">
-              Outstanding Invoices
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-green-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              ${totalUnpaidInvoices.toFixed(2)}
-            </div>
-            <p className="text-xs text-green-500">
-              Unpaid invoices
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Retainer Funds List */}
-      <Collapsible open={retainerOpen} onOpenChange={setRetainerOpen}>
-        <Card>
-          <CollapsibleTrigger className="w-full">
-            <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="text-left">
-                <CardTitle>Retainer Funds by Case</CardTitle>
-                <CardDescription>
-                  Current retainer balance for each case
-                </CardDescription>
-              </div>
-              <ChevronDown className={`h-5 w-5 transition-transform ${retainerOpen ? 'rotate-180' : ''}`} />
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent>
+      <Card>
+        <CardHeader>
+          <CardTitle>Retainer Funds by Case</CardTitle>
+          <CardDescription>
+            Current retainer balance for each case
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <div className="mb-4 flex gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
@@ -475,522 +245,8 @@ const Finance = () => {
               </div>
             </div>
           )}
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
-      {/* Expenses List */}
-      <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen}>
-        <Card>
-          <CollapsibleTrigger className="w-full">
-            <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="text-left">
-                <CardTitle>All Expenses</CardTitle>
-                <CardDescription>
-                  Expenses across all cases
-                </CardDescription>
-              </div>
-              <ChevronDown className={`h-5 w-5 transition-transform ${expensesOpen ? 'rotate-180' : ''}`} />
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent>
-          <div className="mb-4 flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by case, category..."
-                value={expenseSearch}
-                onChange={(e) => {
-                  setExpenseSearch(e.target.value);
-                  setExpensePage(1);
-                }}
-                className="pl-8"
-              />
-            </div>
-            <Select value={expenseStatusFilter} onValueChange={(v) => {
-              setExpenseStatusFilter(v);
-              setExpensePage(1);
-            }}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="invoiced">Invoiced</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={expensePageSize.toString()} onValueChange={(v) => {
-              setExpensePageSize(parseInt(v));
-              setExpensePage(1);
-            }}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 per page</SelectItem>
-                <SelectItem value="25">25 per page</SelectItem>
-                <SelectItem value="50">50 per page</SelectItem>
-                <SelectItem value="100">100 per page</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {filteredExpenses.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No matching expenses found
-            </p>
-          ) : (
-             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Case</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedExpenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell>
-                      {format(new Date(expense.date), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{expense.case_title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {expense.case_number}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{expense.category || "N/A"}</TableCell>
-                    <TableCell>
-                      {(expense.quantity || 1).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${expense.amount.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          expense.invoiced
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                            : expense.status === "approved"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                        }`}
-                      >
-                        {expense.invoiced ? "Invoiced" : expense.status || "Pending"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {expense.status === "pending" && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={async () => {
-                                const { error } = await supabase
-                                  .from("case_finances")
-                                  .update({ status: "approved" })
-                                  .eq("id", expense.id);
-                                
-                                if (error) {
-                                  toast.error("Failed to approve expense");
-                                } else {
-                                  toast.success("Expense approved");
-                                  fetchFinanceData();
-                                }
-                              }}
-                              title="Approve expense"
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={async () => {
-                                const { error } = await supabase
-                                  .from("case_finances")
-                                  .update({ status: "rejected" })
-                                  .eq("id", expense.id);
-                                
-                                if (error) {
-                                  toast.error("Failed to reject expense");
-                                } else {
-                                  toast.success("Expense rejected");
-                                  fetchFinanceData();
-                                }
-                              }}
-                              title="Reject expense"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={async () => {
-                            // Fetch full expense details
-                            const { data, error } = await supabase
-                              .from("case_finances")
-                              .select("*")
-                              .eq("id", expense.id)
-                              .single();
-                            
-                            if (error) {
-                              toast.error("Failed to load expense details");
-                            } else {
-                              setEditingExpense(data);
-                              setShowExpenseForm(true);
-                            }
-                          }}
-                          title="Edit expense"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={async () => {
-                            if (confirm("Are you sure you want to delete this expense?")) {
-                              const { error } = await supabase
-                                .from("case_finances")
-                                .delete()
-                                .eq("id", expense.id);
-                              
-                              if (error) {
-                                toast.error("Failed to delete expense");
-                              } else {
-                                toast.success("Expense deleted");
-                                fetchFinanceData();
-                              }
-                            }
-                          }}
-                          title="Delete expense"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-          {filteredExpenses.length > 0 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {((expensePage - 1) * expensePageSize) + 1} to {Math.min(expensePage * expensePageSize, filteredExpenses.length)} of {filteredExpenses.length} entries
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setExpensePage(p => Math.max(1, p - 1))}
-                  disabled={expensePage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <div className="text-sm">
-                  Page {expensePage} of {expenseTotalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setExpensePage(p => Math.min(expenseTotalPages, p + 1))}
-                  disabled={expensePage === expenseTotalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
-      {/* Invoices List */}
-      <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
-        <Card>
-          <CollapsibleTrigger className="w-full">
-            <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="text-left">
-                <CardTitle>All Invoices</CardTitle>
-                <CardDescription>
-                  System-wide invoice overview
-                </CardDescription>
-              </div>
-              <ChevronDown className={`h-5 w-5 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} />
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent>
-          <div className="mb-4 flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by invoice #, case..."
-                value={invoiceSearch}
-                onChange={(e) => {
-                  setInvoiceSearch(e.target.value);
-                  setInvoicePage(1);
-                }}
-                className="pl-8"
-              />
-            </div>
-            <Select value={invoiceStatusFilter} onValueChange={(v) => {
-              setInvoiceStatusFilter(v);
-              setInvoicePage(1);
-            }}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="partial">Partial</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={invoicePageSize.toString()} onValueChange={(v) => {
-              setInvoicePageSize(parseInt(v));
-              setInvoicePage(1);
-            }}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 per page</SelectItem>
-                <SelectItem value="25">25 per page</SelectItem>
-                <SelectItem value="50">50 per page</SelectItem>
-                <SelectItem value="100">100 per page</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {filteredInvoices.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No matching invoices found
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Case</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Total / Paid</TableHead>
-                  <TableHead className="text-right">Balance Due</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedInvoices.map((invoice) => (
-                  <TableRow 
-                    key={invoice.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/invoices/${invoice.id}`)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        navigate(`/invoices/${invoice.id}`);
-                      }
-                    }}
-                  >
-                    <TableCell className="font-medium">
-                      {invoice.invoice_number || "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{invoice.case_title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {invoice.case_number}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.date), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="space-y-0.5">
-                        <div className="font-medium">${invoice.amount.toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Paid: ${(invoice.total_paid || 0).toFixed(2)}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${(invoice.balance_due !== undefined && invoice.balance_due !== null ? invoice.balance_due : (invoice.amount - (invoice.total_paid || 0))).toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          invoice.status === "paid"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : invoice.status === "partial"
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                            : invoice.status === "unpaid"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                            : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                        }`}
-                      >
-                        {invoice.status || "Draft"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {invoice.status !== "paid" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowPayModal(invoice);
-                            }}
-                            title="Record payment"
-                          >
-                            <CircleDollarSign className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingInvoice(invoice.id);
-                          }}
-                          title="Edit invoice"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (confirm("Are you sure you want to delete this invoice?")) {
-                              const { error } = await supabase
-                                .from("invoices")
-                                .delete()
-                                .eq("id", invoice.id);
-                              
-                              if (error) {
-                                toast.error("Failed to delete invoice");
-                              } else {
-                                toast.success("Invoice deleted");
-                                fetchFinanceData();
-                              }
-                            }
-                          }}
-                          title="Delete invoice"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-          {filteredInvoices.length > 0 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {((invoicePage - 1) * invoicePageSize) + 1} to {Math.min(invoicePage * invoicePageSize, filteredInvoices.length)} of {filteredInvoices.length} entries
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInvoicePage(p => Math.max(1, p - 1))}
-                  disabled={invoicePage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <div className="text-sm">
-                  Page {invoicePage} of {invoiceTotalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInvoicePage(p => Math.min(invoiceTotalPages, p + 1))}
-                  disabled={invoicePage === invoiceTotalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
-      {/* Record Payment Modal */}
-      {showPayModal && (
-        <RecordPaymentModal
-          invoice={{
-            id: showPayModal.id,
-            invoice_number: showPayModal.invoice_number || "",
-            case_id: showPayModal.case_id,
-            total: showPayModal.amount,
-            balance_due: showPayModal.balance_due ?? showPayModal.amount,
-          }}
-          caseRetainerBalance={retainerMap[showPayModal.case_id] || 0}
-          open={!!showPayModal}
-          onClose={() => setShowPayModal(null)}
-          onPaymentRecorded={fetchFinanceData}
-        />
-      )}
-
-      {/* Edit Invoice Dialog */}
-      {editingInvoice && (
-        <EditInvoiceDialog
-          invoiceId={editingInvoice}
-          open={!!editingInvoice}
-          onOpenChange={(open) => !open && setEditingInvoice(null)}
-          onSuccess={fetchFinanceData}
-        />
-      )}
-
-      {/* Edit Expense Dialog */}
-      {showExpenseForm && (
-        <FinanceForm
-          caseId={editingExpense?.case_id || ""}
-          open={showExpenseForm}
-          onOpenChange={(open) => {
-            if (!open) {
-              setShowExpenseForm(false);
-              setEditingExpense(null);
-            }
-          }}
-          onSuccess={() => {
-            setShowExpenseForm(false);
-            setEditingExpense(null);
-            fetchFinanceData();
-          }}
-          editingFinance={editingExpense}
-        />
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -13,6 +13,8 @@ import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import Calendar from "./pages/Calendar";
 import Finance from "./pages/Finance";
+import AllExpenses from "./pages/AllExpenses";
+import AllInvoices from "./pages/AllInvoices";
 import InvoiceDetail from "./pages/InvoiceDetail";
 import UpdateDetail from "./pages/UpdateDetail";
 import ExpenseDetail from "./pages/ExpenseDetail";
@@ -115,6 +117,26 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Finance />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/all-expenses"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <AllExpenses />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/all-invoices"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <AllInvoices />
               </DashboardLayout>
             </ProtectedRoute>
           }
