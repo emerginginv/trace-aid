@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Filter, Plus, CheckSquare, Calendar as CalendarIcon } from "lucide-react";
+import { Filter, Plus, CheckSquare, Calendar as CalendarIcon, PanelRightClose, PanelRightOpen, ListTodo } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { usePanelVisibility } from "@/hooks/use-panel-visibility";
 
 interface Case {
   id: string;
@@ -29,6 +30,11 @@ export default function Calendar() {
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [pendingCallback, setPendingCallback] = useState<((caseId: string) => void) | null>(null);
   const calendarRef = useRef<{ triggerAddTask: () => void; triggerAddEvent: () => void } | null>(null);
+  
+  const { isVisible: showTaskList, toggle: toggleTaskList } = usePanelVisibility(
+    "calendar-task-list",
+    true
+  );
 
   // Refetch when organization changes
   useEffect(() => {
@@ -104,6 +110,19 @@ export default function Calendar() {
             <CalendarIcon className="h-4 w-4" />
             Add Event
           </Button>
+          <Button
+            variant="outline"
+            onClick={toggleTaskList}
+            className="gap-2"
+            title={showTaskList ? "Hide task list" : "Show task list"}
+          >
+            {showTaskList ? (
+              <PanelRightClose className="h-4 w-4" />
+            ) : (
+              <PanelRightOpen className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">Tasks</span>
+          </Button>
         </div>
       </div>
 
@@ -159,6 +178,8 @@ export default function Calendar() {
         filterUser={filterUser}
         filterStatus={filterStatus}
         onNeedCaseSelection={handleCaseSelection}
+        showTaskList={showTaskList}
+        onToggleTaskList={toggleTaskList}
       />
 
       {/* Case Selection Dialog */}

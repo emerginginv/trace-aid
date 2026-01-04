@@ -2,8 +2,9 @@ import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, Clock, AlertCircle, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { usePanelVisibility } from "@/hooks/use-panel-visibility";
 import {
   startOfMonth,
   endOfMonth,
@@ -58,12 +59,14 @@ interface CaseCalendarProps {
   filterStatus?: string;
   onNeedCaseSelection?: (callback: (selectedCaseId: string) => void) => void;
   isClosedCase?: boolean;
+  showTaskList?: boolean;
+  onToggleTaskList?: () => void;
 }
 
 export const CaseCalendar = forwardRef<
   { triggerAddTask: () => void; triggerAddEvent: () => void },
   CaseCalendarProps
->(({ caseId, filterCase, filterUser, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false }, ref) => {
+>(({ caseId, filterCase, filterUser, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false, showTaskList: externalShowTaskList, onToggleTaskList }, ref) => {
   const { organization } = useOrganization();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
@@ -78,6 +81,16 @@ export const CaseCalendar = forwardRef<
   const [editingActivity, setEditingActivity] = useState<any>(null);
   const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>(caseId);
   const [taskListFilter, setTaskListFilter] = useState<string>("all");
+  
+  // Internal task list visibility state (used when parent doesn't control it)
+  const { isVisible: internalShowTaskList, toggle: internalToggleTaskList } = usePanelVisibility(
+    "calendar-task-list",
+    true
+  );
+  
+  // Use external props if provided, otherwise use internal state
+  const showTaskList = externalShowTaskList !== undefined ? externalShowTaskList : internalShowTaskList;
+  const toggleTaskList = onToggleTaskList || internalToggleTaskList;
 
   const filterStatus = externalFilterStatus || internalFilterStatus;
 
@@ -494,13 +507,29 @@ export const CaseCalendar = forwardRef<
             {format(currentDate, "MMMM yyyy")}
           </h2>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleTaskList}
+              title={showTaskList ? "Hide task list" : "Show task list"}
+              className="hidden lg:flex"
+            >
+              {showTaskList ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Calendar Grid - EVENTS ONLY */}
@@ -586,6 +615,7 @@ export const CaseCalendar = forwardRef<
       </div>
 
       {/* Task List - Right Side */}
+      {showTaskList && (
       <div className="w-full lg:w-96 border rounded-lg bg-card">
         <div className="p-4 border-b">
           <h3 className="font-semibold text-lg mb-3">Tasks</h3>
@@ -661,6 +691,7 @@ export const CaseCalendar = forwardRef<
           )}
         </div>
       </div>
+      )}
     </div>
   );
 });
