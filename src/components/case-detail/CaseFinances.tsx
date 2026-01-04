@@ -18,6 +18,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface Finance {
   id: string;
@@ -41,6 +43,25 @@ interface Finance {
   quantity?: number;
   unit_price?: number;
 }
+
+const EXPENSE_COLUMNS: ColumnDefinition[] = [
+  { key: "date", label: "Date" },
+  { key: "category", label: "Category" },
+  { key: "description", label: "Description" },
+  { key: "amount", label: "Amount" },
+  { key: "status", label: "Status" },
+  { key: "actions", label: "Actions", hideable: false },
+];
+
+const TIME_COLUMNS: ColumnDefinition[] = [
+  { key: "date", label: "Date" },
+  { key: "description", label: "Description" },
+  { key: "hours", label: "Hours" },
+  { key: "rate", label: "Rate" },
+  { key: "amount", label: "Amount" },
+  { key: "status", label: "Status" },
+  { key: "actions", label: "Actions", hideable: false },
+];
 
 export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
   const { hasPermission, loading: permissionsLoading } = usePermissions();
@@ -69,6 +90,9 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   const canAddFinances = hasPermission('add_finances');
   const canEditFinances = hasPermission('edit_finances');
   const canDeleteFinances = hasPermission('delete_finances');
+
+  const { visibility: expenseVisibility, isVisible: isExpenseVisible, toggleColumn: toggleExpenseColumn, resetToDefaults: resetExpenseDefaults } = useColumnVisibility("case-finances-expense-columns", EXPENSE_COLUMNS);
+  const { visibility: timeVisibility, isVisible: isTimeVisible, toggleColumn: toggleTimeColumn, resetToDefaults: resetTimeDefaults } = useColumnVisibility("case-finances-time-columns", TIME_COLUMNS);
 
   useEffect(() => {
     fetchFinances();
@@ -494,6 +518,12 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                 <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
+            <ColumnVisibility
+              columns={EXPENSE_COLUMNS}
+              visibility={expenseVisibility}
+              onToggle={toggleExpenseColumn}
+              onReset={resetExpenseDefaults}
+            />
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">

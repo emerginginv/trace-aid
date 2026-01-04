@@ -21,6 +21,8 @@ import html2pdf from "html2pdf.js";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { TableHeader, TableRow as TRow } from "@/components/ui/table";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface Invoice {
   id: string;
@@ -41,6 +43,18 @@ interface Case {
   title: string;
   case_number: string;
 }
+
+const COLUMNS: ColumnDefinition[] = [
+  { key: "invoice_number", label: "Invoice #" },
+  { key: "case", label: "Case" },
+  { key: "date", label: "Date" },
+  { key: "due_date", label: "Due Date" },
+  { key: "amount", label: "Total" },
+  { key: "total_paid", label: "Paid" },
+  { key: "balance_due", label: "Balance Due" },
+  { key: "status", label: "Status" },
+  { key: "actions", label: "Actions", hideable: false },
+];
 
 const AllInvoices = () => {
   const navigate = useNavigate();
@@ -66,6 +80,8 @@ const AllInvoices = () => {
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("invoices-columns", COLUMNS);
 
   // Refetch when organization changes
   useEffect(() => {
@@ -475,6 +491,12 @@ const AllInvoices = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <ColumnVisibility
+              columns={COLUMNS}
+              visibility={visibility}
+              onToggle={toggleColumn}
+              onReset={resetToDefaults}
+            />
           </div>
           {sortedInvoices.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
@@ -484,66 +506,84 @@ const AllInvoices = () => {
             <Table>
               <TableHeader>
                 <TRow>
-                  <SortableTableHead
-                    column="invoice_number"
-                    label="Invoice #"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="case"
-                    label="Case"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="date"
-                    label="Date"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="due_date"
-                    label="Due Date"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="amount"
-                    label="Total"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    className="text-right"
-                  />
-                  <SortableTableHead
-                    column="total_paid"
-                    label="Paid"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    className="text-right"
-                  />
-                  <SortableTableHead
-                    column="balance_due"
-                    label="Balance Due"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    className="text-right"
-                  />
-                  <SortableTableHead
-                    column="status"
-                    label="Status"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <th className="text-right p-2">Actions</th>
+                  {isVisible("invoice_number") && (
+                    <SortableTableHead
+                      column="invoice_number"
+                      label="Invoice #"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("case") && (
+                    <SortableTableHead
+                      column="case"
+                      label="Case"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("date") && (
+                    <SortableTableHead
+                      column="date"
+                      label="Date"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("due_date") && (
+                    <SortableTableHead
+                      column="due_date"
+                      label="Due Date"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("amount") && (
+                    <SortableTableHead
+                      column="amount"
+                      label="Total"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="text-right"
+                    />
+                  )}
+                  {isVisible("total_paid") && (
+                    <SortableTableHead
+                      column="total_paid"
+                      label="Paid"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="text-right"
+                    />
+                  )}
+                  {isVisible("balance_due") && (
+                    <SortableTableHead
+                      column="balance_due"
+                      label="Balance Due"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="text-right"
+                    />
+                  )}
+                  {isVisible("status") && (
+                    <SortableTableHead
+                      column="status"
+                      label="Status"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("actions") && (
+                    <th className="text-right p-2">Actions</th>
+                  )}
                 </TRow>
               </TableHeader>
               <TableBody>

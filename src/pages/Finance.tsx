@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface RetainerBalance {
   case_id: string;
@@ -18,6 +20,14 @@ interface RetainerBalance {
   balance: number;
   last_topup: string | null;
 }
+
+const COLUMNS: ColumnDefinition[] = [
+  { key: "case_title", label: "Case" },
+  { key: "case_number", label: "Case Number" },
+  { key: "balance", label: "Current Balance" },
+  { key: "last_topup", label: "Last Top-Up" },
+  { key: "actions", label: "Actions", hideable: false },
+];
 
 const Finance = () => {
   const navigate = useNavigate();
@@ -31,6 +41,8 @@ const Finance = () => {
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>("case_title");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("finance-columns", COLUMNS);
 
   // Refetch when organization changes
   useEffect(() => {
@@ -193,6 +205,12 @@ const Finance = () => {
                 className="pl-8"
               />
             </div>
+            <ColumnVisibility
+              columns={COLUMNS}
+              visibility={visibility}
+              onToggle={toggleColumn}
+              onReset={resetToDefaults}
+            />
           </div>
           {sortedRetainerBalances.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
@@ -202,36 +220,46 @@ const Finance = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead
-                    column="case_title"
-                    label="Case"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="case_number"
-                    label="Case Number"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    column="balance"
-                    label="Current Balance"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    className="text-right"
-                  />
-                  <SortableTableHead
-                    column="last_topup"
-                    label="Last Top-Up"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <th className="text-right p-2">Actions</th>
+                  {isVisible("case_title") && (
+                    <SortableTableHead
+                      column="case_title"
+                      label="Case"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("case_number") && (
+                    <SortableTableHead
+                      column="case_number"
+                      label="Case Number"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("balance") && (
+                    <SortableTableHead
+                      column="balance"
+                      label="Current Balance"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      className="text-right"
+                    />
+                  )}
+                  {isVisible("last_topup") && (
+                    <SortableTableHead
+                      column="last_topup"
+                      label="Last Top-Up"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("actions") && (
+                    <th className="text-right p-2">Actions</th>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -249,19 +277,29 @@ const Finance = () => {
                       }
                     }}
                   >
-                    <TableCell className="font-medium">{balance.case_title}</TableCell>
-                    <TableCell>{balance.case_number}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${balance.balance.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      {balance.last_topup
-                        ? format(new Date(balance.last_topup), "MMM d, yyyy")
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {/* Actions column - row is already clickable */}
-                    </TableCell>
+                    {isVisible("case_title") && (
+                      <TableCell className="font-medium">{balance.case_title}</TableCell>
+                    )}
+                    {isVisible("case_number") && (
+                      <TableCell>{balance.case_number}</TableCell>
+                    )}
+                    {isVisible("balance") && (
+                      <TableCell className="text-right font-medium">
+                        ${balance.balance.toFixed(2)}
+                      </TableCell>
+                    )}
+                    {isVisible("last_topup") && (
+                      <TableCell>
+                        {balance.last_topup
+                          ? format(new Date(balance.last_topup), "MMM d, yyyy")
+                          : "N/A"}
+                      </TableCell>
+                    )}
+                    {isVisible("actions") && (
+                      <TableCell className="text-right">
+                        {/* Actions column - row is already clickable */}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

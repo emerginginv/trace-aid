@@ -12,6 +12,8 @@ import { GenerateReportDialog } from "@/components/templates/GenerateReportDialo
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 
 interface Update {
   id: string;
@@ -27,6 +29,15 @@ interface UserProfile {
   full_name: string;
   email: string;
 }
+
+const COLUMNS: ColumnDefinition[] = [
+  { key: "expand", label: "", hideable: false },
+  { key: "title", label: "Title" },
+  { key: "update_type", label: "Type" },
+  { key: "user_id", label: "Created By" },
+  { key: "created_at", label: "Date" },
+  { key: "actions", label: "Actions", hideable: false },
+];
 
 export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -49,6 +60,8 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const canEditUpdates = hasPermission("edit_updates");
   const canDeleteUpdates = hasPermission("delete_updates");
   const canViewReports = hasPermission("view_reports");
+
+  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("case-updates-columns", COLUMNS);
 
   useEffect(() => {
     fetchUpdates();
@@ -254,13 +267,21 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         </div>
       </div>
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search updates..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+      <div className="relative mb-4 flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search updates..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <ColumnVisibility
+          columns={COLUMNS}
+          visibility={visibility}
+          onToggle={toggleColumn}
+          onReset={resetToDefaults}
         />
       </div>
 
@@ -287,36 +308,48 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
           <Table>
             <TableHeader>
               <TableRow>
-                <th className="w-12 p-2"></th>
-                <SortableTableHead
-                  column="title"
-                  label="Title"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="update_type"
-                  label="Type"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="user_id"
-                  label="Created By"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <SortableTableHead
-                  column="created_at"
-                  label="Date"
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                />
-                <th className="text-right p-2">Actions</th>
+                {isVisible("expand") && (
+                  <th className="w-12 p-2"></th>
+                )}
+                {isVisible("title") && (
+                  <SortableTableHead
+                    column="title"
+                    label="Title"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("update_type") && (
+                  <SortableTableHead
+                    column="update_type"
+                    label="Type"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("user_id") && (
+                  <SortableTableHead
+                    column="user_id"
+                    label="Created By"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("created_at") && (
+                  <SortableTableHead
+                    column="created_at"
+                    label="Date"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("actions") && (
+                  <th className="text-right p-2">Actions</th>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
