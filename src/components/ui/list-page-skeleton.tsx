@@ -216,3 +216,19 @@ export function ExpensesPageSkeleton() {
     />
   );
 }
+
+export function FinancePageSkeleton() {
+  return (
+    <ListPageSkeleton
+      title="retainer funds"
+      columns={[
+        { width: "flex-1" },        // Case title
+        { width: "w-[120px]" },     // Case number
+        { width: "w-[120px]" },     // Balance
+        { width: "w-[120px]" },     // Last top-up
+        { width: "w-[100px]" },     // Actions
+      ]}
+      filterCount={3}
+    />
+  );
+}
