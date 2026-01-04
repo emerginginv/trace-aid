@@ -29,6 +29,7 @@ import ContactDetail from "./pages/ContactDetail";
 import ContactEdit from "./pages/ContactEdit";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import DataImport from "./pages/DataImport";
 
 import UserProfile from "./pages/UserProfile";
 import UserProfileDetail from "./pages/UserProfileDetail";
@@ -264,6 +265,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Settings />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/import"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <DataImport />
               </DashboardLayout>
             </ProtectedRoute>
           }
