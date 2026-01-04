@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, History, DollarSign } from "lucide-react";
+import { Loader2, Plus, History, DollarSign, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface RetainerFund {
   id: string;
@@ -27,9 +28,13 @@ export function RetainerFundsWidget({ caseId }: RetainerFundsWidgetProps) {
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [editingFund, setEditingFund] = useState<RetainerFund | null>(null);
+  const [fundToDelete, setFundToDelete] = useState<RetainerFund | null>(null);
   const { toast } = useToast();
 
   const fetchRetainerFunds = async () => {
@@ -120,6 +125,98 @@ export function RetainerFundsWidget({ caseId }: RetainerFundsWidgetProps) {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEditFund = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFund) return;
+    
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid positive amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("retainer_funds")
+        .update({
+          amount: amountNum,
+          note: note.trim() || null,
+        })
+        .eq("id", editingFund.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Retainer fund updated successfully",
+      });
+
+      setAmount("");
+      setNote("");
+      setEditingFund(null);
+      setEditDialogOpen(false);
+      await fetchRetainerFunds();
+    } catch (error) {
+      console.error("Error updating fund:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update retainer fund",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteFund = async () => {
+    if (!fundToDelete) return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("retainer_funds")
+        .delete()
+        .eq("id", fundToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Retainer fund deleted successfully",
+      });
+
+      setFundToDelete(null);
+      setDeleteDialogOpen(false);
+      await fetchRetainerFunds();
+    } catch (error) {
+      console.error("Error deleting fund:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete retainer fund",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openEditDialog = (fund: RetainerFund) => {
+    setEditingFund(fund);
+    setAmount(Math.abs(fund.amount).toString());
+    setNote(fund.note || "");
+    setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (fund: RetainerFund) => {
+    setFundToDelete(fund);
+    setDeleteDialogOpen(true);
   };
 
   if (loading) {
@@ -221,6 +318,7 @@ export function RetainerFundsWidget({ caseId }: RetainerFundsWidgetProps) {
               ) : (
                 funds.map((fund) => {
                   const isDeduction = Number(fund.amount) < 0;
+                  const isLinkedToInvoice = !!fund.invoice_id;
                   return (
                     <div
                       key={fund.id}
@@ -243,6 +341,32 @@ export function RetainerFundsWidget({ caseId }: RetainerFundsWidgetProps) {
                             </div>
                           )}
                         </div>
+                        {!isLinkedToInvoice && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditDialog(fund);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDeleteDialog(fund);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                       {fund.note && (
                         <p className="text-sm text-foreground/80 mt-2">{fund.note}</p>
@@ -255,6 +379,72 @@ export function RetainerFundsWidget({ caseId }: RetainerFundsWidgetProps) {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open);
+        if (!open) {
+          setEditingFund(null);
+          setAmount("");
+          setNote("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Retainer Fund</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditFund} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-amount">Amount *</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="5000.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-note">Note (Optional)</Label>
+              <Textarea
+                id="edit-note"
+                placeholder="Add any relevant notes..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Retainer Fund"
+        description={`Are you sure you want to delete this $${fundToDelete ? Math.abs(fundToDelete.amount).toFixed(2) : '0.00'} retainer fund entry? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDeleteFund}
+        variant="destructive"
+      />
     </div>
   );
 }
