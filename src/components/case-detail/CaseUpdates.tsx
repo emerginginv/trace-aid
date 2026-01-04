@@ -6,10 +6,12 @@ import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, FileText, Shie
 import { toast } from "@/hooks/use-toast";
 import { UpdateForm } from "./UpdateForm";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { GenerateReportDialog } from "@/components/templates/GenerateReportDialog";
 import { usePermissions } from "@/hooks/usePermissions";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface Update {
   id: string;
@@ -36,6 +38,10 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [caseData, setCaseData] = useState<{ title: string; case_number: string; case_manager_id: string | null } | null>(null);
+
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<string>("created_at");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewUpdates = hasPermission("view_updates");
@@ -145,11 +151,64 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
     });
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   const filteredUpdates = updates.filter(update => {
     return searchQuery === '' || 
       update.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       update.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       update.update_type.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  // Sort data
+  const sortedUpdates = [...filteredUpdates].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    let aVal: any;
+    let bVal: any;
+    
+    switch (sortColumn) {
+      case "title":
+        aVal = a.title;
+        bVal = b.title;
+        break;
+      case "update_type":
+        aVal = a.update_type;
+        bVal = b.update_type;
+        break;
+      case "user_id":
+        const aProfile = userProfiles[a.user_id];
+        const bProfile = userProfiles[b.user_id];
+        aVal = aProfile?.full_name || aProfile?.email || "";
+        bVal = bProfile?.full_name || bProfile?.email || "";
+        break;
+      case "created_at":
+        aVal = new Date(a.created_at).getTime();
+        bVal = new Date(b.created_at).getTime();
+        break;
+      default:
+        return 0;
+    }
+    
+    if (aVal == null) return sortDirection === "asc" ? 1 : -1;
+    if (bVal == null) return sortDirection === "asc" ? -1 : 1;
+    
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return sortDirection === "asc" 
+        ? aVal.localeCompare(bVal) 
+        : bVal.localeCompare(aVal);
+    }
+    
+    return sortDirection === "asc" 
+      ? (aVal as number) - (bVal as number) 
+      : (bVal as number) - (aVal as number);
   });
 
   if (permissionsLoading || loading) {
@@ -175,7 +234,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-bold">Case Updates</h2>
-          <p className="text-muted-foreground">Activity log and progress notes</p>
+          <p className="text-muted-foreground">Showing {sortedUpdates.length} update{sortedUpdates.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           {canViewReports && (
@@ -217,7 +276,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
             )}
           </CardContent>
         </Card>
-      ) : filteredUpdates.length === 0 ? (
+      ) : sortedUpdates.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground">No updates match your search criteria</p>
@@ -228,16 +287,40 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12"></TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <th className="w-12 p-2"></th>
+                <SortableTableHead
+                  column="title"
+                  label="Title"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="update_type"
+                  label="Type"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="user_id"
+                  label="Created By"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableTableHead
+                  column="created_at"
+                  label="Date"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <th className="text-right p-2">Actions</th>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUpdates.map((update) => {
+              {sortedUpdates.map((update) => {
                 const isExpanded = expandedRows.has(update.id);
                 const userProfile = userProfiles[update.user_id];
                 
@@ -314,6 +397,8 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
           userProfiles={userProfiles}
         />
       )}
+
+      <ScrollProgress />
     </>
   );
 };

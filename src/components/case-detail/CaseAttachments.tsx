@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { getPlanLimits } from "@/lib/planLimits";
 import { usePermissions } from "@/hooks/usePermissions";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface Attachment {
   id: string;
@@ -56,6 +58,10 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
   const [isDragging, setIsDragging] = useState(false);
   const [editingAttachment, setEditingAttachment] = useState<Attachment | null>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "", tags: "" });
+  
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<string>("created_at");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewAttachments = hasPermission("view_attachments");
@@ -932,6 +938,8 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
           </div>
         </DialogContent>
       </Dialog>
+
+      <ScrollProgress />
     </div>
   );
 };

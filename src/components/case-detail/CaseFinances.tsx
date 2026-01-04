@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface Finance {
   id: string;
@@ -55,6 +57,12 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [defaultFinanceType, setDefaultFinanceType] = useState<"retainer" | "expense" | "time">("expense");
+  
+  // Sorting states
+  const [expenseSortColumn, setExpenseSortColumn] = useState<string>("date");
+  const [expenseSortDirection, setExpenseSortDirection] = useState<"asc" | "desc">("desc");
+  const [timeSortColumn, setTimeSortColumn] = useState<string>("date");
+  const [timeSortDirection, setTimeSortDirection] = useState<"asc" | "desc">("desc");
 
   // Permission checks
   const canViewFinances = hasPermission('view_finances');
@@ -1062,6 +1070,8 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
           onClose={() => setSelectedInvoiceId(null)}
         />
       )}
+
+      <ScrollProgress />
     </>
   );
 };

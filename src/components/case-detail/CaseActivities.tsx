@@ -9,9 +9,11 @@ import { ActivityForm } from "./ActivityForm";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { usePermissions } from "@/hooks/usePermissions";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 interface Activity {
   id: string;
@@ -47,6 +49,10 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<"tasks" | "events">("tasks");
+
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<string>("due_date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewActivities = hasPermission("view_activities");
@@ -199,6 +205,15 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
     }
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "done":
@@ -239,6 +254,48 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
       return matchesSearch && matchesType && matchesStatus;
     });
 
+  // Sort data
+  const sortedActivities = [...filteredActivities].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    let aVal: any;
+    let bVal: any;
+    
+    switch (sortColumn) {
+      case "title":
+        aVal = a.title;
+        bVal = b.title;
+        break;
+      case "status":
+        aVal = a.status;
+        bVal = b.status;
+        break;
+      case "assigned_user_id":
+        aVal = getUserName(a.assigned_user_id);
+        bVal = getUserName(b.assigned_user_id);
+        break;
+      case "due_date":
+        aVal = a.due_date ? new Date(a.due_date).getTime() : 0;
+        bVal = b.due_date ? new Date(b.due_date).getTime() : 0;
+        break;
+      default:
+        return 0;
+    }
+    
+    if (aVal == null) return sortDirection === "asc" ? 1 : -1;
+    if (bVal == null) return sortDirection === "asc" ? -1 : 1;
+    
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return sortDirection === "asc" 
+        ? aVal.localeCompare(bVal) 
+        : bVal.localeCompare(aVal);
+    }
+    
+    return sortDirection === "asc" 
+      ? (aVal as number) - (bVal as number) 
+      : (bVal as number) - (aVal as number);
+  });
+
   if (permissionsLoading || loading) {
     return <p className="text-muted-foreground">Loading activities...</p>;
   }
@@ -264,7 +321,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
           <div>
             <h3 className="text-lg font-semibold">Case Activities</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Track tasks and events for this case
+              Showing {sortedActivities.length} {activeTab === "tasks" ? "task" : "event"}{sortedActivities.length !== 1 ? 's' : ''}
             </p>
           </div>
           <Button 
@@ -341,7 +398,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
           </Select>
         </div>
 
-        {filteredActivities.length === 0 ? (
+        {sortedActivities.length === 0 ? (
           <div className="text-center py-12 border rounded-lg bg-muted/50">
             <p className="text-muted-foreground">
               {searchQuery || filterStatus !== "all"
@@ -354,16 +411,44 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]"></TableHead>
-                  <TableHead className="min-w-[200px] max-w-[300px]">Title</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
-                  <TableHead className="w-[140px] hidden md:table-cell">Assigned To</TableHead>
-                  <TableHead className="w-[120px]">{activeTab === "tasks" ? "Due Date" : "Date"}</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <th className="w-[50px] p-2"></th>
+                  <SortableTableHead
+                    column="title"
+                    label="Title"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="min-w-[200px] max-w-[300px]"
+                  />
+                  <SortableTableHead
+                    column="status"
+                    label="Status"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="w-[120px]"
+                  />
+                  <SortableTableHead
+                    column="assigned_user_id"
+                    label="Assigned To"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="w-[140px] hidden md:table-cell"
+                  />
+                  <SortableTableHead
+                    column="due_date"
+                    label={activeTab === "tasks" ? "Due Date" : "Date"}
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="w-[120px]"
+                  />
+                  <th className="w-[100px] p-2">Actions</th>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredActivities.map((activity) => (
+                {sortedActivities.map((activity) => (
                   <TableRow key={activity.id}>
                     <TableCell className="align-top">
                       <Checkbox
@@ -459,6 +544,8 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
         }}
         editingActivity={editingActivity}
       />
+
+      <ScrollProgress />
     </>
   );
 }

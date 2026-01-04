@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 
 interface RetainerBalance {
   case_id: string;
@@ -29,9 +28,9 @@ const Finance = () => {
   // Filter states
   const [retainerSearch, setRetainerSearch] = useState("");
   
-  // Pagination states
-  const [retainerPage, setRetainerPage] = useState(1);
-  const [retainerPageSize, setRetainerPageSize] = useState(15);
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<string>("case_title");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Refetch when organization changes
   useEffect(() => {
@@ -98,6 +97,15 @@ const Finance = () => {
     }
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   // Filter functions
   const filteredRetainerBalances = retainerBalances.filter((balance) => {
     const searchLower = retainerSearch.toLowerCase();
@@ -107,12 +115,47 @@ const Finance = () => {
     );
   });
 
-  // Paginated data
-  const paginatedRetainerBalances = filteredRetainerBalances.slice(
-    (retainerPage - 1) * retainerPageSize,
-    retainerPage * retainerPageSize
-  );
-  const retainerTotalPages = Math.ceil(filteredRetainerBalances.length / retainerPageSize);
+  // Sort data
+  const sortedRetainerBalances = [...filteredRetainerBalances].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    let aVal: any;
+    let bVal: any;
+    
+    switch (sortColumn) {
+      case "case_title":
+        aVal = a.case_title;
+        bVal = b.case_title;
+        break;
+      case "case_number":
+        aVal = a.case_number;
+        bVal = b.case_number;
+        break;
+      case "balance":
+        aVal = a.balance;
+        bVal = b.balance;
+        break;
+      case "last_topup":
+        aVal = a.last_topup ? new Date(a.last_topup).getTime() : 0;
+        bVal = b.last_topup ? new Date(b.last_topup).getTime() : 0;
+        break;
+      default:
+        return 0;
+    }
+    
+    if (aVal == null) return sortDirection === "asc" ? 1 : -1;
+    if (bVal == null) return sortDirection === "asc" ? -1 : 1;
+    
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return sortDirection === "asc" 
+        ? aVal.localeCompare(bVal) 
+        : bVal.localeCompare(aVal);
+    }
+    
+    return sortDirection === "asc" 
+      ? (aVal as number) - (bVal as number) 
+      : (bVal as number) - (aVal as number);
+  });
 
   if (loading) {
     return (
@@ -136,7 +179,7 @@ const Finance = () => {
         <CardHeader>
           <CardTitle>Retainer Funds by Case</CardTitle>
           <CardDescription>
-            Current retainer balance for each case
+            Showing {sortedRetainerBalances.length} case{sortedRetainerBalances.length !== 1 ? 's' : ''} with retainer funds
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -146,29 +189,12 @@ const Finance = () => {
               <Input
                 placeholder="Search by case name or number..."
                 value={retainerSearch}
-                onChange={(e) => {
-                  setRetainerSearch(e.target.value);
-                  setRetainerPage(1);
-                }}
+                onChange={(e) => setRetainerSearch(e.target.value)}
                 className="pl-8"
               />
             </div>
-            <Select value={retainerPageSize.toString()} onValueChange={(v) => {
-              setRetainerPageSize(parseInt(v));
-              setRetainerPage(1);
-            }}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 per page</SelectItem>
-                <SelectItem value="25">25 per page</SelectItem>
-                <SelectItem value="50">50 per page</SelectItem>
-                <SelectItem value="100">100 per page</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
-          {filteredRetainerBalances.length === 0 ? (
+          {sortedRetainerBalances.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
               No matching retainer funds found
             </p>
@@ -176,15 +202,40 @@ const Finance = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Case</TableHead>
-                  <TableHead>Case Number</TableHead>
-                  <TableHead className="text-right">Current Balance</TableHead>
-                  <TableHead>Last Top-Up</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <SortableTableHead
+                    column="case_title"
+                    label="Case"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="case_number"
+                    label="Case Number"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="balance"
+                    label="Current Balance"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="text-right"
+                  />
+                  <SortableTableHead
+                    column="last_topup"
+                    label="Last Top-Up"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <th className="text-right p-2">Actions</th>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedRetainerBalances.map((balance) => (
+                {sortedRetainerBalances.map((balance) => (
                   <TableRow
                     key={balance.case_id}
                     className="cursor-pointer hover:bg-muted/50"
@@ -216,38 +267,10 @@ const Finance = () => {
               </TableBody>
             </Table>
           )}
-          {filteredRetainerBalances.length > 0 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {((retainerPage - 1) * retainerPageSize) + 1} to {Math.min(retainerPage * retainerPageSize, filteredRetainerBalances.length)} of {filteredRetainerBalances.length} entries
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRetainerPage(p => Math.max(1, p - 1))}
-                  disabled={retainerPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <div className="text-sm">
-                  Page {retainerPage} of {retainerTotalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRetainerPage(p => Math.min(retainerTotalPages, p + 1))}
-                  disabled={retainerPage === retainerTotalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
+
+      <ScrollProgress />
     </div>
   );
 };
