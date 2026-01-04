@@ -157,10 +157,15 @@ export function ValidationReport({ parsedFiles, onBack, onContinue }: Validation
       ) : (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Validation Failed</AlertTitle>
+          <AlertTitle>Found Some Issues</AlertTitle>
           <AlertDescription>
-            {allErrors.length} error(s) must be fixed before importing. 
-            Download the error report and correct your files.
+            <p>
+              {allErrors.length} issue(s) need attention before importing. 
+              Don't worry - we'll help you understand what needs to be fixed.
+            </p>
+            <p className="text-sm mt-2 opacity-80">
+              Most common fixes: Check that dates are in YYYY-MM-DD format, amounts don't have currency symbols, and referenced IDs match exactly.
+            </p>
           </AlertDescription>
         </Alert>
       )}
