@@ -4,12 +4,18 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import html2pdf from "html2pdf.js";
 import { getCurrentOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
 import { getCaseVariables, formatCaseVariablesForTemplate, CaseVariables } from "@/lib/caseVariables";
+import { getOrganizationTemplates, ReportTemplate } from "@/lib/reportTemplates";
+import { generateReport, ReportInstance } from "@/lib/reportEngine";
+import { ReportInstanceViewer } from "@/components/templates/ReportInstanceViewer";
+import { FileText, Sparkles, FileCode } from "lucide-react";
 
-interface Template {
+interface LegacyTemplate {
   id: string;
   name: string;
   body: string;
@@ -44,20 +50,59 @@ export const GenerateReportDialog = ({
   updates,
   userProfiles,
 }: GenerateReportDialogProps) => {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  // Legacy template state
+  const [legacyTemplates, setLegacyTemplates] = useState<LegacyTemplate[]>([]);
+  const [selectedLegacyTemplateId, setSelectedLegacyTemplateId] = useState<string>("");
+  
+  // Structured template state
+  const [structuredTemplates, setStructuredTemplates] = useState<ReportTemplate[]>([]);
+  const [selectedStructuredTemplateId, setSelectedStructuredTemplateId] = useState<string>("");
+  
+  // Common state
   const [generating, setGenerating] = useState(false);
   const [exportFormat, setExportFormat] = useState<"pdf" | "docx">("pdf");
   const [orgProfile, setOrgProfile] = useState<OrganizationProfile | null>(null);
   const [caseVariables, setCaseVariables] = useState<CaseVariables | null>(null);
+  const [organizationId, setOrganizationId] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
+  const [templateType, setTemplateType] = useState<"legacy" | "structured">("structured");
+  
+  // Preview state
+  const [generatedReport, setGeneratedReport] = useState<ReportInstance | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
-      fetchTemplates();
+      fetchUserAndOrg();
       fetchOrgProfile();
       fetchCaseVariables();
     }
   }, [open, caseId]);
+
+  useEffect(() => {
+    if (organizationId) {
+      fetchLegacyTemplates();
+      fetchStructuredTemplates();
+    }
+  }, [organizationId]);
+
+  const fetchUserAndOrg = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    setUserId(user.id);
+
+    const { data: orgMember } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .single();
+
+    if (orgMember) {
+      setOrganizationId(orgMember.organization_id);
+    }
+  };
 
   const fetchOrgProfile = async () => {
     const profile = await getCurrentOrganizationProfile();
@@ -69,39 +114,31 @@ export const GenerateReportDialog = ({
     setCaseVariables(variables);
   };
 
-  const fetchTemplates = async () => {
+  const fetchLegacyTemplates = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) return;
-
       const { data, error } = await supabase
         .from("case_update_templates")
         .select("*")
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", organizationId)
         .order("name");
 
       if (error) throw error;
-      setTemplates(data || []);
+      setLegacyTemplates(data || []);
     } catch (error) {
-      console.error("Error fetching templates:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load templates",
-        variant: "destructive",
-      });
+      console.error("Error fetching legacy templates:", error);
     }
   };
 
+  const fetchStructuredTemplates = async () => {
+    try {
+      const templates = await getOrganizationTemplates(organizationId);
+      setStructuredTemplates(templates);
+    } catch (error) {
+      console.error("Error fetching structured templates:", error);
+    }
+  };
+
+  // Legacy template filling
   const fillTemplate = (templateBody: string): string => {
     const caseManagerName = caseData.case_manager_id 
       ? (userProfiles[caseData.case_manager_id]?.full_name || "Not assigned")
@@ -115,22 +152,18 @@ export const GenerateReportDialog = ({
       })
       .join("\n\n");
 
-    // Build logo HTML if available
     const logoHtml = orgProfile?.logoUrl 
       ? `<img src="${orgProfile.logoUrl}" alt="${orgProfile.companyName || 'Company'} Logo" style="max-height: 60px; max-width: 200px;" />`
       : "";
 
-    // Get case variable placeholders
     const caseVars = caseVariables ? formatCaseVariablesForTemplate(caseVariables) : {};
 
     return templateBody
-      // Case placeholders (original)
       .replace(/\{\{case_title\}\}/g, caseData.title)
       .replace(/\{\{case_number\}\}/g, caseData.case_number)
       .replace(/\{\{case_manager\}\}/g, caseManagerName)
       .replace(/\{\{current_date\}\}/g, new Date().toLocaleDateString())
       .replace(/\{\{update_list\}\}/g, updateList)
-      // New case variable placeholders
       .replace(/\{\{claim_number\}\}/g, caseVars.claim_number || "")
       .replace(/\{\{client_list\}\}/g, caseVars.client_list || "")
       .replace(/\{\{subject_list\}\}/g, caseVars.subject_list || "")
@@ -143,7 +176,6 @@ export const GenerateReportDialog = ({
       .replace(/\{\{surveillance_start\}\}/g, caseVars.surveillance_start || "")
       .replace(/\{\{surveillance_end\}\}/g, caseVars.surveillance_end || "")
       .replace(/\{\{due_date\}\}/g, caseVars.due_date || "")
-      // Organization branding placeholders
       .replace(/\{\{company_name\}\}/g, orgProfile?.companyName || "")
       .replace(/\{\{company_logo\}\}/g, logoHtml)
       .replace(/\{\{company_address\}\}/g, orgProfile?.fullAddress || "")
@@ -187,8 +219,8 @@ export const GenerateReportDialog = ({
     URL.revokeObjectURL(url);
   };
 
-  const handleGenerate = async () => {
-    if (!selectedTemplateId) {
+  const handleGenerateLegacy = async () => {
+    if (!selectedLegacyTemplateId) {
       toast({
         title: "Error",
         description: "Please select a template",
@@ -197,7 +229,7 @@ export const GenerateReportDialog = ({
       return;
     }
 
-    const template = templates.find((t) => t.id === selectedTemplateId);
+    const template = legacyTemplates.find((t) => t.id === selectedLegacyTemplateId);
     if (!template) return;
 
     setGenerating(true);
@@ -227,64 +259,224 @@ export const GenerateReportDialog = ({
     }
   };
 
+  const handleGenerateStructured = async () => {
+    if (!selectedStructuredTemplateId) {
+      toast({
+        title: "Error",
+        description: "Please select a template",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const result = await generateReport({
+        caseId,
+        templateId: selectedStructuredTemplateId,
+        organizationId,
+        userId,
+      });
+
+      if (!result.success || !result.reportInstance) {
+        throw new Error(result.error || "Failed to generate report");
+      }
+
+      setGeneratedReport(result.reportInstance);
+      setViewerOpen(true);
+
+      toast({
+        title: "Success",
+        description: "Report generated successfully",
+      });
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate report",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (templateType === "legacy") {
+      await handleGenerateLegacy();
+    } else {
+      await handleGenerateStructured();
+    }
+  };
+
+  const hasLegacyTemplates = legacyTemplates.length > 0;
+  const hasStructuredTemplates = structuredTemplates.length > 0;
+  const selectedTemplateId = templateType === "legacy" ? selectedLegacyTemplateId : selectedStructuredTemplateId;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Generate Report</DialogTitle>
-          <DialogDescription>
-            Select a template and format to generate a report from case updates
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Generate Report</DialogTitle>
+            <DialogDescription>
+              Select a template and format to generate a report from case data
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          {templates.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No templates available. Create a template in Settings first.
-            </p>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="template">Template</Label>
-                <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                  <SelectTrigger id="template">
-                    <SelectValue placeholder="Select a template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <Tabs value={templateType} onValueChange={(v) => setTemplateType(v as "legacy" | "structured")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="structured" className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Structured
+                {hasStructuredTemplates && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {structuredTemplates.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="legacy" className="flex items-center gap-2">
+                <FileCode className="h-4 w-4" />
+                Legacy
+                {hasLegacyTemplates && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {legacyTemplates.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-              <div className="space-y-2">
-                <Label htmlFor="format">Export Format</Label>
-                <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as "pdf" | "docx")}>
-                  <SelectTrigger id="format">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pdf">PDF</SelectItem>
-                    <SelectItem value="docx">DOCX</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <TabsContent value="structured" className="space-y-4 mt-4">
+              {!hasStructuredTemplates ? (
+                <div className="text-center py-6">
+                  <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No structured templates available. Create one in Settings → Report Templates.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="structured-template">Template</Label>
+                    <Select 
+                      value={selectedStructuredTemplateId} 
+                      onValueChange={setSelectedStructuredTemplateId}
+                    >
+                      <SelectTrigger id="structured-template">
+                        <SelectValue placeholder="Select a template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {structuredTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            <div className="flex items-center gap-2">
+                              {template.name}
+                              {template.isSystemTemplate && (
+                                <Badge variant="outline" className="text-xs">System</Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedStructuredTemplateId && (
+                      <p className="text-xs text-muted-foreground">
+                        {structuredTemplates.find(t => t.id === selectedStructuredTemplateId)?.description || 
+                          "Generates a read-only report using structured sections."}
+                      </p>
+                    )}
+                  </div>
 
-              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
-                <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
-                  Cancel
-                </Button>
-                <Button onClick={handleGenerate} disabled={generating || !selectedTemplateId} className="w-full sm:w-auto">
-                  {generating ? "Generating..." : "Generate"}
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+                  <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
+                    <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleGenerate} 
+                      disabled={generating || !selectedStructuredTemplateId} 
+                      className="w-full sm:w-auto"
+                    >
+                      {generating ? "Generating..." : "Generate Report"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </TabsContent>
+
+            <TabsContent value="legacy" className="space-y-4 mt-4">
+              {!hasLegacyTemplates ? (
+                <div className="text-center py-6">
+                  <FileCode className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No legacy templates available. Create one in Settings.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="legacy-template">Template</Label>
+                    <Select 
+                      value={selectedLegacyTemplateId} 
+                      onValueChange={setSelectedLegacyTemplateId}
+                    >
+                      <SelectTrigger id="legacy-template">
+                        <SelectValue placeholder="Select a template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {legacyTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="format">Export Format</Label>
+                    <Select 
+                      value={exportFormat} 
+                      onValueChange={(value) => setExportFormat(value as "pdf" | "docx")}
+                    >
+                      <SelectTrigger id="format">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pdf">PDF</SelectItem>
+                        <SelectItem value="docx">DOCX</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
+                    <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleGenerate} 
+                      disabled={generating || !selectedLegacyTemplateId} 
+                      className="w-full sm:w-auto"
+                    >
+                      {generating ? "Generating..." : "Generate"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Report Viewer for structured reports */}
+      <ReportInstanceViewer
+        open={viewerOpen}
+        onOpenChange={(open) => {
+          setViewerOpen(open);
+          if (!open) {
+            setGeneratedReport(null);
+          }
+        }}
+        report={generatedReport}
+      />
+    </>
   );
 };
