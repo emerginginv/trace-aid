@@ -1299,6 +1299,85 @@ export type Database = {
         }
         Relationships: []
       }
+      report_instances: {
+        Row: {
+          case_id: string
+          case_variables_snapshot: Json
+          created_at: string | null
+          export_format: string | null
+          exported_at: string | null
+          generated_at: string
+          id: string
+          input_hash: string
+          org_profile_snapshot: Json
+          organization_id: string
+          rendered_html: string
+          rendered_sections: Json
+          template_id: string
+          template_snapshot: Json
+          title: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          case_variables_snapshot: Json
+          created_at?: string | null
+          export_format?: string | null
+          exported_at?: string | null
+          generated_at?: string
+          id?: string
+          input_hash: string
+          org_profile_snapshot: Json
+          organization_id: string
+          rendered_html: string
+          rendered_sections: Json
+          template_id: string
+          template_snapshot: Json
+          title: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          case_variables_snapshot?: Json
+          created_at?: string | null
+          export_format?: string | null
+          exported_at?: string | null
+          generated_at?: string
+          id?: string
+          input_hash?: string
+          org_profile_snapshot?: Json
+          organization_id?: string
+          rendered_html?: string
+          rendered_sections?: Json
+          template_id?: string
+          template_snapshot?: Json
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_instances_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_instances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_templates: {
         Row: {
           created_at: string | null
