@@ -4,19 +4,33 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 
 type AppRole = 'admin' | 'manager' | 'investigator' | 'vendor';
 
+const LOG_PREFIX = "[useUserRole]";
+
 export function useUserRole() {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const { organization, loading: orgLoading } = useOrganization();
 
   useEffect(() => {
+    const timestamp = new Date().toISOString();
+    
     // CRITICAL: Wait for organization context to finish loading
     if (orgLoading) {
+      console.log(`${LOG_PREFIX} [${timestamp}] Waiting for organization context to load...`);
       setLoading(true);
       return;
     }
 
+    console.log(`${LOG_PREFIX} [${timestamp}] Organization context ready:`, {
+      orgId: organization?.id,
+      orgName: organization?.name,
+      orgLoading
+    });
+
     const fetchUserRole = async () => {
+      const fetchStart = Date.now();
+      console.log(`${LOG_PREFIX} Starting role fetch...`);
+      
       try {
         // Check if we're impersonating a user
         const impersonationData = localStorage.getItem("impersonation");
@@ -26,7 +40,9 @@ export function useUserRole() {
           try {
             const { userId } = JSON.parse(impersonationData);
             targetUserId = userId;
+            console.log(`${LOG_PREFIX} Impersonation detected, target user:`, targetUserId);
           } catch (e) {
+            console.warn(`${LOG_PREFIX} Invalid impersonation data, clearing...`);
             localStorage.removeItem("impersonation");
           }
         }
@@ -35,15 +51,19 @@ export function useUserRole() {
         if (!targetUserId) {
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
+            console.log(`${LOG_PREFIX} No authenticated user found`);
             setRole(null);
             setLoading(false);
             return;
           }
           targetUserId = user.id;
+          console.log(`${LOG_PREFIX} Current user:`, targetUserId);
         }
 
         // CRITICAL: Always get role from organization_members for current org
         if (organization?.id) {
+          console.log(`${LOG_PREFIX} Fetching role from organization_members for org:`, organization.id);
+          
           const { data: orgMember, error: orgError } = await supabase
             .from("organization_members")
             .select("role")
@@ -51,19 +71,34 @@ export function useUserRole() {
             .eq("organization_id", organization.id)
             .maybeSingle();
 
-          if (!orgError && orgMember?.role) {
-            console.log("[useUserRole] Role from organization_members:", orgMember.role, "for org:", organization.id);
+          if (orgError) {
+            console.error(`${LOG_PREFIX} Error fetching from organization_members:`, orgError);
+          }
+
+          if (orgMember?.role) {
+            const duration = Date.now() - fetchStart;
+            console.log(`${LOG_PREFIX} ✅ Role determined from organization_members:`, {
+              role: orgMember.role,
+              orgId: organization.id,
+              orgName: organization.name,
+              userId: targetUserId,
+              durationMs: duration
+            });
             setRole(orgMember.role as AppRole);
             setLoading(false);
             return;
+          } else {
+            console.warn(`${LOG_PREFIX} User not found in organization_members for org:`, organization.id);
           }
+        } else {
+          console.warn(`${LOG_PREFIX} No organization ID available`);
         }
 
         // No organization context or not a member - should not happen in normal flow
-        console.warn("[useUserRole] No organization context or membership found");
+        console.warn(`${LOG_PREFIX} ⚠️ No organization context or membership found, setting role to null`);
         setRole(null);
       } catch (error) {
-        console.error("Error in fetchUserRole:", error);
+        console.error(`${LOG_PREFIX} ❌ Error in fetchUserRole:`, error);
         setRole(null);
       } finally {
         setLoading(false);
@@ -72,7 +107,8 @@ export function useUserRole() {
 
     fetchUserRole();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      console.log(`${LOG_PREFIX} Auth state changed:`, event);
       if (!orgLoading) {
         fetchUserRole();
       }
@@ -80,6 +116,18 @@ export function useUserRole() {
 
     return () => subscription.unsubscribe();
   }, [organization?.id, orgLoading]);
+
+  // Log role changes
+  useEffect(() => {
+    console.log(`${LOG_PREFIX} Role state updated:`, {
+      role,
+      loading: loading || orgLoading,
+      isAdmin: role === 'admin',
+      isManager: role === 'manager' || role === 'admin',
+      isInvestigator: role === 'investigator',
+      isVendor: role === 'vendor',
+    });
+  }, [role, loading, orgLoading]);
 
   return {
     role,

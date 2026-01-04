@@ -43,6 +43,7 @@ interface OrganizationContextType {
 const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
 
 const SELECTED_ORG_KEY = "selectedOrganizationId";
+const LOG_PREFIX = "[OrganizationContext]";
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -51,15 +52,20 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchAllUserOrganizations = async (userId: string): Promise<Organization[]> => {
+    console.log(`${LOG_PREFIX} Fetching all organizations for user:`, userId);
+    
     // Get all organization memberships for this user
     const { data: memberData, error: memberError } = await supabase
       .from("organization_members")
-      .select("organization_id")
+      .select("organization_id, role")
       .eq("user_id", userId);
 
     if (memberError || !memberData || memberData.length === 0) {
+      console.warn(`${LOG_PREFIX} No organization memberships found for user:`, userId);
       return [];
     }
+
+    console.log(`${LOG_PREFIX} Found ${memberData.length} organization membership(s):`, memberData);
 
     const orgIds = memberData.map(m => m.organization_id);
     
@@ -70,58 +76,80 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       .in("id", orgIds);
 
     if (orgsError || !orgsData) {
+      console.error(`${LOG_PREFIX} Error fetching organizations:`, orgsError);
       return [];
     }
 
+    console.log(`${LOG_PREFIX} Fetched ${orgsData.length} organization(s):`, orgsData.map(o => ({ id: o.id, name: o.name })));
     return orgsData as Organization[];
   };
 
   const refreshOrganization = async () => {
+    const timestamp = new Date().toISOString();
+    console.log(`${LOG_PREFIX} [${timestamp}] refreshOrganization called`);
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.log(`${LOG_PREFIX} No authenticated user, clearing organization`);
         setOrganization(null);
         setOrganizations([]);
         return;
       }
+
+      console.log(`${LOG_PREFIX} Authenticated user:`, user.id);
 
       // Fetch all organizations for this user
       const allOrgs = await fetchAllUserOrganizations(user.id);
       setOrganizations(allOrgs);
 
       if (allOrgs.length === 0) {
-        console.warn("User not in any organization");
+        console.warn(`${LOG_PREFIX} ⚠️ User not in any organization`);
         setOrganization(null);
         return;
       }
 
       // Check localStorage for previously selected org
       const savedOrgId = localStorage.getItem(SELECTED_ORG_KEY);
+      console.log(`${LOG_PREFIX} Saved organization ID from localStorage:`, savedOrgId);
+      
       let selectedOrg = allOrgs.find(org => org.id === savedOrgId);
       
       // If no saved selection or saved org not in list, use first org
       if (!selectedOrg) {
+        console.log(`${LOG_PREFIX} No valid saved org, using first organization`);
         selectedOrg = allOrgs[0];
         localStorage.setItem(SELECTED_ORG_KEY, selectedOrg.id);
       }
 
+      console.log(`${LOG_PREFIX} ✅ Selected organization:`, {
+        id: selectedOrg.id,
+        name: selectedOrg.name,
+        tier: selectedOrg.subscription_tier
+      });
+      
       setOrganization(selectedOrg);
     } catch (error) {
-      console.error("Error in refreshOrganization:", error);
+      console.error(`${LOG_PREFIX} ❌ Error in refreshOrganization:`, error);
       setOrganization(null);
       setOrganizations([]);
     } finally {
+      console.log(`${LOG_PREFIX} Setting loading to false`);
       setLoading(false);
     }
   };
 
   const switchOrganization = async (orgId: string) => {
+    console.log(`${LOG_PREFIX} Switching organization to:`, orgId);
     const selectedOrg = organizations.find(org => org.id === orgId);
     if (selectedOrg) {
       localStorage.setItem(SELECTED_ORG_KEY, orgId);
       setOrganization(selectedOrg);
+      console.log(`${LOG_PREFIX} ✅ Organization switched to:`, { id: selectedOrg.id, name: selectedOrg.name });
       // Refresh subscription status for the new org
       setTimeout(() => checkSubscription(), 0);
+    } else {
+      console.warn(`${LOG_PREFIX} ⚠️ Organization not found in list:`, orgId);
     }
   };
 
