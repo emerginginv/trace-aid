@@ -138,12 +138,14 @@ export function useConfirmation() {
     description: string;
     variant: "default" | "destructive" | "warning" | "success";
     onConfirm: () => void;
+    onCancel: () => void;
   }>({
     open: false,
     title: "",
     description: "",
     variant: "default",
     onConfirm: () => {},
+    onCancel: () => {},
   });
 
   const confirm = React.useCallback(
@@ -162,6 +164,10 @@ export function useConfirmation() {
             resolve(true);
             setState((prev) => ({ ...prev, open: false }));
           },
+          onCancel: () => {
+            resolve(false);
+            setState((prev) => ({ ...prev, open: false }));
+          },
         });
       });
     },
@@ -172,7 +178,12 @@ export function useConfirmation() {
     () => (
       <ConfirmationDialog
         open={state.open}
-        onOpenChange={(open) => setState((prev) => ({ ...prev, open }))}
+        onOpenChange={(open) => {
+          if (!open) {
+            state.onCancel();
+          }
+          setState((prev) => ({ ...prev, open }));
+        }}
         title={state.title}
         description={state.description}
         variant={state.variant}

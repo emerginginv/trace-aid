@@ -6,7 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2 } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff } from "lucide-react";
+import { useConfirmation } from "@/components/ui/confirmation-dialog";
+import { RevokeMode } from "./RevokeAccessDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
@@ -94,6 +96,11 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const [bulkShareDialogOpen, setBulkShareDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  const [revokeMode, setRevokeMode] = useState<RevokeMode>("bulk");
+  const [singleRevokeAttachment, setSingleRevokeAttachment] = useState<Attachment | null>(null);
+  
+  // Confirmation hook for single revoke
+  const { confirm, ConfirmDialog } = useConfirmation();
   
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("case-attachments", "created_at", "desc");
@@ -386,7 +393,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   };
 
   const handleDelete = async (attachment: Attachment) => {
-    if (!confirm(`Delete ${attachment.file_name}?`)) return;
+    if (!window.confirm(`Delete ${attachment.file_name}?`)) return;
 
     try {
       // Delete from storage
@@ -497,6 +504,79 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const handleShare = (attachment: Attachment) => {
     setSelectedAttachmentForShare(attachment);
     setShareDialogOpen(true);
+  };
+
+  // Handle single attachment revocation
+  const handleSingleRevoke = async (attachment: Attachment, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    
+    // Get link count for this attachment
+    const { data } = await supabase
+      .from("attachment_access")
+      .select("id")
+      .eq("attachment_id", attachment.id)
+      .eq("attachment_type", "case")
+      .is("revoked_at", null)
+      .or("expires_at.is.null,expires_at.gt.now()");
+    
+    const linkCount = data?.length || 0;
+    
+    if (linkCount === 0) {
+      toast({
+        title: "No active links",
+        description: "This attachment has no active share links to revoke.",
+      });
+      return;
+    }
+    
+    const confirmed = await confirm({
+      title: "Revoke Access",
+      description: `This will immediately revoke all ${linkCount} active share link${linkCount !== 1 ? 's' : ''} for "${attachment.name || attachment.file_name}". Recipients will no longer be able to access this file.`,
+      variant: "destructive",
+    });
+    
+    if (confirmed) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { error } = await supabase
+        .from("attachment_access")
+        .update({
+          revoked_at: new Date().toISOString(),
+          revoked_by_user_id: user.id,
+        })
+        .eq("attachment_id", attachment.id)
+        .eq("attachment_type", "case")
+        .is("revoked_at", null);
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to revoke access",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      toast({
+        title: "Access revoked",
+        description: `Revoked ${linkCount} share link${linkCount !== 1 ? 's' : ''}`,
+      });
+      
+      fetchSharedStatus();
+    }
+  };
+
+  // Handle case-level revocation (opens dialog in case mode)
+  const handleRevokeCaseLinks = () => {
+    setRevokeMode("case");
+    setRevokeDialogOpen(true);
+  };
+
+  // Handle bulk revocation (from selection bar)
+  const handleBulkRevoke = () => {
+    setRevokeMode("bulk");
+    setRevokeDialogOpen(true);
   };
 
   const renderPreviewContent = () => {
@@ -614,9 +694,12 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
           canEditAttachments={canEditAttachments}
           onGenerateLinks={() => setBulkShareDialogOpen(true)}
           onEmailAttachments={() => setEmailDialogOpen(true)}
-          onRevokeAccess={() => setRevokeDialogOpen(true)}
+          onRevokeAccess={handleBulkRevoke}
           onClearSelection={clearSelection}
         />
+        
+        {/* Confirmation dialog for single revoke */}
+        <ConfirmDialog />
 
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -626,7 +709,25 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
               {filteredAttachments.length} file{filteredAttachments.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {/* Case-level revoke button - only show when there are shared attachments */}
+            {canEditAttachments && sharedAttachmentIds.size > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRevokeCaseLinks}
+                    className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/50 hover:bg-destructive/5"
+                  >
+                    <ShieldOff className="h-4 w-4 mr-2" />
+                    Revoke All Links
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Revoke all active share links for this case ({sharedAttachmentIds.size} shared file{sharedAttachmentIds.size !== 1 ? 's' : ''})
+                </TooltipContent>
+              </Tooltip>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -944,6 +1045,17 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                           <span className="hidden sm:inline">Share</span>
                         </Button>
                       )}
+                      {canEditAttachments && isShared && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleSingleRevoke(attachment, e)}
+                          className="h-7 sm:h-8 text-xs px-2 text-destructive hover:text-destructive"
+                        >
+                          <ShieldOff className="h-3 w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Revoke</span>
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1108,6 +1220,22 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                             <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         )}
+                        {canEditAttachments && isShared && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => handleSingleRevoke(attachment, e)}
+                                className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
+                                title="Revoke Links"
+                              >
+                                <ShieldOff className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Revoke share links</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1232,8 +1360,10 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
         <RevokeAccessDialog
           open={revokeDialogOpen}
           onOpenChange={setRevokeDialogOpen}
-          attachments={selectedAttachments}
+          attachments={revokeMode === "case" ? [] : selectedAttachments}
           attachmentType="case"
+          mode={revokeMode}
+          allCaseAttachmentIds={revokeMode === "case" ? attachments.map(a => a.id) : undefined}
           onSuccess={handleRevokeSuccess}
         />
       </div>
