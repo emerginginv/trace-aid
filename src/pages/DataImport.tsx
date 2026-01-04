@@ -5,23 +5,27 @@ import { ImportTypeSelector, ImportType } from "@/components/import/ImportTypeSe
 import { FileUploader } from "@/components/import/FileUploader";
 import { ValidationReport } from "@/components/import/ValidationReport";
 import { MappingConfiguration } from "@/components/import/MappingConfiguration";
+import { DryRunProgress } from "@/components/import/DryRunProgress";
+import { DryRunResults } from "@/components/import/DryRunResults";
 import { ImportConfirmation } from "@/components/import/ImportConfirmation";
 import { ImportProgress, EntityProgress } from "@/components/import/ImportProgress";
 import { ImportResults } from "@/components/import/ImportResults";
 import { ParsedCSV, ParseError, sortByImportOrder } from "@/lib/csvParser";
-import { MappingConfig, DEFAULT_MAPPING_CONFIG, NormalizationLog, EMPTY_NORMALIZATION_LOG } from "@/types/import";
+import { MappingConfig, DEFAULT_MAPPING_CONFIG, NormalizationLog, EMPTY_NORMALIZATION_LOG, DryRunResult } from "@/types/import";
 import { normalizeRecord } from "@/lib/importNormalization";
+import { performDryRun } from "@/lib/importService";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type ImportStep = 'type' | 'upload' | 'validation' | 'mapping' | 'confirmation' | 'processing' | 'results';
+type ImportStep = 'type' | 'upload' | 'validation' | 'mapping' | 'dry-run' | 'dry-run-results' | 'confirmation' | 'processing' | 'results';
 
 const STEPS = [
   { id: 'type', label: 'Type', description: 'Select import type' },
   { id: 'upload', label: 'Upload', description: 'Upload files' },
   { id: 'validate', label: 'Validate', description: 'Review validation' },
   { id: 'mapping', label: 'Mapping', description: 'Configure mappings' },
+  { id: 'dry-run', label: 'Dry Run', description: 'Simulate import' },
   { id: 'confirm', label: 'Confirm', description: 'Confirm import' },
   { id: 'process', label: 'Process', description: 'Import data' },
 ];
@@ -43,7 +47,13 @@ export default function DataImport() {
   const [mappingConfig, setMappingConfig] = useState<MappingConfig>(DEFAULT_MAPPING_CONFIG);
   const [normalizationLog, setNormalizationLog] = useState<NormalizationLog>(EMPTY_NORMALIZATION_LOG);
   
-  const stepIndex = ['type', 'upload', 'validation', 'mapping', 'confirmation', 'processing'].indexOf(currentStep);
+  // Dry-run state
+  const [dryRunProgress, setDryRunProgress] = useState(0);
+  const [dryRunMessage, setDryRunMessage] = useState('');
+  const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
+  const [isDryRunComplete, setIsDryRunComplete] = useState(false);
+  
+  const stepIndex = ['type', 'upload', 'validation', 'mapping', 'dry-run', 'confirmation', 'processing'].indexOf(currentStep);
   
   // Step handlers
   const handleTypeSelect = (type: ImportType) => {
@@ -61,8 +71,52 @@ export default function DataImport() {
     setCurrentStep('mapping');
   };
   
-  const handleMappingContinue = () => {
-    setCurrentStep('confirmation');
+  const handleMappingContinue = async () => {
+    if (!organization?.id) {
+      toast.error('No organization selected');
+      return;
+    }
+    
+    // Start dry-run
+    setCurrentStep('dry-run');
+    setDryRunProgress(0);
+    setDryRunMessage('Initializing...');
+    setIsDryRunComplete(false);
+    setDryRunResult(null);
+    
+    try {
+      const result = await performDryRun({
+        parsedFiles,
+        mappingConfig,
+        organizationId: organization.id,
+        onProgress: (progress, message) => {
+          setDryRunProgress(progress);
+          setDryRunMessage(message);
+        }
+      });
+      
+      setDryRunResult(result);
+      setIsDryRunComplete(true);
+      
+      // Auto-advance to results after a brief delay
+      setTimeout(() => {
+        setCurrentStep('dry-run-results');
+      }, 500);
+      
+    } catch (error) {
+      console.error('Dry-run error:', error);
+      toast.error('Dry-run failed. Please try again.');
+      setCurrentStep('mapping');
+    }
+  };
+  
+  const handleDryRunContinue = () => {
+    if (dryRunResult?.success) {
+      setCurrentStep('confirmation');
+    } else {
+      // Go back to mapping to fix issues
+      setCurrentStep('mapping');
+    }
   };
   
   const handleConfirm = async () => {
@@ -214,6 +268,10 @@ export default function DataImport() {
     setSourceSystemName('');
     setMappingConfig(DEFAULT_MAPPING_CONFIG);
     setNormalizationLog(EMPTY_NORMALIZATION_LOG);
+    setDryRunResult(null);
+    setDryRunProgress(0);
+    setDryRunMessage('');
+    setIsDryRunComplete(false);
   };
   
   return (
@@ -269,6 +327,23 @@ export default function DataImport() {
             />
           )}
           
+          {currentStep === 'dry-run' && (
+            <DryRunProgress
+              progress={dryRunProgress}
+              message={dryRunMessage}
+              isComplete={isDryRunComplete}
+              hasErrors={dryRunResult ? !dryRunResult.success : false}
+            />
+          )}
+          
+          {currentStep === 'dry-run-results' && dryRunResult && (
+            <DryRunResults
+              result={dryRunResult}
+              onBack={() => setCurrentStep('mapping')}
+              onContinue={handleDryRunContinue}
+            />
+          )}
+          
           {currentStep === 'confirmation' && importType && (
             <ImportConfirmation
               parsedFiles={parsedFiles}
@@ -276,7 +351,8 @@ export default function DataImport() {
               importType={importType}
               mappingConfig={mappingConfig}
               sourceSystemName={sourceSystemName}
-              onBack={() => setCurrentStep('mapping')}
+              dryRunResult={dryRunResult}
+              onBack={() => setCurrentStep('dry-run-results')}
               onConfirm={handleConfirm}
             />
           )}

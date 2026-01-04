@@ -23,8 +23,14 @@ import type {
   TimeEntryImport,
   ExpenseImport,
   BudgetAdjustmentImport,
+  MappingConfig,
+  NormalizationLog,
+  DryRunResult,
+  DryRunRecordDetail,
+  DryRunError,
+  DryRunWarning,
 } from '@/types/import';
-import { DEFAULT_IMPORT_CONFIG } from '@/types/import';
+import { DEFAULT_IMPORT_CONFIG, EMPTY_NORMALIZATION_LOG } from '@/types/import';
 import {
   importFileSchema,
   clientImportSchema,
@@ -930,4 +936,467 @@ export async function rollbackImportBatch(batchId: string): Promise<void> {
     .from('import_batches' as any)
     .update({ status: 'rolled_back' })
     .eq('id', batchId) as any);
+}
+
+// ============================================
+// Dry-Run Import Functions
+// ============================================
+
+import { ParsedCSV } from '@/lib/csvParser';
+import { normalizeRecord } from '@/lib/importNormalization';
+import { resolveUpdateType, resolveEventType } from '@/lib/importMapping';
+
+interface DryRunReferenceData {
+  clients: Map<string, string>;
+  contacts: Map<string, string>;
+  cases: Map<string, string>;
+  subjects: Map<string, string>;
+  activities: Map<string, string>;
+  users: Map<string, string>;
+}
+
+interface DryRunImportMaps {
+  clients: Map<string, Record<string, unknown>>;
+  contacts: Map<string, Record<string, unknown>>;
+  cases: Map<string, Record<string, unknown>>;
+  subjects: Map<string, Record<string, unknown>>;
+  activities: Map<string, Record<string, unknown>>;
+}
+
+interface DryRunValidationContext {
+  existingRefs: DryRunReferenceData;
+  importMaps: DryRunImportMaps;
+  picklists: { updateTypes: string[]; eventTypes: string[]; };
+  mappingConfig: MappingConfig;
+  seenIds: Map<string, Set<string>>;
+}
+
+function buildDryRunImportMaps(parsedFiles: ParsedCSV[]): DryRunImportMaps {
+  const maps: DryRunImportMaps = {
+    clients: new Map(),
+    contacts: new Map(),
+    cases: new Map(),
+    subjects: new Map(),
+    activities: new Map(),
+  };
+  
+  for (const file of parsedFiles) {
+    const mapKey = file.entityType === 'client' ? 'clients' 
+      : file.entityType === 'contact' ? 'contacts'
+      : file.entityType === 'case' ? 'cases'
+      : file.entityType === 'subject' ? 'subjects'
+      : file.entityType === 'activity' ? 'activities'
+      : null;
+    
+    if (mapKey) {
+      for (const row of file.rows) {
+        const extId = row.external_record_id as string;
+        if (extId) {
+          maps[mapKey].set(extId, row);
+        }
+      }
+    }
+  }
+  
+  return maps;
+}
+
+async function loadDryRunExistingReferences(organizationId: string): Promise<DryRunReferenceData> {
+  const refs: DryRunReferenceData = {
+    clients: new Map(),
+    contacts: new Map(),
+    cases: new Map(),
+    subjects: new Map(),
+    activities: new Map(),
+    users: new Map(),
+  };
+  
+  const { data: accounts } = await supabase
+    .from('accounts')
+    .select('id, external_record_id')
+    .eq('organization_id', organizationId)
+    .not('external_record_id', 'is', null);
+  
+  for (const acc of accounts || []) {
+    if (acc.external_record_id) refs.clients.set(acc.external_record_id, acc.id);
+  }
+  
+  const { data: contacts } = await supabase
+    .from('contacts')
+    .select('id, external_record_id')
+    .eq('organization_id', organizationId)
+    .not('external_record_id', 'is', null);
+  
+  for (const contact of contacts || []) {
+    if (contact.external_record_id) refs.contacts.set(contact.external_record_id, contact.id);
+  }
+  
+  const { data: cases } = await supabase
+    .from('cases')
+    .select('id, external_record_id')
+    .eq('organization_id', organizationId)
+    .not('external_record_id', 'is', null);
+  
+  for (const c of cases || []) {
+    if (c.external_record_id) refs.cases.set(c.external_record_id, c.id);
+  }
+  
+  const { data: subjects } = await supabase
+    .from('case_subjects')
+    .select('id, external_record_id')
+    .eq('organization_id', organizationId)
+    .not('external_record_id', 'is', null);
+  
+  for (const subj of subjects || []) {
+    if (subj.external_record_id) refs.subjects.set(subj.external_record_id, subj.id);
+  }
+  
+  const { data: activities } = await supabase
+    .from('case_activities')
+    .select('id, external_record_id')
+    .eq('organization_id', organizationId)
+    .not('external_record_id', 'is', null);
+  
+  for (const act of activities || []) {
+    if (act.external_record_id) refs.activities.set(act.external_record_id, act.id);
+  }
+  
+  const { data: members } = await supabase
+    .from('organization_members')
+    .select('user_id, profiles:user_id (email)')
+    .eq('organization_id', organizationId);
+  
+  for (const member of members || []) {
+    const profile = member.profiles as { email?: string } | null;
+    if (profile?.email) refs.users.set(profile.email.toLowerCase(), member.user_id);
+  }
+  
+  return refs;
+}
+
+async function loadDryRunPicklistValues(organizationId: string): Promise<{ updateTypes: string[]; eventTypes: string[]; }> {
+  const { data: picklists } = await supabase
+    .from('picklists')
+    .select('type, value')
+    .eq('organization_id', organizationId)
+    .eq('is_active', true);
+  
+  const updateTypes: string[] = [];
+  const eventTypes: string[] = [];
+  
+  for (const pl of picklists || []) {
+    if (pl.type === 'update_type') updateTypes.push(pl.value);
+    else if (pl.type === 'event_type') eventTypes.push(pl.value);
+  }
+  
+  return { updateTypes, eventTypes };
+}
+
+function validateDryRunRecord(
+  record: Record<string, unknown>,
+  entityType: string,
+  rowNumber: number,
+  context: DryRunValidationContext
+): { errors: DryRunError[]; warnings: DryRunWarning[] } {
+  const errors: DryRunError[] = [];
+  const warnings: DryRunWarning[] = [];
+  const extId = (record.external_record_id as string) || '';
+  
+  if (!extId) {
+    errors.push({
+      row: rowNumber, entityType, externalRecordId: '',
+      field: 'external_record_id', message: 'Missing required field: external_record_id', severity: 'blocking'
+    });
+  }
+  
+  if (extId) {
+    const seenSet = context.seenIds.get(entityType) || new Set();
+    if (seenSet.has(extId)) {
+      errors.push({
+        row: rowNumber, entityType, externalRecordId: extId,
+        field: 'external_record_id', message: `Duplicate external_record_id: ${extId}`, severity: 'blocking'
+      });
+    }
+    seenSet.add(extId);
+    context.seenIds.set(entityType, seenSet);
+  }
+  
+  switch (entityType) {
+    case 'client':
+      if (!record.name) {
+        errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'name', message: 'Missing required field: name', severity: 'blocking' });
+      }
+      break;
+    
+    case 'contact':
+      if (!record.first_name) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'first_name', message: 'Missing required field: first_name', severity: 'blocking' });
+      if (!record.last_name) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'last_name', message: 'Missing required field: last_name', severity: 'blocking' });
+      if (record.external_account_id) {
+        const accId = record.external_account_id as string;
+        if (!context.importMaps.clients.has(accId) && !context.existingRefs.clients.has(accId)) {
+          errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_account_id', message: `Referenced client not found: ${accId}`, severity: 'blocking' });
+        }
+      }
+      break;
+    
+    case 'case':
+      if (!record.case_number) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'case_number', message: 'Missing required field: case_number', severity: 'blocking' });
+      if (!record.title) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'title', message: 'Missing required field: title', severity: 'blocking' });
+      if (record.external_account_id) {
+        const accId = record.external_account_id as string;
+        if (!context.importMaps.clients.has(accId) && !context.existingRefs.clients.has(accId)) {
+          errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_account_id', message: `Referenced client not found: ${accId}`, severity: 'blocking' });
+        }
+      }
+      if (record.case_manager_email) {
+        const email = (record.case_manager_email as string).toLowerCase();
+        if (!context.existingRefs.users.has(email)) {
+          warnings.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'case_manager_email', message: `User not found: ${email}`, autoResolution: 'Field will be skipped' });
+        }
+      }
+      break;
+    
+    case 'subject':
+      if (!record.name) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'name', message: 'Missing required field: name', severity: 'blocking' });
+      if (!record.subject_type) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'subject_type', message: 'Missing required field: subject_type', severity: 'blocking' });
+      if (!record.external_case_id) {
+        errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: 'Missing required field: external_case_id', severity: 'blocking' });
+      } else {
+        const caseId = record.external_case_id as string;
+        if (!context.importMaps.cases.has(caseId) && !context.existingRefs.cases.has(caseId)) {
+          errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: `Referenced case not found: ${caseId}`, severity: 'blocking' });
+        }
+      }
+      break;
+    
+    case 'update':
+      if (!record.title) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'title', message: 'Missing required field: title', severity: 'blocking' });
+      if (!record.update_type) {
+        errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'update_type', message: 'Missing required field: update_type', severity: 'blocking' });
+      } else {
+        const result = resolveUpdateType(record.update_type as string, context.mappingConfig, context.picklists.updateTypes);
+        if (result.wasCreated) warnings.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'update_type', message: `New update type: ${result.value}`, autoResolution: 'Will create picklist value' });
+        else if (result.matchType === 'fuzzy') warnings.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'update_type', message: `Fuzzy matched: ${record.update_type} → ${result.value}`, autoResolution: 'Using closest match' });
+      }
+      if (!record.external_case_id) {
+        errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: 'Missing required field: external_case_id', severity: 'blocking' });
+      } else {
+        const caseId = record.external_case_id as string;
+        if (!context.importMaps.cases.has(caseId) && !context.existingRefs.cases.has(caseId)) {
+          errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: `Referenced case not found: ${caseId}`, severity: 'blocking' });
+        }
+      }
+      break;
+    
+    case 'activity':
+      if (!record.title) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'title', message: 'Missing required field: title', severity: 'blocking' });
+      if (!record.activity_type) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'activity_type', message: 'Missing required field: activity_type', severity: 'blocking' });
+      if (record.event_subtype) {
+        const result = resolveEventType(record.event_subtype as string, context.mappingConfig, context.picklists.eventTypes);
+        if (result.wasCreated) warnings.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'event_subtype', message: `New event type: ${result.value}`, autoResolution: 'Will create picklist value' });
+        else if (result.matchType === 'fuzzy') warnings.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'event_subtype', message: `Fuzzy matched: ${record.event_subtype} → ${result.value}`, autoResolution: 'Using closest match' });
+      }
+      if (!record.external_case_id) {
+        errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: 'Missing required field: external_case_id', severity: 'blocking' });
+      } else {
+        const caseId = record.external_case_id as string;
+        if (!context.importMaps.cases.has(caseId) && !context.existingRefs.cases.has(caseId)) {
+          errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: `Referenced case not found: ${caseId}`, severity: 'blocking' });
+        }
+      }
+      break;
+    
+    case 'time_entry':
+      if (!record.description) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'description', message: 'Missing required field: description', severity: 'blocking' });
+      if (record.hours === undefined) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'hours', message: 'Missing required field: hours', severity: 'blocking' });
+      else if (Number(record.hours) > 24) warnings.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'hours', message: `Unusually high hours: ${record.hours}`, autoResolution: 'Will import as-is' });
+      if (!record.external_case_id) {
+        errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: 'Missing required field: external_case_id', severity: 'blocking' });
+      } else {
+        const caseId = record.external_case_id as string;
+        if (!context.importMaps.cases.has(caseId) && !context.existingRefs.cases.has(caseId)) {
+          errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: `Referenced case not found: ${caseId}`, severity: 'blocking' });
+        }
+      }
+      break;
+    
+    case 'expense':
+      if (!record.description) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'description', message: 'Missing required field: description', severity: 'blocking' });
+      if (record.amount === undefined) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'amount', message: 'Missing required field: amount', severity: 'blocking' });
+      if (!record.external_case_id) {
+        errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: 'Missing required field: external_case_id', severity: 'blocking' });
+      } else {
+        const caseId = record.external_case_id as string;
+        if (!context.importMaps.cases.has(caseId) && !context.existingRefs.cases.has(caseId)) {
+          errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: `Referenced case not found: ${caseId}`, severity: 'blocking' });
+        }
+      }
+      break;
+    
+    case 'budget_adjustment':
+      if (!record.reason) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'reason', message: 'Missing required field: reason', severity: 'blocking' });
+      if (!record.adjustment_type) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'adjustment_type', message: 'Missing required field: adjustment_type', severity: 'blocking' });
+      if (record.new_value === undefined) errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'new_value', message: 'Missing required field: new_value', severity: 'blocking' });
+      if (!record.external_case_id) {
+        errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: 'Missing required field: external_case_id', severity: 'blocking' });
+      } else {
+        const caseId = record.external_case_id as string;
+        if (!context.importMaps.cases.has(caseId) && !context.existingRefs.cases.has(caseId)) {
+          errors.push({ row: rowNumber, entityType, externalRecordId: extId, field: 'external_case_id', message: `Referenced case not found: ${caseId}`, severity: 'blocking' });
+        }
+      }
+      break;
+  }
+  
+  return { errors, warnings };
+}
+
+export interface DryRunOptions {
+  parsedFiles: ParsedCSV[];
+  mappingConfig: MappingConfig;
+  organizationId: string;
+  onProgress?: (progress: number, message: string) => void;
+}
+
+export async function performDryRun(options: DryRunOptions): Promise<DryRunResult> {
+  const { parsedFiles, mappingConfig, organizationId, onProgress } = options;
+  const startTime = Date.now();
+  
+  const errors: DryRunError[] = [];
+  const warnings: DryRunWarning[] = [];
+  const details: DryRunRecordDetail[] = [];
+  const normalizationLog: NormalizationLog = { ...EMPTY_NORMALIZATION_LOG };
+  
+  onProgress?.(0, 'Loading existing data...');
+  
+  const existingRefs = await loadDryRunExistingReferences(organizationId);
+  const picklists = await loadDryRunPicklistValues(organizationId);
+  const importMaps = buildDryRunImportMaps(parsedFiles);
+  
+  const context: DryRunValidationContext = {
+    existingRefs,
+    importMaps,
+    picklists,
+    mappingConfig,
+    seenIds: new Map()
+  };
+  
+  const totalRecords = parsedFiles.reduce((sum, f) => sum + f.rowCount, 0);
+  let processed = 0;
+  let recordsToCreate = 0;
+  let recordsToSkip = 0;
+  
+  for (const file of parsedFiles) {
+    onProgress?.(Math.round((processed / totalRecords) * 100), `Validating ${file.entityType}...`);
+    
+    for (let i = 0; i < file.rows.length; i++) {
+      const row = file.rows[i];
+      const rowNumber = i + 2;
+      
+      const { normalized, changes } = normalizeRecord(row, file.entityType);
+      
+      for (const change of changes) {
+        if (change.rule.includes('date')) normalizationLog.datesNormalized++;
+        else if (change.rule.includes('currency')) normalizationLog.currenciesCleaned++;
+        else if (change.rule.includes('text')) normalizationLog.textsTrimmed++;
+        else if (change.rule.includes('email')) normalizationLog.emailsNormalized++;
+        else if (change.rule.includes('phone')) normalizationLog.phonesNormalized++;
+        else if (change.rule.includes('state')) normalizationLog.statesNormalized++;
+      }
+      
+      const validation = validateDryRunRecord(normalized, file.entityType, rowNumber, context);
+      const hasBlockingError = validation.errors.some(e => e.severity === 'blocking');
+      const extId = (row.external_record_id as string) || `row-${rowNumber}`;
+      
+      let operation: 'create' | 'update' | 'skip' = 'create';
+      let skipReason: string | undefined;
+      
+      if (hasBlockingError) {
+        operation = 'skip';
+        skipReason = validation.errors[0].message;
+        recordsToSkip++;
+      } else {
+        const refMap = file.entityType === 'client' ? existingRefs.clients
+          : file.entityType === 'contact' ? existingRefs.contacts
+          : file.entityType === 'case' ? existingRefs.cases
+          : file.entityType === 'subject' ? existingRefs.subjects
+          : file.entityType === 'activity' ? existingRefs.activities
+          : null;
+        
+        if (refMap && extId && refMap.has(extId)) operation = 'update';
+        recordsToCreate++;
+      }
+      
+      details.push({
+        entityType: file.entityType,
+        externalRecordId: extId,
+        operation,
+        normalizedData: normalized,
+        originalData: row,
+        fieldChanges: changes,
+        mappingsApplied: [],
+        warnings: validation.warnings.map(w => w.message),
+        skipReason
+      });
+      
+      errors.push(...validation.errors);
+      warnings.push(...validation.warnings);
+      processed++;
+    }
+  }
+  
+  normalizationLog.typesMapped = { 
+    update_type: mappingConfig.updateTypes.filter(m => m.casewyzeValue).length, 
+    event_type: mappingConfig.eventTypes.filter(m => m.casewyzeValue).length 
+  };
+  normalizationLog.typesCreated = [...mappingConfig.updateTypes, ...mappingConfig.eventTypes]
+    .filter(m => m.autoCreate).map(m => m.casewyzeValue);
+  
+  onProgress?.(100, 'Dry run complete');
+  
+  return {
+    success: !errors.some(e => e.severity === 'blocking'),
+    totalRecords,
+    recordsToCreate,
+    recordsToUpdate: details.filter(d => d.operation === 'update').length,
+    recordsToSkip,
+    errors,
+    warnings,
+    details,
+    normalizationLog,
+    timestamp: new Date().toISOString(),
+    durationMs: Date.now() - startTime
+  };
+}
+
+export function exportDryRunAsCSV(result: DryRunResult): string {
+  const headers = ['Entity Type', 'External ID', 'Operation', 'Status', 'Field', 'Original Value', 'Normalized Value', 'Warnings'];
+  const rows: string[][] = [headers];
+  
+  for (const detail of result.details) {
+    const status = detail.operation === 'skip' ? 'error' : 'valid';
+    const warningText = detail.warnings.join('; ');
+    
+    if (detail.fieldChanges.length === 0) {
+      rows.push([detail.entityType, detail.externalRecordId, detail.operation, status, '', '', '', warningText]);
+    } else {
+      for (const change of detail.fieldChanges) {
+        rows.push([detail.entityType, detail.externalRecordId, detail.operation, status, change.field, String(change.originalValue ?? ''), String(change.normalizedValue ?? ''), warningText]);
+      }
+    }
+  }
+  
+  return rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+}
+
+export function exportDryRunAsJSON(result: DryRunResult): string {
+  return JSON.stringify({
+    timestamp: result.timestamp,
+    duration_ms: result.durationMs,
+    summary: { total: result.totalRecords, to_create: result.recordsToCreate, to_update: result.recordsToUpdate, to_skip: result.recordsToSkip, errors: result.errors.length, warnings: result.warnings.length },
+    normalization_log: result.normalizationLog,
+    records: result.details,
+    errors: result.errors,
+    warnings: result.warnings
+  }, null, 2);
 }

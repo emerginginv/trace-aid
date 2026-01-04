@@ -501,3 +501,97 @@ export interface SavedTypeMapping {
   created_at: string;
   updated_at: string;
 }
+
+// ============================================
+// Dry-Run Types
+// ============================================
+
+/**
+ * Result of a dry-run import simulation
+ */
+export interface DryRunResult {
+  /** Whether all records passed validation (no blocking errors) */
+  success: boolean;
+  /** Total number of records processed */
+  totalRecords: number;
+  /** Number of records that will be created */
+  recordsToCreate: number;
+  /** Number of records that will be updated */
+  recordsToUpdate: number;
+  /** Number of records that will be skipped due to errors */
+  recordsToSkip: number;
+  /** All validation errors found */
+  errors: DryRunError[];
+  /** All validation warnings found */
+  warnings: DryRunWarning[];
+  /** Detailed info for each record */
+  details: DryRunRecordDetail[];
+  /** Summary of normalizations that will be applied */
+  normalizationLog: NormalizationLog;
+  /** When the dry-run was performed */
+  timestamp: string;
+  /** How long the dry-run took in milliseconds */
+  durationMs: number;
+}
+
+/**
+ * Detailed info for a single record in the dry-run
+ */
+export interface DryRunRecordDetail {
+  /** Entity type (client, case, etc.) */
+  entityType: string;
+  /** External record ID from the import file */
+  externalRecordId: string;
+  /** What operation will be performed */
+  operation: 'create' | 'update' | 'skip';
+  /** Data after normalization */
+  normalizedData: Record<string, unknown>;
+  /** Original data from the import file */
+  originalData: Record<string, unknown>;
+  /** List of field-level changes from normalization */
+  fieldChanges: NormalizationChange[];
+  /** List of mappings applied to this record */
+  mappingsApplied: string[];
+  /** Warning messages for this record */
+  warnings: string[];
+  /** If skipped, the reason why */
+  skipReason?: string;
+}
+
+/**
+ * A validation error that blocks import
+ */
+export interface DryRunError {
+  /** Row number in the source file (1-based, includes header) */
+  row: number;
+  /** Entity type being validated */
+  entityType: string;
+  /** External record ID of the problematic record */
+  externalRecordId: string;
+  /** Field that has the error */
+  field: string;
+  /** Error message */
+  message: string;
+  /** Error severity - blocking errors prevent import */
+  severity: 'error' | 'blocking';
+  /** Optional suggestion for fixing */
+  suggestion?: string;
+}
+
+/**
+ * A validation warning that doesn't block import
+ */
+export interface DryRunWarning {
+  /** Row number in the source file */
+  row: number;
+  /** Entity type being validated */
+  entityType: string;
+  /** External record ID of the record */
+  externalRecordId: string;
+  /** Field with the warning */
+  field: string;
+  /** Warning message */
+  message: string;
+  /** How the system will automatically resolve this */
+  autoResolution?: string;
+}
