@@ -131,8 +131,22 @@ export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: Temp
     // Case placeholders
     .replace(/\{\{case_title\}\}/g, "Sample Investigation Case")
     .replace(/\{\{case_number\}\}/g, "CASE-2024-001")
+    .replace(/\{\{claim_number\}\}/g, "CLM-2024-98765")
     .replace(/\{\{case_manager\}\}/g, "John Doe")
     .replace(/\{\{current_date\}\}/g, new Date().toLocaleDateString())
+    // Client/Subject/Investigator placeholders
+    .replace(/\{\{client_list\}\}/g, "Acme Insurance Co., Jane Client")
+    .replace(/\{\{primary_client\}\}/g, "Acme Insurance Co.")
+    .replace(/\{\{subject_list\}\}/g, "John Smith (Primary), Mary Johnson")
+    .replace(/\{\{primary_subject\}\}/g, "John Smith")
+    .replace(/\{\{investigator_list\}\}/g, "Mike Investigator, Sarah Field")
+    .replace(/\{\{location_list\}\}/g, "123 Oak Avenue, New York, NY; 456 Pine Street, Boston, MA")
+    // Date placeholders
+    .replace(/\{\{assignment_date\}\}/g, "January 10, 2024")
+    .replace(/\{\{surveillance_dates\}\}/g, "January 15, 2024 - January 22, 2024")
+    .replace(/\{\{surveillance_start\}\}/g, "January 15, 2024")
+    .replace(/\{\{surveillance_end\}\}/g, "January 22, 2024")
+    .replace(/\{\{due_date\}\}/g, "February 1, 2024")
     .replace(/\{\{update_list\}\}/g, 
       `<p><strong>2024-01-15</strong> - Initial Contact (John Doe)<br>
 Subject contacted and provided initial information.</p>
@@ -195,11 +209,35 @@ Case is progressing well. Waiting for additional information.</p>`
                   </div>
                   
                   <p className="text-xs text-muted-foreground mb-2 font-medium">Case Information:</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
                     <div><code className="bg-muted px-1 rounded">{"{{case_title}}"}</code> - Case title</div>
                     <div><code className="bg-muted px-1 rounded">{"{{case_number}}"}</code> - Case number</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{claim_number}}"}</code> - Claim/reference number</div>
                     <div><code className="bg-muted px-1 rounded">{"{{case_manager}}"}</code> - Case manager name</div>
                     <div><code className="bg-muted px-1 rounded">{"{{current_date}}"}</code> - Current date</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{due_date}}"}</code> - Due date</div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">People & Locations:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
+                    <div><code className="bg-muted px-1 rounded">{"{{client_list}}"}</code> - All clients</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{primary_client}}"}</code> - Primary client</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{subject_list}}"}</code> - All subjects</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{primary_subject}}"}</code> - Primary subject</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{investigator_list}}"}</code> - All investigators</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{location_list}}"}</code> - Case locations</div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">Dates:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
+                    <div><code className="bg-muted px-1 rounded">{"{{assignment_date}}"}</code> - Assignment/start date</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{surveillance_dates}}"}</code> - Surveillance date range</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{surveillance_start}}"}</code> - Surveillance start</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{surveillance_end}}"}</code> - Surveillance end</div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">Updates:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     <div className="sm:col-span-2">
                       <code className="bg-muted px-1 rounded">{"{{update_list}}"}</code> - All case updates (date, author, type, content)
                     </div>

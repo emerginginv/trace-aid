@@ -516,6 +516,7 @@ export type Database = {
           budget_notes: string | null
           case_manager_id: string | null
           case_number: string
+          claim_number: string | null
           closed_at: string | null
           closed_by_user_id: string | null
           contact_id: string | null
@@ -529,6 +530,8 @@ export type Database = {
           parent_case_id: string | null
           start_date: string | null
           status: string
+          surveillance_end_date: string | null
+          surveillance_start_date: string | null
           title: string
           updated_at: string | null
           use_primary_subject_as_title: boolean | null
@@ -541,6 +544,7 @@ export type Database = {
           budget_notes?: string | null
           case_manager_id?: string | null
           case_number: string
+          claim_number?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
           contact_id?: string | null
@@ -554,6 +558,8 @@ export type Database = {
           parent_case_id?: string | null
           start_date?: string | null
           status?: string
+          surveillance_end_date?: string | null
+          surveillance_start_date?: string | null
           title: string
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null
@@ -566,6 +572,7 @@ export type Database = {
           budget_notes?: string | null
           case_manager_id?: string | null
           case_number?: string
+          claim_number?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
           contact_id?: string | null
@@ -579,6 +586,8 @@ export type Database = {
           parent_case_id?: string | null
           start_date?: string | null
           status?: string
+          surveillance_end_date?: string | null
+          surveillance_start_date?: string | null
           title?: string
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null

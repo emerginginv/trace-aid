@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import html2pdf from "html2pdf.js";
 import { getCurrentOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
+import { getCaseVariables, formatCaseVariablesForTemplate, CaseVariables } from "@/lib/caseVariables";
 
 interface Template {
   id: string;
@@ -48,17 +49,24 @@ export const GenerateReportDialog = ({
   const [generating, setGenerating] = useState(false);
   const [exportFormat, setExportFormat] = useState<"pdf" | "docx">("pdf");
   const [orgProfile, setOrgProfile] = useState<OrganizationProfile | null>(null);
+  const [caseVariables, setCaseVariables] = useState<CaseVariables | null>(null);
 
   useEffect(() => {
     if (open) {
       fetchTemplates();
       fetchOrgProfile();
+      fetchCaseVariables();
     }
-  }, [open]);
+  }, [open, caseId]);
 
   const fetchOrgProfile = async () => {
     const profile = await getCurrentOrganizationProfile();
     setOrgProfile(profile);
+  };
+
+  const fetchCaseVariables = async () => {
+    const variables = await getCaseVariables(caseId);
+    setCaseVariables(variables);
   };
 
   const fetchTemplates = async () => {
@@ -112,13 +120,29 @@ export const GenerateReportDialog = ({
       ? `<img src="${orgProfile.logoUrl}" alt="${orgProfile.companyName || 'Company'} Logo" style="max-height: 60px; max-width: 200px;" />`
       : "";
 
+    // Get case variable placeholders
+    const caseVars = caseVariables ? formatCaseVariablesForTemplate(caseVariables) : {};
+
     return templateBody
-      // Case placeholders
+      // Case placeholders (original)
       .replace(/\{\{case_title\}\}/g, caseData.title)
       .replace(/\{\{case_number\}\}/g, caseData.case_number)
       .replace(/\{\{case_manager\}\}/g, caseManagerName)
       .replace(/\{\{current_date\}\}/g, new Date().toLocaleDateString())
       .replace(/\{\{update_list\}\}/g, updateList)
+      // New case variable placeholders
+      .replace(/\{\{claim_number\}\}/g, caseVars.claim_number || "")
+      .replace(/\{\{client_list\}\}/g, caseVars.client_list || "")
+      .replace(/\{\{subject_list\}\}/g, caseVars.subject_list || "")
+      .replace(/\{\{primary_subject\}\}/g, caseVars.primary_subject || "")
+      .replace(/\{\{primary_client\}\}/g, caseVars.primary_client || "")
+      .replace(/\{\{investigator_list\}\}/g, caseVars.investigator_list || "")
+      .replace(/\{\{location_list\}\}/g, caseVars.location_list || "")
+      .replace(/\{\{assignment_date\}\}/g, caseVars.assignment_date || "")
+      .replace(/\{\{surveillance_dates\}\}/g, caseVars.surveillance_dates || "")
+      .replace(/\{\{surveillance_start\}\}/g, caseVars.surveillance_start || "")
+      .replace(/\{\{surveillance_end\}\}/g, caseVars.surveillance_end || "")
+      .replace(/\{\{due_date\}\}/g, caseVars.due_date || "")
       // Organization branding placeholders
       .replace(/\{\{company_name\}\}/g, orgProfile?.companyName || "")
       .replace(/\{\{company_logo\}\}/g, logoHtml)
