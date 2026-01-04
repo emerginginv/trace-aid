@@ -1,0 +1,4 @@
+external_record_id,external_case_id,external_subject_id,is_primary
+CS-001,CASE-001,SUBJ-001,true
+CS-002,CASE-001,SUBJ-002,false
+CS-003,CASE-001,SUBJ-003,false

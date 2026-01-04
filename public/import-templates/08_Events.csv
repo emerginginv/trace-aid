@@ -1,0 +1,5 @@
+external_record_id,external_case_id,activity_type,title,description,status,due_date,completed,completed_at,event_subtype,assigned_to_email,created_at
+EVT-001,CASE-001,task,Review surveillance footage,Review and annotate video from Day 1,completed,2024-01-21,true,2024-01-21T16:00:00Z,,inv1@company.com,2024-01-20T17:00:00Z
+EVT-002,CASE-001,deadline,Report due to client,Final report due,to_do,2024-02-15,false,,,manager@ourcompany.com,2024-01-15T09:00:00Z
+EVT-003,CASE-001,meeting,Client status call,Weekly status update with adjuster,completed,2024-01-22,true,2024-01-22T10:30:00Z,Client Meeting,manager@ourcompany.com,2024-01-20T08:00:00Z
+EVT-004,CASE-002,call,Interview reference,Call employment reference,in_progress,2024-02-05,false,,,inv2@company.com,2024-02-01T09:00:00Z

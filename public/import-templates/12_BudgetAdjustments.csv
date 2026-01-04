@@ -1,0 +1,3 @@
+external_record_id,external_case_id,adjustment_type,new_value,reason,previous_value,adjustment_amount,author_email,created_at
+ADJ-001,CASE-001,hours,60,Client authorized additional 20 hours for extended surveillance,40,20,manager@ourcompany.com,2024-01-25T10:00:00Z
+ADJ-002,CASE-001,dollars,7500,Budget increase approved per client email dated 1/25,5000,2500,manager@ourcompany.com,2024-01-25T10:00:00Z

@@ -1,0 +1,5 @@
+external_record_id,external_case_id,date,amount,description,category,quantity,unit_price,external_subject_id,external_activity_id,notes,author_email,created_at
+EXP-001,CASE-001,2024-01-20,45.50,Mileage to surveillance location,Mileage,65,0.70,,,Round trip 65 miles,inv1@company.com,2024-01-20T18:00:00Z
+EXP-002,CASE-001,2024-01-20,12.50,Lunch during surveillance,Meals,1,12.50,,,,inv1@company.com,2024-01-20T18:00:00Z
+EXP-003,CASE-002,2024-02-01,35,Background database search,Database Fees,1,35,,,,inv2@company.com,2024-02-01T14:00:00Z
+EXP-004,CASE-001,2024-01-21,150,Video equipment rental,Equipment,1,150,,,HD camera for covert recording,inv1@company.com,2024-01-21T09:00:00Z

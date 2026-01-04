@@ -1,0 +1,3 @@
+external_record_id,external_case_id,budget_hours,budget_dollars,budget_notes
+BUD-001,CASE-001,40,5000,Initial authorization per client agreement
+BUD-002,CASE-002,8,800,Standard background check package
