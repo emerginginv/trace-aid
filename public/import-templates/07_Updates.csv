@@ -1,0 +1,4 @@
+external_record_id,external_case_id,title,update_type,description,created_at,author_email
+UPD-001,CASE-001,Initial Surveillance Day 1,Surveillance Report,Subject was observed leaving residence at 0800 hours...,2024-01-20T08:00:00Z,inv1@company.com
+UPD-002,CASE-001,Background Check Complete,Background Check,No criminal history found. Employment verified.,2024-01-21T14:30:00Z,inv2@company.com
+UPD-003,CASE-001,Client Update Call,Status Update,Spoke with adjuster John Smith regarding case progress.,2024-01-22T10:00:00Z,manager@ourcompany.com

@@ -1,0 +1,4 @@
+external_record_id,external_account_id,first_name,last_name,email,phone,address,city,state,zip_code,notes
+CON-001,CLT-001,John,Smith,jsmith@abcins.com,555-111-2222,123 Main St,Chicago,IL,60601,Primary adjuster
+CON-002,CLT-001,Jane,Doe,jdoe@abcins.com,555-333-4444,,,,,Secondary contact
+CON-003,CLT-002,Bob,Wilson,bwilson@xyzlaw.com,555-555-6666,456 Oak Ave,Los Angeles,CA,90001,Intake coordinator

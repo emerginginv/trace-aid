@@ -1,0 +1,3 @@
+external_record_id,case_number,title,external_account_id,external_contact_id,external_parent_case_id,claim_number,status,start_date,due_date,surveillance_start_date,surveillance_end_date,case_manager_email,investigator_emails,budget_hours,budget_dollars,budget_notes,description
+CASE-001,INV-2024-001,Workers Comp Surveillance - Smith,CLT-001,CON-001,,WC-12345,open,2024-01-15,2024-02-15,2024-01-20,2024-01-25,manager@ourcompany.com,"inv1@company.com,inv2@company.com",40,5000,Initial authorization,Surveillance of claimant John Smith for workers compensation claim
+CASE-002,INV-2024-002,Background Check - Johnson,CLT-002,CON-003,,,,open,2024-02-01,2024-02-14,,,manager@ourcompany.com,,8,800,,Pre-employment background check

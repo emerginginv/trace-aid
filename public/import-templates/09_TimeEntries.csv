@@ -1,0 +1,4 @@
+external_record_id,external_case_id,date,hours,description,hourly_rate,amount,external_subject_id,external_activity_id,start_date,end_date,category,notes,author_email,created_at
+TIME-001,CASE-001,2024-01-20,6.5,Surveillance Day 1 - Subject observation,85,552.50,SUBJ-001,,2024-01-20,2024-01-20,Surveillance,,inv1@company.com,2024-01-20T18:00:00Z
+TIME-002,CASE-001,2024-01-21,4,Video review and report writing,85,340,,,,,Report Writing,,inv1@company.com,2024-01-21T17:00:00Z
+TIME-003,CASE-002,2024-02-01,2,Background research and database queries,75,150,,,,,Research,,inv2@company.com,2024-02-01T14:00:00Z
