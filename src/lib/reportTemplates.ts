@@ -12,12 +12,33 @@ export interface VariableBlockConfig {
   showLabels: boolean;
 }
 
+// Update type mapping configuration for update_collection sections
+export interface UpdateTypeMapping {
+  updateTypes: string[];           // Array of update type values (e.g., ['Surveillance', 'Interview'])
+  allowDuplicates: boolean;        // If true, same update can appear in multiple sections
+  includeAll: boolean;             // If true, ignores updateTypes and includes all
+}
+
 export interface CollectionConfig {
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   limit: number | null;
   filters?: Record<string, any>;
+  // Update type mapping for update_collection sections
+  updateTypeMapping?: UpdateTypeMapping;
 }
+
+// Default update types for reference
+export const DEFAULT_UPDATE_TYPES = [
+  'Surveillance',
+  'Case Update',
+  'Interview',
+  'Accounting',
+  'Client Contact',
+  '3rd Party Contact',
+  'Review',
+  'Other'
+];
 
 export interface TemplateSection {
   id: string;
@@ -369,4 +390,57 @@ export async function duplicateSystemTemplate(
 
   // Fetch and return the complete new template
   return getReportTemplate(newTemplate.id);
+}
+
+// ============= Update Type Mapping Helper Functions =============
+
+// Get update types configured for a section
+export function getSectionUpdateTypes(section: TemplateSection): string[] | null {
+  if (section.sectionType !== 'update_collection') return null;
+  if (!section.collectionConfig?.updateTypeMapping) return null;
+  
+  const mapping = section.collectionConfig.updateTypeMapping;
+  if (mapping.includeAll) return null; // null means "all types"
+  return mapping.updateTypes;
+}
+
+// Check if duplication is allowed for a section
+export function isSectionDuplicationAllowed(section: TemplateSection): boolean {
+  return section.collectionConfig?.updateTypeMapping?.allowDuplicates ?? false;
+}
+
+// Build update query params for a section (for report generation)
+export interface UpdateQueryParams {
+  updateTypes: string[] | null;  // null = all types
+  sortOrder: 'asc' | 'desc';
+  limit: number | null;
+  allowDuplicates: boolean;
+}
+
+export function getUpdateQueryParams(section: TemplateSection): UpdateQueryParams | null {
+  if (section.sectionType !== 'update_collection') return null;
+  
+  const config = section.collectionConfig;
+  const mapping = config?.updateTypeMapping;
+  
+  return {
+    updateTypes: mapping?.includeAll ? null : (mapping?.updateTypes ?? null),
+    sortOrder: config?.sortOrder ?? 'asc',
+    limit: config?.limit ?? null,
+    allowDuplicates: mapping?.allowDuplicates ?? false,
+  };
+}
+
+// Get default collection config for update_collection sections
+export function getDefaultUpdateCollectionConfig(): CollectionConfig {
+  return {
+    sortBy: 'created_at',
+    sortOrder: 'asc',
+    limit: null,
+    updateTypeMapping: {
+      updateTypes: [],
+      includeAll: true,
+      allowDuplicates: false,
+    },
+  };
 }

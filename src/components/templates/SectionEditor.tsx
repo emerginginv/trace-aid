@@ -18,9 +18,13 @@ import {
   type SectionType,
   type VariableBlockConfig,
   type VariableLayout,
+  type CollectionConfig,
+  type UpdateTypeMapping,
   SECTION_TYPE_LABELS,
   AVAILABLE_CASE_VARIABLES,
+  getDefaultUpdateCollectionConfig,
 } from "@/lib/reportTemplates";
+import { UpdateTypeMappingEditor } from "./UpdateTypeMappingEditor";
 
 interface SectionEditorProps {
   section: TemplateSection;
@@ -57,7 +61,12 @@ export function SectionEditor({
         showLabels: true,
       };
       updates.collectionConfig = null;
+    } else if (sectionType === 'update_collection') {
+      updates.content = null;
+      updates.variableConfig = null;
+      updates.collectionConfig = getDefaultUpdateCollectionConfig();
     } else {
+      // event_collection
       updates.content = null;
       updates.variableConfig = null;
       updates.collectionConfig = {
@@ -125,6 +134,37 @@ export function SectionEditor({
 
   const handleVisibilityToggle = () => {
     onUpdate({ isVisible: !section.isVisible });
+  };
+
+  // Update collection config handlers
+  const handleUpdateMappingChange = (updateTypeMapping: UpdateTypeMapping) => {
+    const currentConfig = section.collectionConfig || getDefaultUpdateCollectionConfig();
+    onUpdate({
+      collectionConfig: {
+        ...currentConfig,
+        updateTypeMapping,
+      },
+    });
+  };
+
+  const handleSortOrderChange = (sortOrder: 'asc' | 'desc') => {
+    const currentConfig = section.collectionConfig || getDefaultUpdateCollectionConfig();
+    onUpdate({
+      collectionConfig: {
+        ...currentConfig,
+        sortOrder,
+      },
+    });
+  };
+
+  const handleLimitChange = (limit: number | null) => {
+    const currentConfig = section.collectionConfig || getDefaultUpdateCollectionConfig();
+    onUpdate({
+      collectionConfig: {
+        ...currentConfig,
+        limit,
+      },
+    });
   };
 
   // Group variables by category
@@ -318,15 +358,31 @@ export function SectionEditor({
             </div>
           )}
 
-          {(section.sectionType === 'event_collection' || section.sectionType === 'update_collection') && (
+          {section.sectionType === 'update_collection' && (
+            <div className="space-y-3">
+              <Label className="text-xs font-medium">Update Type Mapping</Label>
+              <UpdateTypeMappingEditor
+                mapping={section.collectionConfig?.updateTypeMapping || null}
+                sortOrder={section.collectionConfig?.sortOrder || 'asc'}
+                limit={section.collectionConfig?.limit || null}
+                onMappingChange={handleUpdateMappingChange}
+                onSortOrderChange={handleSortOrderChange}
+                onLimitChange={handleLimitChange}
+                isReadOnly={isReadOnly}
+              />
+              <p className="text-xs text-muted-foreground">
+                Selected updates will be inserted in chronological order when generating reports.
+              </p>
+            </div>
+          )}
+
+          {section.sectionType === 'event_collection' && (
             <div className="bg-muted p-4 rounded-md text-center">
               <p className="text-sm text-muted-foreground">
-                {section.sectionType === 'event_collection'
-                  ? 'Activities/Events will be inserted here when generating the report.'
-                  : 'Case Updates will be inserted here when generating the report.'}
+                Activities/Events will be inserted here when generating the report.
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Collection rendering coming soon.
+                Event collection configuration coming soon.
               </p>
             </div>
           )}
