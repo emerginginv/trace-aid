@@ -109,10 +109,15 @@ export default function ImportReview() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {selectedBatch && (
+          {selectedBatch ? (
             <Button variant="ghost" size="sm" onClick={handleBackToList}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => navigate('/import')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Import
             </Button>
           )}
           <div>

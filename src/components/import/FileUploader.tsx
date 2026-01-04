@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Upload, FileText, X, AlertCircle, CheckCircle2, 
-  ArrowUp, ArrowDown, HelpCircle, Lightbulb
+  ArrowUp, ArrowDown, ArrowLeft, HelpCircle, Lightbulb
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ParsedCSV, parseCSVFile, detectEntityType, getEntityDisplayName, IMPORT_ORDER } from "@/lib/csvParser";
@@ -16,6 +16,7 @@ import { getEntityDefinition } from "@/lib/templateColumnDefinitions";
 interface FileUploaderProps {
   onFilesValidated: (files: ParsedCSV[]) => void;
   importType: 'new_migration' | 'incremental';
+  onBack?: () => void;
 }
 
 interface UploadedFile {
@@ -25,7 +26,7 @@ interface UploadedFile {
   entityType: string | null;
 }
 
-export function FileUploader({ onFilesValidated, importType }: FileUploaderProps) {
+export function FileUploader({ onFilesValidated, importType, onBack }: FileUploaderProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -314,20 +315,28 @@ export function FileUploader({ onFilesValidated, importType }: FileUploaderProps
         </CollapsibleContent>
       </Collapsible>
       
-      {/* Continue Button */}
-      {allParsed && validFiles.length > 0 && (
-        <div className="flex justify-end gap-3">
-          {hasErrors && (
-            <p className="text-sm text-destructive self-center">
+      {/* Footer Buttons */}
+      <div className="flex justify-between gap-3">
+        {onBack && (
+          <Button variant="outline" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+        )}
+        <div className="flex items-center gap-3 ml-auto">
+          {hasErrors && allParsed && validFiles.length > 0 && (
+            <p className="text-sm text-destructive">
               Some files have errors and will be skipped
             </p>
           )}
-          <Button onClick={handleContinue} size="lg">
-            Continue to Validation
-            <ArrowUp className="h-4 w-4 ml-2 rotate-90" />
-          </Button>
+          {allParsed && validFiles.length > 0 && (
+            <Button onClick={handleContinue} size="lg">
+              Continue to Validation
+              <ArrowUp className="h-4 w-4 ml-2 rotate-90" />
+            </Button>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

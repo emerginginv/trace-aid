@@ -367,6 +367,7 @@ export default function DataImport() {
                 <FileUploader 
                   importType={importType}
                   onFilesValidated={handleFilesValidated}
+                  onBack={() => setCurrentStep('type')}
                 />
               )}
               
