@@ -13,7 +13,7 @@ import { Search, Download, FileSpreadsheet, FileText, LayoutGrid, List, DollarSi
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
@@ -739,8 +739,6 @@ const Finance = () => {
         variant="destructive"
         loading={submitting}
       />
-
-      <ScrollProgress />
     </div>
   );
 };

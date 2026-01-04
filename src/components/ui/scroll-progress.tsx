@@ -43,12 +43,15 @@ export function ScrollProgress({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Calculate SVG circle properties
-  const size = 48;
-  const strokeWidth = 4;
+  // SVG circle properties - increased size for better visibility
+  const size = 56;
+  const strokeWidth = 3;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (scrollProgress / 100) * circumference;
+  
+  // Glow effect when near complete
+  const isNearComplete = scrollProgress > 85;
 
   const barColorClasses = {
     primary: "bg-primary",
@@ -83,50 +86,68 @@ export function ScrollProgress({
       {showButton && (
         <div
           className={cn(
-            "fixed bottom-6 right-6 flex flex-col items-center gap-2 z-50 transition-all duration-300",
+            "fixed bottom-6 right-6 z-50 transition-all duration-300",
             isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4 pointer-events-none"
           )}
         >
-          {/* Scroll to top button with progress ring */}
+          {/* Button container with progress ring */}
           <Button
             variant="outline"
             size="icon"
             onClick={scrollToTop}
-            className="h-12 w-12 rounded-full bg-background/95 backdrop-blur-sm shadow-elevation-3 border-border/50 hover:bg-muted relative"
-            aria-label="Scroll to top"
+            className={cn(
+              "h-14 w-14 rounded-full bg-background/95 shadow-lg border-border/60 hover:bg-muted relative overflow-visible",
+              isNearComplete && "ring-2 ring-primary/40"
+            )}
+            aria-label={`Scroll to top - ${Math.round(scrollProgress)}% scrolled`}
           >
-            {/* Progress ring SVG */}
+            {/* SVG Progress Ring */}
             <svg
               width={size}
               height={size}
-              className="absolute inset-0 transform -rotate-90"
+              className="absolute inset-0 -rotate-90"
+              style={{ filter: isNearComplete ? "drop-shadow(0 0 4px hsl(var(--primary) / 0.5))" : undefined }}
             >
-              {/* Background circle */}
+              {/* Gradient definition */}
+              <defs>
+                <linearGradient id="scroll-progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" />
+                  <stop offset="50%" stopColor="hsl(var(--primary) / 0.85)" />
+                  <stop offset="100%" stopColor="hsl(var(--secondary-500, var(--primary)))" />
+                </linearGradient>
+              </defs>
+              
+              {/* Background track circle */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
                 r={radius}
                 fill="none"
-                stroke="currentColor"
+                stroke="hsl(var(--muted-foreground) / 0.2)"
                 strokeWidth={strokeWidth}
-                className="text-muted/30"
               />
-              {/* Progress circle */}
+              
+              {/* Progress arc with gradient */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
                 r={radius}
                 fill="none"
-                stroke="currentColor"
+                stroke="url(#scroll-progress-gradient)"
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
-                className="text-primary transition-all duration-150"
+                className="transition-all duration-150"
+                style={{
+                  filter: scrollProgress > 0 ? "drop-shadow(0 0 2px hsl(var(--primary) / 0.3))" : undefined
+                }}
               />
             </svg>
+            
+            {/* Chevron icon centered */}
             <ChevronUp className="h-5 w-5 relative z-10" />
           </Button>
         </div>

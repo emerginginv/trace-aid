@@ -18,7 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
@@ -628,8 +628,6 @@ const Cases = () => {
         title="Delete Case"
         description="Are you sure you want to delete this case? This action cannot be undone."
       />
-
-      <ScrollProgress />
     </div>
   );
 };

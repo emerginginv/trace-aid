@@ -18,7 +18,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { getPlanLimits } from "@/lib/planLimits";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
@@ -1014,8 +1014,6 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
           </div>
         </DialogContent>
       </Dialog>
-
-      <ScrollProgress />
     </div>
   );
 };
