@@ -5,13 +5,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { getPlanLimits } from "@/lib/planLimits";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Attachment {
   id: string;
@@ -55,6 +56,12 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
   const [isDragging, setIsDragging] = useState(false);
   const [editingAttachment, setEditingAttachment] = useState<Attachment | null>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "", tags: "" });
+
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const canViewAttachments = hasPermission("view_attachments");
+  const canAddAttachments = hasPermission("add_attachments");
+  const canEditAttachments = hasPermission("edit_attachments");
+  const canDeleteAttachments = hasPermission("delete_attachments");
 
   useEffect(() => {
     fetchAttachments();
@@ -332,41 +339,6 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
     return <File className="h-8 w-8 text-muted-foreground" />;
   };
 
-  const getFilePreview = async (attachment: Attachment) => {
-    try {
-      // Use signed URL for private bucket
-      const { data, error } = await supabase.storage
-        .from("case-attachments")
-        .createSignedUrl(attachment.file_path, 3600); // 1 hour expiry
-
-      if (error) throw error;
-      const signedUrl = data.signedUrl;
-
-      if (attachment.file_type.startsWith("image/")) {
-        return (
-          <img 
-            src={signedUrl} 
-            alt={attachment.file_name}
-            className="h-10 w-10 object-cover rounded"
-          />
-        );
-      }
-      if (attachment.file_type.startsWith("video/")) {
-        return (
-          <video 
-            src={signedUrl} 
-            className="h-10 w-10 object-cover rounded"
-            muted
-          />
-        );
-      }
-      return getFileIcon(attachment.file_type, attachment.file_name);
-    } catch (error) {
-      console.error("Error getting file preview:", error);
-      return getFileIcon(attachment.file_type, attachment.file_name);
-    }
-  };
-
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -503,33 +475,49 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
     return matchesSearch && matchesType && matchesTag;
   });
 
-  if (loading) {
+  if (permissionsLoading || loading) {
     return <div className="text-center py-8">Loading attachments...</div>;
+  }
+
+  if (!canViewAttachments) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
+          <p className="text-muted-foreground text-center">
+            You don't have permission to view attachments. Contact your administrator for access.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
     <div className="space-y-4">
-      {/* Drag-and-Drop Zone */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => document.getElementById('file-upload')?.click()}
-        className={`w-full border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
-          isDragging
-            ? 'border-primary bg-primary/5'
-            : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
-        }`}
-      >
-        <Upload className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground mb-1">
-          Drag and drop files here, or{' '}
-          <span className="text-primary font-medium underline">click to upload</span>
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Supports images, videos, audio, PDF, DOC, and more
-        </p>
-      </div>
+      {/* Drag-and-Drop Zone - only show if user can add attachments */}
+      {canAddAttachments && !isClosedCase && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => document.getElementById('file-upload')?.click()}
+          className={`w-full border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
+            isDragging
+              ? 'border-primary bg-primary/5'
+              : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+          }`}
+        >
+          <Upload className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground mb-1">
+            Drag and drop files here, or{' '}
+            <span className="text-primary font-medium underline">click to upload</span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Supports images, videos, audio, PDF, DOC, and more
+          </p>
+        </div>
+      )}
 
       {/* Uploading Files Preview */}
       {uploadingFiles.length > 0 && (
@@ -714,18 +702,21 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                     {formatFileSize(attachment.file_size)} • {new Date(attachment.created_at).toLocaleDateString()}
                   </div>
                   <div className="flex flex-wrap justify-end gap-1 sm:gap-2 mt-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(attachment);
-                      }}
-                      className="h-7 sm:h-8 text-xs px-2"
-                    >
-                      <Pencil className="h-3 w-3 sm:mr-1" />
-                      <span className="hidden sm:inline">Edit</span>
-                    </Button>
+                    {canEditAttachments && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(attachment);
+                        }}
+                        disabled={isClosedCase}
+                        className="h-7 sm:h-8 text-xs px-2"
+                      >
+                        <Pencil className="h-3 w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Edit</span>
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -738,18 +729,21 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                       <Download className="h-3 w-3 sm:mr-1" />
                       <span className="hidden sm:inline">Download</span>
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(attachment);
-                      }}
-                      className="h-7 sm:h-8 text-xs px-2 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-3 w-3 sm:mr-1" />
-                      <span className="hidden sm:inline">Delete</span>
-                    </Button>
+                    {canDeleteAttachments && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(attachment);
+                        }}
+                        disabled={isClosedCase}
+                        className="h-7 sm:h-8 text-xs px-2 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Delete</span>
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -828,18 +822,21 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                   <TableCell className="py-1.5 hidden md:table-cell">{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right py-1.5">
                     <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(attachment);
-                        }}
-                        className="h-7 w-7 sm:h-8 sm:w-8"
-                        title="Edit"
-                      >
-                        <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
+                      {canEditAttachments && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(attachment);
+                          }}
+                          disabled={isClosedCase}
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          title="Edit"
+                        >
+                          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -852,18 +849,21 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                       >
                         <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(attachment);
-                        }}
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
+                      {canDeleteAttachments && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(attachment);
+                          }}
+                          disabled={isClosedCase}
+                          className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -920,20 +920,12 @@ export const CaseAttachments = ({ caseId, isClosedCase = false }: CaseAttachment
                 onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
                 className="text-sm"
               />
-              <p className="text-xs text-muted-foreground mt-1">Separate tags with commas</p>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditingAttachment(null)}
-              >
+              <Button variant="outline" onClick={() => setEditingAttachment(null)}>
                 Cancel
               </Button>
-              <Button
-                size="sm"
-                onClick={handleSaveEdit}
-              >
+              <Button onClick={handleSaveEdit}>
                 Save Changes
               </Button>
             </div>

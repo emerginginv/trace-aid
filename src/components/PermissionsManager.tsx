@@ -35,6 +35,42 @@ const featureGroups: FeatureGroup[] = [
     ],
   },
   {
+    name: "Activities",
+    features: [
+      { key: "view_activities", label: "View Activities" },
+      { key: "add_activities", label: "Add Activities" },
+      { key: "edit_activities", label: "Edit Activities" },
+      { key: "delete_activities", label: "Delete Activities" },
+    ],
+  },
+  {
+    name: "Attachments",
+    features: [
+      { key: "view_attachments", label: "View Attachments" },
+      { key: "add_attachments", label: "Add Attachments" },
+      { key: "edit_attachments", label: "Edit Attachments" },
+      { key: "delete_attachments", label: "Delete Attachments" },
+    ],
+  },
+  {
+    name: "Subjects",
+    features: [
+      { key: "view_subjects", label: "View Subjects" },
+      { key: "add_subjects", label: "Add Subjects" },
+      { key: "edit_subjects", label: "Edit Subjects" },
+      { key: "delete_subjects", label: "Delete Subjects" },
+    ],
+  },
+  {
+    name: "Updates",
+    features: [
+      { key: "view_updates", label: "View Updates" },
+      { key: "add_updates", label: "Add Updates" },
+      { key: "edit_updates", label: "Edit Updates" },
+      { key: "delete_updates", label: "Delete Updates" },
+    ],
+  },
+  {
     name: "Contacts",
     features: [
       { key: "view_contacts", label: "View Contacts" },

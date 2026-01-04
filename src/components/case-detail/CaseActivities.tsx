@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Search, ShieldAlert } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { ActivityForm } from "./ActivityForm";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Activity {
   id: string;
@@ -46,6 +47,12 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<"tasks" | "events">("tasks");
+
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const canViewActivities = hasPermission("view_activities");
+  const canAddActivities = hasPermission("add_activities");
+  const canEditActivities = hasPermission("edit_activities");
+  const canDeleteActivities = hasPermission("delete_activities");
 
   useEffect(() => {
     fetchUsers();
@@ -232,159 +239,179 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
       return matchesSearch && matchesType && matchesStatus;
     });
 
+  if (permissionsLoading || loading) {
+    return <p className="text-muted-foreground">Loading activities...</p>;
+  }
+
+  if (!canViewActivities) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
+          <p className="text-muted-foreground text-center">
+            You don't have permission to view activities. Contact your administrator for access.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <>
-      {loading ? (
-        <p className="text-muted-foreground">Loading activities...</p>
-      ) : (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold">Case Activities</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Track tasks and events for this case
-              </p>
-            </div>
-            <Button onClick={() => setFormOpen(true)} size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Add {activeTab === "tasks" ? "Task" : "Event"}
-            </Button>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold">Case Activities</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Track tasks and events for this case
+            </p>
           </div>
+          <Button 
+            onClick={() => setFormOpen(true)} 
+            size="sm"
+            disabled={!canAddActivities || isClosedCase}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add {activeTab === "tasks" ? "Task" : "Event"}
+          </Button>
+        </div>
 
-          <div className="flex border-b">
-            <button
-              onClick={() => {
-                setActiveTab("tasks");
-                setFilterStatus("all");
-              }}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "tasks"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Tasks
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("events");
-                setFilterStatus("all");
-              }}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "events"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Events
-            </button>
+        <div className="flex border-b">
+          <button
+            onClick={() => {
+              setActiveTab("tasks");
+              setFilterStatus("all");
+            }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "tasks"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Tasks
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("events");
+              setFilterStatus("all");
+            }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "events"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Events
+          </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={`Search ${activeTab}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              {activeTab === "tasks" ? (
+                <>
+                  <SelectItem value="to_do">To Do</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="blocked">Blocked</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </>
+              ) : (
+                <>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={`Search ${activeTab}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                {activeTab === "tasks" ? (
-                  <>
-                    <SelectItem value="to_do">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
-                    <SelectItem value="done">Done</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </>
-                ) : (
-                  <>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
+        {filteredActivities.length === 0 ? (
+          <div className="text-center py-12 border rounded-lg bg-muted/50">
+            <p className="text-muted-foreground">
+              {searchQuery || filterStatus !== "all"
+                ? `No ${activeTab} match your search`
+                : `No ${activeTab} yet. Add your first ${activeTab === "tasks" ? "task" : "event"} to get started.`}
+            </p>
           </div>
-
-          {filteredActivities.length === 0 ? (
-            <div className="text-center py-12 border rounded-lg bg-muted/50">
-              <p className="text-muted-foreground">
-                {searchQuery || filterStatus !== "all"
-                  ? `No ${activeTab} match your search`
-                  : `No ${activeTab} yet. Add your first ${activeTab === "tasks" ? "task" : "event"} to get started.`}
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]"></TableHead>
-                    <TableHead className="min-w-[200px] max-w-[300px]">Title</TableHead>
-                    <TableHead className="w-[120px]">Status</TableHead>
-                    <TableHead className="w-[140px] hidden md:table-cell">Assigned To</TableHead>
-                    <TableHead className="w-[120px]">{activeTab === "tasks" ? "Due Date" : "Date"}</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredActivities.map((activity) => (
-                    <TableRow key={activity.id}>
-                      <TableCell className="align-top">
-                        <Checkbox
-                          checked={activity.status === "done" || activity.status === "completed"}
-                          onCheckedChange={() => handleToggleComplete(activity)}
-                          disabled={isClosedCase}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium align-top">
-                        <div className="flex flex-col gap-1">
-                          <span 
-                            className={`line-clamp-2 ${activity.status === "done" || activity.status === "completed" ? "line-through text-muted-foreground" : ""}`}
-                            title={activity.title}
-                          >
-                            {activity.title}
-                          </span>
-                          {activity.description && (
-                            <span className="text-sm text-muted-foreground line-clamp-1" title={activity.description}>
-                              {activity.description}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <Badge variant="outline" className={`${getStatusColor(activity.status)} whitespace-nowrap`}>
-                          {getStatusLabel(activity.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="align-top hidden md:table-cell">
-                        <span className="text-sm truncate block" title={getUserName(activity.assigned_user_id)}>
-                          {getUserName(activity.assigned_user_id)}
+        ) : (
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="min-w-[200px] max-w-[300px]">Title</TableHead>
+                  <TableHead className="w-[120px]">Status</TableHead>
+                  <TableHead className="w-[140px] hidden md:table-cell">Assigned To</TableHead>
+                  <TableHead className="w-[120px]">{activeTab === "tasks" ? "Due Date" : "Date"}</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredActivities.map((activity) => (
+                  <TableRow key={activity.id}>
+                    <TableCell className="align-top">
+                      <Checkbox
+                        checked={activity.status === "done" || activity.status === "completed"}
+                        onCheckedChange={() => handleToggleComplete(activity)}
+                        disabled={isClosedCase || !canEditActivities}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium align-top">
+                      <div className="flex flex-col gap-1">
+                        <span 
+                          className={`line-clamp-2 ${activity.status === "done" || activity.status === "completed" ? "line-through text-muted-foreground" : ""}`}
+                          title={activity.title}
+                        >
+                          {activity.title}
                         </span>
-                      </TableCell>
-                      <TableCell className="align-top whitespace-nowrap">
-                        {activity.due_date
-                          ? (() => {
-                              const dateStr = activity.due_date;
-                              if (dateStr.length === 10 && dateStr.includes('-')) {
-                                const [year, month, day] = dateStr.split('-').map(Number);
-                                return format(new Date(year, month - 1, day), "MMM dd, yyyy");
-                              }
-                              return format(new Date(dateStr), "MMM dd, yyyy");
-                            })()
-                          : "-"}
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <div className="flex gap-1">
+                        {activity.description && (
+                          <span className="text-sm text-muted-foreground line-clamp-1" title={activity.description}>
+                            {activity.description}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <Badge variant="outline" className={`${getStatusColor(activity.status)} whitespace-nowrap`}>
+                        {getStatusLabel(activity.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="align-top hidden md:table-cell">
+                      <span className="text-sm truncate block" title={getUserName(activity.assigned_user_id)}>
+                        {getUserName(activity.assigned_user_id)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="align-top whitespace-nowrap">
+                      {activity.due_date
+                        ? (() => {
+                            const dateStr = activity.due_date;
+                            if (dateStr.length === 10 && dateStr.includes('-')) {
+                              const [year, month, day] = dateStr.split('-').map(Number);
+                              return format(new Date(year, month - 1, day), "MMM dd, yyyy");
+                            }
+                            return format(new Date(dateStr), "MMM dd, yyyy");
+                          })()
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="flex gap-1">
+                        {canEditActivities && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -394,6 +421,8 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                        )}
+                        {canDeleteActivities && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -403,16 +432,16 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-      )}
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
 
       <ActivityForm
         caseId={caseId}

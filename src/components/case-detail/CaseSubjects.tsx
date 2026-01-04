@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, User, Car, MapPin, Package, Pencil, Trash2, Search, ExternalLink, Phone, Mail, Calendar, DollarSign } from "lucide-react";
+import { Plus, User, Car, MapPin, Package, Pencil, Trash2, Search, ExternalLink, Phone, Mail, Calendar, DollarSign, ShieldAlert } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SubjectForm } from "./SubjectForm";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { ProfileImageModal } from "./ProfileImageModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { format } from "date-fns";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Subject {
   id: string;
@@ -33,6 +34,12 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{ url: string; subjectId: string } | null>(null);
   const { isAdmin, isManager } = useUserRole();
+
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const canViewSubjects = hasPermission("view_subjects");
+  const canAddSubjects = hasPermission("add_subjects");
+  const canEditSubjects = hasPermission("edit_subjects");
+  const canDeleteSubjects = hasPermission("delete_subjects");
 
   useEffect(() => {
     fetchSubjects();
@@ -422,8 +429,22 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
     }
   };
 
-  if (loading) {
+  if (permissionsLoading || loading) {
     return <p className="text-muted-foreground">Loading subjects...</p>;
+  }
+
+  if (!canViewSubjects) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
+          <p className="text-muted-foreground text-center">
+            You don't have permission to view subjects. Contact your administrator for access.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -433,7 +454,10 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
           <h2 className="text-2xl font-bold">Subjects</h2>
           <p className="text-muted-foreground">People, vehicles, locations, and items related to this case</p>
         </div>
-        <Button onClick={() => setFormOpen(true)}>
+        <Button 
+          onClick={() => setFormOpen(true)}
+          disabled={!canAddSubjects || isClosedCase}
+        >
           <Plus className="h-4 w-4" />
           Add Subject
         </Button>
@@ -467,10 +491,12 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground mb-4">No subjects added yet</p>
-            <Button onClick={() => setFormOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Add First Subject
-            </Button>
+            {canAddSubjects && (
+              <Button onClick={() => setFormOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Add First Subject
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : filteredSubjects.length === 0 ? (
@@ -503,20 +529,26 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
                     <Badge className={getTypeColor(subject.subject_type)}>
                       {subject.subject_type}
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(subject)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(subject.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canEditSubjects && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(subject)}
+                        disabled={isClosedCase}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {canDeleteSubjects && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(subject.id)}
+                        disabled={isClosedCase}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
