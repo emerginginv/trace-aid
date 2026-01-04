@@ -462,14 +462,14 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   return (
     <>
       <Tabs defaultValue="expenses" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="expenses">Expenses</TabsTrigger>
-          <TabsTrigger value="time">Time</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
-          <TabsTrigger value="create-invoice">Create Invoice</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 gap-1">
+          <TabsTrigger value="expenses" className="text-xs sm:text-sm px-2 sm:px-3">Expenses</TabsTrigger>
+          <TabsTrigger value="time" className="text-xs sm:text-sm px-2 sm:px-3">Time</TabsTrigger>
+          <TabsTrigger value="invoices" className="text-xs sm:text-sm px-2 sm:px-3">Invoices</TabsTrigger>
+          <TabsTrigger value="create-invoice" className="text-xs sm:text-sm px-2 sm:px-3">Create Invoice</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="expenses" className="space-y-6">
+        <TabsContent value="expenses" className="space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Finances</h2>
@@ -844,7 +844,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
           )}
         </TabsContent>
 
-        <TabsContent value="time" className="space-y-6">
+        <TabsContent value="time" className="space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Time Tracking</h2>
@@ -1046,7 +1046,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
           </Card>
         </TabsContent>
 
-        <TabsContent value="invoices" className="space-y-6">
+        <TabsContent value="invoices" className="space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Invoices</h2>
@@ -1208,7 +1208,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
             )}
         </TabsContent>
 
-        <TabsContent value="create-invoice">
+        <TabsContent value="create-invoice" className="animate-fade-in">
           <InvoiceFromExpenses caseId={caseId} />
         </TabsContent>
       </Tabs>
