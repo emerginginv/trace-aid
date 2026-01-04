@@ -25,9 +25,10 @@ interface CaseBudgetWidgetProps {
   caseId: string;
   refreshKey?: number;
   onAdjustmentSuccess?: () => void;
+  onViewHistory?: () => void;
 }
 
-export function CaseBudgetWidget({ caseId, refreshKey, onAdjustmentSuccess }: CaseBudgetWidgetProps) {
+export function CaseBudgetWidget({ caseId, refreshKey, onAdjustmentSuccess, onViewHistory }: CaseBudgetWidgetProps) {
   const [summary, setSummary] = useState<BudgetSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const { hasPermission } = usePermissions();
@@ -62,14 +63,6 @@ export function CaseBudgetWidget({ caseId, refreshKey, onAdjustmentSuccess }: Ca
   }, [caseId, refreshKey]);
 
   const hasBudget = summary && (summary.budget_hours_authorized > 0 || summary.budget_dollars_authorized > 0);
-
-  const scrollToBudgetTab = () => {
-    const budgetTab = document.querySelector('[value="budget"]') as HTMLElement;
-    if (budgetTab) {
-      budgetTab.click();
-      budgetTab.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
 
   if (loading) {
     return (
@@ -267,7 +260,8 @@ export function CaseBudgetWidget({ caseId, refreshKey, onAdjustmentSuccess }: Ca
             variant="ghost"
             size="sm"
             className="flex-1"
-            onClick={scrollToBudgetTab}
+            onClick={onViewHistory}
+            disabled={!onViewHistory}
           >
             <History className="h-3 w-3 mr-1" />
             History

@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,6 +87,20 @@ const CaseDetail = () => {
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState(isVendor ? "updates" : "subjects");
+  const [highlightHistory, setHighlightHistory] = useState(false);
+  const budgetTabRef = useRef<HTMLDivElement>(null);
+
+  const handleViewBudgetHistory = () => {
+    setActiveTab("budget");
+    setHighlightHistory(true);
+    // Scroll to budget tab content after state update
+    setTimeout(() => {
+      budgetTabRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Remove highlight after animation
+      setTimeout(() => setHighlightHistory(false), 2000);
+    }, 100);
+  };
   useEffect(() => {
     fetchCaseData();
     fetchCaseStatuses();
@@ -646,6 +660,7 @@ const CaseDetail = () => {
               caseId={id!} 
               refreshKey={budgetRefreshKey}
               onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)}
+              onViewHistory={handleViewBudgetHistory}
             />
             <RetainerFundsWidget caseId={id!} />
             <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} investigatorIds={caseData.investigator_ids || []} onUpdate={fetchCaseData} />
@@ -653,7 +668,7 @@ const CaseDetail = () => {
           </div>}
       </div>
 
-      <Tabs defaultValue={isVendor ? "updates" : "subjects"} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full gap-1" style={{
         gridTemplateColumns: isVendor ? 'repeat(2, 1fr)' : 'repeat(4, 1fr) repeat(3, 1fr)'
       }}>
@@ -688,14 +703,14 @@ const CaseDetail = () => {
         </TabsContent>
 
         <TabsContent value="budget" className="mt-4 sm:mt-6">
-          <div className="space-y-6">
+          <div ref={budgetTabRef} className="space-y-6 scroll-mt-4">
             <BudgetSummary 
               caseId={id!} 
               refreshKey={budgetRefreshKey} 
               onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
             />
             <BudgetConsumptionSnapshot caseId={id!} refreshKey={budgetRefreshKey} />
-            <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} />
+            <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} highlight={highlightHistory} />
           </div>
         </TabsContent>
           </>}
