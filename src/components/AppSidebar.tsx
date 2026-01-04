@@ -68,9 +68,10 @@ export function AppSidebar() {
   const location = useLocation();
   const {
     role,
-    isVendor
+    isVendor,
+    loading: roleLoading
   } = useUserRole();
-  const { organization } = useOrganization();
+  const { organization, loading: orgLoading } = useOrganization();
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null;
     email: string;
@@ -82,6 +83,11 @@ export function AppSidebar() {
   const menuItems = allMenuItems.filter(item => !role || item.roles.includes(role));
   
   useEffect(() => {
+    // CRITICAL: Wait for organization context to finish loading
+    if (orgLoading) {
+      return;
+    }
+
     const fetchUserProfile = async () => {
       const {
         data: {
@@ -107,19 +113,6 @@ export function AppSidebar() {
         if (orgMember?.role) {
           displayRole = orgMember.role;
         }
-      } else {
-        // Fallback to user_roles if no organization context
-        const { data: userRole } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        
-        if (userRole?.role) {
-          displayRole = userRole.role;
-        }
       }
       
       setUserProfile({
@@ -130,7 +123,7 @@ export function AppSidebar() {
       });
     };
     fetchUserProfile();
-  }, [organization?.id]);
+  }, [organization?.id, orgLoading]);
 
   const handleSignOut = async () => {
     const {
