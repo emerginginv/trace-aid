@@ -4,12 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, Pencil, Trash2, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Search, Pencil, Trash2, ChevronLeft, ChevronRight, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle } from "lucide-react";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import html2pdf from "html2pdf.js";
 
 interface Expense {
   id: string;
@@ -24,10 +28,17 @@ interface Expense {
   quantity: number | null;
 }
 
+interface Case {
+  id: string;
+  title: string;
+  case_number: string;
+}
+
 const AllExpenses = () => {
   const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [cases, setCases] = useState<Case[]>([]);
   
   // Filter states
   const [expenseSearch, setExpenseSearch] = useState("");
@@ -39,12 +50,26 @@ const AllExpenses = () => {
   const [expensePage, setExpensePage] = useState(1);
   const [expensePageSize, setExpensePageSize] = useState(15);
 
+  // Bulk selection state
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
+  // Add expense/time dialog state
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState<string>("");
+  const [financeFormType, setFinanceFormType] = useState<"expense" | "time">("expense");
+
   // Refetch when organization changes
   useEffect(() => {
     if (organization?.id) {
       fetchExpenseData();
     }
   }, [organization?.id]);
+
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedExpenses(new Set());
+  }, [expenseSearch, expenseStatusFilter, expensePage]);
 
   const fetchExpenseData = async () => {
     if (!organization?.id) return;
@@ -53,14 +78,16 @@ const AllExpenses = () => {
       setLoading(true);
       const orgId = organization.id;
 
-      // Fetch all cases first (needed for joins)
+      // Fetch all cases first (needed for joins and dropdown)
       const { data: casesData, error: casesError } = await supabase
         .from("cases")
         .select("id, title, case_number")
-        .eq("organization_id", orgId);
+        .eq("organization_id", orgId)
+        .order("case_number", { ascending: false });
 
       if (casesError) throw casesError;
 
+      setCases(casesData || []);
       const casesMap = new Map(casesData?.map(c => [c.id, c]) || []);
 
       // Fetch all expenses
@@ -110,6 +137,7 @@ const AllExpenses = () => {
       expenseStatusFilter === "all" ||
       (expenseStatusFilter === "invoiced" && expense.invoiced) ||
       (expenseStatusFilter === "approved" && !expense.invoiced && expense.status === "approved") ||
+      (expenseStatusFilter === "rejected" && expense.status === "rejected") ||
       (expenseStatusFilter === "pending" && !expense.invoiced && expense.status === "pending");
     
     return matchesSearch && matchesStatus;
@@ -122,6 +150,179 @@ const AllExpenses = () => {
   );
   const expenseTotalPages = Math.ceil(filteredExpenses.length / expensePageSize);
 
+  // Get pending expenses on current page for bulk selection
+  const pendingExpensesOnPage = paginatedExpenses.filter(exp => exp.status === "pending" && !exp.invoiced);
+  const allPendingSelected = pendingExpensesOnPage.length > 0 && 
+    pendingExpensesOnPage.every(exp => selectedExpenses.has(exp.id));
+  const somePendingSelected = pendingExpensesOnPage.some(exp => selectedExpenses.has(exp.id));
+
+  const handleSelectAll = (checked: boolean) => {
+    const newSelected = new Set(selectedExpenses);
+    pendingExpensesOnPage.forEach(exp => {
+      if (checked) {
+        newSelected.add(exp.id);
+      } else {
+        newSelected.delete(exp.id);
+      }
+    });
+    setSelectedExpenses(newSelected);
+  };
+
+  const handleSelectExpense = (expenseId: string, checked: boolean) => {
+    const newSelected = new Set(selectedExpenses);
+    if (checked) {
+      newSelected.add(expenseId);
+    } else {
+      newSelected.delete(expenseId);
+    }
+    setSelectedExpenses(newSelected);
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedExpenses.size === 0) return;
+    
+    setIsBulkProcessing(true);
+    try {
+      const ids = Array.from(selectedExpenses);
+      const { error } = await supabase
+        .from("case_finances")
+        .update({ status: "approved" })
+        .in("id", ids);
+
+      if (error) throw error;
+
+      toast.success(`${ids.length} expense${ids.length > 1 ? 's' : ''} approved`);
+      setSelectedExpenses(new Set());
+      fetchExpenseData();
+    } catch (error) {
+      console.error("Error approving expenses:", error);
+      toast.error("Failed to approve expenses");
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    if (selectedExpenses.size === 0) return;
+    
+    setIsBulkProcessing(true);
+    try {
+      const ids = Array.from(selectedExpenses);
+      const { error } = await supabase
+        .from("case_finances")
+        .update({ status: "rejected" })
+        .in("id", ids);
+
+      if (error) throw error;
+
+      toast.success(`${ids.length} expense${ids.length > 1 ? 's' : ''} rejected`);
+      setSelectedExpenses(new Set());
+      fetchExpenseData();
+    } catch (error) {
+      console.error("Error rejecting expenses:", error);
+      toast.error("Failed to reject expenses");
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  // Export functions
+  const exportToCSV = () => {
+    const headers = ["Date", "Case Number", "Case Title", "Category", "Quantity", "Amount", "Status"];
+    const rows = filteredExpenses.map(exp => [
+      format(new Date(exp.date), "yyyy-MM-dd"),
+      exp.case_number,
+      exp.case_title,
+      exp.category || "",
+      exp.quantity || 1,
+      exp.amount.toFixed(2),
+      exp.invoiced ? "Invoiced" : (exp.status || "Pending")
+    ]);
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(","))
+      .join("\n");
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `expenses-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Expenses exported to CSV");
+  };
+
+  const exportToPDF = () => {
+    const printContent = document.createElement("div");
+    printContent.innerHTML = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h1 style="margin-bottom: 8px; font-size: 24px;">Expenses Report</h1>
+        <p style="margin-bottom: 20px; color: #666; font-size: 14px;">Generated: ${format(new Date(), "MMMM d, yyyy")}</p>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Case</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Category</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Qty</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Amount</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredExpenses.map(exp => `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">${format(new Date(exp.date), "MMM d, yyyy")}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${exp.case_number} - ${exp.case_title}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${exp.category || "-"}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${exp.quantity || 1}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${exp.amount.toFixed(2)}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${exp.invoiced ? "Invoiced" : (exp.status || "Pending")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+          <tfoot>
+            <tr style="background: #f3f4f6; font-weight: bold;">
+              <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total:</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${filteredExpenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    `;
+    
+    html2pdf()
+      .set({
+        margin: 10,
+        filename: `expenses-${format(new Date(), "yyyy-MM-dd")}.pdf`,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
+      })
+      .from(printContent)
+      .save();
+    
+    toast.success("Expenses exported to PDF");
+  };
+
+  const openAddExpense = () => {
+    setFinanceFormType("expense");
+    setSelectedCaseId("");
+    setShowAddDialog(true);
+  };
+
+  const openAddTime = () => {
+    setFinanceFormType("time");
+    setSelectedCaseId("");
+    setShowAddDialog(true);
+  };
+
+  const handleCaseSelected = () => {
+    setShowAddDialog(false);
+    setShowExpenseForm(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -132,24 +333,76 @@ const AllExpenses = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Expenses</h1>
-        <p className="text-muted-foreground">
-          Manage expenses across all cases
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Expenses</h1>
+          <p className="text-muted-foreground">
+            Manage expenses across all cases
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={openAddExpense}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Expense
+          </Button>
+          <Button variant="outline" onClick={openAddTime}>
+            <Clock className="h-4 w-4 mr-2" />
+            Add Time
+          </Button>
+        </div>
       </div>
+
+      {/* Bulk Action Toolbar */}
+      {selectedExpenses.size > 0 && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">
+                {selectedExpenses.size} expense{selectedExpenses.size > 1 ? 's' : ''} selected
+              </span>
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  onClick={handleBulkApprove}
+                  disabled={isBulkProcessing}
+                  className="bg-emerald-500 hover:bg-emerald-600"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Approve All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={handleBulkReject}
+                  disabled={isBulkProcessing}
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Reject All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={() => setSelectedExpenses(new Set())}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Expenses List */}
       <Card>
         <CardHeader>
           <CardTitle>All Expenses</CardTitle>
           <CardDescription>
-            Expenses across all cases
+            {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''} found
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex gap-4">
-            <div className="relative flex-1">
+          <div className="mb-4 flex flex-wrap gap-4">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2 top-[0.625rem] h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by case, category..."
@@ -165,13 +418,14 @@ const AllExpenses = () => {
               setExpenseStatusFilter(v);
               setExpensePage(1);
             }}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
                 <SelectItem value="invoiced">Invoiced</SelectItem>
               </SelectContent>
             </Select>
@@ -189,6 +443,23 @@ const AllExpenses = () => {
                 <SelectItem value="100">100 per page</SelectItem>
               </SelectContent>
             </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Download className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportToCSV}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export to CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           {filteredExpenses.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
@@ -198,6 +469,14 @@ const AllExpenses = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={allPendingSelected}
+                      onCheckedChange={handleSelectAll}
+                      disabled={pendingExpensesOnPage.length === 0}
+                      className={somePendingSelected && !allPendingSelected ? "opacity-50" : ""}
+                    />
+                  </TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Case</TableHead>
                   <TableHead>Category</TableHead>
@@ -208,135 +487,150 @@ const AllExpenses = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedExpenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell>
-                      {format(new Date(expense.date), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{expense.case_title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {expense.case_number}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{expense.category || "N/A"}</TableCell>
-                    <TableCell>
-                      {(expense.quantity || 1).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${expense.amount.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          expense.invoiced
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                            : expense.status === "approved"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                        }`}
-                      >
-                        {expense.invoiced ? "Invoiced" : expense.status || "Pending"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {expense.status === "pending" && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={async () => {
-                                const { error } = await supabase
-                                  .from("case_finances")
-                                  .update({ status: "approved" })
-                                  .eq("id", expense.id);
-                                
-                                if (error) {
-                                  toast.error("Failed to approve expense");
-                                } else {
-                                  toast.success("Expense approved");
-                                  fetchExpenseData();
-                                }
-                              }}
-                              title="Approve expense"
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={async () => {
-                                const { error } = await supabase
-                                  .from("case_finances")
-                                  .update({ status: "rejected" })
-                                  .eq("id", expense.id);
-                                
-                                if (error) {
-                                  toast.error("Failed to reject expense");
-                                } else {
-                                  toast.success("Expense rejected");
-                                  fetchExpenseData();
-                                }
-                              }}
-                              title="Reject expense"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
+                {paginatedExpenses.map((expense) => {
+                  const isPending = expense.status === "pending" && !expense.invoiced;
+                  return (
+                    <TableRow key={expense.id}>
+                      <TableCell>
+                        {isPending ? (
+                          <Checkbox
+                            checked={selectedExpenses.has(expense.id)}
+                            onCheckedChange={(checked) => handleSelectExpense(expense.id, checked as boolean)}
+                          />
+                        ) : (
+                          <div className="w-4" />
                         )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={async () => {
-                            // Fetch full expense details
-                            const { data, error } = await supabase
-                              .from("case_finances")
-                              .select("*")
-                              .eq("id", expense.id)
-                              .single();
-                            
-                            if (error) {
-                              toast.error("Failed to load expense details");
-                            } else {
-                              setEditingExpense(data);
-                              setShowExpenseForm(true);
-                            }
-                          }}
-                          title="Edit expense"
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(expense.date), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{expense.case_title}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {expense.case_number}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{expense.category || "N/A"}</TableCell>
+                      <TableCell>
+                        {(expense.quantity || 1).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        ${expense.amount.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            expense.invoiced
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                              : expense.status === "approved"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                              : expense.status === "rejected"
+                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                              : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                          }`}
                         >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={async () => {
-                            if (confirm("Are you sure you want to delete this expense?")) {
-                              const { error } = await supabase
+                          {expense.invoiced ? "Invoiced" : expense.status || "Pending"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {isPending && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={async () => {
+                                  const { error } = await supabase
+                                    .from("case_finances")
+                                    .update({ status: "approved" })
+                                    .eq("id", expense.id);
+                                  
+                                  if (error) {
+                                    toast.error("Failed to approve expense");
+                                  } else {
+                                    toast.success("Expense approved");
+                                    fetchExpenseData();
+                                  }
+                                }}
+                                title="Approve expense"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={async () => {
+                                  const { error } = await supabase
+                                    .from("case_finances")
+                                    .update({ status: "rejected" })
+                                    .eq("id", expense.id);
+                                  
+                                  if (error) {
+                                    toast.error("Failed to reject expense");
+                                  } else {
+                                    toast.success("Expense rejected");
+                                    fetchExpenseData();
+                                  }
+                                }}
+                                title="Reject expense"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={async () => {
+                              // Fetch full expense details
+                              const { data, error } = await supabase
                                 .from("case_finances")
-                                .delete()
-                                .eq("id", expense.id);
+                                .select("*")
+                                .eq("id", expense.id)
+                                .single();
                               
                               if (error) {
-                                toast.error("Failed to delete expense");
+                                toast.error("Failed to load expense details");
                               } else {
-                                toast.success("Expense deleted");
-                                fetchExpenseData();
+                                setEditingExpense(data);
+                                setShowExpenseForm(true);
                               }
-                            }
-                          }}
-                          title="Delete expense"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                            }}
+                            title="Edit expense"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={async () => {
+                              if (confirm("Are you sure you want to delete this expense?")) {
+                                const { error } = await supabase
+                                  .from("case_finances")
+                                  .delete()
+                                  .eq("id", expense.id);
+                                
+                                if (error) {
+                                  toast.error("Failed to delete expense");
+                                } else {
+                                  toast.success("Expense deleted");
+                                  fetchExpenseData();
+                                }
+                              }
+                            }}
+                            title="Delete expense"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -373,23 +667,63 @@ const AllExpenses = () => {
         </CardContent>
       </Card>
 
-      {/* Edit Expense Dialog */}
+      {/* Add Expense/Time Dialog - Case Selection */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {financeFormType === "expense" ? "Add Expense" : "Add Time Entry"}
+            </DialogTitle>
+            <DialogDescription>
+              Select a case to add {financeFormType === "expense" ? "an expense" : "a time entry"} to
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a case..." />
+            </SelectTrigger>
+            <SelectContent>
+              {cases.map(c => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.case_number} - {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              disabled={!selectedCaseId}
+              onClick={handleCaseSelected}
+            >
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit/Add Expense Dialog */}
       {showExpenseForm && (
         <FinanceForm
-          caseId={editingExpense?.case_id || ""}
+          caseId={selectedCaseId || editingExpense?.case_id || ""}
           open={showExpenseForm}
           onOpenChange={(open) => {
             if (!open) {
               setShowExpenseForm(false);
               setEditingExpense(null);
+              setSelectedCaseId("");
             }
           }}
           onSuccess={() => {
             setShowExpenseForm(false);
             setEditingExpense(null);
+            setSelectedCaseId("");
             fetchExpenseData();
           }}
           editingFinance={editingExpense}
+          defaultFinanceType={financeFormType}
         />
       )}
     </div>
