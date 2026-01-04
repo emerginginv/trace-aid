@@ -844,40 +844,22 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
           )}
         </TabsContent>
 
-        <TabsContent value="time" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Hours Logged</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{timeMetrics.totalHours.toFixed(2)} hrs</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Time Value</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${timeMetrics.totalAmount.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Time Entries</CardTitle>
-                <div className="flex gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        Export
-                      </Button>
-                    </DropdownMenuTrigger>
+        <TabsContent value="time" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">Time Tracking</h2>
+              <p className="text-muted-foreground">
+                {timeMetrics.totalHours.toFixed(2)} hours logged · ${timeMetrics.totalAmount.toFixed(2)} total value
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => {
                         const exportColumns: ExportColumn[] = [
@@ -907,19 +889,41 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                       }}>
                         Export to PDF
                       </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Button onClick={() => {
-                    setDefaultFinanceType("time");
-                    setFormOpen(true);
-                  }} disabled={!canAddFinances}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Log Time
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={() => {
+                setDefaultFinanceType("time");
+                setFormOpen(true);
+              }} disabled={!canAddFinances}>
+                <Plus className="h-4 w-4 mr-2" />
+                Log Time
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Hours Logged</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{timeMetrics.totalHours.toFixed(2)} hrs</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Time Value</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${timeMetrics.totalAmount.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -1042,12 +1046,56 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
           </Card>
         </TabsContent>
 
-        <TabsContent value="invoices">
-          <div className="space-y-4">
+        <TabsContent value="invoices" className="space-y-6">
+          <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Invoices</h2>
-              <p className="text-muted-foreground">View and manage all invoices</p>
+              <p className="text-muted-foreground">
+                {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
+              </p>
             </div>
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    const exportColumns: ExportColumn[] = [
+                      { key: "invoice_number", label: "Invoice #" },
+                      { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                      { key: "status", label: "Status", format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || "-" },
+                      { key: "total", label: "Amount", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
+                      { key: "retainer_applied", label: "Retainer Applied", format: (v) => v ? `$${Number(v).toFixed(2)}` : "-", align: "right" },
+                      { key: "total_paid", label: "Paid", format: (v) => v ? `$${Number(v).toFixed(2)}` : "$0.00", align: "right" },
+                    ];
+                    exportToCSV(invoices, exportColumns, "case-invoices");
+                  }}>
+                    Export to CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    const exportColumns: ExportColumn[] = [
+                      { key: "invoice_number", label: "Invoice #" },
+                      { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                      { key: "status", label: "Status", format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || "-" },
+                      { key: "total", label: "Amount", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
+                    ];
+                    const totalInvoiced = invoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+                    const totalPaid = invoices.reduce((sum, inv) => sum + Number(inv.total_paid || 0), 0);
+                    exportToPDF(invoices, exportColumns, "Case Invoices", "case-invoices", [
+                      { label: "Total Invoiced", value: `$${totalInvoiced.toFixed(2)}` },
+                      { label: "Total Paid", value: `$${totalPaid.toFixed(2)}` }
+                    ]);
+                  }}>
+                    Export to PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
 
             {invoices.length === 0 ? (
               <Card>
@@ -1158,7 +1206,6 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                 </Table>
               </Card>
             )}
-          </div>
         </TabsContent>
 
         <TabsContent value="create-invoice">

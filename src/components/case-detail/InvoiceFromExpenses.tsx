@@ -289,12 +289,12 @@ export const InvoiceFromExpenses = ({ caseId, onSuccess }: InvoiceFromExpensesPr
   const subtotal = calculateSubtotal();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold">Create Invoice from Time + Expenses</h3>
-          <p className="text-sm text-muted-foreground">
-            Select approved time and expense entries to include in a new invoice
+          <h2 className="text-2xl font-bold">Create Invoice</h2>
+          <p className="text-muted-foreground">
+            Select approved time and expense entries to include
           </p>
         </div>
       </div>
