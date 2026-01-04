@@ -243,30 +243,37 @@ export function NotificationCenter() {
         <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
-            <Badge className="badge-notification">{unreadCount}</Badge>
+            <span className="absolute -top-0.5 -right-0.5 h-5 min-w-[20px] rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium px-1 animate-pulse">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0 glass-card" align="end">
+      <PopoverContent className="w-96 p-0 glass-modal shadow-elevation-4" align="end">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold text-base">Notifications</h3>
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-              <Check className="w-4 h-4 mr-2" />
-              Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8">
+                <Check className="w-4 h-4 mr-1.5" />
+                Mark all read
+              </Button>
+            )}
+          </div>
         </div>
 
         <ScrollArea className="h-[400px]">
           {loading ? (
             <div className="flex items-center justify-center h-32">
-              <p className="text-sm text-muted-foreground">Loading notifications...</p>
+              <div className="spinner" />
             </div>
           ) : notifications.length === 0 ? (
-            <div className="empty-state py-12">
-              <Bell className="w-12 h-12 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No notifications</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                <Bell className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground mb-1">All caught up!</p>
+              <p className="text-xs text-muted-foreground">No new notifications</p>
             </div>
           ) : (
             <div className="divide-y">
@@ -283,8 +290,10 @@ export function NotificationCenter() {
                   <div
                     key={notification.id}
                     className={cn(
-                      "p-4 transition-colors hover:bg-muted/50 relative cursor-pointer",
-                      !notification.read && "bg-primary/5"
+                      "p-4 transition-all duration-200 hover:bg-muted/50 relative cursor-pointer notification-enter",
+                      !notification.read && "bg-primary/5",
+                      notification.priority === "high" && "notification-priority-high",
+                      notification.priority === "medium" && !notification.read && "notification-priority-medium"
                     )}
                     onClick={() => {
                       if (notification.link) {
@@ -296,42 +305,56 @@ export function NotificationCenter() {
                     }}
                   >
                     {!notification.read && (
-                      <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                      <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
                     )}
-                    
-                    <div className="flex gap-3 pl-4">
-                      <div className="flex-shrink-0 mt-0.5">
+
+                    <div className="flex gap-3 pl-3">
+                      <div className={cn(
+                        "flex-shrink-0 mt-0.5 w-8 h-8 rounded-full flex items-center justify-center",
+                        notification.type === "success" && "bg-success/10",
+                        notification.type === "warning" && "bg-warning/10",
+                        notification.type === "error" && "bg-destructive/10",
+                        notification.type === "info" && "bg-primary/10"
+                      )}>
                         {getIcon(notification.type)}
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <h4 className="font-medium text-sm">{notification.title}</h4>
+                          <h4 className="font-medium text-sm line-clamp-1">
+                            {notification.title}
+                          </h4>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 -mt-1"
-                            onClick={() => removeNotification(notification.id)}
+                            className="h-6 w-6 -mt-1 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeNotification(notification.id);
+                            }}
                           >
                             <X className="w-4 h-4" />
                           </Button>
                         </div>
-                        
-                        <p className="text-sm text-muted-foreground mb-2">
+
+                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                           {notification.message}
                         </p>
-                        
+
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">
                             {formatTimestamp(notification.timestamp)}
                           </span>
-                          
+
                           {!notification.read && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => markAsRead(notification.id)}
+                              className="h-6 text-xs px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markAsRead(notification.id);
+                              }}
                             >
                               Mark as read
                             </Button>
@@ -344,6 +367,19 @@ export function NotificationCenter() {
             </div>
           )}
         </ScrollArea>
+
+        {notifications.length > 0 && (
+          <div className="p-3 border-t text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-sm text-muted-foreground hover:text-foreground"
+              onClick={() => navigate("/notifications")}
+            >
+              View all notifications
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

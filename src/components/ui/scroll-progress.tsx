@@ -5,9 +5,17 @@ import { cn } from "@/lib/utils";
 
 interface ScrollProgressProps {
   threshold?: number;
+  showBar?: boolean;
+  showButton?: boolean;
+  barColor?: "primary" | "secondary" | "success" | "warning";
 }
 
-export function ScrollProgress({ threshold = 200 }: ScrollProgressProps) {
+export function ScrollProgress({
+  threshold = 200,
+  showBar = false,
+  showButton = true,
+  barColor = "primary",
+}: ScrollProgressProps) {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -16,7 +24,7 @@ export function ScrollProgress({ threshold = 200 }: ScrollProgressProps) {
       const scrollTop = window.scrollY;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      
+
       setScrollProgress(Math.min(progress, 100));
       setIsVisible(scrollTop > threshold);
     };
@@ -42,60 +50,204 @@ export function ScrollProgress({ threshold = 200 }: ScrollProgressProps) {
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (scrollProgress / 100) * circumference;
 
+  const barColorClasses = {
+    primary: "bg-primary",
+    secondary: "bg-secondary-500",
+    success: "bg-success",
+    warning: "bg-warning",
+  };
+
+  return (
+    <>
+      {/* Progress Bar at top of page */}
+      {showBar && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 h-1 bg-muted/30"
+          role="progressbar"
+          aria-valuenow={Math.round(scrollProgress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Page scroll progress"
+        >
+          <div
+            className={cn(
+              "h-full transition-all duration-100 ease-out",
+              barColorClasses[barColor]
+            )}
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
+      )}
+
+      {/* Floating scroll-to-top button with progress ring */}
+      {showButton && (
+        <div
+          className={cn(
+            "fixed bottom-6 right-6 flex flex-col items-center gap-2 z-50 transition-all duration-300",
+            isVisible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-4 pointer-events-none"
+          )}
+        >
+          {/* Scroll to top button with progress ring */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={scrollToTop}
+            className="h-12 w-12 rounded-full bg-background/95 backdrop-blur-sm shadow-elevation-3 border-border/50 hover:bg-muted relative"
+            aria-label="Scroll to top"
+          >
+            {/* Progress ring SVG */}
+            <svg
+              width={size}
+              height={size}
+              className="absolute inset-0 transform -rotate-90"
+            >
+              {/* Background circle */}
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                className="text-muted/30"
+              />
+              {/* Progress circle */}
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                className="text-primary transition-all duration-150"
+              />
+            </svg>
+            <ChevronUp className="h-5 w-5 relative z-10" />
+          </Button>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Progress Ring Component for circular progress
+interface ProgressRingProps {
+  value: number;
+  max?: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: "primary" | "secondary" | "success" | "warning" | "destructive";
+  showValue?: boolean;
+  className?: string;
+  label?: string;
+}
+
+export function ProgressRing({
+  value,
+  max = 100,
+  size = 48,
+  strokeWidth = 4,
+  color = "primary",
+  showValue = true,
+  className,
+  label,
+}: ProgressRingProps) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
+  const offset = circumference - (percentage / 100) * circumference;
+
+  const colorClasses = {
+    primary: "stroke-primary",
+    secondary: "stroke-secondary-500",
+    success: "stroke-success",
+    warning: "stroke-warning",
+    destructive: "stroke-destructive",
+  };
+
   return (
     <div
-      className={cn(
-        "fixed bottom-6 right-6 flex flex-col items-center gap-2 z-50 transition-all duration-300",
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-      )}
+      className={cn("relative inline-flex items-center justify-center", className)}
+      role="progressbar"
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-label={label || `Progress: ${Math.round(percentage)}%`}
     >
-      {/* Scroll to top button */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={scrollToTop}
-        className="h-10 w-10 rounded-full bg-background/95 backdrop-blur-sm shadow-lg border-border/50 hover:bg-muted"
-        aria-label="Scroll to top"
-      >
-        <ChevronUp className="h-5 w-5" />
-      </Button>
-
-      {/* Circular progress indicator */}
-      <div className="relative h-12 w-12 flex items-center justify-center">
-        <svg
-          width={size}
-          height={size}
-          className="transform -rotate-90"
-        >
-          {/* Background circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            className="text-muted/30"
-          />
-          {/* Progress circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            className="text-primary transition-all duration-150"
-          />
-        </svg>
-        {/* Percentage text */}
-        <span className="absolute text-xs font-medium text-muted-foreground">
-          {Math.round(scrollProgress)}%
+      <svg width={size} height={size} className="progress-ring">
+        <circle
+          className="progress-ring-bg"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          className={cn("progress-ring-fill", colorClasses[color])}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      {showValue && (
+        <span className="absolute text-xs font-medium number-display">
+          {Math.round(percentage)}%
         </span>
-      </div>
+      )}
     </div>
+  );
+}
+
+// Trend Indicator Component
+interface TrendIndicatorProps {
+  value: number;
+  previousValue?: number;
+  showValue?: boolean;
+  suffix?: string;
+  className?: string;
+}
+
+export function TrendIndicator({
+  value,
+  previousValue,
+  showValue = true,
+  suffix = "%",
+  className,
+}: TrendIndicatorProps) {
+  const change =
+    previousValue !== undefined
+      ? ((value - previousValue) / previousValue) * 100
+      : value;
+
+  const isPositive = change > 0;
+  const isNeutral = change === 0;
+
+  const trendClass = isNeutral
+    ? "trend-neutral"
+    : isPositive
+    ? "trend-up"
+    : "trend-down";
+
+  const arrow = isNeutral ? "→" : isPositive ? "↑" : "↓";
+
+  return (
+    <span className={cn(trendClass, className)}>
+      <span aria-hidden="true">{arrow}</span>
+      {showValue && (
+        <span className="number-display">
+          {isPositive && "+"}
+          {change.toFixed(1)}
+          {suffix}
+        </span>
+      )}
+    </span>
   );
 }
