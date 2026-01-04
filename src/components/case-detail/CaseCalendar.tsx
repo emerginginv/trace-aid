@@ -1,4 +1,5 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import { CalendarTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -417,7 +418,7 @@ export const CaseCalendar = forwardRef<
   const calendarDays = getCalendarDays();
 
   if (loading) {
-    return <div className="p-4">Loading calendar...</div>;
+    return <CalendarTabSkeleton />;
   }
 
   return (

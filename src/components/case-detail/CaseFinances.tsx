@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FinancesTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -442,7 +443,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   );
 
   if (loading || permissionsLoading) {
-    return <p className="text-muted-foreground">Loading finances...</p>;
+    return <FinancesTabSkeleton />;
   }
 
   // Check view permission
