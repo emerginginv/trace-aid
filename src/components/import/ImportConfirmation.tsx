@@ -7,11 +7,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { 
   Shield, Clock, AlertTriangle, ArrowRight, ArrowLeft,
-  FileText, Database, History, Settings2, FileType, Sparkles
+  FileText, Database, History, Settings2, FileType, Sparkles, CheckCircle2
 } from "lucide-react";
 import { ParsedCSV, getEntityDisplayName, sortByImportOrder } from "@/lib/csvParser";
 import { ParseError } from "@/lib/csvParser";
-import { MappingConfig } from "@/types/import";
+import { MappingConfig, DryRunResult } from "@/types/import";
 
 interface ImportConfirmationProps {
   parsedFiles: ParsedCSV[];
@@ -19,6 +19,7 @@ interface ImportConfirmationProps {
   importType: 'new_migration' | 'incremental';
   mappingConfig: MappingConfig;
   sourceSystemName: string;
+  dryRunResult: DryRunResult | null;
   onBack: () => void;
   onConfirm: () => void;
 }
@@ -29,6 +30,7 @@ export function ImportConfirmation({
   importType,
   mappingConfig,
   sourceSystemName,
+  dryRunResult,
   onBack, 
   onConfirm 
 }: ImportConfirmationProps) {
@@ -64,6 +66,22 @@ export function ImportConfirmation({
           Review the import summary and confirm to proceed
         </p>
       </div>
+      
+      {/* Dry Run Verified Badge */}
+      {dryRunResult?.success && (
+        <Alert className="bg-green-500/5 border-green-500/20">
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              <strong>Dry-run completed successfully</strong> - All {dryRunResult.totalRecords} records 
+              passed validation. {dryRunResult.recordsToCreate} will be created, {dryRunResult.recordsToUpdate} updated.
+            </span>
+            <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/30">
+              Verified
+            </Badge>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Import Summary */}
       <Card>
