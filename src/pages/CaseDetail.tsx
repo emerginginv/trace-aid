@@ -49,6 +49,9 @@ interface Case {
   closed_at: string | null;
   parent_case_id: string | null;
   instance_number: number;
+  claim_number?: string | null;
+  surveillance_start_date?: string | null;
+  surveillance_end_date?: string | null;
 }
 interface Account {
   id: string;
@@ -709,6 +712,21 @@ const CaseDetail = () => {
               {caseData.due_date && <div>
                   <p className="text-sm font-medium mb-1">Due Date</p>
                   <p className="text-red-500 font-normal">{new Date(caseData.due_date).toLocaleDateString()}</p>
+                </div>}
+              {caseData.claim_number && <div>
+                  <p className="text-sm font-medium mb-1">Claim Number</p>
+                  <p className="text-muted-foreground">{caseData.claim_number}</p>
+                </div>}
+              {(caseData.surveillance_start_date || caseData.surveillance_end_date) && <div>
+                  <p className="text-sm font-medium mb-1">Surveillance Dates</p>
+                  <p className="text-muted-foreground">
+                    {caseData.surveillance_start_date && caseData.surveillance_end_date
+                      ? `${new Date(caseData.surveillance_start_date).toLocaleDateString()} - ${new Date(caseData.surveillance_end_date).toLocaleDateString()}`
+                      : caseData.surveillance_start_date
+                        ? `Starting ${new Date(caseData.surveillance_start_date).toLocaleDateString()}`
+                        : `Through ${new Date(caseData.surveillance_end_date!).toLocaleDateString()}`
+                    }
+                  </p>
                 </div>}
             </div>
           </CardContent>
