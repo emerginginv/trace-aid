@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical } from "lucide-react";
+import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical, Lock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
 import { InvoiceDetail } from "./InvoiceDetail";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -40,6 +41,7 @@ interface Finance {
 }
 
 export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
   const [finances, setFinances] = useState<Finance[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +55,12 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [defaultFinanceType, setDefaultFinanceType] = useState<"retainer" | "expense" | "time">("expense");
+
+  // Permission checks
+  const canViewFinances = hasPermission('view_finances');
+  const canAddFinances = hasPermission('add_finances');
+  const canEditFinances = hasPermission('edit_finances');
+  const canDeleteFinances = hasPermission('delete_finances');
 
   useEffect(() => {
     fetchFinances();
@@ -400,8 +408,21 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
     { totalHours: 0, totalAmount: 0 }
   );
 
-  if (loading) {
+  if (loading || permissionsLoading) {
     return <p className="text-muted-foreground">Loading finances...</p>;
+  }
+
+  // Check view permission
+  if (!canViewFinances) {
+    return (
+      <Card className="border-yellow-500/50 bg-yellow-500/5">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Lock className="h-12 w-12 text-yellow-500 mb-4" />
+          <p className="text-lg font-medium text-yellow-600 dark:text-yellow-400">Access Restricted</p>
+          <p className="text-muted-foreground mt-2">You don't have permission to view finances.</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -423,7 +444,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
             <Button onClick={() => {
               setDefaultFinanceType("expense");
               setFormOpen(true);
-            }}>
+            }} disabled={!canAddFinances}>
               <Plus className="h-4 w-4" />
               Add Transaction
             </Button>
@@ -605,10 +626,12 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <p className="text-muted-foreground mb-4">No financial records yet</p>
-                <Button onClick={() => setFormOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  Add First Transaction
-                </Button>
+                {canAddFinances && (
+                  <Button onClick={() => setFormOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    Add First Transaction
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : filteredFinances.length === 0 ? (
@@ -693,38 +716,46 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                         ${Number(finance.amount).toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(finance)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            {finance.finance_type === "expense" && finance.status === "pending" && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleApprove(finance.id)}>
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Approve
+                        {(canEditFinances || canDeleteFinances) ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {canEditFinances && (
+                                <DropdownMenuItem onClick={() => handleEdit(finance)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleReject(finance.id)}>
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Reject
+                              )}
+                              {canEditFinances && finance.finance_type === "expense" && finance.status === "pending" && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleApprove(finance.id)}>
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Approve
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleReject(finance.id)}>
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Reject
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {canDeleteFinances && (
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(finance.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
                                 </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(finance.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">-</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -763,7 +794,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                 <Button onClick={() => {
                   setDefaultFinanceType("time");
                   setFormOpen(true);
-                }}>
+                }} disabled={!canAddFinances}>
                   <Plus className="mr-2 h-4 w-4" />
                   Log Time
                 </Button>
@@ -841,38 +872,46 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEdit(finance)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                {finance.status === "pending" && (
-                                  <>
-                                    <DropdownMenuItem onClick={() => handleApprove(finance.id)}>
-                                      <CheckCircle className="mr-2 h-4 w-4" />
-                                      Approve
+                            {(canEditFinances || canDeleteFinances) ? (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {canEditFinances && (
+                                    <DropdownMenuItem onClick={() => handleEdit(finance)}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleReject(finance.id)}>
-                                      <XCircle className="mr-2 h-4 w-4" />
-                                      Reject
+                                  )}
+                                  {canEditFinances && finance.status === "pending" && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => handleApprove(finance.id)}>
+                                        <CheckCircle className="mr-2 h-4 w-4" />
+                                        Approve
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleReject(finance.id)}>
+                                        <XCircle className="mr-2 h-4 w-4" />
+                                        Reject
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  {canDeleteFinances && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleDelete(finance.id)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
                                     </DropdownMenuItem>
-                                  </>
-                                )}
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(finance.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">-</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -951,40 +990,48 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                           })()}
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Convert invoice to finance format for editing
-                                const financeData = {
-                                  id: invoice.id,
-                                  finance_type: 'invoice',
-                                  amount: invoice.total,
-                                  description: invoice.invoice_number,
-                                  date: invoice.date,
-                                  due_date: invoice.due_date,
-                                  status: invoice.status,
-                                  invoice_number: invoice.invoice_number,
-                                  notes: invoice.notes,
-                                  created_at: invoice.created_at
-                                };
-                                handleEdit(financeData);
-                              }}
-                              title="Edit invoice"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(invoice.id)}
-                              title="Delete invoice"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {(canEditFinances || canDeleteFinances) ? (
+                            <div className="flex justify-end gap-1">
+                              {canEditFinances && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Convert invoice to finance format for editing
+                                    const financeData = {
+                                      id: invoice.id,
+                                      finance_type: 'invoice',
+                                      amount: invoice.total,
+                                      description: invoice.invoice_number,
+                                      date: invoice.date,
+                                      due_date: invoice.due_date,
+                                      status: invoice.status,
+                                      invoice_number: invoice.invoice_number,
+                                      notes: invoice.notes,
+                                      created_at: invoice.created_at
+                                    };
+                                    handleEdit(financeData);
+                                  }}
+                                  title="Edit invoice"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {canDeleteFinances && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(invoice.id)}
+                                  title="Delete invoice"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
