@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Pencil, Trash2, CircleDollarSign, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X } from "lucide-react";
+import { Loader2, Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X } from "lucide-react";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
 import { InvoiceFromExpenses } from "@/components/case-detail/InvoiceFromExpenses";
@@ -19,6 +19,8 @@ import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import html2pdf from "html2pdf.js";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { TableHeader, TableRow as TRow } from "@/components/ui/table";
 
 interface Invoice {
   id: string;
@@ -61,9 +63,9 @@ const AllInvoices = () => {
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [showInvoiceFromExpenses, setShowInvoiceFromExpenses] = useState(false);
   
-  // Pagination states
-  const [invoicePage, setInvoicePage] = useState(1);
-  const [invoicePageSize, setInvoicePageSize] = useState(15);
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<string>("date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Refetch when organization changes
   useEffect(() => {
@@ -145,6 +147,15 @@ const AllInvoices = () => {
     }
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   // Filter functions
   const filteredInvoices = invoices.filter((invoice) => {
     const searchLower = invoiceSearch.toLowerCase();
@@ -165,12 +176,63 @@ const AllInvoices = () => {
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
-  // Paginated data
-  const paginatedInvoices = filteredInvoices.slice(
-    (invoicePage - 1) * invoicePageSize,
-    invoicePage * invoicePageSize
-  );
-  const invoiceTotalPages = Math.ceil(filteredInvoices.length / invoicePageSize);
+  // Sort data
+  const sortedInvoices = [...filteredInvoices].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    let aVal: any;
+    let bVal: any;
+    
+    switch (sortColumn) {
+      case "invoice_number":
+        aVal = a.invoice_number || "";
+        bVal = b.invoice_number || "";
+        break;
+      case "case":
+        aVal = a.case_number;
+        bVal = b.case_number;
+        break;
+      case "date":
+        aVal = new Date(a.date).getTime();
+        bVal = new Date(b.date).getTime();
+        break;
+      case "due_date":
+        aVal = a.due_date ? new Date(a.due_date).getTime() : 0;
+        bVal = b.due_date ? new Date(b.due_date).getTime() : 0;
+        break;
+      case "amount":
+        aVal = a.amount;
+        bVal = b.amount;
+        break;
+      case "total_paid":
+        aVal = a.total_paid || 0;
+        bVal = b.total_paid || 0;
+        break;
+      case "balance_due":
+        aVal = a.balance_due !== undefined ? a.balance_due : a.amount - (a.total_paid || 0);
+        bVal = b.balance_due !== undefined ? b.balance_due : b.amount - (b.total_paid || 0);
+        break;
+      case "status":
+        aVal = a.status || "";
+        bVal = b.status || "";
+        break;
+      default:
+        return 0;
+    }
+    
+    if (aVal == null) return sortDirection === "asc" ? 1 : -1;
+    if (bVal == null) return sortDirection === "asc" ? -1 : 1;
+    
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return sortDirection === "asc" 
+        ? aVal.localeCompare(bVal) 
+        : bVal.localeCompare(aVal);
+    }
+    
+    return sortDirection === "asc" 
+      ? (aVal as number) - (bVal as number) 
+      : (bVal as number) - (aVal as number);
+  });
 
   // Export functions
   const exportToCSV = () => {
@@ -260,6 +322,41 @@ const AllInvoices = () => {
     toast.success("Invoices exported to PDF");
   };
 
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!confirm("Are you sure you want to delete this invoice?")) return;
+    
+    try {
+      // First delete linked case_finances items
+      await supabase
+        .from("case_finances")
+        .delete()
+        .eq("invoice_id", invoiceId);
+      
+      // Delete the invoice
+      const { error } = await supabase
+        .from("invoices")
+        .delete()
+        .eq("id", invoiceId);
+      
+      if (error) throw error;
+      
+      toast.success("Invoice deleted successfully");
+      fetchInvoiceData();
+    } catch (error: any) {
+      console.error("Error deleting invoice:", error);
+      toast.error("Failed to delete invoice");
+    }
+  };
+
+  const handleCaseSelect = () => {
+    if (!selectedCaseId) {
+      toast.error("Please select a case");
+      return;
+    }
+    setShowCreateInvoiceDialog(false);
+    setShowInvoiceFromExpenses(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -288,7 +385,7 @@ const AllInvoices = () => {
         <CardHeader>
           <CardTitle>All Invoices</CardTitle>
           <CardDescription>
-            {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''} found
+            Showing {sortedInvoices.length} invoice{sortedInvoices.length !== 1 ? 's' : ''}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -298,17 +395,11 @@ const AllInvoices = () => {
               <Input
                 placeholder="Search by invoice #, case..."
                 value={invoiceSearch}
-                onChange={(e) => {
-                  setInvoiceSearch(e.target.value);
-                  setInvoicePage(1);
-                }}
+                onChange={(e) => setInvoiceSearch(e.target.value)}
                 className="pl-8"
               />
             </div>
-            <Select value={invoiceStatusFilter} onValueChange={(v) => {
-              setInvoiceStatusFilter(v);
-              setInvoicePage(1);
-            }}>
+            <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -331,10 +422,7 @@ const AllInvoices = () => {
                 <Calendar
                   mode="single"
                   selected={dateFrom}
-                  onSelect={(date) => {
-                    setDateFrom(date);
-                    setInvoicePage(1);
-                  }}
+                  onSelect={setDateFrom}
                   initialFocus
                   className="pointer-events-auto"
                 />
@@ -351,10 +439,7 @@ const AllInvoices = () => {
                 <Calendar
                   mode="single"
                   selected={dateTo}
-                  onSelect={(date) => {
-                    setDateTo(date);
-                    setInvoicePage(1);
-                  }}
+                  onSelect={setDateTo}
                   initialFocus
                   className="pointer-events-auto"
                 />
@@ -373,20 +458,6 @@ const AllInvoices = () => {
                 <X className="h-4 w-4" />
               </Button>
             )}
-            <Select value={invoicePageSize.toString()} onValueChange={(v) => {
-              setInvoicePageSize(parseInt(v));
-              setInvoicePage(1);
-            }}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 per page</SelectItem>
-                <SelectItem value="25">25 per page</SelectItem>
-                <SelectItem value="50">50 per page</SelectItem>
-                <SelectItem value="100">100 per page</SelectItem>
-              </SelectContent>
-            </Select>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon">
@@ -405,166 +476,216 @@ const AllInvoices = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {filteredInvoices.length === 0 ? (
+          {sortedInvoices.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
               No matching invoices found
             </p>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Case</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Total / Paid</TableHead>
-                  <TableHead className="text-right">Balance Due</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
+                <TRow>
+                  <SortableTableHead
+                    column="invoice_number"
+                    label="Invoice #"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="case"
+                    label="Case"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="date"
+                    label="Date"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="due_date"
+                    label="Due Date"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    column="amount"
+                    label="Total"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="text-right"
+                  />
+                  <SortableTableHead
+                    column="total_paid"
+                    label="Paid"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="text-right"
+                  />
+                  <SortableTableHead
+                    column="balance_due"
+                    label="Balance Due"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="text-right"
+                  />
+                  <SortableTableHead
+                    column="status"
+                    label="Status"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <th className="text-right p-2">Actions</th>
+                </TRow>
               </TableHeader>
               <TableBody>
-                {paginatedInvoices.map((invoice) => (
-                  <TableRow 
-                    key={invoice.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/invoices/${invoice.id}`)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        navigate(`/invoices/${invoice.id}`);
-                      }
-                    }}
-                  >
-                    <TableCell className="font-medium">
-                      {invoice.invoice_number || "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{invoice.case_title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {invoice.case_number}
+                {sortedInvoices.map((invoice) => {
+                  const balanceDue = invoice.balance_due !== undefined 
+                    ? invoice.balance_due 
+                    : invoice.amount - (invoice.total_paid || 0);
+                  
+                  return (
+                    <TableRow
+                      key={invoice.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/invoices/${invoice.id}`)}
+                    >
+                      <TableCell className="font-medium">
+                        {invoice.invoice_number || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{invoice.case_number}</span>
+                          <span className="text-xs text-muted-foreground">{invoice.case_title}</span>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.date), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="space-y-0.5">
-                        <div className="font-medium">${invoice.amount.toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Paid: ${(invoice.total_paid || 0).toFixed(2)}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${(invoice.balance_due !== undefined && invoice.balance_due !== null ? invoice.balance_due : (invoice.amount - (invoice.total_paid || 0))).toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(invoice.date), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell>
+                        {invoice.due_date
+                          ? format(new Date(invoice.due_date), "MMM d, yyyy")
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        ${invoice.amount.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ${(invoice.total_paid || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        ${balanceDue.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
                           invoice.status === "paid"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            ? "bg-green-100 text-green-700"
                             : invoice.status === "partial"
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                            : invoice.status === "unpaid"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                            : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                        }`}
-                      >
-                        {invoice.status || "Draft"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {invoice.status !== "paid" && (
+                            ? "bg-yellow-100 text-yellow-700"
+                            : invoice.status === "sent"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}>
+                          {invoice.status || "Draft"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowPayModal(invoice);
-                            }}
-                            title="Record payment"
+                            onClick={() => setShowPayModal(invoice)}
+                            title="Record Payment"
                           >
                             <CircleDollarSign className="h-4 w-4" />
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingInvoice(invoice.id);
-                          }}
-                          title="Edit invoice"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (confirm("Are you sure you want to delete this invoice?")) {
-                              const { error } = await supabase
-                                .from("invoices")
-                                .delete()
-                                .eq("id", invoice.id);
-                              
-                              if (error) {
-                                toast.error("Failed to delete invoice");
-                              } else {
-                                toast.success("Invoice deleted");
-                                fetchInvoiceData();
-                              }
-                            }
-                          }}
-                          title="Delete invoice"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditingInvoice(invoice.id)}
+                            title="Edit Invoice"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteInvoice(invoice.id)}
+                            title="Delete Invoice"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
-          {filteredInvoices.length > 0 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {((invoicePage - 1) * invoicePageSize) + 1} to {Math.min(invoicePage * invoicePageSize, filteredInvoices.length)} of {filteredInvoices.length} entries
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInvoicePage(p => Math.max(1, p - 1))}
-                  disabled={invoicePage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <div className="text-sm">
-                  Page {invoicePage} of {invoiceTotalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInvoicePage(p => Math.min(invoiceTotalPages, p + 1))}
-                  disabled={invoicePage === invoiceTotalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
+
+      {/* Create Invoice Dialog */}
+      <Dialog open={showCreateInvoiceDialog} onOpenChange={setShowCreateInvoiceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Invoice</DialogTitle>
+            <DialogDescription>
+              Select a case to create an invoice from its uninvoiced expenses and time entries.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a case" />
+              </SelectTrigger>
+              <SelectContent>
+                {cases.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.case_number} - {c.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateInvoiceDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCaseSelect}>
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice from Expenses - render inline when case is selected */}
+      {showInvoiceFromExpenses && selectedCaseId && (
+        <Dialog open={showInvoiceFromExpenses} onOpenChange={(open) => {
+          setShowInvoiceFromExpenses(open);
+          if (!open) setSelectedCaseId("");
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <InvoiceFromExpenses
+              caseId={selectedCaseId}
+              onSuccess={() => {
+                setShowInvoiceFromExpenses(false);
+                setSelectedCaseId("");
+                fetchInvoiceData();
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Record Payment Modal */}
       {showPayModal && (
@@ -572,14 +693,19 @@ const AllInvoices = () => {
           invoice={{
             id: showPayModal.id,
             invoice_number: showPayModal.invoice_number || "",
-            case_id: showPayModal.case_id,
             total: showPayModal.amount,
-            balance_due: showPayModal.balance_due ?? showPayModal.amount,
+            balance_due: showPayModal.balance_due !== undefined 
+              ? showPayModal.balance_due 
+              : showPayModal.amount - (showPayModal.total_paid || 0),
+            case_id: showPayModal.case_id,
           }}
           caseRetainerBalance={retainerMap[showPayModal.case_id] || 0}
           open={!!showPayModal}
           onClose={() => setShowPayModal(null)}
-          onPaymentRecorded={fetchInvoiceData}
+          onPaymentRecorded={() => {
+            setShowPayModal(null);
+            fetchInvoiceData();
+          }}
         />
       )}
 
@@ -589,68 +715,14 @@ const AllInvoices = () => {
           invoiceId={editingInvoice}
           open={!!editingInvoice}
           onOpenChange={(open) => !open && setEditingInvoice(null)}
-          onSuccess={fetchInvoiceData}
+          onSuccess={() => {
+            setEditingInvoice(null);
+            fetchInvoiceData();
+          }}
         />
       )}
 
-      {/* Case Selection Dialog for Create Invoice */}
-      <Dialog open={showCreateInvoiceDialog} onOpenChange={setShowCreateInvoiceDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Invoice</DialogTitle>
-            <DialogDescription>
-              Select a case to create an invoice for. You'll be able to select 
-              approved time and expense entries to include.
-            </DialogDescription>
-          </DialogHeader>
-          <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a case..." />
-            </SelectTrigger>
-            <SelectContent>
-              {cases.map(c => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.case_number} - {c.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateInvoiceDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              disabled={!selectedCaseId}
-              onClick={() => {
-                setShowCreateInvoiceDialog(false);
-                setShowInvoiceFromExpenses(true);
-              }}
-            >
-              Continue
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Invoice From Expenses Dialog */}
-      <Dialog open={showInvoiceFromExpenses} onOpenChange={setShowInvoiceFromExpenses}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create Invoice</DialogTitle>
-            <DialogDescription>
-              Select approved time and expense entries to include in the invoice
-            </DialogDescription>
-          </DialogHeader>
-          <InvoiceFromExpenses 
-            caseId={selectedCaseId} 
-            onSuccess={() => {
-              setShowInvoiceFromExpenses(false);
-              setSelectedCaseId("");
-              fetchInvoiceData();
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      <ScrollProgress />
     </div>
   );
 };
