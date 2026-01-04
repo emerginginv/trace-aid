@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Building2, Search, LayoutGrid, List, Edit, Trash2 } from "lucide-react";
+import { Plus, Building2, Search, LayoutGrid, List, Edit, Trash2, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { AccountForm } from "@/components/AccountForm";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
@@ -26,6 +27,7 @@ import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 
 interface Account {
   id: string;
@@ -144,6 +146,19 @@ const Accounts = () => {
       : bVal.localeCompare(aVal);
   });
 
+  // Export columns definition
+  const EXPORT_COLUMNS: ExportColumn[] = [
+    { key: "name", label: "Name" },
+    { key: "industry", label: "Industry" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "city", label: "City" },
+    { key: "state", label: "State" },
+  ];
+
+  const handleExportCSV = () => exportToCSV(sortedAccounts, EXPORT_COLUMNS, "accounts");
+  const handleExportPDF = () => exportToPDF(sortedAccounts, EXPORT_COLUMNS, "Accounts Report", "accounts");
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -194,6 +209,24 @@ const Accounts = () => {
           onToggle={toggleColumn}
           onReset={resetToDefaults}
         />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="flex gap-1 border rounded-md p-1">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}

@@ -5,11 +5,12 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, User, Search, LayoutGrid, List, Edit, Trash2, Mail } from "lucide-react";
+import { Plus, User, Search, LayoutGrid, List, Edit, Trash2, Mail, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ContactForm } from "@/components/ContactForm";
 import { EmailComposer } from "@/components/EmailComposer";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
@@ -27,6 +28,7 @@ import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 
 interface Contact {
   id: string;
@@ -148,6 +150,19 @@ const Contacts = () => {
       : bVal.localeCompare(aVal);
   });
 
+  // Export columns definition
+  const EXPORT_COLUMNS: ExportColumn[] = [
+    { key: "first_name", label: "First Name" },
+    { key: "last_name", label: "Last Name" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "city", label: "City" },
+    { key: "state", label: "State" },
+  ];
+
+  const handleExportCSV = () => exportToCSV(sortedContacts, EXPORT_COLUMNS, "contacts");
+  const handleExportPDF = () => exportToPDF(sortedContacts, EXPORT_COLUMNS, "Contacts Report", "contacts");
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -187,6 +202,24 @@ const Contacts = () => {
           onToggle={toggleColumn}
           onReset={resetToDefaults}
         />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="flex gap-1 border rounded-md p-1">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
