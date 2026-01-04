@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import html2pdf from "html2pdf.js";
-import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { TableHeader, TableRow as TRow } from "@/components/ui/table";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
@@ -892,8 +892,6 @@ const AllInvoices = () => {
           }}
         />
       )}
-
-      <ScrollProgress />
     </div>
   );
 };

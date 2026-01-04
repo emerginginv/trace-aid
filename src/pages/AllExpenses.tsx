@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import html2pdf from "html2pdf.js";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
@@ -1097,8 +1097,6 @@ const AllExpenses = () => {
           defaultFinanceType={financeFormType}
         />
       )}
-
-      <ScrollProgress />
     </div>
   );
 };

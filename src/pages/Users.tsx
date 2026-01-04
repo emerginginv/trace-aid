@@ -26,7 +26,7 @@ import { RoleBadge } from "@/components/RoleBadge";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
@@ -816,8 +816,6 @@ const Users = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      <ScrollProgress />
     </div>
   );
 };

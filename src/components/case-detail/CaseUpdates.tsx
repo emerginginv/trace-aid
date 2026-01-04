@@ -14,7 +14,7 @@ import { format } from "date-fns";
 import { GenerateReportDialog } from "@/components/templates/GenerateReportDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
@@ -458,8 +458,6 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
           userProfiles={userProfiles}
         />
       )}
-
-      <ScrollProgress />
     </>
   );
 };

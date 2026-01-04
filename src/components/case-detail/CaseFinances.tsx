@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
@@ -1248,8 +1248,6 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
           onClose={() => setSelectedInvoiceId(null)}
         />
       )}
-
-      <ScrollProgress />
     </>
   );
 };

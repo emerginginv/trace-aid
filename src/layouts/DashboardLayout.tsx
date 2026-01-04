@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { HeaderProgressIndicator } from "@/components/ui/header-progress-indicator";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -55,6 +57,7 @@ const DashboardLayout = ({
             {children}
           </div>
         </main>
+        <ScrollProgress />
       </div>
     </SidebarProvider>;
 };
