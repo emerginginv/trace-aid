@@ -14,7 +14,7 @@ import { format } from "date-fns";
 import { GenerateReportDialog } from "@/components/templates/GenerateReportDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
@@ -426,10 +426,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                     {isExpanded && update.description && (
                       <TableRow key={`${update.id}-desc`}>
                         <TableCell colSpan={6} className="py-3 bg-muted/30 border-0">
-                          <div 
-                            className="prose prose-sm max-w-none text-muted-foreground pl-10 dark:prose-invert [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:text-foreground [&_em]:text-foreground"
-                            dangerouslySetInnerHTML={{ __html: update.description }}
-                          />
+                          <RichTextDisplay html={update.description} className="pl-10" />
                         </TableCell>
                       </TableRow>
                     )}

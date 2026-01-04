@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Calendar, User, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 
 interface Update {
   id: string;
@@ -147,14 +148,11 @@ const UpdateDetail = () => {
               <FileText className="h-4 w-4" />
               Description
             </div>
-            {update.description ? (
-              <div 
-                className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 [&_strong]:text-foreground [&_em]:text-foreground"
-                dangerouslySetInnerHTML={{ __html: update.description }}
-              />
-            ) : (
-              <p className="text-muted-foreground">No description provided.</p>
-            )}
+            <RichTextDisplay 
+              html={update.description} 
+              fallback="No description provided."
+              className="[&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1"
+            />
           </div>
         </CardContent>
       </Card>
