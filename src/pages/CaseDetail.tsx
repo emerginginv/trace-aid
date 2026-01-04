@@ -25,6 +25,7 @@ import { RelatedCases } from "@/components/case-detail/RelatedCases";
 import { BudgetSummary } from "@/components/case-detail/BudgetSummary";
 import { BudgetAdjustmentForm } from "@/components/case-detail/BudgetAdjustmentForm";
 import { BudgetAdjustmentsHistory } from "@/components/case-detail/BudgetAdjustmentsHistory";
+import { CaseBudgetWidget } from "@/components/case-detail/CaseBudgetWidget";
 import { Mail } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -640,6 +641,11 @@ const CaseDetail = () => {
         </Card>
 
         {!isVendor && <div className="space-y-4 sm:space-y-6">
+            <CaseBudgetWidget 
+              caseId={id!} 
+              refreshKey={budgetRefreshKey}
+              onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)}
+            />
             <RetainerFundsWidget caseId={id!} />
             <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} investigatorIds={caseData.investigator_ids || []} onUpdate={fetchCaseData} />
             <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
