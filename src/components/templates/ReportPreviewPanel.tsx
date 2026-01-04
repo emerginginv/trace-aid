@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { ZoomIn, ZoomOut, RotateCcw, FileText, Eye, Maximize, ArrowLeftRight } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, FileText, Eye, Maximize, ArrowLeftRight, PanelLeftClose, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -38,6 +38,10 @@ const ZOOM_LEVELS = [50, 75, 100, 125, 150];
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 150;
 
+// Thumbnail dimensions
+const THUMB_WIDTH = 80;
+const THUMB_HEIGHT = Math.round(THUMB_WIDTH * (PAGE_HEIGHT_PX / PAGE_WIDTH_PX));
+
 type ZoomMode = "manual" | "fit-width" | "fit-page";
 
 interface ParsedPage {
@@ -55,7 +59,10 @@ export function ReportPreviewPanel({
 }: ReportPreviewPanelProps) {
   const [zoomLevel, setZoomLevel] = useState(75);
   const [zoomMode, setZoomMode] = useState<ZoomMode>("manual");
+  const [showNav, setShowNav] = useState(true);
+  const [activePage, setActivePage] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   // Parse HTML into pages
   const pages = useMemo<ParsedPage[]>(() => {
@@ -76,8 +83,6 @@ export function ReportPreviewPanel({
     // Extract content - everything after the page break
     const contentMatch = preview.html.match(/<div class="report-content"[\s\S]*$/);
     if (contentMatch) {
-      // Split content into multiple pages based on sections
-      // For now, put all content on one page (can be enhanced later)
       pages.push({
         pageNumber: 2,
         pageType: 'content',
@@ -151,6 +156,32 @@ export function ReportPreviewPanel({
     };
   }, [highlightedSectionId]);
 
+  // Track which page is in view
+  useEffect(() => {
+    if (!containerRef.current || pages.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            const pageNum = parseInt(entry.target.getAttribute('data-page-number') || '1');
+            setActivePage(pageNum);
+          }
+        });
+      },
+      {
+        root: containerRef.current,
+        threshold: 0.5,
+      }
+    );
+
+    pageRefs.current.forEach((el) => {
+      observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [pages]);
+
   const handleZoomIn = () => {
     setZoomMode("manual");
     const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
@@ -186,6 +217,14 @@ export function ReportPreviewPanel({
     setZoomMode("fit-page");
   };
 
+  const handlePageClick = (pageNumber: number) => {
+    const pageEl = pageRefs.current.get(pageNumber);
+    if (pageEl) {
+      pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActivePage(pageNumber);
+    }
+  };
+
   // Handle section clicks
   const handlePreviewClick = (e: React.MouseEvent) => {
     if (!onSectionClick) return;
@@ -204,6 +243,9 @@ export function ReportPreviewPanel({
   const scaledPageWidth = PAGE_WIDTH_PX * scale;
   const scaledPageHeight = PAGE_HEIGHT_PX * scale;
   const scaledGap = PAGE_GAP * scale;
+
+  // Thumbnail scale
+  const thumbScale = THUMB_WIDTH / PAGE_WIDTH_PX;
 
   if (isLoading) {
     return (
@@ -250,10 +292,33 @@ export function ReportPreviewPanel({
       {/* Header with zoom controls */}
       <div className="flex items-center justify-between p-3 border-b bg-muted/30">
         <div className="flex items-center gap-2">
+          {/* Toggle nav button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setShowNav(!showNav)}
+                >
+                  {showNav ? (
+                    <PanelLeftClose className="h-3.5 w-3.5" />
+                  ) : (
+                    <PanelLeft className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{showNav ? "Hide pages" : "Show pages"}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="h-4 w-px bg-border" />
+
           <Eye className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">Preview</span>
           <Badge variant="outline" className="text-xs">
-            ~{preview.estimatedPages} page{preview.estimatedPages !== 1 ? "s" : ""}
+            {activePage}/{pages.length}
           </Badge>
         </div>
 
@@ -345,75 +410,149 @@ export function ReportPreviewPanel({
         </div>
       </div>
 
-      {/* Preview content - page-based layout */}
-      <ScrollArea className="flex-1" ref={containerRef}>
-        <div 
-          className="min-h-full"
-          style={{
-            padding: CONTAINER_PADDING,
-            background: 'linear-gradient(180deg, hsl(var(--muted) / 0.4) 0%, hsl(var(--muted) / 0.6) 100%)',
-          }}
-          onClick={handlePreviewClick}
-        >
-          {/* Pages container - centered flex column */}
+      {/* Main content area with optional nav sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Page navigation sidebar */}
+        {showNav && (
+          <div className="w-[120px] border-r bg-muted/20 flex-shrink-0">
+            <ScrollArea className="h-full">
+              <div className="p-3 space-y-3">
+                {pages.map((page) => (
+                  <button
+                    key={page.pageNumber}
+                    onClick={() => handlePageClick(page.pageNumber)}
+                    className={cn(
+                      "w-full rounded-md overflow-hidden transition-all",
+                      "hover:ring-2 hover:ring-primary/50",
+                      "focus:outline-none focus:ring-2 focus:ring-primary",
+                      activePage === page.pageNumber
+                        ? "ring-2 ring-primary shadow-md"
+                        : "ring-1 ring-border"
+                    )}
+                  >
+                    {/* Thumbnail */}
+                    <div
+                      className="relative bg-white overflow-hidden"
+                      style={{
+                        width: `${THUMB_WIDTH}px`,
+                        height: `${THUMB_HEIGHT}px`,
+                        margin: '0 auto',
+                      }}
+                    >
+                      <div
+                        className="absolute top-0 left-0 origin-top-left pointer-events-none"
+                        style={{
+                          width: `${PAGE_WIDTH_PX}px`,
+                          height: `${PAGE_HEIGHT_PX}px`,
+                          transform: `scale(${thumbScale})`,
+                        }}
+                      >
+                        <div 
+                          className="w-full h-full overflow-hidden report-document"
+                          style={{
+                            fontFamily: "Georgia, 'Times New Roman', serif",
+                            fontSize: '11pt',
+                            lineHeight: 1.6,
+                            color: '#1a1a1a',
+                            backgroundColor: '#ffffff',
+                          }}
+                          dangerouslySetInnerHTML={{ __html: page.html }}
+                        />
+                      </div>
+                    </div>
+                    {/* Page label */}
+                    <div className={cn(
+                      "py-1.5 text-xs font-medium text-center",
+                      activePage === page.pageNumber
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/50 text-muted-foreground"
+                    )}>
+                      {page.pageType === 'cover' ? 'Cover' : `Page ${page.pageNumber}`}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+
+        {/* Preview content - page-based layout */}
+        <ScrollArea className="flex-1" ref={containerRef}>
           <div 
-            className="flex flex-col items-center mx-auto"
-            style={{ gap: `${scaledGap}px` }}
+            className="min-h-full"
+            style={{
+              padding: CONTAINER_PADDING,
+              background: 'linear-gradient(180deg, hsl(var(--muted) / 0.4) 0%, hsl(var(--muted) / 0.6) 100%)',
+            }}
+            onClick={handlePreviewClick}
           >
-            {pages.map((page, index) => (
-              <div key={page.pageNumber} className="flex flex-col items-center">
-                {/* Page card */}
-                <div
-                  className="relative bg-white overflow-hidden"
-                  style={{
-                    width: `${scaledPageWidth}px`,
-                    height: `${scaledPageHeight}px`,
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                    borderRadius: `${Math.max(2, 4 * scale)}px`,
+            {/* Pages container - centered flex column */}
+            <div 
+              className="flex flex-col items-center mx-auto"
+              style={{ gap: `${scaledGap}px` }}
+            >
+              {pages.map((page) => (
+                <div 
+                  key={page.pageNumber} 
+                  className="flex flex-col items-center"
+                  data-page-number={page.pageNumber}
+                  ref={(el) => {
+                    if (el) pageRefs.current.set(page.pageNumber, el);
                   }}
                 >
-                  {/* Inner content with transform scaling */}
+                  {/* Page card */}
                   <div
-                    className="absolute top-0 left-0 origin-top-left"
+                    className="relative bg-white overflow-hidden"
                     style={{
-                      width: `${PAGE_WIDTH_PX}px`,
-                      height: `${PAGE_HEIGHT_PX}px`,
-                      transform: `scale(${scale})`,
+                      width: `${scaledPageWidth}px`,
+                      height: `${scaledPageHeight}px`,
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                      borderRadius: `${Math.max(2, 4 * scale)}px`,
                     }}
                   >
-                    <div 
-                      className="w-full h-full overflow-hidden report-document"
+                    {/* Inner content with transform scaling */}
+                    <div
+                      className="absolute top-0 left-0 origin-top-left"
                       style={{
-                        fontFamily: "Georgia, 'Times New Roman', serif",
-                        fontSize: '11pt',
-                        lineHeight: 1.6,
-                        color: '#1a1a1a',
-                        backgroundColor: '#ffffff',
+                        width: `${PAGE_WIDTH_PX}px`,
+                        height: `${PAGE_HEIGHT_PX}px`,
+                        transform: `scale(${scale})`,
                       }}
-                      dangerouslySetInnerHTML={{ __html: page.html }}
-                    />
+                    >
+                      <div 
+                        className="w-full h-full overflow-hidden report-document"
+                        style={{
+                          fontFamily: "Georgia, 'Times New Roman', serif",
+                          fontSize: '11pt',
+                          lineHeight: 1.6,
+                          color: '#1a1a1a',
+                          backgroundColor: '#ffffff',
+                        }}
+                        dangerouslySetInnerHTML={{ __html: page.html }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Page number indicator */}
+                  <div 
+                    className="mt-2 px-3 py-1 rounded-full bg-background/80 border shadow-sm"
+                    style={{ 
+                      fontSize: `${Math.max(10, 11 * scale)}px`,
+                    }}
+                  >
+                    <span className="text-muted-foreground font-medium">
+                      Page {page.pageNumber} of {pages.length}
+                    </span>
                   </div>
                 </div>
-                
-                {/* Page number indicator */}
-                <div 
-                  className="mt-2 px-3 py-1 rounded-full bg-background/80 border shadow-sm"
-                  style={{ 
-                    fontSize: `${Math.max(10, 11 * scale)}px`,
-                  }}
-                >
-                  <span className="text-muted-foreground font-medium">
-                    Page {page.pageNumber} of {pages.length}
-                  </span>
-                </div>
-              </div>
-            ))}
-            
-            {/* Spacer at bottom */}
-            <div style={{ height: CONTAINER_PADDING }} />
+              ))}
+              
+              {/* Spacer at bottom */}
+              <div style={{ height: CONTAINER_PADDING }} />
+            </div>
           </div>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      </div>
 
       {/* Section count footer */}
       <div className="px-3 py-2 border-t bg-muted/20 text-xs text-muted-foreground">
