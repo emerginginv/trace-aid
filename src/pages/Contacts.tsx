@@ -26,6 +26,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Contact {
   id: string;
@@ -59,8 +60,7 @@ const Contacts = () => {
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [selectedContactEmail, setSelectedContactEmail] = useState<string>("");
   const [emailSubject, setEmailSubject] = useState<string>("");
-  const [sortColumn, setSortColumn] = useState<string>("first_name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("contacts", "first_name", "asc");
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("contacts-columns", COLUMNS);
 
@@ -117,14 +117,6 @@ const Contacts = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
 
   const filteredContacts = contacts.filter(contact => {
     return searchQuery === '' || 

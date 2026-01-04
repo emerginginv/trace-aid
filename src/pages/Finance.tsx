@@ -12,6 +12,7 @@ import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface RetainerBalance {
   case_id: string;
@@ -39,8 +40,7 @@ const Finance = () => {
   const [retainerSearch, setRetainerSearch] = useState("");
   
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("case_title");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("finance", "case_title", "asc");
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("finance-columns", COLUMNS);
 
@@ -109,14 +109,6 @@ const Finance = () => {
     }
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
 
   // Filter functions
   const filteredRetainerBalances = retainerBalances.filter((balance) => {

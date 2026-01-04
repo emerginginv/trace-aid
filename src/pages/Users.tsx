@@ -28,6 +28,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface OrgUser {
   id: string;
@@ -63,8 +64,7 @@ const Users = () => {
   const [userToRemove, setUserToRemove] = useState<OrgUser | null>(null);
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [selectedUserForColor, setSelectedUserForColor] = useState<OrgUser | null>(null);
-  const [sortColumn, setSortColumn] = useState<string>("full_name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("users", "full_name", "asc");
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { isAdmin } = useUserRole();
@@ -299,14 +299,6 @@ const Users = () => {
     }
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||

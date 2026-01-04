@@ -20,6 +20,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Finance {
   id: string;
@@ -80,10 +81,8 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   const [defaultFinanceType, setDefaultFinanceType] = useState<"retainer" | "expense" | "time">("expense");
   
   // Sorting states
-  const [expenseSortColumn, setExpenseSortColumn] = useState<string>("date");
-  const [expenseSortDirection, setExpenseSortDirection] = useState<"asc" | "desc">("desc");
-  const [timeSortColumn, setTimeSortColumn] = useState<string>("date");
-  const [timeSortDirection, setTimeSortDirection] = useState<"asc" | "desc">("desc");
+  const { sortColumn: expenseSortColumn, sortDirection: expenseSortDirection, handleSort: handleExpenseSort } = useSortPreference("case-finances-expenses", "date", "desc");
+  const { sortColumn: timeSortColumn, sortDirection: timeSortDirection, handleSort: handleTimeSort } = useSortPreference("case-finances-time", "date", "desc");
 
   // Permission checks
   const canViewFinances = hasPermission('view_finances');

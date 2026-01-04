@@ -23,6 +23,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { TableHeader, TableRow as TRow } from "@/components/ui/table";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Invoice {
   id: string;
@@ -78,8 +79,7 @@ const AllInvoices = () => {
   const [showInvoiceFromExpenses, setShowInvoiceFromExpenses] = useState(false);
   
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("date");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("invoices", "date", "desc");
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("invoices-columns", COLUMNS);
 
@@ -163,14 +163,6 @@ const AllInvoices = () => {
     }
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
 
   // Filter functions
   const filteredInvoices = invoices.filter((invoice) => {

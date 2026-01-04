@@ -16,6 +16,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Activity {
   id: string;
@@ -62,8 +63,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const [activeTab, setActiveTab] = useState<"tasks" | "events">("tasks");
 
   // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>("due_date");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("case-activities", "due_date", "asc");
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewActivities = hasPermission("view_activities");
@@ -218,14 +218,6 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
     }
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
