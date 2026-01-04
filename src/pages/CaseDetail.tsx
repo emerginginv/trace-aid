@@ -25,6 +25,7 @@ import { RelatedCases } from "@/components/case-detail/RelatedCases";
 import { BudgetSummary } from "@/components/case-detail/BudgetSummary";
 import { BudgetAdjustmentForm } from "@/components/case-detail/BudgetAdjustmentForm";
 import { BudgetAdjustmentsHistory } from "@/components/case-detail/BudgetAdjustmentsHistory";
+import { BudgetConsumptionSnapshot } from "@/components/case-detail/BudgetConsumptionSnapshot";
 import { CaseBudgetWidget } from "@/components/case-detail/CaseBudgetWidget";
 import { Mail } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -693,6 +694,7 @@ const CaseDetail = () => {
               refreshKey={budgetRefreshKey} 
               onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
             />
+            <BudgetConsumptionSnapshot caseId={id!} refreshKey={budgetRefreshKey} />
             <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} />
           </div>
         </TabsContent>
