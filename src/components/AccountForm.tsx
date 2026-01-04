@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 const accountSchema = z.object({
   name: z.string().min(1, "Account name is required").max(100),
@@ -101,15 +102,20 @@ export function AccountForm({ open, onOpenChange, onSuccess }: AccountFormProps)
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Account</DialogTitle>
-          <DialogDescription>
-            Add a new business account to your system
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
+    <>
+      <LoadingOverlay 
+        show={form.formState.isSubmitting} 
+        message="Creating account..." 
+      />
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Account</DialogTitle>
+            <DialogDescription>
+              Add a new business account to your system
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
@@ -257,9 +263,10 @@ export function AccountForm({ open, onOpenChange, onSuccess }: AccountFormProps)
                 {form.formState.isSubmitting ? "Creating..." : "Create Account"}
               </Button>
             </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

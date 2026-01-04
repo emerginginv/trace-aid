@@ -14,6 +14,7 @@ import { ActivityForm } from "@/components/case-detail/ActivityForm";
 import { UpdateForm } from "@/components/case-detail/UpdateForm";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 
 interface Task {
   id: string;
@@ -79,11 +80,13 @@ const Dashboard = () => {
     outstandingExpenses: 0,
     unpaidInvoices: 0
   });
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   useEffect(() => {
     if (!organization?.id) return;
 
     const fetchDashboardData = async () => {
+      setIsDataLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -278,6 +281,7 @@ const Dashboard = () => {
         outstandingExpenses: outstandingExpenses,
         unpaidInvoices: unpaidInvoicesTotal
       });
+      setIsDataLoading(false);
     };
 
     fetchDashboardData();
@@ -381,14 +385,9 @@ const Dashboard = () => {
     color: "text-accent",
     bgColor: "bg-accent/10"
   }];
-  // Show loading state while checking role
-  if (roleLoading) {
-    return <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>;
+  // Show loading state while checking role or loading data
+  if (roleLoading || isDataLoading) {
+    return <DashboardSkeleton />;
   }
 
   // Show vendor dashboard if user is a vendor
