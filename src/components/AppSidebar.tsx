@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar, FileText, Info, Wallet, Receipt, Upload } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar, FileText, Info, Wallet, Receipt } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
@@ -61,11 +61,6 @@ const allMenuItems = [{
   icon: Users,
   url: "/contacts",
   roles: ['admin', 'manager', 'investigator']
-}, {
-  title: "Data Import",
-  icon: Upload,
-  url: "/import",
-  roles: ['admin', 'manager']
 }];
 
 export function AppSidebar() {

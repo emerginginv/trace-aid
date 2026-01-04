@@ -3,7 +3,7 @@ import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PermissionsManager } from "@/components/PermissionsManager";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,8 @@ import { EmailTestForm } from "@/components/EmailTestForm";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSearchParams } from "react-router-dom";
 import { OrgIsolationAudit } from "@/components/OrgIsolationAudit";
+import { SettingsNav } from "@/components/settings/SettingsNav";
+import { DataImportTab } from "@/components/settings/DataImportTab";
 import {
   DndContext,
   closestCenter,
@@ -179,7 +181,7 @@ const Settings = () => {
   // Billing State
   const { organization, subscriptionStatus, checkSubscription, refreshOrganization } = useOrganization();
   const [billingLoading, setBillingLoading] = useState<string | null>(null);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Import pricing tiers from planLimits - removed local definition
 
@@ -1376,6 +1378,21 @@ const Settings = () => {
     );
   }
 
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    return tabParam || 'preferences';
+  });
+
+  // Handle tab changes with URL sync
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === 'preferences') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: value });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -1385,35 +1402,22 @@ const Settings = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className={`grid w-full gap-1 p-1 ${(currentUserRole === 'investigator' || currentUserRole === 'vendor') ? 'grid-cols-1' : currentUserRole === 'admin' ? 'grid-cols-2 sm:grid-cols-5 lg:grid-cols-9' : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8'} h-auto`}>
-          <TabsTrigger value="preferences" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Preferences</TabsTrigger>
-          {currentUserRole !== 'investigator' && currentUserRole !== 'vendor' && (
-            <>
-              <TabsTrigger value="organization" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Organization</TabsTrigger>
-              <TabsTrigger value="permissions" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Permissions</TabsTrigger>
-              <TabsTrigger value="users" onClick={() => !users.length && fetchUsers()} className="text-xs sm:text-sm px-2 py-2 sm:px-3">Users</TabsTrigger>
-              <TabsTrigger value="picklists" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Picklists</TabsTrigger>
-              <TabsTrigger value="templates" className="text-xs sm:text-sm px-2 py-2 sm:px-3">Templates</TabsTrigger>
-              <TabsTrigger value="email" className="text-xs sm:text-sm px-2 py-2 sm:px-3 flex items-center justify-center gap-1">
-                <Mail className="w-3 h-3" />
-                <span className="hidden sm:inline">Email</span>
-              </TabsTrigger>
-              {currentUserRole === 'admin' && (
-                <>
-                  <TabsTrigger value="billing" className="text-xs sm:text-sm px-2 py-2 sm:px-3 flex items-center justify-center gap-1">
-                    <CreditCard className="w-3 h-3" />
-                    <span className="hidden sm:inline">Billing</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="data-integrity" className="text-xs sm:text-sm px-2 py-2 sm:px-3 flex items-center justify-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    <span className="hidden sm:inline">Data Integrity</span>
-                  </TabsTrigger>
-                </>
-              )}
-            </>
-          )}
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Left sidebar navigation */}
+          <div className="w-full md:w-56 shrink-0">
+            <div className="sticky top-6">
+              <SettingsNav 
+                currentTab={activeTab}
+                onTabChange={handleTabChange}
+                userRole={currentUserRole}
+                onUsersClick={() => !users.length && fetchUsers()}
+              />
+            </div>
+          </div>
+
+          {/* Right content area */}
+          <div className="flex-1 min-w-0">
 
         {/* User Preferences Tab */}
         <TabsContent value="preferences">
@@ -2947,6 +2951,25 @@ const Settings = () => {
             </Card>
           </TabsContent>
         )}
+
+        {/* Data Import Tab - Admin and Manager Only */}
+        {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+          <TabsContent value="data-import">
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Import</CardTitle>
+                <CardDescription>
+                  Import data from external systems using CaseWyze templates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataImportTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+          </div>
+        </div>
       </Tabs>
     </div>
   );
