@@ -192,6 +192,67 @@ export type Database = {
           },
         ]
       }
+      case_budget_adjustments: {
+        Row: {
+          adjustment_amount: number | null
+          adjustment_type: string
+          case_id: string
+          created_at: string
+          id: string
+          new_value: number
+          organization_id: string
+          previous_value: number | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          adjustment_amount?: number | null
+          adjustment_type: string
+          case_id: string
+          created_at?: string
+          id?: string
+          new_value: number
+          organization_id: string
+          previous_value?: number | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          adjustment_amount?: number | null
+          adjustment_type?: string
+          case_id?: string
+          created_at?: string
+          id?: string
+          new_value?: number
+          organization_id?: string
+          previous_value?: number | null
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_budget_adjustments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_budget_adjustments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_budget_adjustments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_finances: {
         Row: {
           activity_id: string | null
@@ -450,6 +511,9 @@ export type Database = {
       cases: {
         Row: {
           account_id: string | null
+          budget_dollars: number | null
+          budget_hours: number | null
+          budget_notes: string | null
           case_manager_id: string | null
           case_number: string
           closed_at: string | null
@@ -472,6 +536,9 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          budget_dollars?: number | null
+          budget_hours?: number | null
+          budget_notes?: string | null
           case_manager_id?: string | null
           case_number: string
           closed_at?: string | null
@@ -494,6 +561,9 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          budget_dollars?: number | null
+          budget_hours?: number | null
+          budget_notes?: string | null
           case_manager_id?: string | null
           case_number?: string
           closed_at?: string | null
@@ -1339,6 +1409,19 @@ export type Database = {
       accept_organization_invite: {
         Args: { invite_token: string }
         Returns: Json
+      }
+      get_case_budget_summary: {
+        Args: { p_case_id: string }
+        Returns: {
+          budget_dollars_authorized: number
+          budget_hours_authorized: number
+          dollars_consumed: number
+          dollars_remaining: number
+          dollars_utilization_pct: number
+          hours_consumed: number
+          hours_remaining: number
+          hours_utilization_pct: number
+        }[]
       }
       get_organization_users: {
         Args: { org_id: string }
