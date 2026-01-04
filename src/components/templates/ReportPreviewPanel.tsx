@@ -383,6 +383,13 @@ export function ReportPreviewPanel({
                   >
                     <div 
                       className="w-full h-full overflow-hidden report-document"
+                      style={{
+                        fontFamily: "Georgia, 'Times New Roman', serif",
+                        fontSize: '11pt',
+                        lineHeight: 1.6,
+                        color: '#1a1a1a',
+                        backgroundColor: '#ffffff',
+                      }}
                       dangerouslySetInnerHTML={{ __html: page.html }}
                     />
                   </div>
