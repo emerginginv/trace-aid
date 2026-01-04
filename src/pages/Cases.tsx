@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { CasesPageSkeleton } from "@/components/ui/list-page-skeleton";
+import { InlineEditCell } from "@/components/ui/inline-edit-cell";
 
 interface Case {
   id: string;
@@ -134,6 +135,46 @@ const Cases = () => {
     const statusItem = statusPicklists.find(s => s.value === status);
     return statusItem?.status_type === 'closed';
   };
+
+  // Inline status update handler with optimistic UI
+  const handleInlineStatusChange = useCallback(async (caseId: string, newStatus: string): Promise<boolean> => {
+    const caseItem = cases.find(c => c.id === caseId);
+    if (!caseItem) return false;
+    
+    const oldStatus = caseItem.status;
+    if (oldStatus === newStatus) return true;
+    
+    // Optimistic update
+    setCases(prev => prev.map(c => 
+      c.id === caseId ? { ...c, status: newStatus } : c
+    ));
+    
+    toast.success(`Status updated to ${newStatus}`);
+    
+    try {
+      const { error } = await supabase
+        .from("cases")
+        .update({ status: newStatus })
+        .eq("id", caseId);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      // Rollback on error
+      setCases(prev => prev.map(c => 
+        c.id === caseId ? { ...c, status: oldStatus } : c
+      ));
+      toast.error("Failed to update status. Change reverted.");
+      return false;
+    }
+  }, [cases]);
+
+  // Get status options for inline editing
+  const statusOptions = statusPicklists.map(s => ({
+    value: s.value,
+    label: s.value,
+    color: s.color
+  }));
 
   const handleDeleteClick = (caseId: string) => {
     setCaseToDelete(caseId);
@@ -524,10 +565,21 @@ const Cases = () => {
                       </TableCell>
                     )}
                     {isVisible("status") && (
-                      <TableCell>
-                        <Badge className="border" style={getStatusStyle(caseItem.status)}>
-                          {caseItem.status}
-                        </Badge>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {hasPermission('edit_cases') ? (
+                          <InlineEditCell
+                            value={caseItem.status}
+                            options={statusOptions}
+                            type="select"
+                            onSave={(newValue) => handleInlineStatusChange(caseItem.id, newValue)}
+                            displayAs="badge"
+                            badgeStyle={getStatusStyle(caseItem.status)}
+                          />
+                        ) : (
+                          <Badge className="border" style={getStatusStyle(caseItem.status)}>
+                            {caseItem.status}
+                          </Badge>
+                        )}
                       </TableCell>
                     )}
                     {isVisible("start_date") && (

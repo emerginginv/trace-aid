@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -29,6 +29,7 @@ import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibi
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { AccountsPageSkeleton } from "@/components/ui/list-page-skeleton";
+import { InlineEditCell } from "@/components/ui/inline-edit-cell";
 
 interface Account {
   id: string;
@@ -93,6 +94,45 @@ const Accounts = () => {
   };
 
   const uniqueIndustries = Array.from(new Set(accounts.map(a => a.industry).filter(Boolean)));
+
+  // Inline industry update handler with optimistic UI
+  const handleInlineIndustryChange = useCallback(async (accountId: string, newIndustry: string): Promise<boolean> => {
+    const accountItem = accounts.find(a => a.id === accountId);
+    if (!accountItem) return false;
+    
+    const oldIndustry = accountItem.industry;
+    if (oldIndustry === newIndustry) return true;
+    
+    // Optimistic update
+    setAccounts(prev => prev.map(a => 
+      a.id === accountId ? { ...a, industry: newIndustry } : a
+    ));
+    
+    toast.success("Industry updated");
+    
+    try {
+      const { error } = await supabase
+        .from("accounts")
+        .update({ industry: newIndustry })
+        .eq("id", accountId);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      // Rollback on error
+      setAccounts(prev => prev.map(a => 
+        a.id === accountId ? { ...a, industry: oldIndustry } : a
+      ));
+      toast.error("Failed to update industry. Change reverted.");
+      return false;
+    }
+  }, [accounts]);
+
+  // Get industry options for inline editing
+  const industryOptions = uniqueIndustries.map(i => ({
+    value: i,
+    label: i
+  }));
 
   // Pending deletion tracking for undo functionality
   const pendingDeletions = useRef<Map<string, { item: Account; timeoutId: NodeJS.Timeout }>>(new Map());
@@ -464,7 +504,18 @@ const Accounts = () => {
                     </TableCell>
                   )}
                   {isVisible("industry") && (
-                    <TableCell>{account.industry || '-'}</TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      {hasPermission('edit_accounts') ? (
+                        <InlineEditCell
+                          value={account.industry || '-'}
+                          options={industryOptions}
+                          type="select"
+                          onSave={(newValue) => handleInlineIndustryChange(account.id, newValue)}
+                        />
+                      ) : (
+                        account.industry || '-'
+                      )}
+                    </TableCell>
                   )}
                   {isVisible("email") && (
                     <TableCell>{account.email || '-'}</TableCell>
