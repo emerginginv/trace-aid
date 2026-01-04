@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import html2pdf from "html2pdf.js";
+import { getCurrentOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
 
 interface Template {
   id: string;
@@ -46,12 +47,19 @@ export const GenerateReportDialog = ({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [generating, setGenerating] = useState(false);
   const [exportFormat, setExportFormat] = useState<"pdf" | "docx">("pdf");
+  const [orgProfile, setOrgProfile] = useState<OrganizationProfile | null>(null);
 
   useEffect(() => {
     if (open) {
       fetchTemplates();
+      fetchOrgProfile();
     }
   }, [open]);
+
+  const fetchOrgProfile = async () => {
+    const profile = await getCurrentOrganizationProfile();
+    setOrgProfile(profile);
+  };
 
   const fetchTemplates = async () => {
     try {
@@ -99,12 +107,29 @@ export const GenerateReportDialog = ({
       })
       .join("\n\n");
 
+    // Build logo HTML if available
+    const logoHtml = orgProfile?.logoUrl 
+      ? `<img src="${orgProfile.logoUrl}" alt="${orgProfile.companyName || 'Company'} Logo" style="max-height: 60px; max-width: 200px;" />`
+      : "";
+
     return templateBody
+      // Case placeholders
       .replace(/\{\{case_title\}\}/g, caseData.title)
       .replace(/\{\{case_number\}\}/g, caseData.case_number)
       .replace(/\{\{case_manager\}\}/g, caseManagerName)
       .replace(/\{\{current_date\}\}/g, new Date().toLocaleDateString())
-      .replace(/\{\{update_list\}\}/g, updateList);
+      .replace(/\{\{update_list\}\}/g, updateList)
+      // Organization branding placeholders
+      .replace(/\{\{company_name\}\}/g, orgProfile?.companyName || "")
+      .replace(/\{\{company_logo\}\}/g, logoHtml)
+      .replace(/\{\{company_address\}\}/g, orgProfile?.fullAddress || "")
+      .replace(/\{\{company_street\}\}/g, orgProfile?.streetAddress || "")
+      .replace(/\{\{company_city\}\}/g, orgProfile?.city || "")
+      .replace(/\{\{company_state\}\}/g, orgProfile?.state || "")
+      .replace(/\{\{company_zip\}\}/g, orgProfile?.zipCode || "")
+      .replace(/\{\{company_phone\}\}/g, orgProfile?.phone || "")
+      .replace(/\{\{company_email\}\}/g, orgProfile?.email || "")
+      .replace(/\{\{company_website\}\}/g, orgProfile?.websiteUrl || "");
   };
 
   const generatePDF = async (content: string) => {

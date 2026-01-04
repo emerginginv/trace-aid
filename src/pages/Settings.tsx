@@ -112,7 +112,12 @@ const Settings = () => {
   const [timezone, setTimezone] = useState("America/New_York");
   const [logoUrl, setLogoUrl] = useState("");
   const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zipCode, setZipCode] = useState("");
   const [phone, setPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [billingEmail, setBillingEmail] = useState("");
   const [agencyLicenseNumber, setAgencyLicenseNumber] = useState("");
   const [feinNumber, setFeinNumber] = useState("");
@@ -238,7 +243,12 @@ const Settings = () => {
         setTimezone(orgSettings.timezone || "America/New_York");
         setLogoUrl(orgSettings.logo_url || "");
         setAddress(orgSettings.address || "");
+        setCity((orgSettings as any).city || "");
+        setState((orgSettings as any).state || "");
+        setZipCode((orgSettings as any).zip_code || "");
         setPhone(orgSettings.phone || "");
+        setContactEmail((orgSettings as any).email || "");
+        setWebsiteUrl((orgSettings as any).website_url || "");
         setBillingEmail(orgSettings.billing_email || "");
         setAgencyLicenseNumber(orgSettings.agency_license_number || "");
         setFeinNumber(orgSettings.fein_number || "");
@@ -582,7 +592,12 @@ const Settings = () => {
         timezone: timezone,
         logo_url: logoUrl,
         address: address,
+        city: city,
+        state: state,
+        zip_code: zipCode,
         phone: phone,
+        email: contactEmail,
+        website_url: websiteUrl,
         billing_email: billingEmail,
         agency_license_number: agencyLicenseNumber,
         fein_number: feinNumber,
@@ -1612,14 +1627,65 @@ const Settings = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea
+                  <Label htmlFor="address">Street Address</Label>
+                  <Input
                     id="address"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="123 Main St, Suite 100&#10;City, State 12345"
-                    rows={3}
+                    placeholder="123 Main St, Suite 100"
                   />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="City"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      placeholder="State"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="zipCode">ZIP Code</Label>
+                    <Input
+                      id="zipCode"
+                      value={zipCode}
+                      onChange={(e) => setZipCode(e.target.value)}
+                      placeholder="12345"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="contactEmail">Contact Email</Label>
+                    <Input
+                      id="contactEmail"
+                      type="email"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      placeholder="info@company.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="websiteUrl">Website URL</Label>
+                    <Input
+                      id="websiteUrl"
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      placeholder="https://www.company.com"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
