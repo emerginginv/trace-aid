@@ -20,7 +20,9 @@ export type Database = {
           city: string | null
           created_at: string | null
           email: string | null
+          external_record_id: string | null
           id: string
+          import_batch_id: string | null
           industry: string | null
           name: string
           notes: string | null
@@ -36,7 +38,9 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           email?: string | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           industry?: string | null
           name: string
           notes?: string | null
@@ -52,7 +56,9 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           email?: string | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           industry?: string | null
           name?: string
           notes?: string | null
@@ -64,6 +70,13 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "accounts_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "accounts_organization_id_fkey"
             columns: ["organization_id"]
@@ -91,7 +104,9 @@ export type Database = {
           description: string | null
           due_date: string | null
           event_subtype: string | null
+          external_record_id: string | null
           id: string
+          import_batch_id: string | null
           organization_id: string | null
           status: string
           title: string
@@ -108,7 +123,9 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           event_subtype?: string | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           organization_id?: string | null
           status?: string
           title: string
@@ -125,7 +142,9 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           event_subtype?: string | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           organization_id?: string | null
           status?: string
           title?: string
@@ -133,6 +152,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "case_activities_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "case_activities_organization_id_fkey"
             columns: ["organization_id"]
@@ -201,7 +227,9 @@ export type Database = {
           adjustment_type: string
           case_id: string
           created_at: string
+          external_record_id: string | null
           id: string
+          import_batch_id: string | null
           new_value: number
           organization_id: string
           previous_value: number | null
@@ -213,7 +241,9 @@ export type Database = {
           adjustment_type: string
           case_id: string
           created_at?: string
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           new_value: number
           organization_id: string
           previous_value?: number | null
@@ -225,7 +255,9 @@ export type Database = {
           adjustment_type?: string
           case_id?: string
           created_at?: string
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           new_value?: number
           organization_id?: string
           previous_value?: number | null
@@ -238,6 +270,13 @@ export type Database = {
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_budget_adjustments_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
             referencedColumns: ["id"]
           },
           {
@@ -268,10 +307,12 @@ export type Database = {
           description: string
           due_date: string | null
           end_date: string | null
+          external_record_id: string | null
           finance_type: string
           hourly_rate: number | null
           hours: number | null
           id: string
+          import_batch_id: string | null
           invoice_id: string | null
           invoice_number: string | null
           invoiced: boolean | null
@@ -296,10 +337,12 @@ export type Database = {
           description: string
           due_date?: string | null
           end_date?: string | null
+          external_record_id?: string | null
           finance_type: string
           hourly_rate?: number | null
           hours?: number | null
           id?: string
+          import_batch_id?: string | null
           invoice_id?: string | null
           invoice_number?: string | null
           invoiced?: boolean | null
@@ -324,10 +367,12 @@ export type Database = {
           description?: string
           due_date?: string | null
           end_date?: string | null
+          external_record_id?: string | null
           finance_type?: string
           hourly_rate?: number | null
           hours?: number | null
           id?: string
+          import_batch_id?: string | null
           invoice_id?: string | null
           invoice_number?: string | null
           invoiced?: boolean | null
@@ -347,6 +392,13 @@ export type Database = {
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "case_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_finances_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
             referencedColumns: ["id"]
           },
           {
@@ -370,7 +422,9 @@ export type Database = {
           case_id: string
           created_at: string
           details: Json | null
+          external_record_id: string | null
           id: string
+          import_batch_id: string | null
           is_primary: boolean | null
           name: string
           notes: string | null
@@ -384,7 +438,9 @@ export type Database = {
           case_id: string
           created_at?: string
           details?: Json | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           is_primary?: boolean | null
           name: string
           notes?: string | null
@@ -398,7 +454,9 @@ export type Database = {
           case_id?: string
           created_at?: string
           details?: Json | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           is_primary?: boolean | null
           name?: string
           notes?: string | null
@@ -409,6 +467,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "case_subjects_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "case_subjects_organization_id_fkey"
             columns: ["organization_id"]
@@ -461,7 +526,9 @@ export type Database = {
           case_id: string
           created_at: string | null
           description: string | null
+          external_record_id: string | null
           id: string
+          import_batch_id: string | null
           organization_id: string | null
           title: string
           update_type: string
@@ -471,7 +538,9 @@ export type Database = {
           case_id: string
           created_at?: string | null
           description?: string | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           organization_id?: string | null
           title: string
           update_type?: string
@@ -481,7 +550,9 @@ export type Database = {
           case_id?: string
           created_at?: string | null
           description?: string | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           organization_id?: string | null
           title?: string
           update_type?: string
@@ -493,6 +564,13 @@ export type Database = {
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_updates_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
             referencedColumns: ["id"]
           },
           {
@@ -526,7 +604,9 @@ export type Database = {
           created_at: string | null
           description: string | null
           due_date: string | null
+          external_record_id: string | null
           id: string
+          import_batch_id: string | null
           instance_number: number
           investigator_ids: string[] | null
           organization_id: string | null
@@ -554,7 +634,9 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           instance_number?: number
           investigator_ids?: string[] | null
           organization_id?: string | null
@@ -582,7 +664,9 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          external_record_id?: string | null
           id?: string
+          import_batch_id?: string | null
           instance_number?: number
           investigator_ids?: string[] | null
           organization_id?: string | null
@@ -619,6 +703,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cases_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cases_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -648,8 +739,10 @@ export type Database = {
           city: string | null
           created_at: string | null
           email: string | null
+          external_record_id: string | null
           first_name: string
           id: string
+          import_batch_id: string | null
           last_name: string
           notes: string | null
           organization_id: string
@@ -665,8 +758,10 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           email?: string | null
+          external_record_id?: string | null
           first_name: string
           id?: string
+          import_batch_id?: string | null
           last_name: string
           notes?: string | null
           organization_id: string
@@ -682,8 +777,10 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           email?: string | null
+          external_record_id?: string | null
           first_name?: string
           id?: string
+          import_batch_id?: string | null
           last_name?: string
           notes?: string | null
           organization_id?: string
@@ -699,6 +796,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
             referencedColumns: ["id"]
           },
           {
@@ -749,6 +853,110 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      import_batches: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_log: Json | null
+          failed_records: number
+          id: string
+          organization_id: string
+          processed_records: number
+          source_system: string
+          started_at: string | null
+          status: string
+          total_records: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_log?: Json | null
+          failed_records?: number
+          id?: string
+          organization_id: string
+          processed_records?: number
+          source_system: string
+          started_at?: string | null
+          status?: string
+          total_records?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_log?: Json | null
+          failed_records?: number
+          id?: string
+          organization_id?: string
+          processed_records?: number
+          source_system?: string
+          started_at?: string | null
+          status?: string
+          total_records?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_records: {
+        Row: {
+          batch_id: string
+          casewyze_id: string | null
+          created_at: string
+          entity_type: string
+          error_message: string | null
+          external_record_id: string
+          id: string
+          source_data: Json
+          status: string
+        }
+        Insert: {
+          batch_id: string
+          casewyze_id?: string | null
+          created_at?: string
+          entity_type: string
+          error_message?: string | null
+          external_record_id: string
+          id?: string
+          source_data: Json
+          status?: string
+        }
+        Update: {
+          batch_id?: string
+          casewyze_id?: string | null
+          created_at?: string
+          entity_type?: string
+          error_message?: string | null
+          external_record_id?: string
+          id?: string
+          source_data?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoice_payments: {
         Row: {
