@@ -610,19 +610,6 @@ export const CaseCalendar = forwardRef<
           </div>
         </div>
 
-        {/* User Legend */}
-        <div className="flex flex-wrap gap-2 p-4 bg-card border rounded-lg">
-          <div className="text-sm font-medium mr-2">Team:</div>
-          {users.map(user => (
-            <div key={user.id} className="flex items-center gap-2 text-xs bg-muted/50 px-2 py-1 rounded">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: user.color || "#6366f1" }}
-              />
-              <span>{user.full_name || user.email}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Task List - Right Side */}
