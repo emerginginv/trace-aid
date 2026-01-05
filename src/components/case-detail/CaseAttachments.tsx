@@ -6,7 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical, Loader2 } from "lucide-react";
+import { generatePdfThumbnail, isPdfFile } from "@/lib/pdfThumbnail";
 import { useConfirmation } from "@/components/ui/confirmation-dialog";
 import { RevokeMode } from "./RevokeAccessDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -98,6 +99,8 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sharedAttachmentIds, setSharedAttachmentIds] = useState<Set<string>>(new Set());
+  const [generatingThumbnails, setGeneratingThumbnails] = useState(false);
+  const [thumbnailProgress, setThumbnailProgress] = useState({ current: 0, total: 0 });
   
   // Bulk actions dialogs
   const [bulkShareDialogOpen, setBulkShareDialogOpen] = useState(false);
@@ -791,6 +794,86 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     clearSelection();
   };
 
+  const handleGenerateMissingThumbnails = async () => {
+    const pdfsNeedingThumbnails = attachments.filter(
+      (a) => isPdfFile(a.file_type, a.file_name) && 
+             (!a.preview_status || a.preview_status === 'failed')
+    );
+
+    if (pdfsNeedingThumbnails.length === 0) {
+      toast({
+        title: "No Missing Thumbnails",
+        description: "All PDF attachments already have thumbnails.",
+      });
+      return;
+    }
+
+    setGeneratingThumbnails(true);
+    setThumbnailProgress({ current: 0, total: pdfsNeedingThumbnails.length });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < pdfsNeedingThumbnails.length; i++) {
+      const attachment = pdfsNeedingThumbnails[i];
+      setThumbnailProgress({ current: i + 1, total: pdfsNeedingThumbnails.length });
+
+      try {
+        const { data: pdfBlob, error: downloadError } = await supabase.storage
+          .from('case-attachments')
+          .download(attachment.file_path);
+
+        if (downloadError) throw downloadError;
+
+        const thumbnailBlob = await generatePdfThumbnail(pdfBlob, {
+          width: 400,
+          height: 300,
+        });
+
+        const previewPath = `${attachment.file_path.replace(/\.[^/.]+$/, '')}_preview.jpg`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('case-attachments')
+          .upload(previewPath, thumbnailBlob, {
+            contentType: 'image/jpeg',
+            upsert: true,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { error: updateError } = await supabase
+          .from('case_attachments')
+          .update({
+            preview_path: previewPath,
+            preview_status: 'complete',
+            preview_generated_at: new Date().toISOString(),
+          })
+          .eq('id', attachment.id);
+
+        if (updateError) throw updateError;
+
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to generate thumbnail for ${attachment.file_name}:`, error);
+        
+        await supabase
+          .from('case_attachments')
+          .update({ preview_status: 'failed' })
+          .eq('id', attachment.id);
+
+        failCount++;
+      }
+    }
+
+    setGeneratingThumbnails(false);
+    fetchAttachments();
+
+    toast({
+      title: "Thumbnail Generation Complete",
+      description: `Generated ${successCount} thumbnail${successCount !== 1 ? 's' : ''}${failCount > 0 ? `, ${failCount} failed` : ''}.`,
+    });
+  };
+
   if (permissionsLoading || loading) {
     return <AttachmentsTabSkeleton />;
   }
@@ -852,6 +935,25 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                   Revoke all active share links for this case ({sharedAttachmentIds.size} shared file{sharedAttachmentIds.size !== 1 ? 's' : ''})
                 </TooltipContent>
               </Tooltip>
+            )}
+            {canEditAttachments && (
+              <Button 
+                variant="outline" 
+                onClick={handleGenerateMissingThumbnails}
+                disabled={generatingThumbnails}
+              >
+                {generatingThumbnails ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {thumbnailProgress.current}/{thumbnailProgress.total}
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Generate Thumbnails
+                  </>
+                )}
+              </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
