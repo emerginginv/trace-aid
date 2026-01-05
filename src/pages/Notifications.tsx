@@ -20,6 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface Notification {
   id: string;
@@ -33,13 +34,16 @@ interface Notification {
 }
 
 const Notifications = () => {
+  const { organization } = useOrganization();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchNotifications();
+    if (organization?.id) {
+      fetchNotifications();
+    }
     
     // Set up realtime subscription
     const channel = supabase
@@ -60,30 +64,23 @@ const Notifications = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [organization?.id]);
 
   const fetchNotifications = async () => {
+    if (!organization?.id) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
-      // Get user's organization_id
-      const { data: orgMember } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!orgMember?.organization_id) {
-        setLoading(false);
-        return;
-      }
 
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
-        .eq('organization_id', orgMember.organization_id)
+        .eq('organization_id', organization.id)
         .order('timestamp', { ascending: false });
 
       if (error) throw error;

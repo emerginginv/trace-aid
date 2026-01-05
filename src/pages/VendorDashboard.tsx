@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Info, Briefcase, FileText, Upload, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface Case {
   id: string;
@@ -42,6 +43,7 @@ interface Update {
 export default function VendorDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { organization } = useOrganization();
   const [cases, setCases] = useState<Case[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,27 +58,19 @@ export default function VendorDashboard() {
 
   useEffect(() => {
     fetchVendorData();
-    fetchUpdateTypes();
-  }, []);
+    if (organization?.id) {
+      fetchUpdateTypes();
+    }
+  }, [organization?.id]);
 
   const fetchUpdateTypes = async () => {
+    if (!organization?.id) return;
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!orgMember) return;
-
       const { data, error } = await supabase
         .from("picklists")
         .select("value")
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", organization.id)
         .eq("type", "update_type")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
