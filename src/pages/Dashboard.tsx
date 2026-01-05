@@ -35,6 +35,10 @@ interface CalendarEvent {
   date: string;
   time: string;
   type: string;
+  eventSubtype: string | null;
+  eventStatus: string;
+  assignedUserId: string | null;
+  assignedUserName: string | null;
   caseId: string;
   activityData: any;
 }
@@ -228,15 +232,24 @@ const Dashboard = () => {
       const { data: eventsData } = await eventsQuery;
 
       if (eventsData) {
-        const calendarEvents: CalendarEvent[] = eventsData.map(event => ({
-          id: event.id,
-          title: event.title,
-          date: event.due_date,
-          time: "All Day",
-          type: event.activity_type || "event",
-          caseId: event.case_id,
-          activityData: event
-        }));
+        const calendarEvents: CalendarEvent[] = eventsData.map(event => {
+          // Find assigned user name from users array
+          const assignedUser = orgUsers?.find(u => u.id === event.assigned_user_id);
+          
+          return {
+            id: event.id,
+            title: event.title,
+            date: event.due_date,
+            time: "All Day",
+            type: event.activity_type || "event",
+            eventSubtype: event.event_subtype,
+            eventStatus: event.status || "to_do",
+            assignedUserId: event.assigned_user_id,
+            assignedUserName: assignedUser?.full_name || assignedUser?.email || null,
+            caseId: event.case_id,
+            activityData: event
+          };
+        });
         setEvents(calendarEvents);
       }
 
@@ -413,6 +426,19 @@ const Dashboard = () => {
       case 'to_do':
       default:
         return { label: 'To Do', className: 'bg-muted text-muted-foreground' };
+    }
+  };
+
+  const getEventStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'in_progress':
+        return { label: 'In Progress', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' };
+      case 'done':
+      case 'completed':
+        return { label: 'Done', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
+      case 'to_do':
+      default:
+        return { label: 'Scheduled', className: 'bg-muted text-muted-foreground' };
     }
   };
 
@@ -663,7 +689,7 @@ const Dashboard = () => {
               </Select>
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4">
             {upcomingEvents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
@@ -673,27 +699,51 @@ const Dashboard = () => {
                 <p className="text-xs text-muted-foreground/70 mt-1">Your calendar is clear</p>
               </div>
             ) : (
-              <div className="max-h-[400px] overflow-y-auto space-y-3 pr-1">
-                {upcomingEvents.map(event => (
-                  <div 
-                    key={event.id} 
-                    className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-secondary/20 transition-all cursor-pointer hover:shadow-md" 
-                    onClick={() => setEditingEvent(event)}
-                  >
-                    <div className="flex-1 space-y-2">
-                      <p className="font-medium text-sm leading-tight group-hover:text-primary transition-colors">
-                        {event.title}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs">
-                        <Badge variant="outline" className="bg-secondary/10 border-secondary/20 text-secondary">
-                          {getEventDateLabel(event.date)}
-                        </Badge>
-                        <span className="text-muted-foreground">{event.time}</span>
+              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+                {upcomingEvents.map(event => {
+                  const statusDisplay = getEventStatusDisplay(event.eventStatus);
+                  
+                  return (
+                    <div 
+                      key={event.id} 
+                      className="group flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-secondary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50" 
+                      onClick={() => setEditingEvent(event)}
+                    >
+                      {/* Title - Primary anchor */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{event.title}</p>
                       </div>
+                      
+                      {/* Event Type Badge (if available) */}
+                      {event.eventSubtype && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary shrink-0">
+                          {event.eventSubtype}
+                        </span>
+                      )}
+                      
+                      {/* Status Badge */}
+                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${statusDisplay.className}`}>
+                        {statusDisplay.label}
+                      </span>
+                      
+                      {/* Start Date */}
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                        <Clock className="w-3 h-3" />
+                        {getEventDateLabel(event.date)}
+                      </span>
+                      
+                      {/* Assigned User Avatar */}
+                      {event.assignedUserName && (
+                        <div 
+                          className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-medium shrink-0"
+                          title={event.assignedUserName}
+                        >
+                          {getUserInitials(event.assignedUserName)}
+                        </div>
+                      )}
                     </div>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
