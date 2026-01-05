@@ -131,7 +131,7 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
   });
   
   // Fetch totals separately
-  const { data: totals } = useQuery({
+  const { data: totals, refetch: refetchTotals } = useQuery({
     queryKey: ["report-totals", reportId, organization?.id, filters, timeRange],
     queryFn: async () => {
       if (!organization?.id || !report) return {};
@@ -231,7 +231,7 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
           <p className="text-muted-foreground">{report.description}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <Button variant="outline" size="sm" onClick={() => { refetch(); refetchTotals(); }}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
