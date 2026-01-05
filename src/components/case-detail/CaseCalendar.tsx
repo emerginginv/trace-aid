@@ -427,7 +427,7 @@ export const CaseCalendar = forwardRef<
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4">
+    <div className="space-y-4">
       <ActivityForm
         open={activityFormOpen}
         onOpenChange={(open) => {
@@ -497,18 +497,22 @@ export const CaseCalendar = forwardRef<
         </DialogContent>
       </Dialog>
 
-      {/* Calendar View - Left Side */}
-      <div className="flex-1 space-y-4">
-        {/* Page Header */}
+      {/* Only show Page Header when used standalone (caseId provided) */}
+      {caseId && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold">Calendar</h2>
             <p className="text-muted-foreground">Events and activities timeline</p>
           </div>
         </div>
+      )}
 
-        {/* Calendar Navigation */}
-        <div className="flex items-center justify-between bg-card border rounded-lg p-4">
+      {/* Flex container for calendar + task list */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Calendar View - Left Side */}
+        <div className="flex-1 space-y-4">
+          {/* Calendar Navigation */}
+          <div className="flex items-center justify-between bg-card border rounded-lg p-4">
           <Button
             variant="outline"
             onClick={() => setCurrentDate(subMonths(currentDate, 1))}
@@ -610,86 +614,87 @@ export const CaseCalendar = forwardRef<
           </div>
         </div>
 
-      </div>
-
-      {/* Task List - Right Side */}
-      {showTaskList && (
-      <div className="w-full lg:w-96 border rounded-lg bg-card">
-        <div className="p-4 border-b">
-          <h3 className="font-semibold text-lg mb-3">Tasks</h3>
-          
-          {/* Task List Filters */}
-          <Select value={taskListFilter} onValueChange={setTaskListFilter}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filter tasks" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="me">Assigned to Me</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
-        <div className="p-4 space-y-2 max-h-[600px] overflow-y-auto">
-          {getFilteredTasks().length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No tasks found
-            </p>
-          ) : (
-            getFilteredTasks().map(activity => {
-              const userColor = getUserColor(activity.assigned_user_id);
-              const activityDate = activity.date ? new Date(activity.date) : null;
-              const isPast = activityDate && isBefore(activityDate, new Date());
-              const statusIcon = getStatusIcon(activity.status, isPast);
-              
-              return (
-                <div
-                  key={activity.id}
-                  className="p-3 border rounded hover:bg-muted/50 transition-colors"
-                  style={{ borderLeftWidth: '3px', borderLeftColor: userColor }}
-                >
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={activity.status === "done"}
-                      onCheckedChange={() => handleToggleTaskComplete(activity)}
-                      disabled={isClosedCase}
-                      className="mt-1"
-                    />
-                    <div 
-                      className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => handleActivityClick(activity)}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className={`text-sm font-medium truncate flex-1 ${
-                          activity.status === "done" ? "line-through text-muted-foreground" : ""
-                        }`}>
-                          {activity.title}
+        {/* Task List - Right Side */}
+        {showTaskList && (
+        <div className="w-full lg:w-96 border rounded-lg bg-card">
+          <div className="p-4 border-b">
+            <h3 className="font-semibold text-lg mb-3">Tasks</h3>
+            
+            {/* Task List Filters */}
+            <Select value={taskListFilter} onValueChange={setTaskListFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filter tasks" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="me">Assigned to Me</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="p-4 space-y-2 max-h-[600px] overflow-y-auto">
+            {getFilteredTasks().length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No tasks found
+              </p>
+            ) : (
+              getFilteredTasks().map(activity => {
+                const userColor = getUserColor(activity.assigned_user_id);
+                const activityDate = activity.date ? new Date(activity.date) : null;
+                const isPast = activityDate && isBefore(activityDate, new Date());
+                const statusIcon = getStatusIcon(activity.status, isPast);
+                
+                return (
+                  <div
+                    key={activity.id}
+                    className="p-3 border rounded hover:bg-muted/50 transition-colors"
+                    style={{ borderLeftWidth: '3px', borderLeftColor: userColor }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={activity.status === "done"}
+                        onCheckedChange={() => handleToggleTaskComplete(activity)}
+                        disabled={isClosedCase}
+                        className="mt-1"
+                      />
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => handleActivityClick(activity)}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className={`text-sm font-medium truncate flex-1 ${
+                            activity.status === "done" ? "line-through text-muted-foreground" : ""
+                          }`}>
+                            {activity.title}
+                          </p>
+                        </div>
+                        
+                        {activityDate && (
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {format(activityDate, "MMM d, yyyy")}
+                            {isPast && activity.status !== "completed" && activity.status !== "done" && (
+                              <span className="text-red-500 ml-2">⚠️ Overdue</span>
+                            )}
+                          </p>
+                        )}
+                        
+                        <p className="text-xs font-medium" style={{ color: userColor }}>
+                          {getUserName(activity.assigned_user_id)}
                         </p>
                       </div>
-                      
-                      {activityDate && (
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {format(activityDate, "MMM d, yyyy")}
-                          {isPast && activity.status !== "completed" && activity.status !== "done" && (
-                            <span className="text-red-500 ml-2">⚠️ Overdue</span>
-                          )}
-                        </p>
-                      )}
-                      
-                      <p className="text-xs font-medium" style={{ color: userColor }}>
-                        {getUserName(activity.assigned_user_id)}
-                      </p>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
+        )}
       </div>
-      )}
     </div>
   );
 });
