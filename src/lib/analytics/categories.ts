@@ -92,8 +92,8 @@ export const ANALYTICS_CATEGORIES: AnalyticsCategory[] = [
     iconColor: "text-amber-500",
     iconBg: "bg-amber-500/10",
     links: [
-      { label: "Templates", href: "/settings?tab=templates", description: "Manage report templates" },
-      { label: "History", href: "/analytics/reports/history", description: "View report history" }
+      { label: "Dashboard", href: "/analytics/reports", description: "View report metrics" },
+      { label: "Templates", href: "/settings?tab=templates", description: "Manage report templates" }
     ]
   },
   {
