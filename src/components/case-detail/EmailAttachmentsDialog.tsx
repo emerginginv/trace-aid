@@ -11,6 +11,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { addHours, addDays, format } from "date-fns";
 import { Mail, File, Loader2, Eye, Edit3, Check, ChevronsUpDown, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ export function EmailAttachmentsDialog({
   attachmentType = "case",
   onSuccess,
 }: EmailAttachmentsDialogProps) {
+  const { organization } = useOrganization();
   const [recipientEmail, setRecipientEmail] = useState("");
   const [subject, setSubject] = useState(caseNumber ? `Shared Files from Case ${caseNumber}` : "Shared Files");
   const [message, setMessage] = useState("Please find the requested files below:");
@@ -73,22 +75,12 @@ export function EmailAttachmentsDialog({
   const fetchContacts = async () => {
     setContactsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) return;
+      if (!organization?.id) return;
 
       const { data, error } = await supabase
         .from("contacts")
         .select("id, first_name, last_name, email")
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", organization.id)
         .not("email", "is", null)
         .order("first_name");
 

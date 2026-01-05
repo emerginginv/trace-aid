@@ -225,18 +225,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
 
   const fetchAttachments = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) {
+      if (!organization?.id) {
         setLoading(false);
         return;
       }
@@ -245,7 +234,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
         .from("case_attachments")
         .select("*")
         .eq("case_id", caseId)
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", organization.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

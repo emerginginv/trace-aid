@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays } from "lucide-react";
@@ -45,6 +46,7 @@ interface CaseActivitiesProps {
 }
 
 export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesProps) {
+  const { organization } = useOrganization();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,22 +77,12 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
 
   const fetchUsers = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) return;
+      if (!organization?.id) return;
 
       const { data: orgMembers } = await supabase
         .from("organization_members")
         .select("user_id")
-        .eq("organization_id", orgMember.organization_id);
+        .eq("organization_id", organization.id);
 
       if (!orgMembers) return;
 
@@ -744,6 +736,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
           setEditingActivity(null);
         }}
         editingActivity={editingActivity}
+        organizationId={organization?.id || ""}
       />
     </>
   );

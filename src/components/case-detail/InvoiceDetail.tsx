@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ interface CaseData {
 }
 
 export const InvoiceDetail = ({ invoiceId, onClose }: InvoiceDetailProps) => {
+  const { organization } = useOrganization();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -422,6 +424,7 @@ export const InvoiceDetail = ({ invoiceId, onClose }: InvoiceDetailProps) => {
                 caseId={invoice.case_id}
                 remainingBalance={remainingBalance}
                 onSuccess={fetchInvoiceDetails}
+                organizationId={organization?.id || ""}
               />
             </div>
           )}

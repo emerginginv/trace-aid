@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { addHours, addDays, format, isBefore, startOfDay } from "date-fns";
 import { Share2, Copy, Check, CalendarIcon, Clock, Link2, AlertCircle, File } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ export function BulkShareAttachmentDialog({
   attachmentType = "case",
   onSuccess,
 }: BulkShareAttachmentDialogProps) {
+  const { organization } = useOrganization();
   const [expirationPreset, setExpirationPreset] = useState<ExpirationPreset>("24h");
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
   const [customTime, setCustomTime] = useState("12:00");
@@ -99,14 +101,7 @@ export function BulkShareAttachmentDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) throw new Error("Organization not found");
+      if (!organization?.id) throw new Error("Organization not found");
 
       const expirationDate = calculateExpirationDate();
       const links: GeneratedLink[] = [];
@@ -118,7 +113,7 @@ export function BulkShareAttachmentDialog({
             attachment_id: attachment.id,
             attachment_type: attachmentType,
             created_by_user_id: user.id,
-            organization_id: orgMember.organization_id,
+            organization_id: organization.id,
             expires_at: expirationDate.toISOString(),
           })
           .select("access_token")

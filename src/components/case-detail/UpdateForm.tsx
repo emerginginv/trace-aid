@@ -26,9 +26,10 @@ interface UpdateFormProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   editingUpdate?: any;
+  organizationId: string;
 }
 
-export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdate }: UpdateFormProps) => {
+export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdate, organizationId }: UpdateFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updateTypes, setUpdateTypes] = useState<string[]>([]);
   const [caseTitle, setCaseTitle] = useState<string>("");
@@ -85,23 +86,12 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
 
   const fetchUpdateTypes = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) return;
+      if (!organizationId) return;
 
       const { data, error } = await supabase
         .from("picklists")
         .select("value")
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", organizationId)
         .eq("type", "update_type")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
@@ -143,20 +133,12 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) throw new Error("Organization not found");
+      if (!organizationId) throw new Error("Organization not found");
 
       const updateData = {
         case_id: caseId,
         user_id: user.id,
-        organization_id: orgMember.organization_id,
+        organization_id: organizationId,
         title: values.title,
         description: values.description || null,
         update_type: values.update_type,
@@ -191,7 +173,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
             case_id: caseId,
           },
           user.id,
-          orgMember.organization_id
+          organizationId
         );
       }
 

@@ -697,22 +697,22 @@ const Dashboard = () => {
       {editingTask && <ActivityForm caseId={editingTask.caseId} activityType="task" users={users} open={!!editingTask} onOpenChange={open => !open && setEditingTask(null)} onSuccess={() => {
       setEditingTask(null);
       window.location.reload();
-    }} editingActivity={editingTask.activityData} />}
+    }} editingActivity={editingTask.activityData} organizationId={organization?.id || ""} />}
 
       {editingEvent && <ActivityForm caseId={editingEvent.caseId} activityType="event" users={users} open={!!editingEvent} onOpenChange={open => !open && setEditingEvent(null)} onSuccess={() => {
       setEditingEvent(null);
       window.location.reload();
-    }} editingActivity={editingEvent.activityData} />}
+    }} editingActivity={editingEvent.activityData} organizationId={organization?.id || ""} />}
 
       {editingUpdate && <UpdateForm caseId={editingUpdate.caseId} open={!!editingUpdate} onOpenChange={open => !open && setEditingUpdate(null)} onSuccess={() => {
       setEditingUpdate(null);
       window.location.reload();
-    }} editingUpdate={editingUpdate.updateData} />}
+    }} editingUpdate={editingUpdate.updateData} organizationId={organization?.id || ""} />}
 
       {editingExpense && <FinanceForm caseId={editingExpense.caseId} open={!!editingExpense} onOpenChange={open => !open && setEditingExpense(null)} onSuccess={() => {
       setEditingExpense(null);
       window.location.reload();
-    }} editingFinance={editingExpense.financeData} />}
+    }} editingFinance={editingExpense.financeData} organizationId={organization?.id || ""} />}
 
       {/* Event Details Dialog */}
       <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>

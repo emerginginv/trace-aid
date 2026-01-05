@@ -67,6 +67,7 @@ interface ActivityFormProps {
   onSuccess: () => void;
   editingActivity?: any;
   prefilledDate?: Date;
+  organizationId: string;
 }
 
 export function ActivityForm({
@@ -78,6 +79,7 @@ export function ActivityForm({
   onSuccess,
   editingActivity,
   prefilledDate,
+  organizationId,
 }: ActivityFormProps) {
   const [caseTitle, setCaseTitle] = useState<string>("");
   const [dueDateOpen, setDueDateOpen] = useState(false);
@@ -114,28 +116,18 @@ export function ActivityForm({
 
   const fetchEventTypes = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!organizationId) return;
 
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
+      const { data: picklists } = await supabase
+        .from("picklists")
+        .select("value")
+        .eq("type", "event_type")
+        .eq("organization_id", organizationId)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
 
-      if (orgMember) {
-        const { data: picklists } = await supabase
-          .from("picklists")
-          .select("value")
-          .eq("type", "event_type")
-          .eq("organization_id", orgMember.organization_id)
-          .eq("is_active", true)
-          .order("display_order", { ascending: true });
-
-        if (picklists && picklists.length > 0) {
-          setEventTypes(picklists.map(p => p.value));
-        }
+      if (picklists && picklists.length > 0) {
+        setEventTypes(picklists.map(p => p.value));
       }
     } catch (error) {
       console.error("Error fetching event types:", error);

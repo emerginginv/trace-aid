@@ -538,7 +538,8 @@ const Contacts = () => {
       <ContactForm 
         open={formOpen} 
         onOpenChange={setFormOpen} 
-        onSuccess={fetchContacts} 
+        onSuccess={fetchContacts}
+        organizationId={organization?.id || ""}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

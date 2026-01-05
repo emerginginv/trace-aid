@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +29,7 @@ export const CaseTeamManager = ({
   investigatorIds,
   onUpdate
 }: CaseTeamManagerProps) => {
+  const { organization } = useOrganization();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [caseManager, setCaseManager] = useState<Profile | null>(null);
   const [investigators, setInvestigators] = useState<Profile[]>([]);
@@ -41,22 +43,12 @@ export const CaseTeamManager = ({
 
   const fetchProfiles = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) return;
+      if (!organization?.id) return;
 
       const { data: orgMembers } = await supabase
         .from("organization_members")
         .select("user_id")
-        .eq("organization_id", orgMember.organization_id);
+        .eq("organization_id", organization.id);
 
       if (!orgMembers) return;
 

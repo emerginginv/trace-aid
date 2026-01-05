@@ -1095,6 +1095,7 @@ const AllExpenses = () => {
           }}
           editingFinance={editingExpense}
           defaultFinanceType={financeFormType}
+          organizationId={organization?.id || ""}
         />
       )}
     </div>

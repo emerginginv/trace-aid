@@ -443,6 +443,7 @@ export const CaseCalendar = forwardRef<
           setEditingActivity(null);
           fetchData();
         }}
+        organizationId={organization?.id || ""}
         activityType={activityType}
         users={users}
         prefilledDate={createDate || undefined}

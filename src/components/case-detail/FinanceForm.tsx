@@ -63,9 +63,10 @@ interface FinanceFormProps {
   onSuccess: () => void;
   editingFinance?: any;
   defaultFinanceType?: "retainer" | "expense" | "time";
+  organizationId: string;
 }
 
-export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFinance, defaultFinanceType = "expense" }: FinanceFormProps) => {
+export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFinance, defaultFinanceType = "expense", organizationId }: FinanceFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
@@ -188,15 +189,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) throw new Error("Organization not found");
+      if (!organizationId) throw new Error("Organization not found");
 
       const isTimeEntry = values.finance_type === 'time';
       const isExpense = values.finance_type === 'expense';
@@ -231,7 +224,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         invoice_number: values.invoice_number || null,
         notes: values.notes || null,
         due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
-        organization_id: orgMember.organization_id,
+        organization_id: organizationId,
         ...(isTimeEntry && {
           hours: hours,
           hourly_rate: hourlyRate,
@@ -268,7 +261,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
             case_id: caseId,
           },
           user.id,
-          orgMember.organization_id
+          organizationId
         );
       }
 
