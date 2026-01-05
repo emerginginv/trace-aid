@@ -218,7 +218,7 @@ const Dashboard = () => {
         .gte("due_date", today.toISOString().split('T')[0])
         .lte("due_date", futureDate.toISOString().split('T')[0])
         .order("due_date", { ascending: true })
-        .limit(10);
+        .limit(50);
 
       // Apply user filter if "My Events" is selected
       if (eventsFilter === 'my') {
@@ -378,11 +378,11 @@ const Dashboard = () => {
     return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
   });
 
-  // Filter events for today, yesterday, tomorrow
-  const relevantEvents = events.filter(event => {
-    const eventDate = parseISO(event.date);
-    return isYesterday(eventDate) || isToday(eventDate) || isTomorrow(eventDate);
-  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Show all upcoming events (up to 30 days) sorted by date
+  const upcomingEvents = events.sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  
   const getEventDateLabel = (dateStr: string) => {
     const date = parseISO(dateStr);
     if (isToday(date)) return "Today";
@@ -663,27 +663,39 @@ const Dashboard = () => {
               </Select>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 pt-6">
-            {relevantEvents.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
+          <CardContent className="pt-6">
+            {upcomingEvents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <Calendar className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No upcoming events</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Your calendar is clear</p>
-              </div> : relevantEvents.map(event => <div key={event.id} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-secondary/20 transition-all cursor-pointer hover:shadow-md" onClick={() => setEditingEvent(event)}>
-                <div className="flex-1 space-y-2">
-                  <p className="font-medium text-sm leading-tight group-hover:text-primary transition-colors">
-                    {event.title}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs">
-                    <Badge variant="outline" className="bg-secondary/10 border-secondary/20 text-secondary">
-                      {getEventDateLabel(event.date)}
-                    </Badge>
-                    <span className="text-muted-foreground">{event.time}</span>
+              </div>
+            ) : (
+              <div className="max-h-[400px] overflow-y-auto space-y-3 pr-1">
+                {upcomingEvents.map(event => (
+                  <div 
+                    key={event.id} 
+                    className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 hover:border-secondary/20 transition-all cursor-pointer hover:shadow-md" 
+                    onClick={() => setEditingEvent(event)}
+                  >
+                    <div className="flex-1 space-y-2">
+                      <p className="font-medium text-sm leading-tight group-hover:text-primary transition-colors">
+                        {event.title}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs">
+                        <Badge variant="outline" className="bg-secondary/10 border-secondary/20 text-secondary">
+                          {getEventDateLabel(event.date)}
+                        </Badge>
+                        <span className="text-muted-foreground">{event.time}</span>
+                      </div>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
                   </div>
-                </div>
-                <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
-              </div>)}
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
