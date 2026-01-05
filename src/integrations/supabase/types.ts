@@ -397,6 +397,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "case_budget_adjustments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "case_budget_adjustments_import_batch_id_fkey"
             columns: ["import_batch_id"]
             isOneToOne: false
@@ -709,6 +716,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "case_updates_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "case_updates_import_batch_id_fkey"
             columns: ["import_batch_id"]
             isOneToOne: false
@@ -866,6 +880,13 @@ export type Database = {
             columns: ["parent_case_id"]
             isOneToOne: false
             referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_parent_case_id_fkey"
+            columns: ["parent_case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1870,6 +1891,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "report_instances_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "report_instances_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -2154,7 +2182,103 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      cases_with_budget_summary: {
+        Row: {
+          account_id: string | null
+          budget_dollars: number | null
+          budget_hours: number | null
+          budget_notes: string | null
+          case_manager_id: string | null
+          case_number: string | null
+          claim_number: string | null
+          closed_at: string | null
+          closed_by_user_id: string | null
+          consumed_dollars: number | null
+          consumed_hours: number | null
+          contact_id: string | null
+          created_at: string | null
+          description: string | null
+          dollars_utilization_pct: number | null
+          due_date: string | null
+          external_record_id: string | null
+          external_system_name: string | null
+          hours_utilization_pct: number | null
+          id: string | null
+          import_batch_id: string | null
+          import_timestamp: string | null
+          instance_number: number | null
+          investigator_ids: string[] | null
+          organization_id: string | null
+          parent_case_id: string | null
+          remaining_dollars: number | null
+          remaining_hours: number | null
+          status: string | null
+          surveillance_end_date: string | null
+          surveillance_start_date: string | null
+          title: string | null
+          updated_at: string | null
+          use_primary_subject_as_title: boolean | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cases_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_case_manager_id_fkey"
+            columns: ["case_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_parent_case_id_fkey"
+            columns: ["parent_case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_parent_case_id_fkey"
+            columns: ["parent_case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_organization_invite: {
