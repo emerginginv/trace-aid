@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Search, ShieldAlert, Download } from "lucide-react";
+import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,9 +16,6 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components
 import { format } from "date-fns";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-
-import { ColumnVisibility } from "@/components/ui/column-visibility";
-import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Activity {
@@ -47,36 +44,29 @@ interface CaseActivitiesProps {
   isClosedCase?: boolean;
 }
 
-const COLUMNS: ColumnDefinition[] = [
-  { key: "checkbox", label: "", hideable: false },
-  { key: "title", label: "Title" },
-  { key: "event_subtype", label: "Event Type" },
-  { key: "status", label: "Status" },
-  { key: "assigned_user_id", label: "Assigned To" },
-  { key: "due_date", label: "Due Date" },
-  { key: "actions", label: "Actions", hideable: false },
-];
-
 export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [formType, setFormType] = useState<"task" | "event">("task");
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<"tasks" | "events">("tasks");
 
-  // Sorting states
-  const { sortColumn, sortDirection, handleSort } = useSortPreference("case-activities", "due_date", "asc");
+  // Separate state for tasks panel
+  const [taskSearchQuery, setTaskSearchQuery] = useState("");
+  const [taskFilterStatus, setTaskFilterStatus] = useState<string>("all");
+  const { sortColumn: taskSortColumn, sortDirection: taskSortDirection, handleSort: handleTaskSort } = useSortPreference("case-activities-tasks", "due_date", "asc");
+
+  // Separate state for events panel
+  const [eventSearchQuery, setEventSearchQuery] = useState("");
+  const [eventFilterStatus, setEventFilterStatus] = useState<string>("all");
+  const { sortColumn: eventSortColumn, sortDirection: eventSortDirection, handleSort: handleEventSort } = useSortPreference("case-activities-events", "due_date", "asc");
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewActivities = hasPermission("view_activities");
   const canAddActivities = hasPermission("add_activities");
   const canEditActivities = hasPermission("edit_activities");
   const canDeleteActivities = hasPermission("delete_activities");
-
-  const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("case-activities-columns", COLUMNS);
 
   useEffect(() => {
     fetchUsers();
@@ -88,7 +78,6 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get user's organization
       const { data: orgMember } = await supabase
         .from("organization_members")
         .select("organization_id")
@@ -98,7 +87,6 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
 
       if (!orgMember) return;
 
-      // Get all organization member user_ids
       const { data: orgMembers } = await supabase
         .from("organization_members")
         .select("user_id")
@@ -108,7 +96,6 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
 
       const userIds = orgMembers.map(m => m.user_id);
 
-      // Fetch profiles only for users in the same organization
       const { data, error } = await supabase
         .from('profiles')
         .select('id, email, full_name')
@@ -150,7 +137,14 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
     }
   };
 
+  const openForm = (type: "task" | "event") => {
+    setFormType(type);
+    setEditingActivity(null);
+    setFormOpen(true);
+  };
+
   const handleEdit = (activity: Activity) => {
+    setFormType(activity.activity_type as "task" | "event");
     setEditingActivity(activity);
     setFormOpen(true);
   };
@@ -181,9 +175,9 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
     }
   };
 
-  const handleToggleComplete = async (activity: Activity) => {
+  const handleToggleComplete = async (activity: Activity, type: "task" | "event") => {
     try {
-      const newStatus = activeTab === "tasks" 
+      const newStatus = type === "task" 
         ? (activity.status === "done" ? "to_do" : "done")
         : (activity.status === "completed" ? "scheduled" : "completed");
       
@@ -211,35 +205,34 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
 
       toast({
         title: "Success",
-        description: `${activeTab === "tasks" ? "Task" : "Event"} updated successfully`,
+        description: `${type === "task" ? "Task" : "Event"} updated successfully`,
       });
     } catch (error) {
       console.error('Error updating activity:', error);
       toast({
         title: "Error",
-        description: `Failed to update ${activeTab === "tasks" ? "task" : "event"}`,
+        description: `Failed to update ${type === "task" ? "task" : "event"}`,
         variant: "destructive",
       });
     }
   };
 
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "done":
       case "completed":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
       case "in_progress":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
       case "blocked":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
       case "cancelled":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
       case "scheduled":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
       case "to_do":
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-400";
     }
   };
 
@@ -253,62 +246,95 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
     return user?.full_name || user?.email || "-";
   };
 
-  const filteredActivities = activities
-    .filter((activity) => {
-      const matchesSearch =
-        activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        activity.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = activeTab === "tasks" ? activity.activity_type === "task" : activity.activity_type === "event";
-      const matchesStatus = filterStatus === "all" || activity.status === filterStatus;
+  const formatDueDate = (dateStr: string | null) => {
+    if (!dateStr) return "-";
+    if (dateStr.length === 10 && dateStr.includes('-')) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return format(new Date(year, month - 1, day), "MMM dd, yyyy");
+    }
+    return format(new Date(dateStr), "MMM dd, yyyy");
+  };
 
-      return matchesSearch && matchesType && matchesStatus;
+  // Split activities into tasks and events
+  const allTasks = activities.filter(a => a.activity_type === 'task');
+  const allEvents = activities.filter(a => a.activity_type === 'event');
+
+  // Filter and sort tasks
+  const filteredTasks = allTasks
+    .filter(activity => {
+      const matchesSearch =
+        activity.title.toLowerCase().includes(taskSearchQuery.toLowerCase()) ||
+        activity.description?.toLowerCase().includes(taskSearchQuery.toLowerCase());
+      const matchesStatus = taskFilterStatus === "all" || activity.status === taskFilterStatus;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (!taskSortColumn) return 0;
+      let aVal: any, bVal: any;
+      switch (taskSortColumn) {
+        case "title": aVal = a.title; bVal = b.title; break;
+        case "status": aVal = a.status; bVal = b.status; break;
+        case "due_date":
+          aVal = a.due_date ? new Date(a.due_date).getTime() : 0;
+          bVal = b.due_date ? new Date(b.due_date).getTime() : 0;
+          break;
+        default: return 0;
+      }
+      if (aVal == null) return taskSortDirection === "asc" ? 1 : -1;
+      if (bVal == null) return taskSortDirection === "asc" ? -1 : 1;
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        return taskSortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return taskSortDirection === "asc" ? aVal - bVal : bVal - aVal;
     });
 
-  // Sort data
-  const sortedActivities = [...filteredActivities].sort((a, b) => {
-    if (!sortColumn) return 0;
+  // Filter and sort events
+  const filteredEvents = allEvents
+    .filter(activity => {
+      const matchesSearch =
+        activity.title.toLowerCase().includes(eventSearchQuery.toLowerCase()) ||
+        activity.description?.toLowerCase().includes(eventSearchQuery.toLowerCase());
+      const matchesStatus = eventFilterStatus === "all" || activity.status === eventFilterStatus;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (!eventSortColumn) return 0;
+      let aVal: any, bVal: any;
+      switch (eventSortColumn) {
+        case "title": aVal = a.title; bVal = b.title; break;
+        case "status": aVal = a.status; bVal = b.status; break;
+        case "event_subtype": aVal = a.event_subtype || ''; bVal = b.event_subtype || ''; break;
+        case "due_date":
+          aVal = a.due_date ? new Date(a.due_date).getTime() : 0;
+          bVal = b.due_date ? new Date(b.due_date).getTime() : 0;
+          break;
+        default: return 0;
+      }
+      if (aVal == null) return eventSortDirection === "asc" ? 1 : -1;
+      if (bVal == null) return eventSortDirection === "asc" ? -1 : 1;
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        return eventSortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return eventSortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    });
+
+  const handleExport = (type: "task" | "event", format: "csv" | "pdf") => {
+    const data = type === "task" ? filteredTasks : filteredEvents;
+    const exportColumns: ExportColumn[] = [
+      { key: "title", label: "Title" },
+      ...(type === "event" ? [{ key: "event_subtype", label: "Event Type", format: (v: any) => v || "-" }] : []),
+      { key: "status", label: "Status", format: (v) => v?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '-' },
+      { key: "assigned_user_id", label: "Assigned To", format: (v) => getUserName(v) },
+      { key: "due_date", label: "Due Date", format: (v) => formatDueDate(v) },
+      { key: "description", label: "Description", format: (v) => v || "-" },
+    ];
     
-    let aVal: any;
-    let bVal: any;
-    
-    switch (sortColumn) {
-      case "title":
-        aVal = a.title;
-        bVal = b.title;
-        break;
-      case "status":
-        aVal = a.status;
-        bVal = b.status;
-        break;
-      case "assigned_user_id":
-        aVal = getUserName(a.assigned_user_id);
-        bVal = getUserName(b.assigned_user_id);
-        break;
-      case "event_subtype":
-        aVal = a.event_subtype || '';
-        bVal = b.event_subtype || '';
-        break;
-      case "due_date":
-        aVal = a.due_date ? new Date(a.due_date).getTime() : 0;
-        bVal = b.due_date ? new Date(b.due_date).getTime() : 0;
-        break;
-      default:
-        return 0;
+    if (format === "csv") {
+      exportToCSV(data, exportColumns, `case-${type}s`);
+    } else {
+      exportToPDF(data, exportColumns, `Case ${type === "task" ? "Tasks" : "Events"}`, `case-${type}s`);
     }
-    
-    if (aVal == null) return sortDirection === "asc" ? 1 : -1;
-    if (bVal == null) return sortDirection === "asc" ? -1 : 1;
-    
-    if (typeof aVal === "string" && typeof bVal === "string") {
-      return sortDirection === "asc" 
-        ? aVal.localeCompare(bVal) 
-        : bVal.localeCompare(aVal);
-    }
-    
-    return sortDirection === "asc" 
-      ? (aVal as number) - (bVal as number) 
-      : (bVal as number) - (aVal as number);
-  });
+  };
 
   if (permissionsLoading || loading) {
     return <CaseTabSkeleton title="Case Activities" subtitle="Loading activities..." rows={5} columns={5} />;
@@ -331,295 +357,381 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   return (
     <>
       <div className="space-y-6">
+        {/* Header with both Add buttons */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold">Case Activities</h2>
             <p className="text-muted-foreground">
-              Showing {sortedActivities.length} {activeTab === "tasks" ? "task" : "event"}{sortedActivities.length !== 1 ? 's' : ''}
+              {allTasks.length} task{allTasks.length !== 1 ? 's' : ''}, {allEvents.length} event{allEvents.length !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {
-                  const exportColumns: ExportColumn[] = [
-                    { key: "title", label: "Title" },
-                    ...(activeTab === "events" ? [{ key: "event_subtype", label: "Event Type", format: (v: any) => v || "-" }] : []),
-                    { key: "status", label: "Status", format: (v) => v?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '-' },
-                    { key: "assigned_user_id", label: "Assigned To", format: (v) => getUserName(v) },
-                    { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
-                    { key: "description", label: "Description", format: (v) => v || "-" },
-                  ];
-                  exportToCSV(sortedActivities, exportColumns, `case-${activeTab}`);
-                }}>
-                  Export to CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  const exportColumns: ExportColumn[] = [
-                    { key: "title", label: "Title" },
-                    ...(activeTab === "events" ? [{ key: "event_subtype", label: "Event Type", format: (v: any) => v || "-" }] : []),
-                    { key: "status", label: "Status", format: (v) => v?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '-' },
-                    { key: "assigned_user_id", label: "Assigned To", format: (v) => getUserName(v) },
-                    { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
-                  ];
-                  exportToPDF(sortedActivities, exportColumns, `Case ${activeTab === "tasks" ? "Tasks" : "Events"}`, `case-${activeTab}`);
-                }}>
-                  Export to PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             <Button 
-              onClick={() => setFormOpen(true)} 
+              onClick={() => openForm("task")} 
               disabled={!canAddActivities || isClosedCase}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add {activeTab === "tasks" ? "Task" : "Event"}
+              Add Task
+            </Button>
+            <Button 
+              onClick={() => openForm("event")} 
+              disabled={!canAddActivities || isClosedCase}
+              variant="outline"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Event
             </Button>
           </div>
         </div>
 
-        <div className="flex border-b">
-          <button
-            onClick={() => {
-              setActiveTab("tasks");
-              setFilterStatus("all");
-            }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "tasks"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Tasks
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("events");
-              setFilterStatus("all");
-            }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "events"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Events
-          </button>
-        </div>
+        {/* Side-by-side panels */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Tasks Panel */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CheckSquare className="h-5 w-5" />
+                  Tasks ({filteredTasks.length})
+                </CardTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleExport("task", "csv")}>
+                      Export to CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("task", "pdf")}>
+                      Export to PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Task filters */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search tasks..."
+                    value={taskSearchQuery}
+                    onChange={(e) => setTaskSearchQuery(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <Select value={taskFilterStatus} onValueChange={setTaskFilterStatus}>
+                  <SelectTrigger className="w-[120px] h-9">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="to_do">To Do</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="blocked">Blocked</SelectItem>
+                    <SelectItem value="done">Done</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={`Search ${activeTab}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              {activeTab === "tasks" ? (
-                <>
-                  <SelectItem value="to_do">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="blocked">Blocked</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </>
+              {/* Tasks table */}
+              {filteredTasks.length === 0 ? (
+                <div className="text-center py-8 border rounded-lg bg-muted/50">
+                  <CheckSquare className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground text-sm">
+                    {taskSearchQuery || taskFilterStatus !== "all"
+                      ? "No tasks match your filters"
+                      : "No tasks yet"}
+                  </p>
+                </div>
               ) : (
-                <>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </>
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <th className="w-[40px] p-2"></th>
+                        <SortableTableHead
+                          column="title"
+                          label="Title"
+                          sortColumn={taskSortColumn}
+                          sortDirection={taskSortDirection}
+                          onSort={handleTaskSort}
+                          className="min-w-[150px]"
+                        />
+                        <SortableTableHead
+                          column="status"
+                          label="Status"
+                          sortColumn={taskSortColumn}
+                          sortDirection={taskSortDirection}
+                          onSort={handleTaskSort}
+                          className="w-[100px]"
+                        />
+                        <SortableTableHead
+                          column="due_date"
+                          label="Due"
+                          sortColumn={taskSortColumn}
+                          sortDirection={taskSortDirection}
+                          onSort={handleTaskSort}
+                          className="w-[100px]"
+                        />
+                        <th className="w-[80px] p-2"></th>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTasks.map((task) => (
+                        <TableRow key={task.id}>
+                          <TableCell className="align-top">
+                            <Checkbox
+                              checked={task.status === "done"}
+                              onCheckedChange={() => handleToggleComplete(task, "task")}
+                              disabled={isClosedCase || !canEditActivities}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium align-top">
+                            <div className="flex flex-col gap-0.5">
+                              <span 
+                                className={`line-clamp-1 ${task.status === "done" ? "line-through text-muted-foreground" : ""}`}
+                                title={task.title}
+                              >
+                                {task.title}
+                              </span>
+                              {task.description && (
+                                <span className="text-xs text-muted-foreground line-clamp-1" title={task.description}>
+                                  {task.description}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="align-top">
+                            <Badge variant="outline" className={`${getStatusColor(task.status)} text-xs`}>
+                              {getStatusLabel(task.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="align-top text-sm whitespace-nowrap">
+                            {formatDueDate(task.due_date)}
+                          </TableCell>
+                          <TableCell className="align-top">
+                            <div className="flex gap-1">
+                              {canEditActivities && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEdit(task)}
+                                  disabled={isClosedCase}
+                                  className="h-7 w-7"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                              {canDeleteActivities && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(task.id)}
+                                  disabled={isClosedCase}
+                                  className="h-7 w-7"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
-            </SelectContent>
-          </Select>
-          <ColumnVisibility
-            columns={COLUMNS}
-            visibility={visibility}
-            onToggle={toggleColumn}
-            onReset={resetToDefaults}
-          />
-        </div>
+            </CardContent>
+          </Card>
 
-        {sortedActivities.length === 0 ? (
-          <div className="text-center py-12 border rounded-lg bg-muted/50">
-            <p className="text-muted-foreground">
-              {searchQuery || filterStatus !== "all"
-                ? `No ${activeTab} match your search`
-                : `No ${activeTab} yet. Add your first ${activeTab === "tasks" ? "task" : "event"} to get started.`}
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {isVisible("checkbox") && (
-                    <th className="w-[50px] p-2"></th>
-                  )}
-                  {isVisible("title") && (
-                    <SortableTableHead
-                      column="title"
-                      label="Title"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                      className="min-w-[200px] max-w-[300px]"
-                    />
-                  )}
-                  {isVisible("event_subtype") && activeTab === "events" && (
-                    <SortableTableHead
-                      column="event_subtype"
-                      label="Event Type"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                      className="w-[140px]"
-                    />
-                  )}
-                  {isVisible("status") && (
-                    <SortableTableHead
-                      column="status"
-                      label="Status"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                      className="w-[120px]"
-                    />
-                  )}
-                  {isVisible("assigned_user_id") && (
-                    <SortableTableHead
-                      column="assigned_user_id"
-                      label="Assigned To"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                      className="w-[140px] hidden md:table-cell"
-                    />
-                  )}
-                  {isVisible("due_date") && (
-                    <SortableTableHead
-                      column="due_date"
-                      label={activeTab === "tasks" ? "Due Date" : "Date"}
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                      className="w-[120px]"
-                    />
-                  )}
-                  {isVisible("actions") && (
-                    <th className="w-[100px] p-2">Actions</th>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedActivities.map((activity) => (
-                  <TableRow key={activity.id}>
-                    <TableCell className="align-top">
-                      <Checkbox
-                        checked={activity.status === "done" || activity.status === "completed"}
-                        onCheckedChange={() => handleToggleComplete(activity)}
-                        disabled={isClosedCase || !canEditActivities}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium align-top">
-                      <div className="flex flex-col gap-1">
-                        <span 
-                          className={`line-clamp-2 ${activity.status === "done" || activity.status === "completed" ? "line-through text-muted-foreground" : ""}`}
-                          title={activity.title}
-                        >
-                          {activity.title}
-                        </span>
-                        {activity.description && (
-                          <span className="text-sm text-muted-foreground line-clamp-1" title={activity.description}>
-                            {activity.description}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    {isVisible("event_subtype") && activeTab === "events" && (
-                      <TableCell className="align-top">
-                        {activity.event_subtype ? (
-                          <Badge variant="secondary" className="whitespace-nowrap">
-                            {activity.event_subtype}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                    )}
-                    <TableCell className="align-top">
-                      <Badge variant="outline" className={`${getStatusColor(activity.status)} whitespace-nowrap`}>
-                        {getStatusLabel(activity.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="align-top hidden md:table-cell">
-                      <span className="text-sm truncate block" title={getUserName(activity.assigned_user_id)}>
-                        {getUserName(activity.assigned_user_id)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="align-top whitespace-nowrap">
-                      {activity.due_date
-                        ? (() => {
-                            const dateStr = activity.due_date;
-                            if (dateStr.length === 10 && dateStr.includes('-')) {
-                              const [year, month, day] = dateStr.split('-').map(Number);
-                              return format(new Date(year, month - 1, day), "MMM dd, yyyy");
-                            }
-                            return format(new Date(dateStr), "MMM dd, yyyy");
-                          })()
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      <div className="flex gap-1">
-                        {canEditActivities && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(activity)}
-                            disabled={isClosedCase}
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {canDeleteActivities && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(activity.id)}
-                            disabled={isClosedCase}
-                            className="h-8 w-8"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+          {/* Events Panel */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5" />
+                  Events ({filteredEvents.length})
+                </CardTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleExport("event", "csv")}>
+                      Export to CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("event", "pdf")}>
+                      Export to PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Event filters */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search events..."
+                    value={eventSearchQuery}
+                    onChange={(e) => setEventSearchQuery(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <Select value={eventFilterStatus} onValueChange={setEventFilterStatus}>
+                  <SelectTrigger className="w-[120px] h-9">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Events table */}
+              {filteredEvents.length === 0 ? (
+                <div className="text-center py-8 border rounded-lg bg-muted/50">
+                  <CalendarDays className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground text-sm">
+                    {eventSearchQuery || eventFilterStatus !== "all"
+                      ? "No events match your filters"
+                      : "No events yet"}
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <th className="w-[40px] p-2"></th>
+                        <SortableTableHead
+                          column="title"
+                          label="Title"
+                          sortColumn={eventSortColumn}
+                          sortDirection={eventSortDirection}
+                          onSort={handleEventSort}
+                          className="min-w-[150px]"
+                        />
+                        <SortableTableHead
+                          column="event_subtype"
+                          label="Type"
+                          sortColumn={eventSortColumn}
+                          sortDirection={eventSortDirection}
+                          onSort={handleEventSort}
+                          className="w-[90px]"
+                        />
+                        <SortableTableHead
+                          column="status"
+                          label="Status"
+                          sortColumn={eventSortColumn}
+                          sortDirection={eventSortDirection}
+                          onSort={handleEventSort}
+                          className="w-[100px]"
+                        />
+                        <SortableTableHead
+                          column="due_date"
+                          label="Date"
+                          sortColumn={eventSortColumn}
+                          sortDirection={eventSortDirection}
+                          onSort={handleEventSort}
+                          className="w-[100px]"
+                        />
+                        <th className="w-[80px] p-2"></th>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredEvents.map((event) => (
+                        <TableRow key={event.id}>
+                          <TableCell className="align-top">
+                            <Checkbox
+                              checked={event.status === "completed"}
+                              onCheckedChange={() => handleToggleComplete(event, "event")}
+                              disabled={isClosedCase || !canEditActivities}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium align-top">
+                            <div className="flex flex-col gap-0.5">
+                              <span 
+                                className={`line-clamp-1 ${event.status === "completed" ? "line-through text-muted-foreground" : ""}`}
+                                title={event.title}
+                              >
+                                {event.title}
+                              </span>
+                              {event.description && (
+                                <span className="text-xs text-muted-foreground line-clamp-1" title={event.description}>
+                                  {event.description}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="align-top">
+                            {event.event_subtype ? (
+                              <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                                {event.event_subtype}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="align-top">
+                            <Badge variant="outline" className={`${getStatusColor(event.status)} text-xs`}>
+                              {getStatusLabel(event.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="align-top text-sm whitespace-nowrap">
+                            {formatDueDate(event.due_date)}
+                          </TableCell>
+                          <TableCell className="align-top">
+                            <div className="flex gap-1">
+                              {canEditActivities && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEdit(event)}
+                                  disabled={isClosedCase}
+                                  className="h-7 w-7"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                              {canDeleteActivities && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(event.id)}
+                                  disabled={isClosedCase}
+                                  className="h-7 w-7"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <ActivityForm
         caseId={caseId}
-        activityType={activeTab === "tasks" ? "task" : "event"}
+        activityType={formType}
         users={users}
         open={formOpen}
         onOpenChange={(open) => {
