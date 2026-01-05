@@ -127,38 +127,39 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-          <Select value={filterCase} onValueChange={setFilterCase}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="All Cases" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Cases</SelectItem>
-              {cases.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Filters - All on one row */}
+      <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2 sm:gap-3">
+        <Select value={filterCase} onValueChange={setFilterCase}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="All Cases" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Cases</SelectItem>
+            {cases.map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="to_do">To Do</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-              <SelectItem value="blocked">Blocked</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="to_do">To Do</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="scheduled">Scheduled</SelectItem>
+            <SelectItem value="done">Done</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="blocked">Blocked</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Separator */}
+        <div className="hidden sm:block h-6 w-px bg-border" />
 
         {/* Team Filter Toggles */}
         <div className="flex flex-wrap items-center gap-2">
