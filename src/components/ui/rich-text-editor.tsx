@@ -123,7 +123,7 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           <div className="flex justify-end mb-2">
             <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 gap-1.5">
+                <Button variant="outline" size="sm" className="h-8 gap-1.5">
                   <Braces className="h-3.5 w-3.5" />
                   <span className="text-xs">Insert Placeholder</span>
                 </Button>
