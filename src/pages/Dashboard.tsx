@@ -435,58 +435,30 @@ const Dashboard = () => {
   const getStatusDotDisplay = (status: string, type: 'task' | 'event' = 'task') => {
     switch (status) {
       case 'in_progress':
-        return { 
-          label: 'In Progress', 
-          bgColor: 'bg-blue-500',
-          textColor: 'text-white'
-        };
+        return { label: 'In Progress', dotColor: 'bg-blue-500', textColor: 'text-blue-500' };
       case 'done':
       case 'completed':
-        return { 
-          label: 'Done', 
-          bgColor: 'bg-emerald-500',
-          textColor: 'text-white'
-        };
+        return { label: 'Done', dotColor: 'bg-emerald-500', textColor: 'text-emerald-500' };
       case 'scheduled':
-        return { 
-          label: 'Scheduled', 
-          bgColor: 'bg-purple-500',
-          textColor: 'text-white'
-        };
+        return { label: 'Scheduled', dotColor: 'bg-purple-500', textColor: 'text-purple-500' };
       case 'cancelled':
-        return { 
-          label: 'Cancelled', 
-          bgColor: 'bg-red-500',
-          textColor: 'text-white'
-        };
+        return { label: 'Cancelled', dotColor: 'bg-red-500', textColor: 'text-red-500' };
       case 'on_hold':
-        return { 
-          label: 'On Hold', 
-          bgColor: 'bg-orange-500',
-          textColor: 'text-white'
-        };
+        return { label: 'On Hold', dotColor: 'bg-orange-500', textColor: 'text-orange-500' };
       case 'to_do':
       default:
         if (type === 'event') {
-          return { 
-            label: 'Scheduled', 
-            bgColor: 'bg-purple-500',
-            textColor: 'text-white'
-          };
+          return { label: 'Scheduled', dotColor: 'bg-purple-500', textColor: 'text-purple-500' };
         }
-        return { 
-          label: 'To Do', 
-          bgColor: 'bg-amber-400',
-          textColor: 'text-amber-900'
-        };
+        return { label: 'To Do', dotColor: 'bg-amber-500', textColor: 'text-amber-500' };
     }
   };
 
   const StatusDot = ({ status, type = 'task' }: { status: string; type?: 'task' | 'event' }) => {
-    const { label, bgColor, textColor } = getStatusDotDisplay(status, type);
+    const { label, dotColor, textColor } = getStatusDotDisplay(status, type);
     return (
-      <span className={`flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full shrink-0 font-medium ${bgColor} ${textColor}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" aria-hidden="true" />
+      <span className={`flex items-center gap-1.5 text-xs shrink-0 font-medium ${textColor}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} aria-hidden="true" />
         {label}
       </span>
     );
