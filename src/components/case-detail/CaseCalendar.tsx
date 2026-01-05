@@ -850,40 +850,48 @@ export const CaseCalendar = forwardRef<
                 return (
                   <div
                     key={activity.id}
-                    className="p-3 border rounded hover:bg-muted/50 transition-colors"
+                    className="p-2 border rounded hover:bg-muted/50 transition-colors"
                     style={{ borderLeftWidth: '3px', borderLeftColor: userColor }}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2">
                       <Checkbox
                         checked={activity.status === "done"}
                         onCheckedChange={() => handleToggleTaskComplete(activity)}
                         disabled={isClosedCase}
-                        className="mt-1"
+                        className="mt-0.5"
                       />
                       <div 
                         className="flex-1 min-w-0 cursor-pointer"
                         onClick={() => handleActivityClick(activity)}
                       >
-                        <div className="flex items-center gap-2 mb-1">
+                        {/* Line 1: Title (left) + Date (right) */}
+                        <div className="flex items-center justify-between gap-2">
                           <p className={`text-sm font-medium truncate flex-1 ${
                             activity.status === "done" ? "line-through text-muted-foreground" : ""
                           }`}>
                             {activity.title}
                           </p>
+                          {activityDate && (
+                            <span className={`text-xs whitespace-nowrap ${
+                              isPast && activity.status !== "completed" && activity.status !== "done" 
+                                ? "text-red-500" 
+                                : "text-muted-foreground"
+                            }`}>
+                              {format(activityDate, "MM/dd/yyyy")}
+                            </span>
+                          )}
                         </div>
                         
-                        {activityDate && (
-                          <p className="text-xs text-muted-foreground mb-1">
-                            {format(activityDate, "MMM d, yyyy")}
-                            {isPast && activity.status !== "completed" && activity.status !== "done" && (
-                              <span className="text-red-500 ml-2">⚠️ Overdue</span>
-                            )}
-                          </p>
-                        )}
-                        
-                        <p className="text-xs font-medium" style={{ color: userColor }}>
-                          {getUserName(activity.assigned_user_id)}
-                        </p>
+                        {/* Line 2: Assigned User (left) + Status (right) */}
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <span className="text-xs font-medium truncate" style={{ color: userColor }}>
+                            {getUserName(activity.assigned_user_id)}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                            {statusIcon}
+                            <span className="capitalize">{activity.status || "pending"}</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
