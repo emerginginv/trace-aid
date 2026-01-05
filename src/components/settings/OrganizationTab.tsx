@@ -24,6 +24,7 @@ const organizationSchema = z.object({
 
 interface OrganizationTabProps {
   currentUserId: string | null;
+  organizationId: string | null;
   companyName: string;
   setCompanyName: (value: string) => void;
   defaultCurrency: string;
@@ -63,6 +64,7 @@ interface OrganizationTabProps {
 
 export function OrganizationTab({
   currentUserId,
+  organizationId,
   companyName,
   setCompanyName,
   defaultCurrency,
@@ -225,21 +227,15 @@ export function OrganizationTab({
 
         if (error) throw error;
       } else {
-        const { data: orgMember } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', currentUserId)
-          .single();
-
-        if (!orgMember?.organization_id) {
-          throw new Error("User not in organization");
+        if (!organizationId) {
+          throw new Error("Organization not found");
         }
 
         const { error } = await supabase
           .from("organization_settings")
           .insert({
             user_id: currentUserId,
-            organization_id: orgMember.organization_id,
+            organization_id: organizationId,
             ...updateData,
           });
 
