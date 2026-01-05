@@ -23,8 +23,11 @@ interface Task {
   dueDate: string;
   priority: "high" | "medium" | "low";
   status: "pending" | "completed";
+  taskStatus: string;
   caseId: string;
   activityData: any;
+  assignedUserId: string | null;
+  assignedUserName: string | null;
 }
 interface CalendarEvent {
   id: string;
@@ -150,6 +153,20 @@ const Dashboard = () => {
         totalAccounts: accountsResult.count || 0
       });
 
+      // Fetch users for assignments filtered by organization (moved earlier for task mapping)
+      const { data: orgUsers } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .in('id', (await supabase.from('organization_members').select('user_id').eq('organization_id', orgId)).data?.map(m => m.user_id) || []);
+
+      if (orgUsers) {
+        setUsers(orgUsers.map(u => ({
+          id: u.id,
+          email: u.email,
+          full_name: u.full_name
+        })));
+      }
+
       // Fetch tasks from case_activities (pending tasks only) filtered by organization
       let tasksQuery = supabase
         .from("case_activities")
@@ -158,7 +175,7 @@ const Dashboard = () => {
         .eq("activity_type", "task")
         .eq("completed", false)
         .order("due_date", { ascending: true, nullsFirst: false })
-        .limit(10);
+        .limit(50);
 
       // Apply user filter if "My Tasks" is selected
       if (tasksFilter === 'my') {
@@ -168,15 +185,21 @@ const Dashboard = () => {
       const { data: activitiesData, error: tasksError } = await tasksQuery;
 
       if (activitiesData) {
-        const tasksData: Task[] = activitiesData.map(activity => ({
-          id: activity.id,
-          title: activity.title,
-          dueDate: activity.due_date || new Date().toISOString().split('T')[0],
-          priority: activity.status === "urgent" ? "high" : activity.status === "in_progress" ? "medium" : "low",
-          status: activity.completed ? "completed" : "pending",
-          caseId: activity.case_id,
-          activityData: activity
-        }));
+        const tasksData: Task[] = activitiesData.map(activity => {
+          const assignedUser = orgUsers?.find(u => u.id === activity.assigned_user_id);
+          return {
+            id: activity.id,
+            title: activity.title,
+            dueDate: activity.due_date || new Date().toISOString().split('T')[0],
+            priority: activity.status === "urgent" ? "high" : activity.status === "in_progress" ? "medium" : "low",
+            status: activity.completed ? "completed" : "pending",
+            taskStatus: activity.status || "to_do",
+            caseId: activity.case_id,
+            activityData: activity,
+            assignedUserId: activity.assigned_user_id,
+            assignedUserName: assignedUser?.full_name || assignedUser?.email || null
+          };
+        });
         setTasks(tasksData);
       }
 
@@ -273,19 +296,7 @@ const Dashboard = () => {
         setExpenses(recentExpenses);
       }
 
-      // Fetch users for assignments filtered by organization
-      const { data: orgUsers } = await supabase
-        .from('profiles')
-        .select('id, email, full_name')
-        .in('id', (await supabase.from('organization_members').select('user_id').eq('organization_id', orgId)).data?.map(m => m.user_id) || []);
-
-      if (orgUsers) {
-        setUsers(orgUsers.map(u => ({
-          id: u.id,
-          email: u.email,
-          full_name: u.full_name
-        })));
-      }
+      // Users already fetched earlier for task mapping
 
       // Fetch financial summary data
       const [retainerResult, pendingExpensesResult, unpaidInvoicesResult] = await Promise.all([
@@ -390,6 +401,24 @@ const Dashboard = () => {
       default:
         return "default";
     }
+  };
+
+  const getTaskStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'in_progress':
+        return { label: 'In Progress', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' };
+      case 'done':
+      case 'completed':
+        return { label: 'Done', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
+      case 'to_do':
+      default:
+        return { label: 'To Do', className: 'bg-muted text-muted-foreground' };
+    }
+  };
+
+  const getUserInitials = (name: string | null) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
   const getUpdateIcon = (type: string) => {
     switch (type) {
@@ -545,42 +574,71 @@ const Dashboard = () => {
               </Select>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 pt-6">
-            {dueTasks.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
+          <CardContent className="pt-4">
+            {dueTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No pending tasks</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">You're all caught up!</p>
-              </div> : dueTasks.map(task => {
-            const taskDate = parseISO(task.dueDate);
-            const isOverdue = isPast(taskDate) && !isToday(taskDate);
-            return <div key={task.id} onClick={() => setEditingTask(task)} className="group flex items-start gap-3 p-4 rounded-xl border border-border/50 hover:border-primary/20 transition-all hover:shadow-md cursor-pointer bg-muted/30 hover:bg-muted/50">
-                    <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} className="mt-1" onClick={e => e.stopPropagation()} />
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-medium text-sm leading-tight">{task.title}</p>
-                        <Badge variant={getPriorityColor(task.priority) as any} className="text-xs shrink-0">
-                          {task.priority}
-                        </Badge>
+              </div>
+            ) : (
+              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+                {dueTasks.map(task => {
+                  const taskDate = parseISO(task.dueDate);
+                  const isOverdue = isPast(taskDate) && !isToday(taskDate);
+                  const statusDisplay = getTaskStatusDisplay(task.taskStatus);
+                  
+                  return (
+                    <div 
+                      key={task.id} 
+                      onClick={() => setEditingTask(task)} 
+                      className="group flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-primary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
+                    >
+                      {/* Checkbox */}
+                      <Checkbox 
+                        checked={task.status === "completed"} 
+                        onCheckedChange={() => handleTaskToggle(task.id)} 
+                        onClick={e => e.stopPropagation()} 
+                      />
+                      
+                      {/* Title - Primary anchor */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{task.title}</p>
                       </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        {isOverdue ? <span className="flex items-center gap-1.5 text-destructive font-medium bg-destructive/10 px-2 py-1 rounded-md">
-                            <AlertCircle className="w-3.5 h-3.5" />
-                            Overdue by {formatDistanceToNow(taskDate)}
-                          </span> : isToday(taskDate) ? <span className="flex items-center gap-1.5 text-warning bg-warning/10 px-2 py-1 rounded-md">
-                            <Clock className="w-3.5 h-3.5" />
-                            Due today
-                          </span> : <span className="flex items-center gap-1.5 text-muted-foreground">
-                            <Clock className="w-3.5 h-3.5" />
-                            Due {formatDistanceToNow(taskDate, {
-                      addSuffix: true
-                    })}
-                          </span>}
-                      </div>
+                      
+                      {/* Status Badge */}
+                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${statusDisplay.className}`}>
+                        {statusDisplay.label}
+                      </span>
+                      
+                      {/* Due Date */}
+                      <span className={`flex items-center gap-1 text-xs shrink-0 ${
+                        isOverdue ? 'text-destructive font-medium' : 
+                        isToday(taskDate) ? 'text-warning' : 
+                        'text-muted-foreground'
+                      }`}>
+                        <Clock className="w-3 h-3" />
+                        {isOverdue ? 'Overdue' : 
+                         isToday(taskDate) ? 'Today' : 
+                         format(taskDate, 'MMM d')}
+                      </span>
+                      
+                      {/* Assigned User Avatar */}
+                      {task.assignedUserName && (
+                        <div 
+                          className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium shrink-0"
+                          title={task.assignedUserName}
+                        >
+                          {getUserInitials(task.assignedUserName)}
+                        </div>
+                      )}
                     </div>
-                  </div>;
-          })}
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
