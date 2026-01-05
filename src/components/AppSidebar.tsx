@@ -9,67 +9,40 @@ import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 
-const allMenuItems = [{
-  title: "Dashboard",
-  icon: LayoutDashboard,
-  url: "/dashboard",
-  roles: ['admin', 'manager', 'investigator', 'vendor']
-}, {
-  title: "My Cases",
-  icon: FileText,
-  url: "/cases",
-  roles: ['vendor']
-}, {
-  title: "Cases",
-  icon: Briefcase,
-  url: "/cases",
-  roles: ['admin', 'manager', 'investigator']
-}, {
-  title: "My Expenses",
-  icon: DollarSign,
-  url: "/expenses",
-  roles: ['vendor', 'investigator']
-}, {
-  title: "Calendar",
-  icon: Calendar,
-  url: "/calendar",
-  roles: ['admin', 'manager', 'investigator']
-}, {
-  title: "Retainers",
-  icon: Wallet,
-  url: "/finance",
-  roles: ['admin', 'manager', 'investigator']
-}, {
-  title: "Expenses",
-  icon: Receipt,
-  url: "/all-expenses",
-  roles: ['admin', 'manager', 'investigator']
-}, {
-  title: "Invoices",
-  icon: FileText,
-  url: "/all-invoices",
-  roles: ['admin', 'manager']
-}, {
-  title: "Analytics",
-  icon: BarChart3,
-  url: "/analytics",
-  roles: ['admin', 'manager', 'investigator']
-}, {
-  title: "Reports",
-  icon: ClipboardList,
-  url: "/reports",
-  roles: ['admin', 'manager']
-}, {
-  title: "Accounts",
-  icon: Building2,
-  url: "/accounts",
-  roles: ['admin', 'manager', 'investigator']
-}, {
-  title: "Contacts",
-  icon: Users,
-  url: "/contacts",
-  roles: ['admin', 'manager', 'investigator']
-}];
+const menuGroups = [
+  {
+    label: "Navigation",
+    items: [
+      { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard", roles: ['admin', 'manager', 'investigator', 'vendor'] },
+      { title: "My Cases", icon: FileText, url: "/cases", roles: ['vendor'] },
+      { title: "Cases", icon: Briefcase, url: "/cases", roles: ['admin', 'manager', 'investigator'] },
+      { title: "Calendar", icon: Calendar, url: "/calendar", roles: ['admin', 'manager', 'investigator'] },
+    ]
+  },
+  {
+    label: "Finance",
+    items: [
+      { title: "Retainers", icon: Wallet, url: "/finance", roles: ['admin', 'manager', 'investigator'] },
+      { title: "My Expenses", icon: DollarSign, url: "/expenses", roles: ['vendor', 'investigator'] },
+      { title: "Expenses", icon: Receipt, url: "/all-expenses", roles: ['admin', 'manager', 'investigator'] },
+      { title: "Invoices", icon: FileText, url: "/all-invoices", roles: ['admin', 'manager'] },
+    ]
+  },
+  {
+    label: "Clients",
+    items: [
+      { title: "Accounts", icon: Building2, url: "/accounts", roles: ['admin', 'manager', 'investigator'] },
+      { title: "Contacts", icon: Users, url: "/contacts", roles: ['admin', 'manager', 'investigator'] },
+    ]
+  },
+  {
+    label: "Analytics & Reporting",
+    items: [
+      { title: "Reports", icon: ClipboardList, url: "/reports", roles: ['admin', 'manager'] },
+      { title: "Analytics", icon: BarChart3, url: "/analytics", roles: ['admin', 'manager', 'investigator'] },
+    ]
+  }
+];
 
 export function AppSidebar() {
   const navigate = useNavigate();
@@ -92,8 +65,6 @@ export function AppSidebar() {
     company_name: string | null;
   } | null>(null);
 
-  // Filter menu items based on user role
-  const menuItems = allMenuItems.filter(item => !role || item.roles.includes(role));
   
   useEffect(() => {
     // CRITICAL: Wait for organization context to finish loading
@@ -215,25 +186,32 @@ export function AppSidebar() {
           </div>
         )}
         
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map(item => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    onClick={() => navigate(item.url)} 
-                    isActive={location.pathname === item.url} 
-                    className="w-full"
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {menuGroups.map((group) => {
+          const visibleItems = group.items.filter(item => !role || item.roles.includes(role));
+          if (visibleItems.length === 0) return null;
+          
+          return (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visibleItems.map(item => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton 
+                        onClick={() => navigate(item.url)} 
+                        isActive={location.pathname === item.url} 
+                        className="w-full"
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
