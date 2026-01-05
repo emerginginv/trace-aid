@@ -290,6 +290,7 @@ export const tasksReport: ReportDefinition = {
   description: "All tasks and their completion status",
   category: "activities",
   sourceTable: "case_activities",
+  baseFilters: [{ field: "activity_type", operator: "eq", value: "task" }],
   columns: [
     activityColumns.case_number_activity,
     activityColumns.activity_title,
@@ -329,6 +330,7 @@ export const eventsReport: ReportDefinition = {
   description: "All scheduled events and surveillance",
   category: "activities",
   sourceTable: "case_activities",
+  baseFilters: [{ field: "activity_type", operator: "eq", value: "event" }],
   columns: [
     activityColumns.case_number_activity,
     activityColumns.activity_title,
