@@ -174,14 +174,14 @@ function renderFilterInput(
     case "select":
       return (
         <Select
-          value={value as string || ""}
-          onValueChange={(v) => handleChange(filter.key, v || undefined)}
+          value={value as string || "all"}
+          onValueChange={(v) => handleChange(filter.key, v === "all" ? undefined : v)}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="All" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All</SelectItem>
+            <SelectItem value="all">All</SelectItem>
             {filter.options?.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
@@ -194,14 +194,14 @@ function renderFilterInput(
     case "client":
       return (
         <Select
-          value={value as string || ""}
-          onValueChange={(v) => handleChange(filter.key, v || undefined)}
+          value={value as string || "all"}
+          onValueChange={(v) => handleChange(filter.key, v === "all" ? undefined : v)}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="All clients" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All clients</SelectItem>
+            <SelectItem value="all">All clients</SelectItem>
             {data.clients?.map((client) => (
               <SelectItem key={client.id} value={client.id}>
                 {client.name}
@@ -214,14 +214,14 @@ function renderFilterInput(
     case "investigator":
       return (
         <Select
-          value={value as string || ""}
-          onValueChange={(v) => handleChange(filter.key, v || undefined)}
+          value={value as string || "all"}
+          onValueChange={(v) => handleChange(filter.key, v === "all" ? undefined : v)}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="All investigators" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All investigators</SelectItem>
+            <SelectItem value="all">All investigators</SelectItem>
             {data.investigators?.map((inv) => (
               <SelectItem key={inv.id} value={inv.id}>
                 {inv.name}
@@ -234,14 +234,14 @@ function renderFilterInput(
     case "case":
       return (
         <Select
-          value={value as string || ""}
-          onValueChange={(v) => handleChange(filter.key, v || undefined)}
+          value={value as string || "all"}
+          onValueChange={(v) => handleChange(filter.key, v === "all" ? undefined : v)}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="All cases" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All cases</SelectItem>
+            <SelectItem value="all">All cases</SelectItem>
             {data.cases?.map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 {c.case_number} - {c.title}
