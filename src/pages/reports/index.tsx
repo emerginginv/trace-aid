@@ -4,13 +4,18 @@ import { reportCategories, getReportsByCategory } from "@/lib/analytics/reports"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
+
 const iconMap: Record<string, React.ElementType> = {
   Briefcase,
   DollarSign,
   Activity,
   PieChart
 };
+
 export default function ReportsHub() {
+  useSetBreadcrumbs([{ label: "Reports" }]);
+
   return <div className="space-y-6">
       {/* Header */}
       <div>
