@@ -529,19 +529,7 @@ const Dashboard = () => {
     return <VendorDashboard />;
   }
   return <div className="space-y-6">
-      {/* Header Section with Gradient Background */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 p-8 border border-border">
-        <div className="relative z-10">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Dashboard
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Welcome back! Here's an overview of your day.
-          </p>
-        </div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-0" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/5 rounded-full blur-3xl -z-0" />
-      </div>
+      <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {/* Stats Overview + Financial Summary Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 border border-border rounded-lg p-4">
