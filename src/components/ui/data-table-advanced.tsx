@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -94,18 +95,23 @@ export function DataTableAdvanced<TData, TValue>({
 
         <div className="flex items-center gap-2">
           {onExport && (
-            <Button variant="outline" size="sm" onClick={onExport}>
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
+            <ResponsiveButton
+              icon={<Download className="w-4 h-4" />}
+              label="Export"
+              variant="outline"
+              size="sm"
+              onClick={onExport}
+            />
           )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Settings className="w-4 h-4 mr-2" />
-                View
-              </Button>
+              <ResponsiveButton
+                icon={<Settings className="w-4 h-4" />}
+                label="View"
+                variant="outline"
+                size="sm"
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               {table

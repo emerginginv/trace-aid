@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText, CheckCheck } from "lucide-react";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
@@ -332,10 +333,13 @@ const Cases = () => {
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-10">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+            <ResponsiveButton
+              icon={<Download className="h-4 w-4" />}
+              label="Export"
+              variant="outline"
+              size="sm"
+              className="h-10"
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleExportCSV}>
