@@ -149,10 +149,10 @@ export function PdfViewer({ pdfData, fileName, onDownload }: PdfViewerProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col w-full h-full max-w-full overflow-hidden">
       {/* Controls */}
-      <div className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded-t border-b">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-muted/50 rounded-t border-b">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -161,8 +161,8 @@ export function PdfViewer({ pdfData, fileName, onDownload }: PdfViewerProps) {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm min-w-[80px] text-center">
-            Page {currentPage} of {totalPages}
+          <span className="text-xs sm:text-sm min-w-[60px] sm:min-w-[80px] text-center">
+            {currentPage} / {totalPages}
           </span>
           <Button
             variant="outline"
@@ -174,11 +174,11 @@ export function PdfViewer({ pdfData, fileName, onDownload }: PdfViewerProps) {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button variant="outline" size="sm" onClick={zoomOut} disabled={scale <= 0.5}>
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <span className="text-sm min-w-[50px] text-center">
+          <span className="text-xs sm:text-sm min-w-[40px] sm:min-w-[50px] text-center">
             {Math.round(scale * 100)}%
           </span>
           <Button variant="outline" size="sm" onClick={zoomIn} disabled={scale >= 3}>
@@ -186,16 +186,24 @@ export function PdfViewer({ pdfData, fileName, onDownload }: PdfViewerProps) {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={openInNewTab}>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Button variant="outline" size="sm" onClick={openInNewTab} className="hidden sm:flex">
             <ExternalLink className="h-4 w-4 mr-2" />
             Open in New Tab
           </Button>
+          <Button variant="outline" size="sm" onClick={openInNewTab} className="sm:hidden">
+            <ExternalLink className="h-4 w-4" />
+          </Button>
           {onDownload && (
-            <Button variant="outline" size="sm" onClick={onDownload}>
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={onDownload} className="hidden sm:flex">
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+              <Button variant="outline" size="sm" onClick={onDownload} className="sm:hidden">
+                <Download className="h-4 w-4" />
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -203,10 +211,10 @@ export function PdfViewer({ pdfData, fileName, onDownload }: PdfViewerProps) {
       {/* PDF Canvas */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-muted/30 flex items-start justify-center p-4"
+        className="flex-1 overflow-auto bg-muted/30 flex items-start justify-center p-4 w-full max-w-full"
         style={{ maxHeight: "65vh" }}
       >
-        <canvas ref={canvasRef} className="shadow-lg" />
+        <canvas ref={canvasRef} className="shadow-lg max-w-full h-auto" />
       </div>
     </div>
   );
