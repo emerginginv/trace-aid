@@ -1,14 +1,15 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { 
+  validateDeleteUserInput, 
+  getClientIp, 
+  getUserAgent 
+} from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface DeleteUserRequest {
-  userId: string;
-}
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -49,21 +50,32 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (adminError || !adminCheck) {
+      // Log permission denied
+      await supabaseClient.rpc('log_security_event', {
+        p_event_type: 'permission_denied',
+        p_user_id: user.id,
+        p_metadata: { action: 'delete_user', reason: 'not_admin' },
+      });
+      
       return new Response(
         JSON.stringify({ error: "Only admins can delete users" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Parse request body
-    const { userId }: DeleteUserRequest = await req.json();
-
-    if (!userId) {
+    // Validate input
+    const rawInput = await req.json();
+    const validationResult = validateDeleteUserInput(rawInput);
+    
+    if (!validationResult.success) {
+      console.log('[DELETE-USER] Validation failed:', validationResult.error);
       return new Response(
-        JSON.stringify({ error: "userId is required" }),
+        JSON.stringify({ error: validationResult.error }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const { userId } = validationResult.data!;
 
     // Prevent self-deletion
     if (userId === user.id) {
@@ -72,6 +84,13 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Get the target user's organization for audit logging
+    const { data: targetMembership } = await supabaseClient
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", userId)
+      .maybeSingle();
 
     console.log(`[DELETE-USER] Admin ${user.email} deleting user ${userId}`);
 
@@ -258,6 +277,22 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log the security event
+    await supabaseClient.rpc('log_security_event', {
+      p_event_type: 'user_deleted',
+      p_user_id: user.id,
+      p_organization_id: targetMembership?.organization_id || null,
+      p_target_user_id: userId,
+      p_ip_address: getClientIp(req),
+      p_user_agent: getUserAgent(req),
+      p_metadata: { 
+        deleted_cases: ownedCases?.length || 0,
+        deleted_activities: ownedActivities?.length || 0,
+        deleted_updates: ownedUpdates?.length || 0,
+        deleted_finances: ownedFinances?.length || 0,
+      },
+    });
 
     console.log(`[DELETE-USER] Successfully deleted user ${userId} and all associated data`);
 

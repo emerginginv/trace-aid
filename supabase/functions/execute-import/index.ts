@@ -6,6 +6,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { validateExecuteImportInput } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,22 +38,6 @@ const TABLE_MAP: Record<string, string> = {
   budget_adjustment: 'case_budget_adjustments',
 };
 
-interface ExecuteImportRequest {
-  batchId: string;
-  organizationId: string;
-  userId: string;
-  sourceSystemName: string;
-  entities: {
-    entityType: string;
-    records: {
-      externalRecordId: string;
-      data: Record<string, unknown>;
-      sourceData: Record<string, unknown>;
-    }[];
-  }[];
-  mappingConfig: Record<string, unknown>;
-}
-
 interface ImportError {
   entityType: string;
   externalRecordId: string;
@@ -74,7 +59,33 @@ Deno.serve(async (req: Request) => {
     // Use service role for admin operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const request: ExecuteImportRequest = await req.json();
+    // Validate input
+    const rawInput = await req.json();
+    const validationResult = validateExecuteImportInput(rawInput);
+    
+    if (!validationResult.success) {
+      console.log('[execute-import] Validation failed:', validationResult.error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          batchId: '',
+          successCount: 0,
+          failedCount: 1,
+          skippedCount: 0,
+          errors: [{
+            entityType: 'validation',
+            externalRecordId: '',
+            errorCode: 'VALIDATION_ERROR',
+            errorMessage: validationResult.error,
+          }],
+          referenceMap: {},
+          rollbackPerformed: false,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    const request = validationResult.data!;
     console.log(`[execute-import] Starting import for batch ${request.batchId}`);
     console.log(`[execute-import] Entities to process: ${request.entities.map(e => `${e.entityType}(${e.records.length})`).join(', ')}`);
 
@@ -87,7 +98,6 @@ Deno.serve(async (req: Request) => {
       activities: {},
     };
     let successCount = 0;
-    let failedCount = 0;
     let rollbackPerformed = false;
 
     // Load user email -> ID mapping
@@ -192,8 +202,6 @@ Deno.serve(async (req: Request) => {
               error_message: errorMessage,
             });
 
-            failedCount++;
-
             // If any record fails, rollback all
             throw new Error(`Import failed for ${entityType} record ${record.externalRecordId}: ${errorMessage}`);
           }
@@ -226,11 +234,10 @@ Deno.serve(async (req: Request) => {
 
     } catch (transactionError) {
       const errorMessage = transactionError instanceof Error ? transactionError.message : String(transactionError);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       console.error(`[execute-import] Transaction failed, initiating rollback: ${errorMessage}`);
 
-      // Perform rollback (using any type to avoid Supabase client type issues)
-      rollbackPerformed = await performRollback(supabase as any, insertedRecords, request.batchId);
+      // Perform rollback
+      rollbackPerformed = await performRollback(supabase as ReturnType<typeof createClient>, insertedRecords, request.batchId);
 
       // Log rollback
       await supabase.from('import_logs').insert({
@@ -421,7 +428,7 @@ function categorizeError(message: string): string {
 }
 
 async function performRollback(
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
   insertedRecords: { entityType: string; id: string; table: string }[],
   batchId: string
 ): Promise<boolean> {
@@ -437,7 +444,8 @@ async function performRollback(
       if (recordsToDelete.length === 0) continue;
 
       const tableName = TABLE_MAP[entityType];
-      const { error } = await supabase
+      // Using any to bypass strict Supabase typing for dynamic table access
+      const { error } = await (supabase as any)
         .from(tableName)
         .delete()
         .in('id', recordsToDelete);
@@ -450,9 +458,10 @@ async function performRollback(
     }
 
     // Update import_records to mark as rolled_back
-    await supabase
+    // Using any to bypass strict Supabase typing
+    await (supabase as any)
       .from('import_records')
-      .update({ status: 'failed', error_message: 'Rolled back due to transaction failure' } as any)
+      .update({ status: 'failed', error_message: 'Rolled back due to transaction failure' })
       .eq('batch_id', batchId)
       .eq('status', 'imported');
 

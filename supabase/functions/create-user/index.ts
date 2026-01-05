@@ -1,18 +1,15 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { 
+  validateCreateUserInput, 
+  getClientIp, 
+  getUserAgent 
+} from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface CreateUserRequest {
-  email: string;
-  fullName: string;
-  password: string;
-  role: 'admin' | 'manager' | 'investigator' | 'vendor';
-  organizationId: string;
-}
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
@@ -30,7 +27,14 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // Get the authenticated admin user
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'No authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const token = authHeader.replace('Bearer ', '');
     const { data: { user: adminUser }, error: userError } = await supabase.auth.getUser(token);
 
@@ -41,7 +45,19 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { email, fullName, password, role, organizationId }: CreateUserRequest = await req.json();
+    // Validate input
+    const rawInput = await req.json();
+    const validationResult = validateCreateUserInput(rawInput);
+    
+    if (!validationResult.success) {
+      console.log('[CREATE-USER] Validation failed:', validationResult.error);
+      return new Response(
+        JSON.stringify({ error: validationResult.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { email, fullName, password, role, organizationId } = validationResult.data!;
 
     // Verify the requesting user is an admin of the organization
     const { data: membership, error: memberError } = await supabase
@@ -52,6 +68,14 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (memberError || membership?.role !== 'admin') {
+      // Log permission denied
+      await supabase.rpc('log_security_event', {
+        p_event_type: 'permission_denied',
+        p_user_id: adminUser.id,
+        p_organization_id: organizationId,
+        p_metadata: { action: 'create_user', reason: 'not_admin' },
+      });
+      
       return new Response(
         JSON.stringify({ error: 'Only admins can create users' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -59,7 +83,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Check if user already exists in auth.users by trying to get them via email
-    // We query auth.users directly since profiles might not exist if previous signup failed
     console.log('[CREATE-USER] Checking if user exists:', email);
     const { data: authUsers } = await supabase.auth.admin.listUsers();
     const existingAuthUser = authUsers.users.find(u => u.email === email);
@@ -99,8 +122,6 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('[CREATE-USER] User exists in auth but not in org, will add to org');
 
       // User exists but not in this org - add them to the organization
-      // IMPORTANT: Do NOT modify user_roles table - the user keeps their existing role(s)
-      // The organization_members.role field defines their role within THIS organization
       const { error: orgMemberError } = await supabase
         .from('organization_members')
         .insert({
@@ -118,7 +139,6 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Add the new role to user_roles WITHOUT deleting existing roles
-      // This allows a user to have multiple roles across different organizations
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
@@ -126,9 +146,8 @@ const handler = async (req: Request): Promise<Response> => {
           role: role,
         })
         .select()
-        .maybeSingle(); // Use maybeSingle to handle duplicate gracefully
+        .maybeSingle();
 
-      // Ignore duplicate role errors (user might already have this role)
       if (roleError && !roleError.message.includes('duplicate')) {
         console.error('Error adding role:', roleError);
       }
@@ -147,6 +166,17 @@ const handler = async (req: Request): Promise<Response> => {
           .eq('id', organizationId);
       }
 
+      // Log the security event
+      await supabase.rpc('log_security_event', {
+        p_event_type: 'user_created',
+        p_user_id: adminUser.id,
+        p_organization_id: organizationId,
+        p_target_user_id: existingAuthUser.id,
+        p_ip_address: getClientIp(req),
+        p_user_agent: getUserAgent(req),
+        p_metadata: { role, added_existing_user: true },
+      });
+
       return new Response(
         JSON.stringify({ 
           success: true,
@@ -164,7 +194,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm email
+      email_confirm: true,
       user_metadata: {
         full_name: fullName,
       }
@@ -196,7 +226,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (orgMemberError) {
       console.error('Error adding to organization:', orgMemberError);
-      // Try to clean up the created user
       await supabase.auth.admin.deleteUser(newUser.user.id);
       return new Response(
         JSON.stringify({ error: `Failed to add user to organization: ${orgMemberError.message}` }),
@@ -204,8 +233,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Add role to user_roles - delete all existing roles first, then insert new one
-    // This ensures the user only has the role we're assigning
+    // Add role to user_roles
     const { error: deleteRoleError } = await supabase
       .from('user_roles')
       .delete()
@@ -244,6 +272,17 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('id', organizationId);
     }
 
+    // Log the security event
+    await supabase.rpc('log_security_event', {
+      p_event_type: 'user_created',
+      p_user_id: adminUser.id,
+      p_organization_id: organizationId,
+      p_target_user_id: newUser.user.id,
+      p_ip_address: getClientIp(req),
+      p_user_agent: getUserAgent(req),
+      p_metadata: { role, created_new_user: true },
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true,
@@ -257,10 +296,11 @@ const handler = async (req: Request): Promise<Response> => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in create-user function:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return new Response(
-      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

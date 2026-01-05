@@ -1,19 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.1';
+import { validateSendEmailInput } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface EmailRequest {
-  to: string;
-  subject: string;
-  body: string;
-  isHtml?: boolean;
-  fromName?: string;
-  fromEmail?: string;
-}
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -22,7 +14,19 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, subject, body, isHtml = false, fromName = "CaseWyze", fromEmail }: EmailRequest = await req.json();
+    // Validate input
+    const rawInput = await req.json();
+    const validationResult = validateSendEmailInput(rawInput);
+    
+    if (!validationResult.success) {
+      console.log('[SEND-EMAIL] Validation failed:', validationResult.error);
+      return new Response(
+        JSON.stringify({ error: validationResult.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { to, subject, body, isHtml, fromName, fromEmail } = validationResult.data!;
 
     console.log("Sending email to:", to);
 
@@ -119,7 +123,7 @@ const handler = async (req: Request): Promise<Response> => {
         {
           From: {
             Email: defaultFromEmail,
-            Name: fromName,
+            Name: fromName || "CaseWyze",
           },
           To: [
             {
@@ -166,10 +170,11 @@ const handler = async (req: Request): Promise<Response> => {
         ...corsHeaders,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-email function:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
