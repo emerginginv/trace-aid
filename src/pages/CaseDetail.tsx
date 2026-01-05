@@ -577,116 +577,112 @@ const CaseDetail = () => {
         </Alert>
       )}
       
-      {/* Header */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-start gap-2 sm:gap-4">
-          <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
-            <Link to="/cases">
-              <ChevronLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold break-words leading-tight ${isClosed ? 'text-muted-foreground' : ''}`}>
-              {caseData.title}
-            </h1>
-            <p className={`text-xs mt-0.5 font-medium ${isClosed ? 'text-muted-foreground' : 'text-primary'}`}>
-              {caseData.case_number}
-            </p>
-          </div>
-          
-          {/* Mobile action menu */}
-          {!isVendor && isMobile && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="shrink-0 h-10 w-10">
-                  <MoreVertical className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </DropdownMenuItem>
-                {hasPermission('view_reports') && (
-                  <DropdownMenuItem onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Generate Report
-                  </DropdownMenuItem>
-                )}
-                {hasPermission('edit_cases') && (
-                  <DropdownMenuItem onClick={() => setEditFormOpen(true)} disabled={isClosed}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Case
-                  </DropdownMenuItem>
-                )}
-                {hasPermission('delete_cases') && (
-                  <DropdownMenuItem 
-                    onClick={handleDelete} 
-                    disabled={deleting}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {deleting ? "Deleting..." : "Delete Case"}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+      {/* Header - Single Row */}
+      <div className="flex items-start gap-2 sm:gap-4 flex-wrap">
+        <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
+          <Link to="/cases">
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
+        </Button>
+        
+        <div className="flex-1 min-w-0">
+          <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold break-words leading-tight ${isClosed ? 'text-muted-foreground' : ''}`}>
+            {caseData.title}
+          </h1>
+          <p className={`text-xs mt-0.5 font-medium ${isClosed ? 'text-muted-foreground' : 'text-primary'}`}>
+            {caseData.case_number}
+          </p>
         </div>
         
-        {/* Status + Desktop actions */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {!isVendor && (
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-                <SelectTrigger className={`w-full sm:w-[160px] h-10 sm:h-9 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {caseStatuses.map(status => (
-                    <SelectItem key={status.id} value={status.value}>
-                      {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {isVendor && (
-            <div className="flex items-center gap-2">
-              <Badge className="border" style={getStatusStyle(caseData.status)}>
-                {caseData.status}
-              </Badge>
-            </div>
-          )}
-          
-          {!isVendor && !isMobile && (
-            <div className="flex items-center gap-2 ml-auto">
-              <Button variant="outline" className="h-10 px-4" onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
+        {/* Status Dropdown */}
+        {!isVendor && (
+          <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
+            <SelectTrigger className={`w-[120px] sm:w-[140px] h-9 text-sm shrink-0 ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {caseStatuses.map(status => (
+                <SelectItem key={status.id} value={status.value}>
+                  {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        
+        {/* Vendor Status Badge */}
+        {isVendor && (
+          <Badge className="border shrink-0" style={getStatusStyle(caseData.status)}>
+            {caseData.status}
+          </Badge>
+        )}
+        
+        {/* Desktop Action Buttons */}
+        {!isVendor && !isMobile && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="h-9 px-3" onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Email
+            </Button>
+            {hasPermission('view_reports') && (
+              <Button variant="outline" className="h-9 px-3" onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
+                <FileText className="h-4 w-4 mr-2" />
+                Report
+              </Button>
+            )}
+            {hasPermission('edit_cases') && (
+              <Button variant="outline" className="h-9 px-3" onClick={() => setEditFormOpen(true)} disabled={isClosed}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+            {hasPermission('delete_cases') && (
+              <Button variant="outline" className="h-9 px-3 text-destructive hover:bg-destructive/10" onClick={handleDelete} disabled={deleting}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleting ? "Deleting..." : "Delete"}
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {/* Mobile Action Menu */}
+        {!isVendor && isMobile && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="shrink-0 h-9 w-9">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
                 <Mail className="h-4 w-4 mr-2" />
                 Send Email
-              </Button>
+              </DropdownMenuItem>
               {hasPermission('view_reports') && (
-                <Button variant="outline" className="h-10 px-4" onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
+                <DropdownMenuItem onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
                   <FileText className="h-4 w-4 mr-2" />
                   Generate Report
-                </Button>
+                </DropdownMenuItem>
               )}
               {hasPermission('edit_cases') && (
-                <Button variant="outline" className="h-10 px-4" onClick={() => setEditFormOpen(true)} disabled={isClosed}>
+                <DropdownMenuItem onClick={() => setEditFormOpen(true)} disabled={isClosed}>
                   <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
+                  Edit Case
+                </DropdownMenuItem>
               )}
               {hasPermission('delete_cases') && (
-                <Button variant="outline" className="h-10 px-4 text-destructive hover:bg-destructive/10" onClick={handleDelete} disabled={deleting}>
+                <DropdownMenuItem 
+                  onClick={handleDelete} 
+                  disabled={deleting}
+                  className="text-destructive focus:text-destructive"
+                >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {deleting ? "Deleting..." : "Delete"}
-                </Button>
+                  {deleting ? "Deleting..." : "Delete Case"}
+                </DropdownMenuItem>
               )}
-            </div>
-          )}
-        </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Tabs - Now at top */}
