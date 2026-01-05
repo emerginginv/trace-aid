@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,8 @@ interface Case {
 }
 
 export default function Expenses() {
+  useSetBreadcrumbs([{ label: "My Expenses" }]);
+  
   const { organization } = useOrganization();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
