@@ -416,30 +416,27 @@ const Dashboard = () => {
     }
   };
 
-  const getTaskStatusDisplay = (status: string) => {
+  const getStatusDotDisplay = (status: string, type: 'task' | 'event' = 'task') => {
     switch (status) {
       case 'in_progress':
-        return { label: 'In Progress', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' };
+        return { label: 'In Progress', dotColor: 'bg-blue-500' };
       case 'done':
       case 'completed':
-        return { label: 'Done', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
+        return { label: 'Done', dotColor: 'bg-green-500' };
       case 'to_do':
       default:
-        return { label: 'To Do', className: 'bg-muted text-muted-foreground' };
+        return { label: type === 'event' ? 'Scheduled' : 'To Do', dotColor: 'bg-muted-foreground/50' };
     }
   };
 
-  const getEventStatusDisplay = (status: string) => {
-    switch (status) {
-      case 'in_progress':
-        return { label: 'In Progress', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' };
-      case 'done':
-      case 'completed':
-        return { label: 'Done', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
-      case 'to_do':
-      default:
-        return { label: 'Scheduled', className: 'bg-muted text-muted-foreground' };
-    }
+  const StatusDot = ({ status, type = 'task' }: { status: string; type?: 'task' | 'event' }) => {
+    const { label, dotColor } = getStatusDotDisplay(status, type);
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} aria-hidden="true" />
+        {label}
+      </span>
+    );
   };
 
   const getUserInitials = (name: string | null) => {
@@ -614,7 +611,6 @@ const Dashboard = () => {
                 {dueTasks.map(task => {
                   const taskDate = parseISO(task.dueDate);
                   const isOverdue = isPast(taskDate) && !isToday(taskDate);
-                  const statusDisplay = getTaskStatusDisplay(task.taskStatus);
                   
                   return (
                     <div 
@@ -634,10 +630,8 @@ const Dashboard = () => {
                         <p className="font-medium text-sm truncate">{task.title}</p>
                       </div>
                       
-                      {/* Status Badge */}
-                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${statusDisplay.className}`}>
-                        {statusDisplay.label}
-                      </span>
+                      {/* Status Dot */}
+                      <StatusDot status={task.taskStatus} type="task" />
                       
                       {/* Due Date */}
                       <span className={`flex items-center gap-1 text-xs shrink-0 ${
@@ -701,8 +695,6 @@ const Dashboard = () => {
             ) : (
               <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
                 {upcomingEvents.map(event => {
-                  const statusDisplay = getEventStatusDisplay(event.eventStatus);
-                  
                   return (
                     <div 
                       key={event.id} 
@@ -721,10 +713,8 @@ const Dashboard = () => {
                         </span>
                       )}
                       
-                      {/* Status Badge */}
-                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${statusDisplay.className}`}>
-                        {statusDisplay.label}
-                      </span>
+                      {/* Status Dot */}
+                      <StatusDot status={event.eventStatus} type="event" />
                       
                       {/* Start Date */}
                       <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
@@ -805,7 +795,10 @@ const Dashboard = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Status:</span>
-                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">Active</Badge>
+                        <span className="flex items-center gap-1.5 text-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
+                          Active
+                        </span>
                       </div>
                     </div>
                   </div>}
@@ -879,7 +872,10 @@ const Dashboard = () => {
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">Status:</span>
-                            <Badge variant="outline" className="bg-success/10 text-success border-success/20">Recorded</Badge>
+                            <span className="flex items-center gap-1.5 text-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
+                              Recorded
+                            </span>
                           </div>
                         </div>
                       </div>}
