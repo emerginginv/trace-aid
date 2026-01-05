@@ -32,6 +32,7 @@ import { CaseAccessAuditPanel } from "./CaseAccessAuditPanel";
 
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
+import { AttachmentPreviewThumbnail } from "./AttachmentPreviewThumbnail";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 
 interface Attachment {
@@ -46,6 +47,9 @@ interface Attachment {
   name?: string | null;
   description?: string | null;
   tags?: string[] | null;
+  preview_path?: string | null;
+  preview_status?: string | null;
+  preview_generated_at?: string | null;
 }
 
 interface UploadingFile {
@@ -648,34 +652,8 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     if (!previewAttachment) return null;
 
     const signedUrl = previewUrls[previewAttachment.id];
-    if (!signedUrl) {
-      return (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading preview...</p>
-        </div>
-      );
-    }
 
-    if (previewAttachment.file_type.startsWith("image/")) {
-      return <img src={signedUrl} alt={previewAttachment.file_name} className="max-w-full max-h-[80vh] rounded" />;
-    }
-
-    if (previewAttachment.file_type.startsWith("video/")) {
-      return (
-        <video controls className="w-full max-h-[80vh] rounded">
-          <source src={signedUrl} type={previewAttachment.file_type} />
-        </video>
-      );
-    }
-
-    if (previewAttachment.file_type.startsWith("audio/")) {
-      return (
-        <audio controls className="w-full">
-          <source src={signedUrl} type={previewAttachment.file_type} />
-        </audio>
-      );
-    }
-
+    // Handle PDFs first - they use blob URLs, not signed URLs
     if (previewAttachment.file_type.includes("pdf")) {
       // Show loading state while fetching PDF blob
       if (pdfBlobLoading) {
@@ -694,7 +672,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
             <FileText className="h-16 w-16 mb-4 text-muted-foreground" />
             <p className="text-lg font-medium mb-2">PDF preview not available</p>
             <p className="text-muted-foreground mb-4">
-              {pdfBlobError || "Unable to load PDF preview"}
+              {pdfBlobError || "Loading..."}
             </p>
             <Button onClick={() => handleDownload(previewAttachment)}>
               <Download className="h-4 w-4 mr-2" />
@@ -738,6 +716,35 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
             </Button>
           </div>
         </div>
+      );
+    }
+
+    // For non-PDF files, we still need signed URLs
+    if (!signedUrl) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading preview...</p>
+        </div>
+      );
+    }
+
+    if (previewAttachment.file_type.startsWith("image/")) {
+      return <img src={signedUrl} alt={previewAttachment.file_name} className="max-w-full max-h-[80vh] rounded" />;
+    }
+
+    if (previewAttachment.file_type.startsWith("video/")) {
+      return (
+        <video controls className="w-full max-h-[80vh] rounded">
+          <source src={signedUrl} type={previewAttachment.file_type} />
+        </video>
+      );
+    }
+
+    if (previewAttachment.file_type.startsWith("audio/")) {
+      return (
+        <audio controls className="w-full">
+          <source src={signedUrl} type={previewAttachment.file_type} />
+        </audio>
       );
     }
 
@@ -1054,7 +1061,6 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
         ) : viewMode === "card" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {filteredAttachments.map((attachment) => {
-              const signedUrl = previewUrls[attachment.id];
               const isSelected = selectedIds.has(attachment.id);
               const isShared = sharedAttachmentIds.has(attachment.id);
 
@@ -1102,23 +1108,15 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                       </Tooltip>
                     )}
 
-                    <div className="w-full h-40 bg-muted rounded overflow-hidden flex items-center justify-center">
-                      {attachment.file_type.startsWith("image/") && signedUrl ? (
-                        <img 
-                          src={signedUrl} 
-                          alt={attachment.file_name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : attachment.file_type.startsWith("video/") && signedUrl ? (
-                        <video 
-                          src={signedUrl} 
-                          className="w-full h-full object-cover"
-                          muted
-                        />
-                      ) : (
-                        getFileIcon(attachment.file_type, attachment.file_name)
-                      )}
-                    </div>
+                    <AttachmentPreviewThumbnail
+                      filePath={attachment.file_path}
+                      fileName={attachment.file_name}
+                      fileType={attachment.file_type}
+                      previewPath={attachment.preview_path}
+                      previewStatus={attachment.preview_status}
+                      size="lg"
+                      className="w-full h-40"
+                    />
                     <div className="mt-2">
                       <div className="text-sm font-medium truncate" title={attachment.name || attachment.file_name}>
                         {attachment.name || attachment.file_name}
@@ -1252,7 +1250,6 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
               </TableHeader>
               <TableBody>
                 {filteredAttachments.map((attachment) => {
-                  const signedUrl = previewUrls[attachment.id];
                   const isSelected = selectedIds.has(attachment.id);
                   const isShared = sharedAttachmentIds.has(attachment.id);
                   
@@ -1277,23 +1274,14 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                       />
                     </TableCell>
                     <TableCell className="py-1.5">
-                      <div className="flex items-center justify-center">
-                        {attachment.file_type.startsWith("image/") && signedUrl ? (
-                          <img 
-                            src={signedUrl} 
-                            alt={attachment.file_name}
-                            className="h-10 w-10 object-cover rounded"
-                          />
-                        ) : attachment.file_type.startsWith("video/") && signedUrl ? (
-                          <video 
-                            src={signedUrl} 
-                            className="h-10 w-10 object-cover rounded"
-                            muted
-                          />
-                        ) : (
-                          getFileIcon(attachment.file_type, attachment.file_name)
-                        )}
-                      </div>
+                      <AttachmentPreviewThumbnail
+                        filePath={attachment.file_path}
+                        fileName={attachment.file_name}
+                        fileType={attachment.file_type}
+                        previewPath={attachment.preview_path}
+                        previewStatus={attachment.preview_status}
+                        size="sm"
+                      />
                     </TableCell>
                     <TableCell className="py-1.5">
                       <div>
