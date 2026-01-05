@@ -860,7 +860,7 @@ const AllInvoices = () => {
         </Dialog>
       )}
 
-      {showPayModal && (
+      {showPayModal && organization?.id && (
         <RecordPaymentModal
           invoice={{
             id: showPayModal.id,
@@ -878,6 +878,7 @@ const AllInvoices = () => {
             setShowPayModal(null);
             fetchInvoiceData();
           }}
+          organizationId={organization.id}
         />
       )}
 

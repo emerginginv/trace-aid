@@ -179,16 +179,9 @@ const Settings = () => {
         setSenderEmail(orgSettings.sender_email || "");
       }
 
-      // Get user's organization for picklists
-      const { data: orgMember, error: orgError } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (orgError || !orgMember) {
-        console.error("Error fetching organization:", orgError);
+      // Use organization from context for picklists
+      if (!organization?.id) {
+        console.error("Organization not found");
         return;
       }
 
@@ -196,7 +189,7 @@ const Settings = () => {
       const { data: picklistsRaw, error: picklistError } = await supabase
         .from("picklists")
         .select("*")
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", organization.id)
         .order("display_order");
 
       if (picklistError) {
@@ -206,13 +199,13 @@ const Settings = () => {
       let picklists = picklistsRaw ?? [];
 
       // Ensure each picklist type has at least defaults
-      if (user && orgMember) {
+      if (user && organization?.id) {
         const hasCaseStatuses = picklists.some(p => p.type === "case_status");
         const hasUpdateTypes = picklists.some(p => p.type === "update_type");
         const hasExpenseCategories = picklists.some(p => p.type === "expense_category");
 
         if (!hasCaseStatuses || !hasUpdateTypes || !hasExpenseCategories) {
-          await initializeDefaultPicklists(user.id, orgMember.organization_id, {
+          await initializeDefaultPicklists(user.id, organization.id, {
             hasCaseStatuses,
             hasUpdateTypes,
             hasExpenseCategories,
@@ -221,7 +214,7 @@ const Settings = () => {
           const { data: refreshedPicklists } = await supabase
             .from("picklists")
             .select("*")
-            .eq("organization_id", orgMember.organization_id)
+            .eq("organization_id", organization.id)
             .order("display_order");
 
           picklists = refreshedPicklists ?? picklists;
@@ -438,21 +431,15 @@ const Settings = () => {
 
         if (error) throw error;
       } else {
-        const { data: orgMember } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', currentUserId)
-          .single();
-
-        if (!orgMember?.organization_id) {
-          throw new Error("User not in organization");
+        if (!organization?.id) {
+          throw new Error("Organization not found");
         }
 
         const { error } = await supabase
           .from("organization_settings")
           .insert({
             user_id: currentUserId,
-            organization_id: orgMember.organization_id,
+            organization_id: organization.id,
             ...updateData,
           });
 

@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface Template {
   id: string;
@@ -40,6 +41,7 @@ const DEFAULT_TEMPLATE = `<div style="text-align: center; margin-bottom: 20px;">
 <p><em>This report was generated from case update templates.</em></p>`;
 
 export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: TemplateEditorProps) => {
+  const { organization } = useOrganization();
   const [name, setName] = useState("");
   const [body, setBody] = useState(DEFAULT_TEMPLATE);
   const [saving, setSaving] = useState(false);
@@ -69,14 +71,7 @@ export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: Temp
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Get user's organization_id
-      const { data: orgData } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!orgData) throw new Error("User not part of an organization");
+      if (!organization?.id) throw new Error("Organization not found");
 
       if (template) {
         const { error } = await supabase
@@ -91,7 +86,7 @@ export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: Temp
           .from("case_update_templates")
           .insert({ 
             user_id: user.id, 
-            organization_id: orgData.organization_id,
+            organization_id: organization.id,
             name, 
             body 
           });

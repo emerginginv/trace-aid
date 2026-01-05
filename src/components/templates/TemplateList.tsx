@@ -14,6 +14,7 @@ import {
   deleteReportTemplate,
   duplicateSystemTemplate,
 } from "@/lib/reportTemplates";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface LegacyTemplate {
   id: string;
@@ -24,6 +25,7 @@ interface LegacyTemplate {
 }
 
 export const TemplateList = () => {
+  const { organization } = useOrganization();
   const [legacyTemplates, setLegacyTemplates] = useState<LegacyTemplate[]>([]);
   const [reportTemplates, setReportTemplates] = useState<ReportTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,46 +33,37 @@ export const TemplateList = () => {
   const [reportEditorOpen, setReportEditorOpen] = useState(false);
   const [editingLegacyTemplate, setEditingLegacyTemplate] = useState<LegacyTemplate | undefined>();
   const [editingReportTemplateId, setEditingReportTemplateId] = useState<string | undefined>();
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAllTemplates();
-  }, []);
+    if (organization?.id) {
+      fetchAllTemplates();
+    }
+  }, [organization?.id]);
 
   const fetchAllTemplates = async () => {
+    if (!organization?.id) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserId(user.id);
 
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) {
-        setLoading(false);
-        return;
-      }
-
-      setOrganizationId(orgMember.organization_id);
-
       // Fetch legacy templates
       const { data: legacyData, error: legacyError } = await supabase
         .from("case_update_templates")
         .select("*")
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", organization.id)
         .order("created_at", { ascending: false });
 
       if (legacyError) throw legacyError;
       setLegacyTemplates(legacyData || []);
 
       // Fetch report templates
-      const templates = await getOrganizationTemplates(orgMember.organization_id);
+      const templates = await getOrganizationTemplates(organization.id);
       setReportTemplates(templates);
     } catch (error) {
       console.error("Error fetching templates:", error);
@@ -112,24 +105,17 @@ export const TemplateList = () => {
   };
 
   const handleDuplicateLegacy = async (template: LegacyTemplate) => {
+    if (!organization?.id) return;
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) throw new Error("User not in organization");
 
       const { error } = await supabase
         .from("case_update_templates")
         .insert({
           user_id: user.id,
-          organization_id: orgMember.organization_id,
+          organization_id: organization.id,
           name: `${template.name} (Copy)`,
           body: template.body,
         });
@@ -191,12 +177,12 @@ export const TemplateList = () => {
   };
 
   const handleDuplicateReport = async (template: ReportTemplate) => {
-    if (!organizationId || !userId) return;
+    if (!organization?.id || !userId) return;
 
     try {
       const newTemplate = await duplicateSystemTemplate(
         template.id,
-        organizationId,
+        organization.id,
         userId
       );
 
