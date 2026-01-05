@@ -59,6 +59,8 @@ interface Expense {
   amount: number;
   date: string;
   category: string;
+  userId: string;
+  submittedByName: string | null;
   caseId: string;
   financeData: any;
 }
@@ -306,15 +308,20 @@ const Dashboard = () => {
       const { data: expensesData } = await expensesQuery;
 
       if (expensesData) {
-        const recentExpenses: Expense[] = expensesData.map(expense => ({
-          id: expense.id,
-          description: expense.description,
-          amount: typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount || '0'),
-          date: expense.date,
-          category: expense.category || "General",
-          caseId: expense.case_id,
-          financeData: expense
-        }));
+        const recentExpenses: Expense[] = expensesData.map(expense => {
+          const submitter = orgUsers?.find(u => u.id === expense.user_id);
+          return {
+            id: expense.id,
+            description: expense.description,
+            amount: typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount || '0'),
+            date: expense.date,
+            category: expense.category || "General",
+            userId: expense.user_id,
+            submittedByName: submitter?.full_name || submitter?.email || null,
+            caseId: expense.case_id,
+            financeData: expense
+          };
+        });
         setExpenses(recentExpenses);
       }
 
@@ -850,59 +857,59 @@ const Dashboard = () => {
               </Select>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 pt-6">
-            {expenses.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
+          <CardContent className="pt-4">
+            {expenses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <DollarSign className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No recent expenses</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Expenses will appear here</p>
-              </div> : <>
-                {expenses.map(expense => <div key={expense.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
-                    <div onClick={() => setEditingExpense(expense)} className="flex items-start gap-3 p-4 transition-colors cursor-pointer hover:bg-muted/50">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="font-medium text-sm leading-tight flex-1">{expense.description}</p>
-                          <p className="font-bold text-base text-warning shrink-0">
-                            ${expense.amount.toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          <Badge variant="outline" className="bg-primary/5 border-primary/20">
-                            {expense.category}
-                          </Badge>
-                          <span className="text-muted-foreground">
-                            {format(parseISO(expense.date), "MMM dd, yyyy")}
-                          </span>
-                        </div>
+              </div>
+            ) : (
+              <>
+                <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+                  {expenses.map(expense => (
+                    <div 
+                      key={expense.id} 
+                      onClick={() => setEditingExpense(expense)} 
+                      className="group flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-warning/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
+                    >
+                      {/* Description - Primary anchor */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{expense.description}</p>
                       </div>
-                      {expandedExpense === expense.id ? <ChevronUp className="w-4 h-4 text-muted-foreground mt-1" /> : <ChevronDown className="w-4 h-4 text-muted-foreground mt-1" />}
-                    </div>
-                    {expandedExpense === expense.id && <div className="px-4 pb-4 text-sm border-t border-border/50 pt-4 bg-muted/30">
-                        <p className="font-semibold mb-3 text-foreground">Expense Details</p>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Amount:</span>
-                            <span className="font-bold text-warning">${expense.amount.toFixed(2)}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Category:</span>
-                            <Badge variant="outline" className="capitalize">{expense.category}</Badge>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Date:</span>
-                            <span className="text-xs">{format(parseISO(expense.date), "PPP")}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Status:</span>
-                            <span className="flex items-center gap-1.5 text-xs">
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
-                              Recorded
-                            </span>
-                          </div>
+                      
+                      {/* Category Badge */}
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 capitalize">
+                        {expense.category}
+                      </span>
+                      
+                      {/* Amount - Emphasized */}
+                      <span className="font-semibold text-sm text-warning shrink-0">
+                        ${expense.amount.toFixed(2)}
+                      </span>
+                      
+                      {/* Date Added */}
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                        <Clock className="w-3 h-3" />
+                        {format(parseISO(expense.date), "MMM d")}
+                      </span>
+                      
+                      {/* Submitted By Avatar */}
+                      {expense.submittedByName && (
+                        <div 
+                          className="w-6 h-6 rounded-full bg-warning/10 text-warning flex items-center justify-center text-xs font-medium shrink-0"
+                          title={expense.submittedByName}
+                        >
+                          {getUserInitials(expense.submittedByName)}
                         </div>
-                      </div>}
-                  </div>)}
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Total Expenses Footer */}
                 <div className="pt-3 mt-3 border-t border-border/50 bg-muted/20 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-semibold text-foreground">Total Expenses</span>
@@ -911,7 +918,8 @@ const Dashboard = () => {
                     </span>
                   </div>
                 </div>
-              </>}
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
