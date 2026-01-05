@@ -22,10 +22,10 @@ const menuGroups = [
   {
     label: "Finance",
     items: [
-      { title: "Retainers", icon: Wallet, url: "/finance", roles: ['admin', 'manager', 'investigator'] },
-      { title: "My Expenses", icon: DollarSign, url: "/expenses", roles: ['vendor', 'investigator'] },
-      { title: "Expenses", icon: Receipt, url: "/all-expenses", roles: ['admin', 'manager', 'investigator'] },
-      { title: "Invoices", icon: FileText, url: "/all-invoices", roles: ['admin', 'manager'] },
+      { title: "Retainers", icon: Wallet, url: "/retainers", roles: ['admin', 'manager', 'investigator'] },
+      { title: "My Expenses", icon: DollarSign, url: "/my-expenses", roles: ['vendor', 'investigator'] },
+      { title: "Expenses", icon: Receipt, url: "/expenses", roles: ['admin', 'manager', 'investigator'] },
+      { title: "Invoices", icon: FileText, url: "/invoices", roles: ['admin', 'manager'] },
     ]
   },
   {

@@ -42,7 +42,6 @@ const ExpenseDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useSetBreadcrumbs([
-    { label: "Finance", href: "/finance" },
     { label: "Expenses", href: "/expenses" },
     { label: expense?.description || "Expense" },
   ]);
@@ -70,7 +69,7 @@ const ExpenseDetail = () => {
           description: "The requested expense could not be found.",
           variant: "destructive",
         });
-        navigate("/finance");
+        navigate("/expenses");
         return;
       }
 

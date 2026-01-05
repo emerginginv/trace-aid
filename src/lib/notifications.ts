@@ -241,7 +241,7 @@ export const NotificationHelpers = {
       message: `Expense of $${amount.toFixed(2)} has been approved`,
       relatedId: expenseId,
       relatedType: 'expense',
-      link: '/finance',
+      link: '/expenses',
       priority: 'medium',
     }),
 
@@ -252,7 +252,7 @@ export const NotificationHelpers = {
       message: `Expense of $${amount.toFixed(2)} has been rejected`,
       relatedId: expenseId,
       relatedType: 'expense',
-      link: '/finance',
+      link: '/expenses',
       priority: 'medium',
     }),
 

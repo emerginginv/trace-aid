@@ -61,10 +61,7 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 const AllInvoices = () => {
-  useSetBreadcrumbs([
-    { label: "Finance", href: "/finance" },
-    { label: "Invoices" },
-  ]);
+  useSetBreadcrumbs([{ label: "Invoices" }]);
   
   const navigate = useNavigate();
   const { organization } = useOrganization();
