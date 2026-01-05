@@ -17,6 +17,7 @@ interface User {
   id: string;
   email: string;
   full_name: string | null;
+  color: string | null;
 }
 
 export default function Calendar() {
@@ -24,7 +25,7 @@ export default function Calendar() {
   const [cases, setCases] = useState<Case[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filterCase, setFilterCase] = useState<string>("all");
-  const [filterUser, setFilterUser] = useState<string>("all");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [caseSelectionOpen, setCaseSelectionOpen] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
@@ -60,7 +61,7 @@ export default function Calendar() {
       const [casesResult, usersResult] = await Promise.all([
         supabase.from("cases").select("id, title").eq("organization_id", orgId),
         orgUserIds.length > 0 
-          ? supabase.from("profiles").select("id, email, full_name").in("id", orgUserIds)
+          ? supabase.from("profiles").select("id, email, full_name, color").in("id", orgUserIds)
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -127,55 +128,83 @@ export default function Calendar() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-        <Select value={filterCase} onValueChange={setFilterCase}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="All Cases" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Cases</SelectItem>
-            {cases.map(c => (
-              <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+          <Select value={filterCase} onValueChange={setFilterCase}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="All Cases" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cases</SelectItem>
+              {cases.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Select value={filterUser} onValueChange={setFilterUser}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="All Users" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Users</SelectItem>
-            {users.map(u => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.full_name || u.email}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="to_do">To Do</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="done">Done</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="All Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="to_do">To Do</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="scheduled">Scheduled</SelectItem>
-            <SelectItem value="done">Done</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="blocked">Blocked</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Team Filter Toggles */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground font-medium">Team:</span>
+          
+          <Button
+            variant={selectedUsers.size === 0 ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedUsers(new Set())}
+            className="h-8"
+          >
+            All
+          </Button>
+          
+          {users.map(user => (
+            <Button
+              key={user.id}
+              variant={selectedUsers.has(user.id) ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setSelectedUsers(prev => {
+                  const next = new Set(prev);
+                  if (next.has(user.id)) {
+                    next.delete(user.id);
+                  } else {
+                    next.add(user.id);
+                  }
+                  return next;
+                });
+              }}
+              className="h-8 gap-2"
+            >
+              <span 
+                className="w-2 h-2 rounded-full shrink-0" 
+                style={{ backgroundColor: user.color || '#6366f1' }}
+              />
+              {user.full_name || user.email?.split('@')[0]}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <CaseCalendar 
         ref={calendarRef}
         filterCase={filterCase}
-        filterUser={filterUser}
+        filterUsers={selectedUsers}
         filterStatus={filterStatus}
         onNeedCaseSelection={handleCaseSelection}
         showTaskList={showTaskList}
