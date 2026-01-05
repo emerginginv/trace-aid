@@ -505,7 +505,7 @@ const Dashboard = () => {
   }
   return <div className="space-y-6">
       {/* Header Section with Gradient Background */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 p-8 border border-border/50">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 p-8 border border-border">
         <div className="relative z-10">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             Dashboard
@@ -519,12 +519,12 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Overview + Financial Summary Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 border border-border rounded-lg p-4">
         {/* Stats Cards - Left Half */}
         <div className="grid grid-cols-2 gap-3">
           {statCards.map(stat => {
             const Icon = stat.icon;
-            return <Card key={stat.title} className="group hover-lift border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden relative">
+            return <Card key={stat.title} className="group hover-lift border-border bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden relative">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-3 relative z-10">
                 <CardTitle className="text-xs font-medium text-muted-foreground">
@@ -542,7 +542,7 @@ const Dashboard = () => {
         </div>
 
         {/* Financial Summary Card - Right Half */}
-        <Card className="border-border/50 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 shadow-lg h-full">
+        <Card className="border-border bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 shadow-lg h-full">
           <CardHeader className="pb-3 pt-3">
             <CardTitle className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-emerald-500/10">
@@ -554,7 +554,7 @@ const Dashboard = () => {
           <CardContent className="pb-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Retainer Funds */}
-              <div className="p-3 rounded-xl bg-card/80 border border-border/50">
+              <div className="p-3 rounded-xl bg-card/80 border border-border">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                   <Wallet className="w-3.5 h-3.5" />
                   <span>Retainer Funds</span>
@@ -565,7 +565,7 @@ const Dashboard = () => {
               </div>
               
               {/* Outstanding Expenses */}
-              <div className="p-3 rounded-xl bg-card/80 border border-border/50">
+              <div className="p-3 rounded-xl bg-card/80 border border-border">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                   <Receipt className="w-3.5 h-3.5" />
                   <span>Outstanding Expenses</span>
@@ -576,7 +576,7 @@ const Dashboard = () => {
               </div>
               
               {/* Unpaid Invoices */}
-              <div className="p-3 rounded-xl bg-card/80 border border-border/50">
+              <div className="p-3 rounded-xl bg-card/80 border border-border">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                   <FileText className="w-3.5 h-3.5" />
                   <span>Unpaid Invoices</span>
@@ -591,10 +591,10 @@ const Dashboard = () => {
       </div>
 
       {/* Main Dashboard Grid with Enhanced Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border border-border rounded-lg p-4">
         {/* Due Tasks */}
-        <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
-          <CardHeader className="pb-4 border-b border-border/50">
+        <Card className="border-border bg-gradient-to-br from-card to-card/80 shadow-lg">
+          <CardHeader className="pb-4 border-b border-border">
             <CardTitle className="flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -632,7 +632,7 @@ const Dashboard = () => {
                     <div 
                       key={task.id} 
                       onClick={() => setEditingTask(task)} 
-                      className="group flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-primary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
+                      className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
                     >
                       {/* Checkbox */}
                       <Checkbox 
@@ -679,8 +679,8 @@ const Dashboard = () => {
         </Card>
 
         {/* Calendar Events */}
-        <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
-          <CardHeader className="pb-4 border-b border-border/50">
+        <Card className="border-border bg-gradient-to-br from-card to-card/80 shadow-lg">
+          <CardHeader className="pb-4 border-b border-border">
             <CardTitle className="flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-secondary/10">
@@ -714,7 +714,7 @@ const Dashboard = () => {
                   return (
                     <div 
                       key={event.id} 
-                      className="group flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-secondary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50" 
+                      className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-secondary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50" 
                       onClick={() => setEditingEvent(event)}
                     >
                       {/* Title - Primary anchor */}
@@ -756,8 +756,8 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Updates */}
-        <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
-          <CardHeader className="pb-4 border-b border-border/50">
+        <Card className="border-border bg-gradient-to-br from-card to-card/80 shadow-lg">
+          <CardHeader className="pb-4 border-b border-border">
             <CardTitle className="flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-accent/10">
@@ -801,7 +801,7 @@ const Dashboard = () => {
                     <div 
                       key={update.id} 
                       onClick={() => setEditingUpdate(update)} 
-                      className="group flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-accent/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
+                      className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-accent/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
                     >
                       {/* Title - Primary anchor */}
                       <div className="flex-1 min-w-0">
@@ -837,8 +837,8 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Expenses */}
-        <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
-          <CardHeader className="pb-4 border-b border-border/50">
+        <Card className="border-border bg-gradient-to-br from-card to-card/80 shadow-lg">
+          <CardHeader className="pb-4 border-b border-border">
             <CardTitle className="flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-warning/10">
@@ -873,7 +873,7 @@ const Dashboard = () => {
                     <div 
                       key={expense.id} 
                       onClick={() => setEditingExpense(expense)} 
-                      className="group flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-warning/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
+                      className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-warning/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
                     >
                       {/* Description - Primary anchor */}
                       <div className="flex-1 min-w-0">
