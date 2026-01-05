@@ -40,6 +40,7 @@ import TestNotifications from "./pages/TestNotifications";
 import AttachmentAccess from "./pages/AttachmentAccess";
 import AttachmentViewer from "./pages/AttachmentViewer";
 import Analytics from "./pages/Analytics";
+import CaseAnalytics from "./pages/CaseAnalytics";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -156,6 +157,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Analytics />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics/cases"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <CaseAnalytics />
               </DashboardLayout>
             </ProtectedRoute>
           }
