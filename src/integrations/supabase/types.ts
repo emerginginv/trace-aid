@@ -2073,6 +2073,10 @@ export type Database = {
         Args: { invite_token: string }
         Returns: Json
       }
+      can_access_case_attachment: {
+        Args: { file_path: string }
+        Returns: boolean
+      }
       get_case_budget_summary: {
         Args: { p_case_id: string }
         Returns: {
