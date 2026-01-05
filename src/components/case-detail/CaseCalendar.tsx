@@ -57,6 +57,7 @@ interface CaseCalendarProps {
   caseId?: string;
   filterCase?: string;
   filterUser?: string;
+  filterUsers?: Set<string>;
   filterStatus?: string;
   onNeedCaseSelection?: (callback: (selectedCaseId: string) => void) => void;
   isClosedCase?: boolean;
@@ -67,7 +68,7 @@ interface CaseCalendarProps {
 export const CaseCalendar = forwardRef<
   { triggerAddTask: () => void; triggerAddEvent: () => void },
   CaseCalendarProps
->(({ caseId, filterCase, filterUser, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false, showTaskList: externalShowTaskList, onToggleTaskList }, ref) => {
+>(({ caseId, filterCase, filterUser, filterUsers, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false, showTaskList: externalShowTaskList, onToggleTaskList }, ref) => {
   const { organization } = useOrganization();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
@@ -100,7 +101,7 @@ export const CaseCalendar = forwardRef<
     if (organization?.id) {
       fetchData();
     }
-  }, [caseId, filterCase, filterUser, filterStatus, organization?.id]);
+  }, [caseId, filterCase, filterUser, filterUsers, filterStatus, organization?.id]);
 
   const fetchData = async () => {
     if (!organization?.id) return;
@@ -134,10 +135,14 @@ export const CaseCalendar = forwardRef<
         eventsQuery = eventsQuery.eq("case_id", activeCaseFilter);
       }
 
-      // Apply user filter
-      if (filterUser && filterUser !== "all") {
-        tasksQuery = tasksQuery.eq("assigned_user_id", filterUser);
-        eventsQuery = eventsQuery.eq("assigned_user_id", filterUser);
+      // Apply user filter - support both single user (filterUser) and multiple users (filterUsers)
+      const activeUserFilter = filterUsers?.size 
+        ? Array.from(filterUsers) 
+        : (filterUser && filterUser !== "all" ? [filterUser] : null);
+      
+      if (activeUserFilter && activeUserFilter.length > 0) {
+        tasksQuery = tasksQuery.in("assigned_user_id", activeUserFilter);
+        eventsQuery = eventsQuery.in("assigned_user_id", activeUserFilter);
       }
 
       // Apply status filter
