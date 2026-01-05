@@ -15,6 +15,7 @@ import { UpdateForm } from "@/components/case-detail/UpdateForm";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Task {
   id: string;
@@ -53,8 +54,16 @@ interface Expense {
 }
 const Dashboard = () => {
   const { toast } = useToast();
-  const { isVendor, loading: roleLoading } = useUserRole();
+  const { isVendor, isAdmin, isManager, loading: roleLoading } = useUserRole();
   const { organization } = useOrganization();
+  
+  // Filter states for each container
+  const [tasksFilter, setTasksFilter] = useState<'my' | 'all'>('my');
+  const [eventsFilter, setEventsFilter] = useState<'my' | 'all'>('my');
+  const [updatesFilter, setUpdatesFilter] = useState<'my' | 'all'>('my');
+  const [expensesFilter, setExpensesFilter] = useState<'my' | 'all'>('my');
+  
+  const canViewAll = isAdmin || isManager;
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -142,7 +151,7 @@ const Dashboard = () => {
       });
 
       // Fetch tasks from case_activities (pending tasks only) filtered by organization
-      const { data: activitiesData, error: tasksError } = await supabase
+      let tasksQuery = supabase
         .from("case_activities")
         .select("*")
         .eq("organization_id", orgId)
@@ -150,6 +159,13 @@ const Dashboard = () => {
         .eq("completed", false)
         .order("due_date", { ascending: true, nullsFirst: false })
         .limit(10);
+
+      // Apply user filter if "My Tasks" is selected
+      if (tasksFilter === 'my') {
+        tasksQuery = tasksQuery.or(`user_id.eq.${user.id},assigned_user_id.eq.${user.id}`);
+      }
+
+      const { data: activitiesData, error: tasksError } = await tasksQuery;
 
       if (activitiesData) {
         const tasksData: Task[] = activitiesData.map(activity => ({
@@ -170,7 +186,7 @@ const Dashboard = () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
 
-      const { data: eventsData } = await supabase
+      let eventsQuery = supabase
         .from("case_activities")
         .select("*")
         .eq("organization_id", orgId)
@@ -180,6 +196,13 @@ const Dashboard = () => {
         .lte("due_date", futureDate.toISOString().split('T')[0])
         .order("due_date", { ascending: true })
         .limit(10);
+
+      // Apply user filter if "My Events" is selected
+      if (eventsFilter === 'my') {
+        eventsQuery = eventsQuery.or(`user_id.eq.${user.id},assigned_user_id.eq.${user.id}`);
+      }
+
+      const { data: eventsData } = await eventsQuery;
 
       if (eventsData) {
         const calendarEvents: CalendarEvent[] = eventsData.map(event => ({
@@ -195,12 +218,19 @@ const Dashboard = () => {
       }
 
       // Fetch recent updates from case_updates filtered by organization
-      const { data: updatesData } = await supabase
+      let updatesQuery = supabase
         .from("case_updates")
         .select("*")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false })
         .limit(5);
+
+      // Apply user filter if "My Updates" is selected
+      if (updatesFilter === 'my') {
+        updatesQuery = updatesQuery.eq("user_id", user.id);
+      }
+
+      const { data: updatesData } = await updatesQuery;
 
       if (updatesData) {
         const recentUpdates: Update[] = updatesData.map(update => ({
@@ -215,13 +245,20 @@ const Dashboard = () => {
       }
 
       // Fetch recent expenses from case_finances filtered by organization
-      const { data: expensesData } = await supabase
+      let expensesQuery = supabase
         .from("case_finances")
         .select("*")
         .eq("organization_id", orgId)
         .eq("finance_type", "expense")
         .order("date", { ascending: false })
         .limit(5);
+
+      // Apply user filter if "My Expenses" is selected
+      if (expensesFilter === 'my') {
+        expensesQuery = expensesQuery.eq("user_id", user.id);
+      }
+
+      const { data: expensesData } = await expensesQuery;
 
       if (expensesData) {
         const recentExpenses: Expense[] = expensesData.map(expense => ({
@@ -285,7 +322,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, [organization?.id]);
+  }, [organization?.id, tasksFilter, eventsFilter, updatesFilter, expensesFilter]);
   const handleTaskToggle = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
@@ -490,11 +527,22 @@ const Dashboard = () => {
         {/* Due Tasks */}
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
-            <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <CheckCircle2 className="w-5 h-5 text-primary" />
+            <CardTitle className="flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                </div>
+                <span className="text-lg font-semibold">Tasks</span>
               </div>
-              <span className="text-lg font-semibold">Due Tasks</span>
+              <Select value={tasksFilter} onValueChange={(v) => setTasksFilter(v as 'my' | 'all')}>
+                <SelectTrigger className="h-7 w-auto text-xs gap-1 px-2 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="my">My Tasks</SelectItem>
+                  {canViewAll && <SelectItem value="all">All Tasks</SelectItem>}
+                </SelectContent>
+              </Select>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-6">
@@ -539,11 +587,22 @@ const Dashboard = () => {
         {/* Calendar Events */}
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
-            <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-secondary/10">
-                <Calendar className="w-5 h-5 text-secondary" />
+            <CardTitle className="flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-secondary/10">
+                  <Calendar className="w-5 h-5 text-secondary" />
+                </div>
+                <span className="text-lg font-semibold">Events</span>
               </div>
-              <span className="text-lg font-semibold">Upcoming Events</span>
+              <Select value={eventsFilter} onValueChange={(v) => setEventsFilter(v as 'my' | 'all')}>
+                <SelectTrigger className="h-7 w-auto text-xs gap-1 px-2 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="my">My Events</SelectItem>
+                  {canViewAll && <SelectItem value="all">All Events</SelectItem>}
+                </SelectContent>
+              </Select>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-6">
@@ -573,11 +632,22 @@ const Dashboard = () => {
         {/* Recent Updates */}
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
-            <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-accent/10">
-                <Bell className="w-5 h-5 text-accent" />
+            <CardTitle className="flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-accent/10">
+                  <Bell className="w-5 h-5 text-accent" />
+                </div>
+                <span className="text-lg font-semibold">Updates</span>
               </div>
-              <span className="text-lg font-semibold">Recent Updates</span>
+              <Select value={updatesFilter} onValueChange={(v) => setUpdatesFilter(v as 'my' | 'all')}>
+                <SelectTrigger className="h-7 w-auto text-xs gap-1 px-2 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="my">My Updates</SelectItem>
+                  {canViewAll && <SelectItem value="all">All Updates</SelectItem>}
+                </SelectContent>
+              </Select>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-6">
@@ -626,11 +696,22 @@ const Dashboard = () => {
         {/* Recent Expenses */}
         <Card className="border-border/50 bg-gradient-to-br from-card to-card/80 shadow-lg">
           <CardHeader className="pb-4 border-b border-border/50">
-            <CardTitle className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-warning/10">
-                <DollarSign className="w-5 h-5 text-warning" />
+            <CardTitle className="flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-warning/10">
+                  <DollarSign className="w-5 h-5 text-warning" />
+                </div>
+                <span className="text-lg font-semibold">Expenses</span>
               </div>
-              <span className="text-lg font-semibold">Recent Expenses</span>
+              <Select value={expensesFilter} onValueChange={(v) => setExpensesFilter(v as 'my' | 'all')}>
+                <SelectTrigger className="h-7 w-auto text-xs gap-1 px-2 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="my">My Expenses</SelectItem>
+                  {canViewAll && <SelectItem value="all">All Expenses</SelectItem>}
+                </SelectContent>
+              </Select>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-6">
