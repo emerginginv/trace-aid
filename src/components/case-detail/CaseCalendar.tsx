@@ -447,6 +447,15 @@ export const CaseCalendar = forwardRef<
         activityType={activityType}
         users={users}
         prefilledDate={createDate || undefined}
+        onDuplicate={(duplicateData) => {
+          // Close current form, then re-open with duplicate data in create mode
+          setEditingActivity({
+            ...duplicateData,
+            id: undefined,
+          });
+          setActivityType("event");
+          setActivityFormOpen(true);
+        }}
       />
 
       {/* Create Activity Dialog */}
