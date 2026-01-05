@@ -65,9 +65,10 @@ interface SubjectFormProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   editingSubject?: any;
+  organizationId: string;
 }
 
-export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubject }: SubjectFormProps) => {
+export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubject, organizationId }: SubjectFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [dobOpen, setDobOpen] = useState(false);
@@ -191,6 +192,10 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      if (!organizationId) {
+        throw new Error("Organization not found");
+      }
+
       // Build details object based on subject type
       const details: Record<string, any> = {};
       const { subject_type, name, notes, date_of_birth, ...otherFields } = values;
@@ -207,22 +212,10 @@ export const SubjectForm = ({ caseId, open, onOpenChange, onSuccess, editingSubj
         }
       });
 
-      // Get user's organization_id
-      const { data: orgMember } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (!orgMember?.organization_id) {
-        throw new Error("User not in organization");
-      }
-
       const subjectData = {
         case_id: caseId,
         user_id: user.id,
-        organization_id: orgMember.organization_id,
+        organization_id: organizationId,
         subject_type: values.subject_type,
         name: values.name,
         notes: values.notes || null,

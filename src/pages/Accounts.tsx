@@ -572,7 +572,8 @@ const Accounts = () => {
       <AccountForm 
         open={formOpen} 
         onOpenChange={setFormOpen} 
-        onSuccess={fetchAccounts} 
+        onSuccess={fetchAccounts}
+        organizationId={organization?.id || ""}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

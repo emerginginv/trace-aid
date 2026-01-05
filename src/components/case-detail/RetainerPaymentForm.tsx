@@ -14,6 +14,7 @@ interface RetainerPaymentFormProps {
   caseId: string;
   remainingBalance: number;
   onSuccess: () => void;
+  organizationId: string;
 }
 
 export const RetainerPaymentForm = ({ 
@@ -21,7 +22,8 @@ export const RetainerPaymentForm = ({
   invoiceNumber,
   caseId, 
   remainingBalance, 
-  onSuccess 
+  onSuccess,
+  organizationId
 }: RetainerPaymentFormProps) => {
   const [retainerBalance, setRetainerBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -91,16 +93,8 @@ export const RetainerPaymentForm = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get organization_id
-      const { data: orgMember } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember?.organization_id) {
-        throw new Error("User not in organization");
+      if (!organizationId) {
+        throw new Error("Organization not found");
       }
 
       // Create payment record
@@ -109,7 +103,7 @@ export const RetainerPaymentForm = ({
         .insert({
           invoice_id: invoiceId,
           user_id: user.id,
-          organization_id: orgMember.organization_id,
+          organization_id: organizationId,
           amount: amountNum,
           payment_date: new Date().toISOString().split('T')[0],
           notes: "Payment from retainer funds",
@@ -123,7 +117,7 @@ export const RetainerPaymentForm = ({
         .insert({
           case_id: caseId,
           user_id: user.id,
-          organization_id: orgMember.organization_id,
+          organization_id: organizationId,
           amount: -amountNum,
           note: `Applied to Invoice #${invoiceNumber}`,
           invoice_id: invoiceId,

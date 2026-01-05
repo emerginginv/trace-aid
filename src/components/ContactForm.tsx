@@ -50,6 +50,7 @@ interface ContactFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  organizationId: string;
 }
 
 interface Account {
@@ -57,7 +58,7 @@ interface Account {
   name: string;
 }
 
-export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps) {
+export function ContactForm({ open, onOpenChange, onSuccess, organizationId }: ContactFormProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
 
   const form = useForm<ContactFormData>({
@@ -84,23 +85,12 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
 
   const fetchAccounts = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) return;
+      if (!organizationId) return;
 
       const { data, error } = await supabase
         .from("accounts")
         .select("id, name")
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", organizationId)
         .order("name");
 
       if (error) throw error;
@@ -115,16 +105,8 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Get user's organization_id
-      const { data: orgMember } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember?.organization_id) {
-        throw new Error("User not in organization");
+      if (!organizationId) {
+        throw new Error("Organization not found");
       }
 
       const { error } = await supabase.from("contacts").insert([{
@@ -139,7 +121,7 @@ export function ContactForm({ open, onOpenChange, onSuccess }: ContactFormProps)
         account_id: data.account_id || null,
         notes: data.notes,
         user_id: user.id,
-        organization_id: orgMember.organization_id,
+        organization_id: organizationId,
       }]);
 
       if (error) throw error;

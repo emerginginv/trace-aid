@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,7 @@ interface Subject {
 }
 
 export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
+  const { organization } = useOrganization();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -573,6 +575,7 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
         onOpenChange={handleFormClose}
         onSuccess={fetchSubjects}
         editingSubject={editingSubject}
+        organizationId={organization?.id || ""}
       />
 
       {selectedImage && (

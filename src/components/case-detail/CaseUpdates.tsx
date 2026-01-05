@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +44,7 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
+  const { organization } = useOrganization();
   const [updates, setUpdates] = useState<Update[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -418,6 +420,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingUpdate(null); }}
         onSuccess={fetchUpdates}
         editingUpdate={editingUpdate}
+        organizationId={organization?.id || ""}
       />
     </>
   );

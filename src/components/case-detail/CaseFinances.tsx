@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { FinancesTabSkeleton, ExpensesTabSkeleton, TimeTabSkeleton, InvoicesTabSkeleton, CreateInvoiceTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +69,7 @@ const TIME_COLUMNS: ColumnDefinition[] = [
 ];
 
 export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
+  const { organization } = useOrganization();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const [finances, setFinances] = useState<Finance[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -1240,6 +1242,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
         onSuccess={fetchFinances}
         editingFinance={editingFinance}
         defaultFinanceType={defaultFinanceType}
+        organizationId={organization?.id || ""}
       />
 
       {selectedInvoiceId && (

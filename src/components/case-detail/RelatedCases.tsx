@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
@@ -22,6 +23,7 @@ interface RelatedCasesProps {
 }
 
 export function RelatedCases({ caseId, currentInstanceNumber }: RelatedCasesProps) {
+  const { organization } = useOrganization();
   const [relatedCases, setRelatedCases] = useState<RelatedCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [caseStatuses, setCaseStatuses] = useState<Array<{
@@ -33,26 +35,16 @@ export function RelatedCases({ caseId, currentInstanceNumber }: RelatedCasesProp
   useEffect(() => {
     fetchRelatedCases();
     fetchCaseStatuses();
-  }, [caseId]);
+  }, [caseId, organization?.id]);
 
   const fetchCaseStatuses = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
       const { data } = await supabase
         .from("picklists")
         .select("value, color, status_type")
         .eq("type", "case_status")
         .eq("is_active", true)
-        .or(orgMember ? `organization_id.eq.${orgMember.organization_id},organization_id.is.null` : 'organization_id.is.null');
+        .or(organization?.id ? `organization_id.eq.${organization.id},organization_id.is.null` : 'organization_id.is.null');
 
       if (data) {
         setCaseStatuses(data);
