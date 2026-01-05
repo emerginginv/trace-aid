@@ -37,6 +37,7 @@ import {
   endOfWeek as getWeekEnd,
   isBefore,
   isAfter,
+  parse,
 } from "date-fns";
 import {
   Dialog,
@@ -541,7 +542,8 @@ export const CaseCalendar = forwardRef<
     
     // Parse original date to preserve time
     const originalDate = new Date(draggedEvent.date);
-    const targetDate = new Date(targetDateStr);
+    // Parse the target date in local timezone (not UTC)
+    const targetDate = parse(targetDateStr, "yyyy-MM-dd", new Date());
     
     // If dropping on the same day, do nothing
     if (isSameDay(originalDate, targetDate)) return;
