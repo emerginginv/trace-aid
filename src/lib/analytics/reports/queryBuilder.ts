@@ -243,34 +243,46 @@ async function executeBudgetStatusQuery(
   if (casesError) throw casesError;
   if (!cases || cases.length === 0) return { data: [], count: 0 };
 
-  // Get finance totals for these cases
+  // Get finance totals for these cases (including hours)
   const caseIds = cases.map(c => c.id);
   const { data: finances, error: financesError } = await supabase
     .from("case_finances")
-    .select("case_id, amount, finance_type")
+    .select("case_id, amount, hours, finance_type, status")
     .in("case_id", caseIds);
 
   if (financesError) throw financesError;
 
-  // Compute consumed amounts per case
-  const consumedByCase: Record<string, number> = {};
+  // Compute consumed amounts and hours per case
+  const consumedByCase: Record<string, { dollars: number; hours: number }> = {};
   (finances || []).forEach((f) => {
-    if (f.finance_type === "time" || f.finance_type === "expense") {
-      consumedByCase[f.case_id] = (consumedByCase[f.case_id] || 0) + (f.amount || 0);
+    // Skip rejected entries
+    if (f.status === "rejected") return;
+    
+    if (!consumedByCase[f.case_id]) {
+      consumedByCase[f.case_id] = { dollars: 0, hours: 0 };
     }
+    
+    if (f.finance_type === "time" || f.finance_type === "expense") {
+      consumedByCase[f.case_id].dollars += f.amount || 0;
+    }
+    consumedByCase[f.case_id].hours += f.hours || 0;
   });
 
   // Enrich cases with computed values
   const enrichedData = cases.map((c) => {
     const budgetDollars = c.budget_dollars || 0;
-    const consumed = consumedByCase[c.id] || 0;
-    const remaining = budgetDollars - consumed;
-    const utilization = budgetDollars > 0 ? (consumed / budgetDollars) * 100 : 0;
+    const budgetHours = c.budget_hours || 0;
+    const consumed = consumedByCase[c.id] || { dollars: 0, hours: 0 };
+    const remainingDollars = budgetDollars - consumed.dollars;
+    const remainingHours = budgetHours - consumed.hours;
+    const utilization = budgetDollars > 0 ? (consumed.dollars / budgetDollars) * 100 : 0;
 
     return {
       ...c,
-      consumed_dollars: consumed,
-      remaining_dollars: remaining,
+      consumed_dollars: consumed.dollars,
+      consumed_hours: consumed.hours,
+      remaining_dollars: remainingDollars,
+      remaining_hours: remainingHours,
       utilization: utilization,
     };
   });
