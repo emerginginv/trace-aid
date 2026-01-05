@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { AttachmentsTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical, Loader2 } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical, Loader2, Maximize } from "lucide-react";
 import { generatePdfThumbnail, isPdfFile } from "@/lib/pdfThumbnail";
 import { useConfirmation } from "@/components/ui/confirmation-dialog";
 import { RevokeMode } from "./RevokeAccessDialog";
@@ -79,6 +80,7 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false }: CaseAttachmentsProps) => {
+  const navigate = useNavigate();
   const { organization } = useOrganization();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -554,6 +556,11 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
 
   const handlePreview = async (attachment: Attachment) => {
     setPreviewAttachment(attachment);
+  };
+
+  const openInViewer = (attachment: Attachment, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/attachments/${attachment.id}/view?caseId=${caseId}`);
   };
 
   const handleShare = (attachment: Attachment) => {
@@ -1240,7 +1247,12 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem onClick={(e) => openInViewer(attachment, e)}>
+                            <Maximize className="h-4 w-4 mr-2" />
+                            Open in Viewer
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           {canEditAttachments && !isClosedCase && (
                             <DropdownMenuItem onClick={() => handleEdit(attachment)}>
                               <Pencil className="h-4 w-4 mr-2" />
@@ -1385,6 +1397,20 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                     <TableCell className="py-1.5 hidden md:table-cell">{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right py-1.5">
                       <div className="flex justify-end gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => openInViewer(attachment, e)}
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                              title="Open in Viewer"
+                            >
+                              <Maximize className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Open in full viewer</TooltipContent>
+                        </Tooltip>
                         {canEditAttachments && (
                           <Button
                             variant="ghost"

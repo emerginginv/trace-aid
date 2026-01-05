@@ -38,6 +38,7 @@ import StyleGuide from "./pages/StyleGuide";
 import PremiumShowcase from "./pages/PremiumShowcase";
 import TestNotifications from "./pages/TestNotifications";
 import AttachmentAccess from "./pages/AttachmentAccess";
+import AttachmentViewer from "./pages/AttachmentViewer";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -319,6 +320,16 @@ const App = () => {
         <Route path="/style-guide" element={<StyleGuide />} />
         <Route path="/premium-showcase" element={<PremiumShowcase />} />
         <Route path="/attachment/:token" element={<AttachmentAccess />} />
+        <Route
+          path="/attachments/:id/view"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <AttachmentViewer />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
