@@ -59,7 +59,7 @@ export const openCasesReport: ReportDefinition = {
   description: "Active cases currently in progress",
   category: "cases",
   sourceTable: "cases",
-  baseFilters: [{ field: "status", operator: "in", value: ["active", "pending", "on_hold"] }],
+  baseFilters: [{ field: "closed_at", operator: "is_null", value: null }],
   columns: [
     caseColumns.case_number,
     caseColumns.title,
@@ -88,7 +88,7 @@ export const closedCasesReport: ReportDefinition = {
   description: "Completed cases with closure information",
   category: "cases",
   sourceTable: "cases",
-  baseFilters: [{ field: "status", operator: "eq", value: "closed" }],
+  baseFilters: [{ field: "closed_at", operator: "is_not_null", value: null }],
   columns: [
     caseColumns.case_number,
     caseColumns.title,

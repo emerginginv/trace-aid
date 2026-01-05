@@ -128,7 +128,8 @@ export async function calculateReportTotals(
         report.sourceTable,
         totalConfig.aggregation,
         totalConfig.field,
-        params
+        params,
+        report.baseFilters
       );
     } catch (error) {
       console.error(`Error calculating total ${totalConfig.key}:`, error);
@@ -146,7 +147,8 @@ async function executeDirectAggregation(
   table: string,
   aggregation: "sum" | "count" | "avg",
   field: string,
-  params: ReportQueryParams
+  params: ReportQueryParams,
+  baseFilters?: { field: string; operator: string; value: unknown }[]
 ): Promise<number> {
   // Use a type-safe approach
   const tableName = table as "cases" | "case_finances" | "case_activities" | "case_updates" | "invoices" | "case_budget_adjustments";
@@ -157,6 +159,23 @@ async function executeDirectAggregation(
 
     // Always filter by organization
     query = query.eq("organization_id", params.organizationId);
+
+    // Apply base filters (e.g., closed_at is null for open cases)
+    if (baseFilters) {
+      for (const bf of baseFilters) {
+        if (bf.operator === "in" && Array.isArray(bf.value)) {
+          query = query.in(bf.field as "id", bf.value as string[]);
+        } else if (bf.operator === "is_null") {
+          query = query.is(bf.field as "id", null);
+        } else if (bf.operator === "is_not_null") {
+          query = query.not(bf.field as "id", "is", null);
+        } else if (bf.operator === "neq") {
+          query = query.neq(bf.field as "id", bf.value as string);
+        } else {
+          query = query.eq(bf.field as "id", bf.value as string);
+        }
+      }
+    }
 
     // Apply time range filter
     if (params.timeRange?.start) {
@@ -187,6 +206,23 @@ async function executeDirectAggregation(
   let dataQuery = supabase.from(tableName).select("*");
   
   dataQuery = dataQuery.eq("organization_id", params.organizationId);
+
+  // Apply base filters
+  if (baseFilters) {
+    for (const bf of baseFilters) {
+      if (bf.operator === "in" && Array.isArray(bf.value)) {
+        dataQuery = dataQuery.in(bf.field as "id", bf.value as string[]);
+      } else if (bf.operator === "is_null") {
+        dataQuery = dataQuery.is(bf.field as "id", null);
+      } else if (bf.operator === "is_not_null") {
+        dataQuery = dataQuery.not(bf.field as "id", "is", null);
+      } else if (bf.operator === "neq") {
+        dataQuery = dataQuery.neq(bf.field as "id", bf.value as string);
+      } else {
+        dataQuery = dataQuery.eq(bf.field as "id", bf.value as string);
+      }
+    }
+  }
 
   if (params.timeRange?.start) {
     dataQuery = dataQuery.gte("created_at", params.timeRange.start.toISOString());

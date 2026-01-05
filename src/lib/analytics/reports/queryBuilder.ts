@@ -81,6 +81,10 @@ export async function executeReportQuery(
         query = query.in(bf.field as "id", bf.value as string[]);
       } else if (bf.operator === "neq") {
         query = query.neq(bf.field as "id", bf.value as string);
+      } else if (bf.operator === "is_null") {
+        query = query.is(bf.field as "id", null);
+      } else if (bf.operator === "is_not_null") {
+        query = query.not(bf.field as "id", "is", null);
       } else {
         query = query.eq(bf.field as "id", bf.value as string);
       }
@@ -234,6 +238,10 @@ export async function fetchAllReportData(
         query = query.in(bf.field as "id", bf.value as string[]);
       } else if (bf.operator === "neq") {
         query = query.neq(bf.field as "id", bf.value as string);
+      } else if (bf.operator === "is_null") {
+        query = query.is(bf.field as "id", null);
+      } else if (bf.operator === "is_not_null") {
+        query = query.not(bf.field as "id", "is", null);
       } else {
         query = query.eq(bf.field as "id", bf.value as string);
       }
