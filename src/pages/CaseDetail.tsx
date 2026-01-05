@@ -34,6 +34,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface Case {
   id: string;
@@ -79,6 +80,7 @@ const CaseDetail = () => {
   const isMobile = useIsMobile();
   const { isVendor, isAdmin, isManager } = useUserRole();
   const { hasPermission } = usePermissions();
+  const { organization } = useOrganization();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
@@ -782,7 +784,7 @@ const CaseDetail = () => {
                   onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)}
                   onViewHistory={handleViewBudgetHistory}
                 />
-                <RetainerFundsWidget caseId={id!} />
+                {organization?.id && <RetainerFundsWidget caseId={id!} organizationId={organization.id} />}
               </div>
 
               {/* Team + Related Cases Column */}

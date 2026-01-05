@@ -528,6 +528,7 @@ const Settings = () => {
             <TabsContent value="organization">
               <OrganizationTab
                 currentUserId={currentUserId}
+                organizationId={organization?.id || null}
                 companyName={companyName}
                 setCompanyName={setCompanyName}
                 defaultCurrency={defaultCurrency}

@@ -249,13 +249,7 @@ export const UsersManagementTab = ({
         }
       }
 
-      const { data: orgMember, error: orgError } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", currentUserId)
-        .maybeSingle();
-
-      if (orgError || !orgMember) {
+      if (!organization?.id) {
         toast.error("Could not find organization");
         return;
       }
@@ -263,7 +257,7 @@ export const UsersManagementTab = ({
       const { error } = await supabase.rpc('update_user_role', {
         _user_id: userId,
         _new_role: newRole,
-        _org_id: orgMember.organization_id
+        _org_id: organization.id
       });
 
       if (error) throw error;
