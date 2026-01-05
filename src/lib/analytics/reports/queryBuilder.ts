@@ -270,12 +270,13 @@ async function executeBudgetStatusQuery(
 
   // Enrich cases with computed values
   const enrichedData = cases.map((c) => {
-    const budgetDollars = c.budget_dollars || 0;
-    const budgetHours = c.budget_hours || 0;
+    const budgetDollars = (c.budget_dollars as number) || 0;
+    const budgetHours = (c.budget_hours as number) || 0;
     const consumed = consumedByCase[c.id] || { dollars: 0, hours: 0 };
     const remainingDollars = budgetDollars - consumed.dollars;
     const remainingHours = budgetHours - consumed.hours;
-    const utilization = budgetDollars > 0 ? (consumed.dollars / budgetDollars) * 100 : 0;
+    const dollarsUtilization = budgetDollars > 0 ? (consumed.dollars / budgetDollars) * 100 : null;
+    const hoursUtilization = budgetHours > 0 ? (consumed.hours / budgetHours) * 100 : null;
 
     return {
       ...c,
@@ -283,7 +284,9 @@ async function executeBudgetStatusQuery(
       consumed_hours: consumed.hours,
       remaining_dollars: remainingDollars,
       remaining_hours: remainingHours,
-      utilization: utilization,
+      dollars_utilization: dollarsUtilization,
+      hours_utilization: hoursUtilization,
+      utilization: dollarsUtilization || 0,
     };
   });
 
