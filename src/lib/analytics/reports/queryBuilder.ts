@@ -15,15 +15,17 @@ interface QueryParams {
 
 /**
  * Get the appropriate select statement for each source table
+ * NOTE: We use "*" for tables that don't have valid foreign key relationships
+ * to avoid PGRST200 errors. Enrichment is done separately.
  */
 function getSelectForTable(table: SourceTable): string {
   const selectMap: Record<SourceTable, string> = {
     cases: "*, accounts(*), profiles:case_manager_id(*)",
-    case_finances: "*, cases(id, case_number, title)",
-    invoices: "*, cases(id, case_number, title)",
-    case_activities: "*, cases(id, case_number), profiles:assigned_user_id(*)",
-    case_updates: "*, cases(id, case_number), profiles:user_id(*)",
-    case_budget_adjustments: "*, cases(id, case_number, title), profiles:user_id(*)",
+    case_finances: "*", // No valid FK to cases for embedding
+    invoices: "*", // No valid FK to cases for embedding
+    case_activities: "*", // No valid FK to cases or profiles for embedding
+    case_updates: "*", // No valid FK for embedding
+    case_budget_adjustments: "*", // No valid FK for embedding
   };
   return selectMap[table] || "*";
 }
@@ -41,6 +43,81 @@ function getDateFieldForTable(table: SourceTable): string {
     case_budget_adjustments: "created_at",
   };
   return dateFieldMap[table] || "created_at";
+}
+
+/**
+ * Enrich report rows with related data (cases, profiles) that we can't embed via FK
+ */
+async function enrichReportRows(
+  table: SourceTable,
+  rows: Record<string, unknown>[]
+): Promise<Record<string, unknown>[]> {
+  if (rows.length === 0) return rows;
+
+  // Collect IDs we need to fetch
+  const caseIds = new Set<string>();
+  const userIds = new Set<string>();
+
+  for (const row of rows) {
+    if (row.case_id && typeof row.case_id === "string") {
+      caseIds.add(row.case_id);
+    }
+    // Handle different user ID fields
+    if (row.assigned_user_id && typeof row.assigned_user_id === "string") {
+      userIds.add(row.assigned_user_id);
+    }
+    if (row.user_id && typeof row.user_id === "string") {
+      userIds.add(row.user_id);
+    }
+  }
+
+  // Fetch cases if needed
+  let casesMap: Record<string, { id: string; case_number: string; title: string }> = {};
+  if (caseIds.size > 0) {
+    const { data: casesData } = await supabase
+      .from("cases")
+      .select("id, case_number, title")
+      .in("id", Array.from(caseIds));
+    
+    if (casesData) {
+      casesMap = Object.fromEntries(casesData.map(c => [c.id, c]));
+    }
+  }
+
+  // Fetch profiles if needed
+  let profilesMap: Record<string, { id: string; full_name: string | null; email: string }> = {};
+  if (userIds.size > 0) {
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", Array.from(userIds));
+    
+    if (profilesData) {
+      profilesMap = Object.fromEntries(profilesData.map(p => [p.id, p]));
+    }
+  }
+
+  // Enrich rows
+  return rows.map(row => {
+    const enriched = { ...row };
+    
+    // Add cases object for accessors that expect row.cases.case_number
+    if (row.case_id && typeof row.case_id === "string" && casesMap[row.case_id]) {
+      enriched.cases = casesMap[row.case_id];
+    }
+    
+    // Add assigned_user for activities (accessed via row.assigned_user.full_name)
+    if (row.assigned_user_id && typeof row.assigned_user_id === "string" && profilesMap[row.assigned_user_id]) {
+      enriched.assigned_user = profilesMap[row.assigned_user_id];
+    }
+    
+    // Add profiles for updates/adjustments (accessed via row.profiles.full_name)
+    if (row.user_id && typeof row.user_id === "string" && profilesMap[row.user_id]) {
+      enriched.profiles = profilesMap[row.user_id];
+    }
+    
+    return enriched;
+  });
 }
 
 /**
@@ -116,8 +193,14 @@ export async function executeReportQuery(
   const result = await query;
   if (result.error) throw result.error;
 
+  // Enrich rows with related data
+  const enrichedData = await enrichReportRows(
+    table,
+    (result.data || []) as unknown as Record<string, unknown>[]
+  );
+
   return {
-    data: (result.data || []) as unknown as Record<string, unknown>[],
+    data: enrichedData,
     count: result.count || 0,
   };
 }
@@ -272,5 +355,9 @@ export async function fetchAllReportData(
   const result = await query;
   if (result.error) throw result.error;
 
-  return (result.data || []) as unknown as Record<string, unknown>[];
+  // Enrich rows with related data
+  return enrichReportRows(
+    table,
+    (result.data || []) as unknown as Record<string, unknown>[]
+  );
 }

@@ -309,17 +309,26 @@ export const tasksReport: ReportDefinition = {
       label: "Status",
       type: "select",
       options: [
-        { value: "pending", label: "Pending" },
+        { value: "to_do", label: "To Do" },
         { value: "in_progress", label: "In Progress" },
-        { value: "completed", label: "Completed" },
+        { value: "done", label: "Done" },
         { value: "cancelled", label: "Cancelled" },
+      ],
+    },
+    {
+      key: "completed",
+      label: "Completed",
+      type: "select",
+      options: [
+        { value: "true", label: "Yes" },
+        { value: "false", label: "No" },
       ],
     },
   ],
   defaultSort: { field: "due_date", direction: "asc" },
   totals: [
-    { key: "totalTasks", label: "Total Tasks", aggregation: "count", field: "id", format: "count" },
-    { key: "completedTasks", label: "Completed", aggregation: "count", field: "id", format: "count" },
+    { key: "totalTasks", label: "Total Tasks", aggregation: "count", field: "id", format: "count", metricId: "activities.total_tasks" },
+    { key: "completedTasks", label: "Completed", aggregation: "count", field: "id", format: "count", metricId: "activities.completed_tasks" },
   ],
   relatedMetrics: ["activity.tasks_count", "activity.tasks_completed"],
 };
