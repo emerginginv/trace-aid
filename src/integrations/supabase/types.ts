@@ -1974,6 +1974,50 @@ export type Database = {
           },
         ]
       }
+      security_audit_log: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          ip_address: unknown
+          metadata: Json | null
+          organization_id: string | null
+          target_user_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          organization_id?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          organization_id?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_audit_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subject_attachments: {
         Row: {
           created_at: string
@@ -2182,6 +2226,18 @@ export type Database = {
       is_vendor_case_accessible: {
         Args: { _case_id: string; _user_id: string }
         Returns: boolean
+      }
+      log_security_event: {
+        Args: {
+          p_event_type: string
+          p_ip_address?: unknown
+          p_metadata?: Json
+          p_organization_id?: string
+          p_target_user_id?: string
+          p_user_agent?: string
+          p_user_id?: string
+        }
+        Returns: string
       }
       update_user_role: {
         Args: {
