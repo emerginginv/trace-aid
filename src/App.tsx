@@ -179,7 +179,7 @@ const App = () => {
           }
         />
         <Route
-          path="/analytics/budgets"
+          path="/analytics/finances"
           element={
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
@@ -199,7 +199,7 @@ const App = () => {
           }
         />
         <Route
-          path="/analytics/activity"
+          path="/analytics/activities"
           element={
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
