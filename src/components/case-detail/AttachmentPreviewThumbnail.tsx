@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FileText, ImageIcon, Video, Music, File, Loader2 } from 'lucide-react';
 import { generatePdfThumbnail, isPdfFile } from '@/lib/pdfThumbnail';
+import { generateVideoThumbnail, isVideoFile } from '@/lib/videoThumbnail';
+import { generateDocxThumbnail, isDocxFile } from '@/lib/docxThumbnail';
 import { cn } from '@/lib/utils';
 
 interface AttachmentPreviewThumbnailProps {
@@ -80,18 +82,22 @@ export function AttachmentPreviewThumbnail({
       // For PDFs, check if we have a pre-generated preview
       if (isPdfFile(fileType, fileName)) {
         if (previewPath && previewStatus === 'complete') {
-          // Load existing preview
           await loadPreviewImage(previewPath);
         } else {
-          // Generate thumbnail on-the-fly
           await generateAndLoadPdfThumbnail();
         }
         return;
       }
 
-      // For videos, we could add video thumbnail extraction here
-      if (fileType.startsWith('video/')) {
-        await loadVideoThumbnail();
+      // For videos, extract poster frame
+      if (isVideoFile(fileType, fileName)) {
+        await generateAndLoadVideoThumbnail();
+        return;
+      }
+
+      // For DOCX files, generate text preview
+      if (isDocxFile(fileType, fileName)) {
+        await generateAndLoadDocxThumbnail();
         return;
       }
 
@@ -157,14 +163,12 @@ export function AttachmentPreviewThumbnail({
     setError(false);
 
     try {
-      // Download the PDF
       const { data: pdfBlob, error: downloadError } = await supabase.storage
         .from('case-attachments')
         .download(filePath);
 
       if (downloadError) throw downloadError;
 
-      // Generate thumbnail
       const thumbnailBlob = await generatePdfThumbnail(pdfBlob, {
         width: size === 'lg' ? 600 : 200,
         height: size === 'lg' ? 400 : 150,
@@ -184,25 +188,60 @@ export function AttachmentPreviewThumbnail({
     }
   };
 
-  const loadVideoThumbnail = async () => {
+  const generateAndLoadVideoThumbnail = async () => {
     setLoading(true);
     setError(false);
 
     try {
-      const { data, error } = await supabase.storage
+      const { data: videoBlob, error: downloadError } = await supabase.storage
         .from('case-attachments')
         .download(filePath);
 
-      if (error) throw error;
+      if (downloadError) throw downloadError;
 
-      const url = URL.createObjectURL(data);
+      const thumbnailBlob = await generateVideoThumbnail(videoBlob, {
+        width: size === 'lg' ? 600 : 200,
+        height: size === 'lg' ? 400 : 150,
+      });
+
+      const url = URL.createObjectURL(thumbnailBlob);
       if (thumbnailUrlRef.current) {
         URL.revokeObjectURL(thumbnailUrlRef.current);
       }
       thumbnailUrlRef.current = url;
       setThumbnailUrl(url);
     } catch (err) {
-      console.error('Error loading video thumbnail:', err);
+      console.error('Error generating video thumbnail:', err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateAndLoadDocxThumbnail = async () => {
+    setLoading(true);
+    setError(false);
+
+    try {
+      const { data: docxBlob, error: downloadError } = await supabase.storage
+        .from('case-attachments')
+        .download(filePath);
+
+      if (downloadError) throw downloadError;
+
+      const thumbnailBlob = await generateDocxThumbnail(docxBlob, {
+        width: size === 'lg' ? 600 : 200,
+        height: size === 'lg' ? 400 : 150,
+      });
+
+      const url = URL.createObjectURL(thumbnailBlob);
+      if (thumbnailUrlRef.current) {
+        URL.revokeObjectURL(thumbnailUrlRef.current);
+      }
+      thumbnailUrlRef.current = url;
+      setThumbnailUrl(url);
+    } catch (err) {
+      console.error('Error generating DOCX thumbnail:', err);
       setError(true);
     } finally {
       setLoading(false);
@@ -211,11 +250,12 @@ export function AttachmentPreviewThumbnail({
 
   const getFileIcon = () => {
     if (fileType.startsWith('image/')) return <ImageIcon className="h-6 w-6 text-blue-500" />;
-    if (fileType.startsWith('video/')) return <Video className="h-6 w-6 text-purple-500" />;
+    if (isVideoFile(fileType, fileName)) return <Video className="h-6 w-6 text-purple-500" />;
     if (fileType.startsWith('audio/')) return <Music className="h-6 w-6 text-green-500" />;
     if (isPdfFile(fileType, fileName)) return <FileText className="h-6 w-6 text-red-500" />;
+    if (isDocxFile(fileType, fileName)) return <FileText className="h-6 w-6 text-blue-600" />;
     const extension = fileName.split('.').pop()?.toLowerCase();
-    if (extension === 'doc' || extension === 'docx') return <FileText className="h-6 w-6 text-blue-600" />;
+    if (extension === 'doc') return <FileText className="h-6 w-6 text-blue-600" />;
     return <File className="h-6 w-6 text-muted-foreground" />;
   };
 
@@ -231,19 +271,11 @@ export function AttachmentPreviewThumbnail({
       {loading ? (
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       ) : thumbnailUrl ? (
-        fileType.startsWith('video/') ? (
-          <video
-            src={thumbnailUrl}
-            className="w-full h-full object-cover"
-            muted
-          />
-        ) : (
-          <img
-            src={thumbnailUrl}
-            alt={fileName}
-            className="w-full h-full object-cover"
-          />
-        )
+        <img
+          src={thumbnailUrl}
+          alt={fileName}
+          className="w-full h-full object-cover"
+        />
       ) : (
         getFileIcon()
       )}
