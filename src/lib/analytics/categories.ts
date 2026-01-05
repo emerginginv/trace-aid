@@ -38,8 +38,7 @@ export const ANALYTICS_CATEGORIES: AnalyticsCategory[] = [
     iconBg: "bg-primary/10",
     metricCategory: "cases",
     links: [
-      { label: "Dashboard", href: "/analytics/cases", description: "View case metrics" },
-      { label: "Reports", href: "/reports", description: "Generate case reports" }
+      { label: "Dashboard", href: "/analytics/cases", description: "View case metrics" }
     ]
   },
   {
@@ -52,8 +51,7 @@ export const ANALYTICS_CATEGORIES: AnalyticsCategory[] = [
     iconBg: "bg-emerald-500/10",
     metricCategory: "finances",
     links: [
-      { label: "Dashboard", href: "/analytics/finances", description: "View financial metrics" },
-      { label: "Reports", href: "/reports", description: "Generate financial reports" }
+      { label: "Dashboard", href: "/analytics/finances", description: "View financial metrics" }
     ]
   },
   {
@@ -65,8 +63,7 @@ export const ANALYTICS_CATEGORIES: AnalyticsCategory[] = [
     iconColor: "text-blue-500",
     iconBg: "bg-blue-500/10",
     links: [
-      { label: "Dashboard", href: "/analytics/time-expense", description: "View time & expense metrics" },
-      { label: "Reports", href: "/reports", description: "Generate time reports" }
+      { label: "Dashboard", href: "/analytics/time-expense", description: "View time & expense metrics" }
     ]
   },
   {
@@ -79,8 +76,7 @@ export const ANALYTICS_CATEGORIES: AnalyticsCategory[] = [
     iconBg: "bg-purple-500/10",
     metricCategory: "activities",
     links: [
-      { label: "Dashboard", href: "/analytics/activities", description: "View activity metrics" },
-      { label: "Reports", href: "/reports", description: "Generate activity reports" }
+      { label: "Dashboard", href: "/analytics/activities", description: "View activity metrics" }
     ]
   },
   {
@@ -92,8 +88,7 @@ export const ANALYTICS_CATEGORIES: AnalyticsCategory[] = [
     iconColor: "text-amber-500",
     iconBg: "bg-amber-500/10",
     links: [
-      { label: "Dashboard", href: "/analytics/reports", description: "View report metrics" },
-      { label: "Reports", href: "/reports", description: "View all reports" }
+      { label: "Dashboard", href: "/analytics/reports", description: "View report metrics" }
     ]
   },
   {
@@ -106,8 +101,7 @@ export const ANALYTICS_CATEGORIES: AnalyticsCategory[] = [
     iconBg: "bg-rose-500/10",
     metricCategory: "storage",
     links: [
-      { label: "Dashboard", href: "/analytics/system", description: "View system metrics" },
-      { label: "Audit Log", href: "/analytics/system", description: "View audit logs" }
+      { label: "Dashboard", href: "/analytics/system", description: "View system metrics" }
     ]
   }
 ];

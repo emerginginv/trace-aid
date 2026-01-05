@@ -32,17 +32,16 @@ export function AnalyticsCategoryCard({ category }: AnalyticsCategoryCardProps) 
           {category.description}
         </p>
         
-        <div className="flex flex-wrap gap-2 pt-2">
+        <div className="pt-4">
           {category.links.map((link) => (
             <Button
               key={link.href}
               variant="outline"
-              size="sm"
               onClick={() => navigate(link.href)}
-              className="group/btn hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+              className="w-full justify-between bg-gradient-to-r from-background to-muted/50 border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all group/btn"
             >
-              {link.label}
-              <ArrowRight className="w-3.5 h-3.5 ml-1.5 opacity-0 -translate-x-2 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all" />
+              <span className="font-medium">{link.label}</span>
+              <ArrowRight className="w-4 h-4 opacity-50 group-hover/btn:opacity-100 group-hover/btn:translate-x-1 transition-all" />
             </Button>
           ))}
         </div>
