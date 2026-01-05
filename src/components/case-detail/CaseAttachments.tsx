@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { AttachmentsTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,12 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const [accessLogDialogOpen, setAccessLogDialogOpen] = useState(false);
   const [accessLogAttachment, setAccessLogAttachment] = useState<Attachment | null>(null);
   
+  // PDF Blob URL state (to bypass blocked signed URLs)
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfBlobLoading, setPdfBlobLoading] = useState(false);
+  const [pdfBlobError, setPdfBlobError] = useState<string | null>(null);
+  const pdfBlobUrlRef = useRef<string | null>(null);
+  
   // Confirmation hook for single revoke
   const { confirm, ConfirmDialog } = useConfirmation();
   
@@ -122,6 +128,52 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   useEffect(() => {
     fetchAttachments();
   }, [caseId]);
+
+  // Effect to load PDF as blob when previewing
+  useEffect(() => {
+    // Cleanup function for blob URL
+    const cleanupBlobUrl = () => {
+      if (pdfBlobUrlRef.current) {
+        URL.revokeObjectURL(pdfBlobUrlRef.current);
+        pdfBlobUrlRef.current = null;
+      }
+      setPdfBlobUrl(null);
+      setPdfBlobError(null);
+    };
+
+    const loadPdfBlob = async () => {
+      if (!previewAttachment || !previewAttachment.file_type.includes("pdf")) {
+        cleanupBlobUrl();
+        return;
+      }
+
+      setPdfBlobLoading(true);
+      setPdfBlobError(null);
+      cleanupBlobUrl();
+
+      try {
+        const { data, error } = await supabase.storage
+          .from("case-attachments")
+          .download(previewAttachment.file_path);
+
+        if (error) throw error;
+        if (!data) throw new Error("No data received");
+
+        const blobUrl = URL.createObjectURL(data);
+        pdfBlobUrlRef.current = blobUrl;
+        setPdfBlobUrl(blobUrl);
+      } catch (error) {
+        console.error("Error loading PDF:", error);
+        setPdfBlobError("Failed to load PDF preview");
+      } finally {
+        setPdfBlobLoading(false);
+      }
+    };
+
+    loadPdfBlob();
+
+    return cleanupBlobUrl;
+  }, [previewAttachment]);
 
   useEffect(() => {
     if (attachments.length > 0) {
@@ -625,37 +677,58 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     }
 
     if (previewAttachment.file_type.includes("pdf")) {
+      // Show loading state while fetching PDF blob
+      if (pdfBlobLoading) {
+        return (
+          <div className="flex flex-col items-center justify-center py-12 h-[70vh] bg-muted/30 rounded">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4" />
+            <p className="text-muted-foreground">Loading PDF...</p>
+          </div>
+        );
+      }
+
+      // Show error state with download option
+      if (pdfBlobError || !pdfBlobUrl) {
+        return (
+          <div className="flex flex-col items-center justify-center py-12 h-[70vh] bg-muted/30 rounded">
+            <FileText className="h-16 w-16 mb-4 text-muted-foreground" />
+            <p className="text-lg font-medium mb-2">PDF preview not available</p>
+            <p className="text-muted-foreground mb-4">
+              {pdfBlobError || "Unable to load PDF preview"}
+            </p>
+            <Button onClick={() => handleDownload(previewAttachment)}>
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
+          </div>
+        );
+      }
+
+      // Render PDF from blob URL (bypasses blocked signed URLs)
       return (
         <div className="flex flex-col h-full">
           <object
-            data={signedUrl}
+            data={pdfBlobUrl}
             type="application/pdf"
             className="w-full h-[70vh] rounded"
             title={previewAttachment.file_name}
           >
-            {/* Fallback content if object tag fails */}
             <div className="flex flex-col items-center justify-center py-12 h-[70vh] bg-muted/30 rounded">
               <FileText className="h-16 w-16 mb-4 text-muted-foreground" />
               <p className="text-lg font-medium mb-2">PDF preview not available</p>
               <p className="text-muted-foreground mb-4">
                 Your browser cannot display this PDF inline.
               </p>
-              <div className="flex gap-2">
-                <Button onClick={() => window.open(signedUrl, '_blank')}>
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Open in New Tab
-                </Button>
-                <Button variant="outline" onClick={() => handleDownload(previewAttachment)}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-              </div>
+              <Button onClick={() => handleDownload(previewAttachment)}>
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </Button>
             </div>
           </object>
           
-          {/* Always show action buttons below the PDF viewer */}
+          {/* Action buttons below the PDF viewer */}
           <div className="flex gap-2 justify-center mt-4 pt-4 border-t">
-            <Button variant="outline" size="sm" onClick={() => window.open(signedUrl, '_blank')}>
+            <Button variant="outline" size="sm" onClick={() => window.open(pdfBlobUrl, '_blank', 'noopener,noreferrer')}>
               <ExternalLink className="h-4 w-4 mr-2" />
               Open in New Tab
             </Button>
