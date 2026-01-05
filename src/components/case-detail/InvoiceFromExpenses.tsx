@@ -184,12 +184,14 @@ export const InvoiceFromExpenses = ({ caseId, onSuccess }: InvoiceFromExpensesPr
         throw new Error("User not in organization");
       }
 
+      const organizationId = orgMember.organization_id;
+
       // Calculate total from selected items
       const selectedItemsList = billableItems.filter(item => selectedItems.has(item.id));
       const totalAmount = selectedItemsList.reduce((sum, item) => sum + Number(item.amount), 0);
 
       // Generate invoice number
-      const invoiceNumber = await generateInvoiceNumber(orgMember.organization_id);
+      const invoiceNumber = await generateInvoiceNumber(organizationId);
       if (!invoiceNumber) throw new Error("Failed to generate invoice number");
 
       // Calculate initial totals
@@ -202,7 +204,7 @@ export const InvoiceFromExpenses = ({ caseId, onSuccess }: InvoiceFromExpensesPr
         .insert({
           case_id: caseId,
           user_id: user.id,
-          organization_id: orgMember.organization_id,
+          organization_id: organizationId,
           invoice_number: invoiceNumber,
           total: totalAmount,
           retainer_applied: retainerUsed,
@@ -243,7 +245,7 @@ export const InvoiceFromExpenses = ({ caseId, onSuccess }: InvoiceFromExpensesPr
           .insert({
             case_id: caseId,
             user_id: user.id,
-            organization_id: orgMember.organization_id,
+            organization_id: organizationId,
             amount: -retainerUsed,
             invoice_id: invoice.id,
             note: `Applied to invoice ${invoiceNumber}`,

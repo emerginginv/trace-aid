@@ -15,6 +15,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Plus, Save, Loader2 } from "lucide-react";
 import { SectionEditor } from "./SectionEditor";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import {
   type ReportTemplate,
   type TemplateSection,
@@ -93,6 +94,7 @@ export function ReportTemplateEditor({
   onSuccess,
   templateId,
 }: ReportTemplateEditorProps) {
+  const { organization } = useOrganization();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
@@ -164,21 +166,14 @@ export function ReportTemplateEditor({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) throw new Error("User not in organization");
+      if (!organization?.id) throw new Error("Organization not found");
 
       let savedTemplateId = currentTemplateId;
 
       if (!savedTemplateId) {
         // Create new template
         const newTemplate = await createReportTemplate({
-          organizationId: orgMember.organization_id,
+          organizationId: organization.id,
           userId: user.id,
           name,
           description: description || null,

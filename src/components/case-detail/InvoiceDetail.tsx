@@ -518,13 +518,16 @@ export const InvoiceDetail = ({ invoiceId, onClose }: InvoiceDetailProps) => {
         </Card>
 
         {/* Payment Form */}
-        <PaymentForm
-          open={paymentFormOpen}
-          onOpenChange={setPaymentFormOpen}
-          invoiceId={invoiceId}
-          remainingBalance={remainingBalance}
-          onSuccess={fetchInvoiceDetails}
-        />
+        {organization?.id && (
+          <PaymentForm
+            open={paymentFormOpen}
+            onOpenChange={setPaymentFormOpen}
+            invoiceId={invoiceId}
+            remainingBalance={remainingBalance}
+            onSuccess={fetchInvoiceDetails}
+            organizationId={organization.id}
+          />
+        )}
       </div>
 
       {/* Print styles */}

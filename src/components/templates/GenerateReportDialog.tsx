@@ -15,6 +15,7 @@ import { generateReport, ReportInstance } from "@/lib/reportEngine";
 import { ReportInstanceViewer } from "@/components/templates/ReportInstanceViewer";
 import { TemplateCustomizer } from "@/components/templates/TemplateCustomizer";
 import { FileText, Sparkles, FileCode, Settings2 } from "lucide-react";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface LegacyTemplate {
   id: string;
@@ -52,6 +53,7 @@ export const GenerateReportDialog = ({
   userProfiles,
 }: GenerateReportDialogProps) => {
   // Legacy template state
+  const { organization } = useOrganization();
   const [legacyTemplates, setLegacyTemplates] = useState<LegacyTemplate[]>([]);
   const [selectedLegacyTemplateId, setSelectedLegacyTemplateId] = useState<string>("");
   
@@ -64,7 +66,6 @@ export const GenerateReportDialog = ({
   const [exportFormat, setExportFormat] = useState<"pdf" | "docx">("pdf");
   const [orgProfile, setOrgProfile] = useState<OrganizationProfile | null>(null);
   const [caseVariables, setCaseVariables] = useState<CaseVariables | null>(null);
-  const [organizationId, setOrganizationId] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
   const [templateType, setTemplateType] = useState<"legacy" | "structured">("structured");
   
@@ -86,28 +87,17 @@ export const GenerateReportDialog = ({
   }, [open, caseId]);
 
   useEffect(() => {
-    if (organizationId) {
+    if (organization?.id) {
       fetchLegacyTemplates();
       fetchStructuredTemplates();
     }
-  }, [organizationId]);
+  }, [organization?.id]);
 
   const fetchUserAndOrg = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     
     setUserId(user.id);
-
-    const { data: orgMember } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .single();
-
-    if (orgMember) {
-      setOrganizationId(orgMember.organization_id);
-    }
   };
 
   const fetchOrgProfile = async () => {
@@ -121,11 +111,13 @@ export const GenerateReportDialog = ({
   };
 
   const fetchLegacyTemplates = async () => {
+    if (!organization?.id) return;
+    
     try {
       const { data, error } = await supabase
         .from("case_update_templates")
         .select("*")
-        .eq("organization_id", organizationId)
+        .eq("organization_id", organization.id)
         .order("name");
 
       if (error) throw error;
@@ -136,8 +128,10 @@ export const GenerateReportDialog = ({
   };
 
   const fetchStructuredTemplates = async () => {
+    if (!organization?.id) return;
+    
     try {
-      const templates = await getOrganizationTemplates(organizationId);
+      const templates = await getOrganizationTemplates(organization.id);
       setStructuredTemplates(templates);
     } catch (error) {
       console.error("Error fetching structured templates:", error);
@@ -280,7 +274,7 @@ export const GenerateReportDialog = ({
       const result = await generateReport({
         caseId,
         templateId: selectedStructuredTemplateId,
-        organizationId,
+        organizationId: organization?.id || "",
         userId,
         customization: templateCustomization || undefined,
       });

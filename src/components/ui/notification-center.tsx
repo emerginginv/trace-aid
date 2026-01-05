@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface Notification {
   id: string;
@@ -24,9 +25,12 @@ export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { organization } = useOrganization();
 
   useEffect(() => {
-    fetchNotifications();
+    if (organization?.id) {
+      fetchNotifications();
+    }
     
     // Set up realtime subscription for instant updates
     const channel = supabase
@@ -98,22 +102,14 @@ export function NotificationCenter() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [organization?.id]);
 
   const fetchNotifications = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get user's organization_id
-      const { data: orgMember } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember?.organization_id) {
+      if (!organization?.id) {
         setLoading(false);
         return;
       }
@@ -122,7 +118,7 @@ export function NotificationCenter() {
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
-        .eq('organization_id', orgMember.organization_id)
+        .eq('organization_id', organization.id)
         .order('timestamp', { ascending: false })
         .limit(10); // Only show 10 most recent in popup
 
