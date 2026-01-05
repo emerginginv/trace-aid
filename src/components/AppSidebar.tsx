@@ -86,6 +86,10 @@ export function AppSidebar() {
     role: string;
     avatar_url: string | null;
   } | null>(null);
+  const [orgSettings, setOrgSettings] = useState<{
+    logo_url: string | null;
+    company_name: string | null;
+  } | null>(null);
 
   // Filter menu items based on user role
   const menuItems = allMenuItems.filter(item => !role || item.roles.includes(role));
@@ -133,18 +137,53 @@ export function AppSidebar() {
     fetchUserProfile();
   }, [organization?.id, orgLoading]);
 
+  // Fetch organization settings for logo
+  useEffect(() => {
+    if (orgLoading || !organization?.id) return;
+
+    const fetchOrgSettings = async () => {
+      const { data } = await supabase
+        .from("organization_settings")
+        .select("logo_url, company_name")
+        .eq("organization_id", organization.id)
+        .maybeSingle();
+      
+      setOrgSettings(data);
+    };
+
+    fetchOrgSettings();
+  }, [organization?.id, orgLoading]);
+
 
   return (
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-            <Shield className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-sky-300 font-medium text-base">CaseWyze</h2>
-            <p className="text-xs text-sidebar-foreground/60">Investigation Management</p>
-          </div>
+          {orgSettings?.logo_url ? (
+            <>
+              <img 
+                src={orgSettings.logo_url} 
+                alt={orgSettings.company_name || "Organization"} 
+                className="w-8 h-8 rounded-lg object-contain"
+              />
+              <div>
+                <h2 className="text-sky-300 font-medium text-base truncate max-w-[140px]">
+                  {orgSettings.company_name || "Organization"}
+                </h2>
+                <p className="text-xs text-sidebar-foreground/60">Case Management</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-sky-300 font-medium text-base">CaseWyze</h2>
+                <p className="text-xs text-sidebar-foreground/60">Investigation Management</p>
+              </div>
+            </>
+          )}
         </div>
         <OrganizationSwitcher />
       </SidebarHeader>
