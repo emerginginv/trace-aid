@@ -13,6 +13,7 @@ import { TemplateList } from "@/components/templates/TemplateList";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSearchParams } from "react-router-dom";
 import { OrgIsolationAudit } from "@/components/OrgIsolationAudit";
+import { CaseDataAudit } from "@/components/CaseDataAudit";
 import { SettingsNav } from "@/components/settings/SettingsNav";
 import { DataImportTab } from "@/components/settings/DataImportTab";
 import { UserPreferencesTab } from "@/components/settings/UserPreferencesTab";
@@ -628,7 +629,7 @@ const Settings = () => {
 
             {/* Data Integrity Tab - Admin Only */}
             {currentUserRole === 'admin' && (
-              <TabsContent value="data-integrity">
+              <TabsContent value="data-integrity" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Data Integrity</CardTitle>
@@ -640,6 +641,8 @@ const Settings = () => {
                     <OrgIsolationAudit />
                   </CardContent>
                 </Card>
+                
+                <CaseDataAudit />
               </TabsContent>
             )}
 
