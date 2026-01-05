@@ -1,7 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { NotificationCenter } from "@/components/ui/notification-center";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useUserRole } from "@/hooks/useUserRole";
 import { RoleBadge } from "@/components/RoleBadge";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,10 +44,8 @@ const DashboardLayout = ({
             <SidebarTrigger />
             <div className="flex items-center gap-2 sm:gap-4">
               {role && <div className="hidden sm:flex items-center gap-3">
-                  
                   <RoleBadge role={role} />
                 </div>}
-              <ThemeToggle />
               <NotificationCenter />
             </div>
             <HeaderProgressIndicator />

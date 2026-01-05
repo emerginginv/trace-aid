@@ -10,8 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 const FEEDBACK_EMAIL = "brian@emerginginv.com";
 
-export function HelpFeedback() {
-  const [open, setOpen] = useState(false);
+interface HelpFeedbackDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+// Controlled dialog component for use in dropdown menus
+export function HelpFeedbackDialog({ open, onOpenChange }: HelpFeedbackDialogProps) {
   const [category, setCategory] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,7 +63,7 @@ export function HelpFeedback() {
       if (error) throw error;
 
       toast.success("Thank you! Your feedback has been submitted.");
-      setOpen(false);
+      onOpenChange(false);
       setCategory("");
       setMessage("");
     } catch (error) {
@@ -70,13 +75,7 @@ export function HelpFeedback() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" className="w-full justify-start">
-          <MessageCircle className="w-4 h-4 mr-2" />
-          Help & Feedback
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Help & Feedback</DialogTitle>
@@ -110,7 +109,7 @@ export function HelpFeedback() {
             />
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={loading} className="flex-1">
@@ -120,5 +119,24 @@ export function HelpFeedback() {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Standalone component with trigger button (for backward compatibility)
+export function HelpFeedback() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" className="w-full justify-start">
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Help & Feedback
+          </Button>
+        </DialogTrigger>
+      </Dialog>
+      <HelpFeedbackDialog open={open} onOpenChange={setOpen} />
+    </>
   );
 }
