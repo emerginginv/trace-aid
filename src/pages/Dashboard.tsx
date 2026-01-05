@@ -16,7 +16,6 @@ import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 interface Task {
   id: string;
   title: string;
@@ -65,16 +64,24 @@ interface Expense {
   financeData: any;
 }
 const Dashboard = () => {
-  const { toast } = useToast();
-  const { isVendor, isAdmin, isManager, loading: roleLoading } = useUserRole();
-  const { organization } = useOrganization();
-  
+  const {
+    toast
+  } = useToast();
+  const {
+    isVendor,
+    isAdmin,
+    isManager,
+    loading: roleLoading
+  } = useUserRole();
+  const {
+    organization
+  } = useOrganization();
+
   // Filter states for each container
   const [tasksFilter, setTasksFilter] = useState<'my' | 'all'>('my');
   const [eventsFilter, setEventsFilter] = useState<'my' | 'all'>('my');
   const [updatesFilter, setUpdatesFilter] = useState<'my' | 'all'>('my');
   const [expensesFilter, setExpensesFilter] = useState<'my' | 'all'>('my');
-  
   const canViewAll = isAdmin || isManager;
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -102,52 +109,45 @@ const Dashboard = () => {
     unpaidInvoices: 0
   });
   const [isDataLoading, setIsDataLoading] = useState(true);
-  const [updateTypePicklists, setUpdateTypePicklists] = useState<{value: string, color: string | null}[]>([]);
-
+  const [updateTypePicklists, setUpdateTypePicklists] = useState<{
+    value: string;
+    color: string | null;
+  }[]>([]);
   useEffect(() => {
     if (!organization?.id) return;
-
     const fetchDashboardData = async () => {
       setIsDataLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
       const orgId = organization.id;
 
       // Fetch stats filtered by organization
-      const [casesResult, contactsResult, accountsResult] = await Promise.all([
-        supabase.from("cases").select("*", { count: "exact", head: true }).eq("organization_id", orgId),
-        supabase.from("contacts").select("*", { count: "exact", head: true }).eq("organization_id", orgId),
-        supabase.from("accounts").select("*", { count: "exact", head: true }).eq("organization_id", orgId)
-      ]);
+      const [casesResult, contactsResult, accountsResult] = await Promise.all([supabase.from("cases").select("*", {
+        count: "exact",
+        head: true
+      }).eq("organization_id", orgId), supabase.from("contacts").select("*", {
+        count: "exact",
+        head: true
+      }).eq("organization_id", orgId), supabase.from("accounts").select("*", {
+        count: "exact",
+        head: true
+      }).eq("organization_id", orgId)]);
 
       // Fetch all cases to categorize by status_type
-      const { data: allCases } = await supabase
-        .from("cases")
-        .select("status")
-        .eq("organization_id", orgId);
+      const {
+        data: allCases
+      } = await supabase.from("cases").select("status").eq("organization_id", orgId);
 
       // Fetch status picklists filtered by organization
-      const [statusPicklistsResult, updateTypePicklistsResult] = await Promise.all([
-        supabase
-          .from("picklists")
-          .select("value, status_type")
-          .eq("type", "case_status")
-          .eq("is_active", true)
-          .or(`organization_id.eq.${orgId},organization_id.is.null`),
-        supabase
-          .from("picklists")
-          .select("value, color")
-          .eq("type", "update_type")
-          .eq("is_active", true)
-          .or(`organization_id.eq.${orgId},organization_id.is.null`)
-      ]);
-      
+      const [statusPicklistsResult, updateTypePicklistsResult] = await Promise.all([supabase.from("picklists").select("value, status_type").eq("type", "case_status").eq("is_active", true).or(`organization_id.eq.${orgId},organization_id.is.null`), supabase.from("picklists").select("value, color").eq("type", "update_type").eq("is_active", true).or(`organization_id.eq.${orgId},organization_id.is.null`)]);
       const statusPicklists = statusPicklistsResult.data;
       if (updateTypePicklistsResult.data) {
         setUpdateTypePicklists(updateTypePicklistsResult.data);
       }
-
       let openCasesCount = 0;
       let closedCasesCount = 0;
       if (allCases && statusPicklists) {
@@ -160,13 +160,10 @@ const Dashboard = () => {
           }
         });
       }
-
-      const activeCasesResult = await supabase
-        .from("cases")
-        .select("*", { count: "exact", head: true })
-        .eq("organization_id", orgId)
-        .eq("status", "open");
-
+      const activeCasesResult = await supabase.from("cases").select("*", {
+        count: "exact",
+        head: true
+      }).eq("organization_id", orgId).eq("status", "open");
       setStats({
         totalCases: casesResult.count || 0,
         activeCases: activeCasesResult.count || 0,
@@ -177,11 +174,9 @@ const Dashboard = () => {
       });
 
       // Fetch users for assignments filtered by organization (moved earlier for task mapping)
-      const { data: orgUsers } = await supabase
-        .from('profiles')
-        .select('id, email, full_name')
-        .in('id', (await supabase.from('organization_members').select('user_id').eq('organization_id', orgId)).data?.map(m => m.user_id) || []);
-
+      const {
+        data: orgUsers
+      } = await supabase.from('profiles').select('id, email, full_name').in('id', (await supabase.from('organization_members').select('user_id').eq('organization_id', orgId)).data?.map(m => m.user_id) || []);
       if (orgUsers) {
         setUsers(orgUsers.map(u => ({
           id: u.id,
@@ -191,22 +186,19 @@ const Dashboard = () => {
       }
 
       // Fetch tasks from case_activities (pending tasks only) filtered by organization
-      let tasksQuery = supabase
-        .from("case_activities")
-        .select("*")
-        .eq("organization_id", orgId)
-        .eq("activity_type", "task")
-        .eq("completed", false)
-        .order("due_date", { ascending: true, nullsFirst: false })
-        .limit(50);
+      let tasksQuery = supabase.from("case_activities").select("*").eq("organization_id", orgId).eq("activity_type", "task").eq("completed", false).order("due_date", {
+        ascending: true,
+        nullsFirst: false
+      }).limit(50);
 
       // Apply user filter if "My Tasks" is selected
       if (tasksFilter === 'my') {
         tasksQuery = tasksQuery.or(`user_id.eq.${user.id},assigned_user_id.eq.${user.id}`);
       }
-
-      const { data: activitiesData, error: tasksError } = await tasksQuery;
-
+      const {
+        data: activitiesData,
+        error: tasksError
+      } = await tasksQuery;
       if (activitiesData) {
         const tasksData: Task[] = activitiesData.map(activity => {
           const assignedUser = orgUsers?.find(u => u.id === activity.assigned_user_id);
@@ -231,30 +223,21 @@ const Dashboard = () => {
       today.setHours(0, 0, 0, 0);
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
-
-      let eventsQuery = supabase
-        .from("case_activities")
-        .select("*")
-        .eq("organization_id", orgId)
-        .eq("activity_type", "event")
-        .not("due_date", "is", null)
-        .gte("due_date", today.toISOString().split('T')[0])
-        .lte("due_date", futureDate.toISOString().split('T')[0])
-        .order("due_date", { ascending: true })
-        .limit(50);
+      let eventsQuery = supabase.from("case_activities").select("*").eq("organization_id", orgId).eq("activity_type", "event").not("due_date", "is", null).gte("due_date", today.toISOString().split('T')[0]).lte("due_date", futureDate.toISOString().split('T')[0]).order("due_date", {
+        ascending: true
+      }).limit(50);
 
       // Apply user filter if "My Events" is selected
       if (eventsFilter === 'my') {
         eventsQuery = eventsQuery.or(`user_id.eq.${user.id},assigned_user_id.eq.${user.id}`);
       }
-
-      const { data: eventsData } = await eventsQuery;
-
+      const {
+        data: eventsData
+      } = await eventsQuery;
       if (eventsData) {
         const calendarEvents: CalendarEvent[] = eventsData.map(event => {
           // Find assigned user name from users array
           const assignedUser = orgUsers?.find(u => u.id === event.assigned_user_id);
-          
           return {
             id: event.id,
             title: event.title,
@@ -273,20 +256,17 @@ const Dashboard = () => {
       }
 
       // Fetch recent updates from case_updates filtered by organization
-      let updatesQuery = supabase
-        .from("case_updates")
-        .select("*")
-        .eq("organization_id", orgId)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      let updatesQuery = supabase.from("case_updates").select("*").eq("organization_id", orgId).order("created_at", {
+        ascending: false
+      }).limit(5);
 
       // Apply user filter if "My Updates" is selected
       if (updatesFilter === 'my') {
         updatesQuery = updatesQuery.eq("user_id", user.id);
       }
-
-      const { data: updatesData } = await updatesQuery;
-
+      const {
+        data: updatesData
+      } = await updatesQuery;
       if (updatesData) {
         const recentUpdates: Update[] = updatesData.map(update => {
           const author = orgUsers?.find(u => u.id === update.user_id);
@@ -306,21 +286,17 @@ const Dashboard = () => {
       }
 
       // Fetch recent expenses from case_finances filtered by organization
-      let expensesQuery = supabase
-        .from("case_finances")
-        .select("*")
-        .eq("organization_id", orgId)
-        .eq("finance_type", "expense")
-        .order("date", { ascending: false })
-        .limit(5);
+      let expensesQuery = supabase.from("case_finances").select("*").eq("organization_id", orgId).eq("finance_type", "expense").order("date", {
+        ascending: false
+      }).limit(5);
 
       // Apply user filter if "My Expenses" is selected
       if (expensesFilter === 'my') {
         expensesQuery = expensesQuery.eq("user_id", user.id);
       }
-
-      const { data: expensesData } = await expensesQuery;
-
+      const {
+        data: expensesData
+      } = await expensesQuery;
       if (expensesData) {
         const recentExpenses: Expense[] = expensesData.map(expense => {
           const submitter = orgUsers?.find(u => u.id === expense.user_id);
@@ -342,31 +318,10 @@ const Dashboard = () => {
       // Users already fetched earlier for task mapping
 
       // Fetch financial summary data
-      const [retainerResult, pendingExpensesResult, unpaidInvoicesResult] = await Promise.all([
-        supabase
-          .from("retainer_funds")
-          .select("amount")
-          .eq("organization_id", orgId),
-        supabase
-          .from("case_finances")
-          .select("amount")
-          .eq("organization_id", orgId)
-          .eq("finance_type", "expense")
-          .eq("status", "pending"),
-        supabase
-          .from("invoices")
-          .select("balance_due")
-          .eq("organization_id", orgId)
-          .gt("balance_due", 0)
-      ]);
-
-      const totalRetainer = retainerResult.data?.reduce((sum, r) => 
-        sum + parseFloat(String(r.amount) || '0'), 0) || 0;
-      const outstandingExpenses = pendingExpensesResult.data?.reduce((sum, e) => 
-        sum + parseFloat(String(e.amount) || '0'), 0) || 0;
-      const unpaidInvoicesTotal = unpaidInvoicesResult.data?.reduce((sum, i) => 
-        sum + parseFloat(String(i.balance_due) || '0'), 0) || 0;
-
+      const [retainerResult, pendingExpensesResult, unpaidInvoicesResult] = await Promise.all([supabase.from("retainer_funds").select("amount").eq("organization_id", orgId), supabase.from("case_finances").select("amount").eq("organization_id", orgId).eq("finance_type", "expense").eq("status", "pending"), supabase.from("invoices").select("balance_due").eq("organization_id", orgId).gt("balance_due", 0)]);
+      const totalRetainer = retainerResult.data?.reduce((sum, r) => sum + parseFloat(String(r.amount) || '0'), 0) || 0;
+      const outstandingExpenses = pendingExpensesResult.data?.reduce((sum, e) => sum + parseFloat(String(e.amount) || '0'), 0) || 0;
+      const unpaidInvoicesTotal = unpaidInvoicesResult.data?.reduce((sum, i) => sum + parseFloat(String(i.balance_due) || '0'), 0) || 0;
       setFinancialSummary({
         totalRetainerFunds: totalRetainer,
         outstandingExpenses: outstandingExpenses,
@@ -374,7 +329,6 @@ const Dashboard = () => {
       });
       setIsDataLoading(false);
     };
-
     fetchDashboardData();
   }, [organization?.id, tasksFilter, eventsFilter, updatesFilter, expensesFilter]);
   const handleTaskToggle = async (taskId: string) => {
@@ -388,7 +342,6 @@ const Dashboard = () => {
       ...t,
       status: newStatus
     } : t));
-    
     toast({
       title: newStatus === "completed" ? "Task completed!" : "Task reopened",
       description: task.title
@@ -400,7 +353,6 @@ const Dashboard = () => {
     } = await supabase.from("case_activities").update({
       completed: newStatus === "completed"
     }).eq("id", taskId);
-    
     if (error) {
       // Rollback on error
       setTasks(previousTasks);
@@ -422,10 +374,7 @@ const Dashboard = () => {
   });
 
   // Show all upcoming events (up to 30 days) sorted by date
-  const upcomingEvents = events.sort((a, b) => 
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-  
+  const upcomingEvents = events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const getEventDateLabel = (dateStr: string) => {
     const date = parseISO(dateStr);
     if (isToday(date)) return "Today";
@@ -445,61 +394,89 @@ const Dashboard = () => {
         return "default";
     }
   };
-
   const getStatusDotDisplay = (status: string, type: 'task' | 'event' = 'task') => {
     switch (status) {
       case 'in_progress':
-        return { label: 'In Progress', dotColor: 'bg-blue-500', textColor: 'text-blue-500' };
+        return {
+          label: 'In Progress',
+          dotColor: 'bg-blue-500',
+          textColor: 'text-blue-500'
+        };
       case 'done':
       case 'completed':
-        return { label: 'Done', dotColor: 'bg-emerald-500', textColor: 'text-emerald-500' };
+        return {
+          label: 'Done',
+          dotColor: 'bg-emerald-500',
+          textColor: 'text-emerald-500'
+        };
       case 'scheduled':
-        return { label: 'Scheduled', dotColor: 'bg-purple-500', textColor: 'text-purple-500' };
+        return {
+          label: 'Scheduled',
+          dotColor: 'bg-purple-500',
+          textColor: 'text-purple-500'
+        };
       case 'cancelled':
-        return { label: 'Cancelled', dotColor: 'bg-red-500', textColor: 'text-red-500' };
+        return {
+          label: 'Cancelled',
+          dotColor: 'bg-red-500',
+          textColor: 'text-red-500'
+        };
       case 'on_hold':
-        return { label: 'On Hold', dotColor: 'bg-orange-500', textColor: 'text-orange-500' };
+        return {
+          label: 'On Hold',
+          dotColor: 'bg-orange-500',
+          textColor: 'text-orange-500'
+        };
       case 'to_do':
       default:
         if (type === 'event') {
-          return { label: 'Scheduled', dotColor: 'bg-purple-500', textColor: 'text-purple-500' };
+          return {
+            label: 'Scheduled',
+            dotColor: 'bg-purple-500',
+            textColor: 'text-purple-500'
+          };
         }
-        return { label: 'To Do', dotColor: 'bg-amber-500', textColor: 'text-amber-500' };
+        return {
+          label: 'To Do',
+          dotColor: 'bg-amber-500',
+          textColor: 'text-amber-500'
+        };
     }
   };
-
-  const StatusDot = ({ status, type = 'task' }: { status: string; type?: 'task' | 'event' }) => {
-    const { label, dotColor, textColor } = getStatusDotDisplay(status, type);
-    return (
-      <span className={`flex items-center gap-1.5 text-xs shrink-0 font-medium ${textColor}`}>
+  const StatusDot = ({
+    status,
+    type = 'task'
+  }: {
+    status: string;
+    type?: 'task' | 'event';
+  }) => {
+    const {
+      label,
+      dotColor,
+      textColor
+    } = getStatusDotDisplay(status, type);
+    return <span className={`flex items-center gap-1.5 text-xs shrink-0 font-medium ${textColor}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} aria-hidden="true" />
         {label}
-      </span>
-    );
+      </span>;
   };
-
-  const UpdateTypeDot = ({ updateType }: { updateType: string }) => {
+  const UpdateTypeDot = ({
+    updateType
+  }: {
+    updateType: string;
+  }) => {
     const picklist = updateTypePicklists.find(p => p.value === updateType);
     const color = picklist?.color || '#6b7280';
-    const label = updateType
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
-    
-    return (
-      <span 
-        className="flex items-center gap-1.5 text-xs shrink-0 font-medium"
-        style={{ color }}
-      >
-        <span 
-          className="w-1.5 h-1.5 rounded-full" 
-          style={{ backgroundColor: color }}
-          aria-hidden="true" 
-        />
+    const label = updateType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return <span className="flex items-center gap-1.5 text-xs shrink-0 font-medium" style={{
+      color
+    }}>
+        <span className="w-1.5 h-1.5 rounded-full" style={{
+        backgroundColor: color
+      }} aria-hidden="true" />
         {label}
-      </span>
-    );
+      </span>;
   };
-
   const getUserInitials = (name: string | null) => {
     if (!name) return '?';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -568,8 +545,8 @@ const Dashboard = () => {
         {/* Stats Cards - Left Half */}
         <div className="grid grid-cols-2 gap-3">
           {statCards.map(stat => {
-            const Icon = stat.icon;
-            return <Card key={stat.title} className="group hover-lift border-border bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden relative">
+          const Icon = stat.icon;
+          return <Card key={stat.title} className="group hover-lift border-border bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden relative">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-3 relative z-10">
                 <CardTitle className="text-xs font-medium text-muted-foreground">
@@ -583,7 +560,7 @@ const Dashboard = () => {
                 <div className="text-2xl font-bold">{stat.value}</div>
               </CardContent>
             </Card>;
-          })}
+        })}
         </div>
 
         {/* Financial Summary Card - Right Half */}
@@ -605,7 +582,10 @@ const Dashboard = () => {
                   <span>Retainer Funds</span>
                 </div>
                 <p className="text-xl font-bold text-emerald-500">
-                  ${financialSummary.totalRetainerFunds.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${financialSummary.totalRetainerFunds.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
                 </p>
               </div>
               
@@ -616,7 +596,10 @@ const Dashboard = () => {
                   <span>Outstanding Expenses</span>
                 </div>
                 <p className="text-xl font-bold text-amber-500">
-                  ${financialSummary.outstandingExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${financialSummary.outstandingExpenses.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
                 </p>
               </div>
               
@@ -627,7 +610,10 @@ const Dashboard = () => {
                   <span>Unpaid Invoices</span>
                 </div>
                 <p className="text-xl font-bold text-blue-500">
-                  ${financialSummary.unpaidInvoices.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${financialSummary.unpaidInvoices.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
                 </p>
               </div>
             </div>
@@ -647,7 +633,7 @@ const Dashboard = () => {
                 </div>
                 <span className="text-lg font-semibold">Tasks</span>
               </div>
-              <Select value={tasksFilter} onValueChange={(v) => setTasksFilter(v as 'my' | 'all')}>
+              <Select value={tasksFilter} onValueChange={v => setTasksFilter(v as 'my' | 'all')}>
                 <SelectTrigger className="h-7 w-auto text-xs gap-1 px-2 bg-background">
                   <SelectValue />
                 </SelectTrigger>
@@ -659,32 +645,19 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
-            {dueTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+            {dueTasks.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No pending tasks</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">You're all caught up!</p>
-              </div>
-            ) : (
-              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+              </div> : <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
                 {dueTasks.map(task => {
-                  const taskDate = parseISO(task.dueDate);
-                  const isOverdue = isPast(taskDate) && !isToday(taskDate);
-                  
-                  return (
-                    <div 
-                      key={task.id} 
-                      onClick={() => setEditingTask(task)} 
-                      className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
-                    >
+              const taskDate = parseISO(task.dueDate);
+              const isOverdue = isPast(taskDate) && !isToday(taskDate);
+              return <div key={task.id} onClick={() => setEditingTask(task)} className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50">
                       {/* Checkbox */}
-                      <Checkbox 
-                        checked={task.status === "completed"} 
-                        onCheckedChange={() => handleTaskToggle(task.id)} 
-                        onClick={e => e.stopPropagation()} 
-                      />
+                      <Checkbox checked={task.status === "completed"} onCheckedChange={() => handleTaskToggle(task.id)} onClick={e => e.stopPropagation()} />
                       
                       {/* Title - Primary anchor */}
                       <div className="flex-1 min-w-0">
@@ -695,31 +668,18 @@ const Dashboard = () => {
                       <StatusDot status={task.taskStatus} type="task" />
                       
                       {/* Due Date */}
-                      <span className={`flex items-center gap-1 text-xs shrink-0 ${
-                        isOverdue ? 'text-destructive font-medium' : 
-                        isToday(taskDate) ? 'text-warning' : 
-                        'text-muted-foreground'
-                      }`}>
+                      <span className={`flex items-center gap-1 text-xs shrink-0 ${isOverdue ? 'text-destructive font-medium' : isToday(taskDate) ? 'text-warning' : 'text-muted-foreground'}`}>
                         <Clock className="w-3 h-3" />
-                        {isOverdue ? 'Overdue' : 
-                         isToday(taskDate) ? 'Today' : 
-                         format(taskDate, 'MMM d')}
+                        {isOverdue ? 'Overdue' : isToday(taskDate) ? 'Today' : format(taskDate, 'MMM d')}
                       </span>
                       
                       {/* Assigned User Avatar */}
-                      {task.assignedUserName && (
-                        <div 
-                          className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium shrink-0"
-                          title={task.assignedUserName}
-                        >
+                      {task.assignedUserName && <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium shrink-0" title={task.assignedUserName}>
                           {getUserInitials(task.assignedUserName)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        </div>}
+                    </div>;
+            })}
+              </div>}
           </CardContent>
         </Card>
 
@@ -733,7 +693,7 @@ const Dashboard = () => {
                 </div>
                 <span className="text-lg font-semibold">Events</span>
               </div>
-              <Select value={eventsFilter} onValueChange={(v) => setEventsFilter(v as 'my' | 'all')}>
+              <Select value={eventsFilter} onValueChange={v => setEventsFilter(v as 'my' | 'all')}>
                 <SelectTrigger className="h-7 w-auto text-xs gap-1 px-2 bg-background">
                   <SelectValue />
                 </SelectTrigger>
@@ -745,34 +705,24 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
-            {upcomingEvents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+            {upcomingEvents.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <Calendar className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No upcoming events</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Your calendar is clear</p>
-              </div>
-            ) : (
-              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+              </div> : <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
                 {upcomingEvents.map(event => {
-                  return (
-                    <div 
-                      key={event.id} 
-                      className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-secondary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50" 
-                      onClick={() => setEditingEvent(event)}
-                    >
+              return <div key={event.id} className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-secondary/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50" onClick={() => setEditingEvent(event)}>
                       {/* Title - Primary anchor */}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{event.title}</p>
                       </div>
                       
                       {/* Event Type Badge (if available) */}
-                      {event.eventSubtype && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary shrink-0">
+                      {event.eventSubtype && <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary shrink-0">
                           {event.eventSubtype}
-                        </span>
-                      )}
+                        </span>}
                       
                       {/* Status Dot */}
                       <StatusDot status={event.eventStatus} type="event" />
@@ -784,19 +734,12 @@ const Dashboard = () => {
                       </span>
                       
                       {/* Assigned User Avatar */}
-                      {event.assignedUserName && (
-                        <div 
-                          className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-medium shrink-0"
-                          title={event.assignedUserName}
-                        >
+                      {event.assignedUserName && <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-medium shrink-0" title={event.assignedUserName}>
                           {getUserInitials(event.assignedUserName)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        </div>}
+                    </div>;
+            })}
+              </div>}
           </CardContent>
         </Card>
 
@@ -805,12 +748,12 @@ const Dashboard = () => {
           <CardHeader className="pb-4 border-b border-border">
             <CardTitle className="flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Bell className="w-5 h-5 text-primary" />
+                <div className="p-2 rounded-lg bg-[#c9f7cd] text-gray-50/0">
+                  <Bell className="w-5 h-5 text-emerald-500" />
                 </div>
                 <span className="text-lg font-semibold">Updates</span>
               </div>
-              <Select value={updatesFilter} onValueChange={(v) => setUpdatesFilter(v as 'my' | 'all')}>
+              <Select value={updatesFilter} onValueChange={v => setUpdatesFilter(v as 'my' | 'all')}>
                 <SelectTrigger className="h-7 w-auto text-xs gap-1 px-2 bg-background">
                   <SelectValue />
                 </SelectTrigger>
@@ -822,23 +765,15 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
-            {updates.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+            {updates.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <Bell className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No recent updates</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Updates will appear here</p>
-              </div>
-            ) : (
-              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+              </div> : <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
                 {updates.map(update => {
-                  return (
-                    <div 
-                      key={update.id} 
-                      onClick={() => setEditingUpdate(update)} 
-                      className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-accent/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
-                    >
+              return <div key={update.id} onClick={() => setEditingUpdate(update)} className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-accent/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50">
                       {/* Title - Primary anchor */}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{update.message}</p>
@@ -850,23 +785,18 @@ const Dashboard = () => {
                       {/* Date Added */}
                       <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                         <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(parseISO(update.timestamp), { addSuffix: true })}
+                        {formatDistanceToNow(parseISO(update.timestamp), {
+                    addSuffix: true
+                  })}
                       </span>
                       
                       {/* Author Avatar */}
-                      {update.authorName && (
-                        <div 
-                          className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium shrink-0"
-                          title={update.authorName}
-                        >
+                      {update.authorName && <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium shrink-0" title={update.authorName}>
                           {getUserInitials(update.authorName)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        </div>}
+                    </div>;
+            })}
+              </div>}
           </CardContent>
         </Card>
 
@@ -880,7 +810,7 @@ const Dashboard = () => {
                 </div>
                 <span className="text-lg font-semibold">Expenses</span>
               </div>
-              <Select value={expensesFilter} onValueChange={(v) => setExpensesFilter(v as 'my' | 'all')}>
+              <Select value={expensesFilter} onValueChange={v => setExpensesFilter(v as 'my' | 'all')}>
                 <SelectTrigger className="h-7 w-auto text-xs gap-1 px-2 bg-background">
                   <SelectValue />
                 </SelectTrigger>
@@ -892,23 +822,15 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
-            {expenses.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+            {expenses.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <DollarSign className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No recent expenses</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Expenses will appear here</p>
-              </div>
-            ) : (
-              <>
+              </div> : <>
                 <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
-                  {expenses.map(expense => (
-                    <div 
-                      key={expense.id} 
-                      onClick={() => setEditingExpense(expense)} 
-                      className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-warning/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
-                    >
+                  {expenses.map(expense => <div key={expense.id} onClick={() => setEditingExpense(expense)} className="group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-warning/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50">
                       {/* Description - Primary anchor */}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{expense.description}</p>
@@ -931,16 +853,10 @@ const Dashboard = () => {
                       </span>
                       
                       {/* Submitted By Avatar */}
-                      {expense.submittedByName && (
-                        <div 
-                          className="w-6 h-6 rounded-full bg-warning/10 text-warning flex items-center justify-center text-xs font-medium shrink-0"
-                          title={expense.submittedByName}
-                        >
+                      {expense.submittedByName && <div className="w-6 h-6 rounded-full bg-warning/10 text-warning flex items-center justify-center text-xs font-medium shrink-0" title={expense.submittedByName}>
                           {getUserInitials(expense.submittedByName)}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        </div>}
+                    </div>)}
                 </div>
                 
                 {/* Total Expenses Footer */}
@@ -952,8 +868,7 @@ const Dashboard = () => {
                     </span>
                   </div>
                 </div>
-              </>
-            )}
+              </>}
           </CardContent>
         </Card>
       </div>
