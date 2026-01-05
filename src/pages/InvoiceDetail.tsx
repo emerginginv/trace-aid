@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +89,12 @@ export default function InvoiceDetail() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [orgSettings, setOrgSettings] = useState<OrgSettings | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  useSetBreadcrumbs([
+    { label: "Finance", href: "/finance" },
+    { label: "Invoices", href: "/invoices" },
+    { label: invoice?.invoice_number || "Invoice" },
+  ]);
 
   useEffect(() => {
     if (id) {

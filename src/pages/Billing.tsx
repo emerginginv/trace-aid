@@ -8,8 +8,14 @@ import { toast } from "sonner";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSearchParams } from "react-router-dom";
 import { PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanLimits } from "@/lib/planLimits";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 
 export default function Billing() {
+  useSetBreadcrumbs([
+    { label: "Settings", href: "/settings" },
+    { label: "Billing" },
+  ]);
+  
   const { organization, subscriptionStatus, checkSubscription } = useOrganization();
   const [loading, setLoading] = useState<string | null>(null);
   const [searchParams] = useSearchParams();

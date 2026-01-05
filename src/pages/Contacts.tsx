@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -51,6 +52,8 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 const Contacts = () => {
+  useSetBreadcrumbs([{ label: "Contacts" }]);
+  
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const { organization } = useOrganization();

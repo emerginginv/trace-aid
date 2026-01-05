@@ -13,6 +13,7 @@ import { Info, Briefcase, FileText, Upload, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 
 interface Case {
   id: string;
@@ -41,6 +42,8 @@ interface Update {
 }
 
 export default function VendorDashboard() {
+  useSetBreadcrumbs([{ label: "Vendor Dashboard" }]);
+  
   const { toast } = useToast();
   const navigate = useNavigate();
   const { organization } = useOrganization();

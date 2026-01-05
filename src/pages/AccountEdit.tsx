@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +38,17 @@ const AccountEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [accountName, setAccountName] = useState("");
+
+  useSetBreadcrumbs(
+    accountName
+      ? [
+          { label: "Accounts", href: "/accounts" },
+          { label: accountName, href: `/accounts/${id}` },
+          { label: "Edit" },
+        ]
+      : []
+  );
 
   const form = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
@@ -71,6 +83,7 @@ const AccountEdit = () => {
 
       if (error) throw error;
 
+      setAccountName(data.name || "");
       form.reset({
         name: data.name || "",
         industry: data.industry || "",

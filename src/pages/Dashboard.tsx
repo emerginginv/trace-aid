@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Briefcase, Users, Building2, TrendingUp, CheckCircle2, Calendar, Bell, DollarSign, Clock, AlertCircle, X, ChevronDown, ChevronUp, Wallet, Receipt, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +65,8 @@ interface Expense {
   financeData: any;
 }
 const Dashboard = () => {
+  useSetBreadcrumbs([{ label: "Dashboard" }]);
+  
   const {
     toast
   } = useToast();

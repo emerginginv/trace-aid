@@ -1,6 +1,7 @@
 import { CaseCalendar } from "@/components/case-detail/CaseCalendar";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ interface User {
 }
 
 export default function Calendar() {
+  useSetBreadcrumbs([{ label: "Calendar" }]);
+  
   const { organization } = useOrganization();
   const [cases, setCases] = useState<Case[]>([]);
   const [users, setUsers] = useState<User[]>([]);

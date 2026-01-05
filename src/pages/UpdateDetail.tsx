@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,15 @@ const UpdateDetail = () => {
   const [update, setUpdate] = useState<Update | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useSetBreadcrumbs(
+    update
+      ? [
+          { label: "Cases", href: "/cases" },
+          { label: update.title || "Update" },
+        ]
+      : []
+  );
 
   useEffect(() => {
     fetchUpdate();

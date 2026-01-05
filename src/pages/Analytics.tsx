@@ -1,7 +1,10 @@
 import { BarChart3 } from "lucide-react";
 import { ANALYTICS_CATEGORIES } from "@/lib/analytics/categories";
 import { AnalyticsCategoryCard } from "@/components/analytics/AnalyticsCategoryCard";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
+
 const Analytics = () => {
+  useSetBreadcrumbs([{ label: "Analytics" }]);
   return <div className="space-y-6">
       {/* Header Section with Gradient Background */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 p-8 border border-border/50">

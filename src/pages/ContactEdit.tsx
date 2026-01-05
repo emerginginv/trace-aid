@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +52,17 @@ const ContactEdit = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [contactName, setContactName] = useState("");
+
+  useSetBreadcrumbs(
+    contactName
+      ? [
+          { label: "Contacts", href: "/contacts" },
+          { label: contactName, href: `/contacts/${id}` },
+          { label: "Edit" },
+        ]
+      : []
+  );
 
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactSchema),
@@ -105,6 +117,7 @@ const ContactEdit = () => {
 
       if (error) throw error;
 
+      setContactName(`${data.first_name} ${data.last_name}`);
       form.reset({
         first_name: data.first_name || "",
         last_name: data.last_name || "",

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Building2, Mail, Phone, MapPin, Edit, Users } from "lucide-react";
@@ -37,6 +38,15 @@ const AccountDetail = () => {
   const [account, setAccount] = useState<Account | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useSetBreadcrumbs(
+    account
+      ? [
+          { label: "Accounts", href: "/accounts" },
+          { label: account.name },
+        ]
+      : []
+  );
 
   useEffect(() => {
     if (organization?.id) {

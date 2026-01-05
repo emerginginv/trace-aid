@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -60,6 +61,8 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 const Users = () => {
+  useSetBreadcrumbs([{ label: "Users" }]);
+  
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");

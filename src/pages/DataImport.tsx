@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LayoutDashboard, Upload } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 
 type ImportStep = 'welcome' | 'prepare' | 'type' | 'upload' | 'column-mapping' | 'validation' | 'mapping' | 'dry-run' | 'dry-run-results' | 'confirmation' | 'processing' | 'results';
 
@@ -42,6 +43,11 @@ const STEPS = [
 ];
 
 export default function DataImport() {
+  useSetBreadcrumbs([
+    { label: "Settings", href: "/settings" },
+    { label: "Data Import" },
+  ]);
+  
   const { organization } = useOrganization();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'dashboard');

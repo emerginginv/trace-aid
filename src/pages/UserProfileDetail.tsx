@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +21,15 @@ const UserProfileDetail = () => {
     created_at: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useSetBreadcrumbs(
+    userProfile
+      ? [
+          { label: "Users", href: "/users" },
+          { label: userProfile.full_name || userProfile.email },
+        ]
+      : []
+  );
 
   useEffect(() => {
     const fetchUserProfile = async () => {

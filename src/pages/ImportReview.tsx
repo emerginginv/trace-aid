@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { toast } from "sonner";
 import { 
   ArrowLeft, Calendar, Database, AlertTriangle, CheckCircle2, 
@@ -19,6 +20,12 @@ import type { ImportBatch } from "@/types/import";
 import { format } from "date-fns";
 
 export default function ImportReview() {
+  useSetBreadcrumbs([
+    { label: "Settings", href: "/settings" },
+    { label: "Data Import", href: "/import" },
+    { label: "Review" },
+  ]);
+  
   const { organization } = useOrganization();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();

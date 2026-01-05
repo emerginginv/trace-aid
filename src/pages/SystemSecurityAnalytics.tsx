@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { TimeRangeSelector } from "@/components/analytics/TimeRangeSelector";
 import { SharingActivityChart } from "@/components/analytics/SharingActivityChart";
 import { LinkStatusDistributionChart } from "@/components/analytics/LinkStatusDistributionChart";
@@ -95,6 +96,11 @@ export interface ResolvedTimeRangeSimple {
 }
 
 export default function SystemSecurityAnalytics() {
+  useSetBreadcrumbs([
+    { label: "Analytics", href: "/analytics" },
+    { label: "Security" },
+  ]);
+  
   const { organization } = useOrganization();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [timeRangePreset, setTimeRangePreset] = useState<TimeRangePreset>("last_30_days");

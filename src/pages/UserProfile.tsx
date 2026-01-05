@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +12,8 @@ import DashboardLayout from "@/layouts/DashboardLayout";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 
 const UserProfile = () => {
+  useSetBreadcrumbs([{ label: "My Profile" }]);
+  
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null;
