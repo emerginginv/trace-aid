@@ -42,6 +42,7 @@ import AttachmentViewer from "./pages/AttachmentViewer";
 import Analytics from "./pages/Analytics";
 import CaseAnalytics from "./pages/CaseAnalytics";
 import BudgetAnalytics from "./pages/BudgetAnalytics";
+import TimeExpenseAnalytics from "./pages/TimeExpenseAnalytics";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -178,6 +179,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <BudgetAnalytics />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics/time-expense"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <TimeExpenseAnalytics />
               </DashboardLayout>
             </ProtectedRoute>
           }
