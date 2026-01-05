@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, ImageIcon, Video, Music, File, Loader2 } from 'lucide-react';
+import { FileText, ImageIcon, Video, Music, File, Loader2, AlertCircle } from 'lucide-react';
 import { generatePdfThumbnail, isPdfFile } from '@/lib/pdfThumbnail';
 import { generateVideoThumbnail, isVideoFile } from '@/lib/videoThumbnail';
 import { generateDocxThumbnail, isDocxFile } from '@/lib/docxThumbnail';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AttachmentPreviewThumbnailProps {
   filePath: string;
@@ -72,20 +73,35 @@ export function AttachmentPreviewThumbnail({
   useEffect(() => {
     if (!isVisible) return;
 
+    // If thumbnail is being generated in background, show spinner
+    if (previewStatus === 'pending' || previewStatus === 'generating') {
+      setLoading(true);
+      return;
+    }
+
+    // If generation failed, show error state
+    if (previewStatus === 'failed') {
+      setLoading(false);
+      setError(true);
+      return;
+    }
+
     const loadThumbnail = async () => {
+      // If we have a completed preview, load it
+      if (previewPath && previewStatus === 'complete') {
+        await loadPreviewImage(previewPath);
+        return;
+      }
+
       // For images, download and display directly
       if (fileType.startsWith('image/')) {
         await loadImageThumbnail();
         return;
       }
 
-      // For PDFs, check if we have a pre-generated preview
+      // For PDFs without pre-generated preview, generate on-demand
       if (isPdfFile(fileType, fileName)) {
-        if (previewPath && previewStatus === 'complete') {
-          await loadPreviewImage(previewPath);
-        } else {
-          await generateAndLoadPdfThumbnail();
-        }
+        await generateAndLoadPdfThumbnail();
         return;
       }
 
@@ -259,6 +275,21 @@ export function AttachmentPreviewThumbnail({
     return <File className="h-6 w-6 text-muted-foreground" />;
   };
 
+  // Show failed state with icon
+  const renderFailedState = () => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex flex-col items-center justify-center gap-1">
+          {getFileIcon()}
+          <AlertCircle className="h-3 w-3 text-destructive" />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Preview generation failed</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+
   return (
     <div
       ref={containerRef}
@@ -276,6 +307,8 @@ export function AttachmentPreviewThumbnail({
           alt={fileName}
           className="w-full h-full object-cover"
         />
+      ) : error && previewStatus === 'failed' ? (
+        renderFailedState()
       ) : (
         getFileIcon()
       )}
