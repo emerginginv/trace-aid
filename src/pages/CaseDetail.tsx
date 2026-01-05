@@ -596,8 +596,8 @@ const CaseDetail = () => {
           </Link>
         </Button>
         
-        <div className="flex-1 min-w-0">
-          <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold break-words leading-tight ${isClosed ? 'text-muted-foreground' : ''}`}>
+        <div className="flex-1 min-w-0 max-w-[200px] sm:max-w-none">
+          <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate sm:whitespace-normal sm:overflow-visible leading-tight ${isClosed ? 'text-muted-foreground' : ''}`} title={caseData.title}>
             {caseData.title}
           </h1>
           <p className={`text-xs mt-0.5 font-medium ${isClosed ? 'text-muted-foreground' : 'text-primary'}`}>
