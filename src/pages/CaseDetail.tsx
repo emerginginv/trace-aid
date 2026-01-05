@@ -35,6 +35,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 
 interface Case {
   id: string;
@@ -104,6 +105,16 @@ const CaseDetail = () => {
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [updates, setUpdates] = useState<Array<{ id: string; title: string; description: string | null; created_at: string; update_type: string; user_id: string }>>([]);
   const [userProfiles, setUserProfiles] = useState<Record<string, { id: string; full_name: string; email: string }>>({});
+
+  // Set breadcrumbs based on case data
+  useSetBreadcrumbs(
+    caseData
+      ? [
+          { label: "Cases", href: "/cases" },
+          { label: caseData.case_number || caseData.title },
+        ]
+      : [{ label: "Cases", href: "/cases" }]
+  );
 
   const handleViewBudgetHistory = () => {
     setActiveTab("budget");

@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Spinner } from "@/components/ui/spinner";
 import { ProgressSteps } from "@/components/ui/progress-steps";
-import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -38,11 +38,11 @@ export default function StyleGuide() {
     { id: "4", label: "Complete", description: "All done!" },
   ];
 
-  const breadcrumbs = [
+  useSetBreadcrumbs([
     { label: "Documentation", href: "/docs" },
     { label: "Components", href: "/docs/components" },
     { label: "Style Guide" },
-  ];
+  ]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,7 +53,6 @@ export default function StyleGuide() {
 
       <div className="container-comfortable py-12">
         <header className="mb-12">
-          <BreadcrumbNav items={breadcrumbs} className="mb-6" />
           <h1 className="text-display mb-4">UX Design System</h1>
           <p className="text-body-large text-muted-foreground max-w-3xl">
             A comprehensive design system featuring premium micro-interactions, accessibility

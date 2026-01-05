@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { TimeRangeSelector } from "@/components/analytics/TimeRangeSelector";
 import { MetricKpiCard } from "@/components/analytics/MetricKpiCard";
 import { CaseVolumeChart } from "@/components/analytics/CaseVolumeChart";
@@ -31,20 +31,19 @@ export default function CaseAnalytics() {
   const { organization } = useOrganization();
   const [timeRangePreset, setTimeRangePreset] = useState<TimeRangePreset>("last_30_days");
 
+  useSetBreadcrumbs([
+    { label: "Analytics", href: "/analytics" },
+    { label: "Case Analytics" },
+  ]);
+
   const timeRange = createPresetTimeRange(timeRangePreset);
   const comparisonPreset = COMPARISON_MAP[timeRangePreset];
   const organizationId = organization?.id || "";
-
-  const breadcrumbItems = [
-    { label: "Analytics", href: "/analytics" },
-    { label: "Case Analytics" },
-  ];
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="space-y-4">
-        <BreadcrumbNav items={breadcrumbItems} />
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">

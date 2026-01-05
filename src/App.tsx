@@ -8,6 +8,7 @@ import { OrganizationProvider } from "./contexts/OrganizationContext";
 import { GlobalLoadingProvider } from "./contexts/GlobalLoadingContext";
 import { GlobalLoadingIndicator } from "./components/ui/global-loading-indicator";
 import { RouteTransitionDetector } from "./hooks/use-route-transition";
+import { BreadcrumbProvider } from "./contexts/BreadcrumbContext";
 import Auth from "./pages/Auth";
 import { Onboarding } from "./components/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -72,7 +73,8 @@ const App = () => {
           disableTransitionOnChange
         >
           <OrganizationProvider>
-            <BrowserRouter>
+            <BreadcrumbProvider>
+              <BrowserRouter>
               <GlobalLoadingIndicator />
               <RouteTransitionDetector />
               <Toaster />
@@ -432,7 +434,8 @@ const App = () => {
         />
         <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
+              </BrowserRouter>
+            </BreadcrumbProvider>
           </OrganizationProvider>
         </ThemeProvider>
       </GlobalLoadingProvider>

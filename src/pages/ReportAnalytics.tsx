@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { TimeRangeSelector } from "@/components/analytics/TimeRangeSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,6 +80,11 @@ function SimpleKpiCard({ title, value, icon, change, subtitle, loading }: Simple
 export default function ReportAnalytics() {
   const { organization } = useOrganization();
   const [timeRangePreset, setTimeRangePreset] = useState<TimeRangePreset>("last_30_days");
+
+  useSetBreadcrumbs([
+    { label: "Analytics", href: "/analytics" },
+    { label: "Reports" },
+  ]);
 
   const timeRange = useMemo(() => {
     const resolved = resolveTimeRange({ type: "preset", preset: timeRangePreset });
@@ -216,12 +221,6 @@ export default function ReportAnalytics() {
 
   return (
     <div className="container mx-auto py-6 px-4 space-y-6">
-      <BreadcrumbNav
-        items={[
-          { label: "Analytics", href: "/analytics" },
-          { label: "Reports", href: "/analytics/reports" },
-        ]}
-      />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
