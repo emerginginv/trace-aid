@@ -873,7 +873,14 @@ const Dashboard = () => {
       {editingEvent && <ActivityForm caseId={editingEvent.caseId} activityType="event" users={users} open={!!editingEvent} onOpenChange={open => !open && setEditingEvent(null)} onSuccess={() => {
       setEditingEvent(null);
       window.location.reload();
-    }} editingActivity={editingEvent.activityData} organizationId={organization?.id || ""} />}
+    }} editingActivity={editingEvent.activityData} organizationId={organization?.id || ""} onDuplicate={(duplicateData) => {
+      setEditingEvent({
+        ...editingEvent,
+        id: `duplicate-${Date.now()}`,
+        title: duplicateData.title,
+        activityData: { ...duplicateData, id: undefined },
+      });
+    }} />}
 
       {editingUpdate && <UpdateForm caseId={editingUpdate.caseId} open={!!editingUpdate} onOpenChange={open => !open && setEditingUpdate(null)} onSuccess={() => {
       setEditingUpdate(null);

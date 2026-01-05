@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ExternalLink } from "lucide-react";
+import { CalendarIcon, ExternalLink, Copy } from "lucide-react";
 import { format, formatISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -68,6 +68,7 @@ interface ActivityFormProps {
   editingActivity?: any;
   prefilledDate?: Date;
   organizationId: string;
+  onDuplicate?: (activityData: any) => void;
 }
 
 export function ActivityForm({
@@ -80,6 +81,7 @@ export function ActivityForm({
   editingActivity,
   prefilledDate,
   organizationId,
+  onDuplicate,
 }: ActivityFormProps) {
   const [caseTitle, setCaseTitle] = useState<string>("");
   const [dueDateOpen, setDueDateOpen] = useState(false);
@@ -630,7 +632,7 @@ export function ActivityForm({
               </div>
             )}
 
-            <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end pt-4">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 justify-between pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -639,9 +641,31 @@ export function ActivityForm({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
-                {editingActivity ? `Update ${activityType === "task" ? "Task" : "Event"}` : `Add ${activityType === "task" ? "Task" : "Event"}`}
-              </Button>
+              <div className="flex flex-col-reverse sm:flex-row gap-3">
+                {editingActivity && activityType === "event" && onDuplicate && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const formValues = form.getValues();
+                      onDuplicate({
+                        ...editingActivity,
+                        ...formValues,
+                        id: undefined,
+                        title: `${formValues.title} (Copy)`,
+                      });
+                      onOpenChange(false);
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Duplicate
+                  </Button>
+                )}
+                <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
+                  {editingActivity ? `Update ${activityType === "task" ? "Task" : "Event"}` : `Add ${activityType === "task" ? "Task" : "Event"}`}
+                </Button>
+              </div>
             </div>
           </form>
         </Form>
