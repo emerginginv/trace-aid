@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { getPlanLimits } from "@/lib/planLimits";
 
-interface Organization {
+export interface Organization {
   id: string;
   name: string;
   slug: string | null;
@@ -19,7 +19,7 @@ interface Organization {
   storage_used_gb: number;
 }
 
-interface SubscriptionStatus {
+export interface SubscriptionStatus {
   subscribed: boolean;
   product_id: string | null;
   subscription_end: string | null;
