@@ -73,7 +73,7 @@ export class AnalyticsEngine {
   }
 
   private async executeCount(table: SourceTable, conditions: Filter[], config: AnalyticsQuery): Promise<number> {
-    let query: any = (supabase.from(table) as any).select("id", { count: "exact", head: true }).eq("organization_id", config.organizationId);
+    let query: any = (supabase as any).from(table).select("id", { count: "exact", head: true }).eq("organization_id", config.organizationId);
     query = applyFiltersToQuery(query, conditions);
     if (config.timeRange) {
       const { start, end } = resolveTimeRange(config.timeRange);
@@ -86,7 +86,7 @@ export class AnalyticsEngine {
   }
 
   private async executeSum(table: SourceTable, field: string, conditions: Filter[], config: AnalyticsQuery): Promise<number> {
-    let query: any = (supabase.from(table) as any).select(field).eq("organization_id", config.organizationId);
+    let query: any = (supabase as any).from(table).select(field).eq("organization_id", config.organizationId);
     query = applyFiltersToQuery(query, conditions);
     if (config.timeRange) {
       const { start, end } = resolveTimeRange(config.timeRange);
@@ -99,7 +99,7 @@ export class AnalyticsEngine {
   }
 
   private async executeAverage(table: SourceTable, field: string, conditions: Filter[], config: AnalyticsQuery): Promise<number> {
-    let query: any = (supabase.from(table) as any).select(field).eq("organization_id", config.organizationId);
+    let query: any = (supabase as any).from(table).select(field).eq("organization_id", config.organizationId);
     query = applyFiltersToQuery(query, conditions);
     if (config.timeRange) {
       const { start, end } = resolveTimeRange(config.timeRange);
@@ -121,7 +121,7 @@ export class AnalyticsEngine {
   }
 
   private async executeDuration(calc: Extract<MetricCalculation, { type: "duration" }>, config: AnalyticsQuery): Promise<number> {
-    let query: any = (supabase.from(calc.table) as any).select(`${calc.startField}, ${calc.endField}`).eq("organization_id", config.organizationId);
+    let query: any = (supabase as any).from(calc.table).select(`${calc.startField}, ${calc.endField}`).eq("organization_id", config.organizationId);
     if (calc.conditions) query = applyFiltersToQuery(query, calc.conditions);
     if (config.timeRange) {
       const { start, end } = resolveTimeRange(config.timeRange);
