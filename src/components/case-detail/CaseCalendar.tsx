@@ -6,6 +6,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, Clock, AlertCircle, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { usePanelVisibility } from "@/hooks/use-panel-visibility";
+import { useUserRole } from "@/hooks/useUserRole";
+import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  useDraggable,
+} from "@dnd-kit/core";
 import {
   startOfMonth,
   endOfMonth,
@@ -34,6 +47,76 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ActivityForm } from "./ActivityForm";
 import { useOrganization } from "@/contexts/OrganizationContext";
+
+// Droppable day component for calendar grid
+function DroppableDay({ dateStr, isOver, children }: { 
+  dateStr: string; 
+  isOver: boolean;
+  children: React.ReactNode; 
+}) {
+  const { setNodeRef } = useDroppable({ id: dateStr });
+  
+  return (
+    <div 
+      ref={setNodeRef} 
+      className={cn(
+        "transition-all duration-200",
+        isOver && "ring-2 ring-primary ring-inset bg-primary/10"
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Draggable event component
+interface DraggableEventProps {
+  event: CalendarActivity;
+  canDrag: boolean;
+  onClick: () => void;
+  userColor: string;
+  userName: string;
+}
+
+function DraggableEvent({ event, canDrag, onClick, userColor, userName }: DraggableEventProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: event.id,
+    disabled: !canDrag,
+  });
+  
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    zIndex: 1000,
+  } : undefined;
+  
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        backgroundColor: `${userColor}20`,
+        borderLeftColor: userColor,
+        color: userColor,
+        ...style,
+      }}
+      {...(canDrag ? { ...listeners, ...attributes } : {})}
+      onClick={(e) => {
+        if (!isDragging) {
+          e.stopPropagation();
+          onClick();
+        }
+      }}
+      className={cn(
+        "text-xs rounded px-2 py-1 truncate border-l-2 transition-all",
+        isDragging && "opacity-50 shadow-lg",
+        canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+        "hover:opacity-80"
+      )}
+      title={`${event.title} - ${userName}${canDrag ? " (drag to reschedule)" : ""}`}
+    >
+      📅 {event.title}
+    </div>
+  );
+}
 
 interface CalendarActivity {
   id: string;
@@ -70,6 +153,7 @@ export const CaseCalendar = forwardRef<
   CaseCalendarProps
 >(({ caseId, filterCase, filterUser, filterUsers, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false, showTaskList: externalShowTaskList, onToggleTaskList }, ref) => {
   const { organization } = useOrganization();
+  const { isManager, isAdmin } = useUserRole();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -84,6 +168,19 @@ export const CaseCalendar = forwardRef<
   const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>(caseId);
   const [taskListFilter, setTaskListFilter] = useState<string>("all");
   const isDuplicatingRef = useRef(false);
+  
+  // Drag-and-drop state
+  const [activeEvent, setActiveEvent] = useState<CalendarActivity | null>(null);
+  const canDragEvents = (isManager || isAdmin) && !isClosedCase;
+  
+  // DnD sensors - require 8px drag before activation to prevent accidental drags
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
   
   // Internal task list visibility state (used when parent doesn't control it)
   const { isVisible: internalShowTaskList, toggle: internalToggleTaskList } = usePanelVisibility(
@@ -421,6 +518,74 @@ export const CaseCalendar = forwardRef<
     });
   };
 
+  // Drag-and-drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const draggedEvent = activities.find(a => a.id === event.active.id);
+    if (draggedEvent) {
+      setActiveEvent(draggedEvent);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const draggedEvent = activeEvent;
+    setActiveEvent(null);
+    
+    const { active, over } = event;
+    if (!over || !active || !draggedEvent) return;
+    
+    const eventId = active.id as string;
+    const targetDateStr = over.id as string;
+    
+    // Only allow dragging events (not tasks)
+    if (draggedEvent.type !== "event") return;
+    
+    // Parse original date to preserve time
+    const originalDate = new Date(draggedEvent.date);
+    const targetDate = new Date(targetDateStr);
+    
+    // If dropping on the same day, do nothing
+    if (isSameDay(originalDate, targetDate)) return;
+    
+    // Preserve the original time on the new date
+    targetDate.setHours(originalDate.getHours(), originalDate.getMinutes(), 0, 0);
+    
+    // Store previous state for rollback
+    const previousActivities = [...activities];
+    
+    // Optimistic update - immediately show event in new position
+    setActivities(prev => prev.map(a => 
+      a.id === eventId ? { ...a, date: targetDate.toISOString() } : a
+    ));
+    
+    // Update in database
+    try {
+      const { error } = await supabase
+        .from("case_activities")
+        .update({ due_date: targetDate.toISOString() })
+        .eq("id", eventId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Event rescheduled",
+        description: `Moved to ${format(targetDate, "MMMM d, yyyy")}`,
+      });
+    } catch (error) {
+      console.error("Error rescheduling event:", error);
+      // Rollback on failure
+      setActivities(previousActivities);
+      toast({
+        title: "Error",
+        description: "Failed to reschedule event",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveEvent(null);
+  };
+
   const calendarDays = getCalendarDays();
 
   if (loading) {
@@ -562,72 +727,89 @@ export const CaseCalendar = forwardRef<
           </div>
         </div>
 
-        {/* Calendar Grid - EVENTS ONLY */}
-        <div className="border rounded-lg overflow-hidden bg-card">
-          {/* Weekday Headers */}
-          <div className="grid grid-cols-7 border-b bg-muted/50">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-              <div key={day} className="p-2 text-center text-sm font-medium">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Days */}
-          <div className="grid grid-cols-7">
-            {calendarDays.map((day, idx) => {
-              const dayEvents = getEventsForDay(day);
-              const isCurrentMonth = isSameMonth(day, currentDate);
-              const isDayToday = isToday(day);
-
-              return (
-                <div
-                  key={idx}
-                  onClick={() => handleDayClick(day)}
-                  className={`min-h-[100px] border-b border-r p-2 cursor-pointer hover:bg-muted/50 transition-colors relative group ${
-                    !isCurrentMonth ? "bg-muted/20 text-muted-foreground" : ""
-                  } ${isDayToday ? "bg-primary/5 ring-1 ring-primary/20" : ""}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className={`text-sm font-medium ${isDayToday ? "text-primary font-bold" : ""}`}>
-                      {format(day, "d")}
-                    </div>
-                    <Plus className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
-                  </div>
-
-                  <div className="space-y-1">
-                    {dayEvents.slice(0, 3).map(event => {
-                      const userColor = getUserColor(event.assigned_user_id);
-                      return (
-                        <div
-                          key={event.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleActivityClick(event);
-                          }}
-                          className="text-xs rounded px-2 py-1 truncate cursor-pointer hover:opacity-80 transition-opacity border-l-2"
-                          style={{
-                            backgroundColor: `${userColor}20`,
-                            borderLeftColor: userColor,
-                            color: userColor
-                          }}
-                          title={`${event.title} - ${getUserName(event.assigned_user_id)}`}
-                        >
-                          📅 {event.title}
-                        </div>
-                      );
-                    })}
-                    {dayEvents.length > 3 && (
-                      <div className="text-xs text-muted-foreground px-1.5">
-                        +{dayEvents.length - 3} more
-                      </div>
-                    )}
-                  </div>
+        {/* Calendar Grid - EVENTS ONLY with Drag-and-Drop */}
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="border rounded-lg overflow-hidden bg-card">
+            {/* Weekday Headers */}
+            <div className="grid grid-cols-7 border-b bg-muted/50">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                <div key={day} className="p-2 text-center text-sm font-medium">
+                  {day}
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7">
+              {calendarDays.map((day, idx) => {
+                const dayEvents = getEventsForDay(day);
+                const isCurrentMonth = isSameMonth(day, currentDate);
+                const isDayToday = isToday(day);
+                const dateStr = format(day, "yyyy-MM-dd");
+                const isDropTarget = activeEvent && !isSameDay(day, new Date(activeEvent.date));
+
+                return (
+                  <DroppableDay key={idx} dateStr={dateStr} isOver={!!isDropTarget}>
+                    <div
+                      onClick={() => handleDayClick(day)}
+                      className={cn(
+                        "min-h-[100px] border-b border-r p-2 cursor-pointer hover:bg-muted/50 transition-colors relative group",
+                        !isCurrentMonth && "bg-muted/20 text-muted-foreground",
+                        isDayToday && "bg-primary/5 ring-1 ring-primary/20"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={cn("text-sm font-medium", isDayToday && "text-primary font-bold")}>
+                          {format(day, "d")}
+                        </div>
+                        <Plus className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                      </div>
+
+                      <div className="space-y-1">
+                        {dayEvents.slice(0, 3).map(event => (
+                          <DraggableEvent
+                            key={event.id}
+                            event={event}
+                            canDrag={canDragEvents}
+                            onClick={() => handleActivityClick(event)}
+                            userColor={getUserColor(event.assigned_user_id)}
+                            userName={getUserName(event.assigned_user_id)}
+                          />
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <div className="text-xs text-muted-foreground px-1.5">
+                            +{dayEvents.length - 3} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </DroppableDay>
+                );
+              })}
+            </div>
           </div>
-        </div>
+
+          {/* Drag Overlay for smooth visual feedback */}
+          <DragOverlay>
+            {activeEvent && (
+              <div
+                className="text-xs rounded px-2 py-1 truncate border-l-2 shadow-lg bg-card"
+                style={{
+                  backgroundColor: `${getUserColor(activeEvent.assigned_user_id)}20`,
+                  borderLeftColor: getUserColor(activeEvent.assigned_user_id),
+                  color: getUserColor(activeEvent.assigned_user_id),
+                }}
+              >
+                📅 {activeEvent.title}
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
 
         </div>
 
