@@ -588,16 +588,16 @@ const CaseDetail = () => {
         </Alert>
       )}
       
-      {/* Header - Single Row */}
-      <div className="flex items-start gap-2 sm:gap-4 flex-wrap">
+      {/* Header */}
+      <div className="flex items-start gap-2 sm:gap-4">
         <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
           <Link to="/cases">
             <ChevronLeft className="h-5 w-5" />
           </Link>
         </Button>
         
-        <div className="flex-1 min-w-0 max-w-[200px] sm:max-w-none">
-          <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate sm:whitespace-normal sm:overflow-visible leading-tight ${isClosed ? 'text-muted-foreground' : ''}`} title={caseData.title}>
+        <div className="flex-1 min-w-0">
+          <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate md:whitespace-normal md:overflow-visible leading-tight ${isClosed ? 'text-muted-foreground' : ''}`} title={caseData.title}>
             {caseData.title}
           </h1>
           <p className={`text-xs mt-0.5 font-medium ${isClosed ? 'text-muted-foreground' : 'text-primary'}`}>
@@ -605,59 +605,61 @@ const CaseDetail = () => {
           </p>
         </div>
         
-        {/* Status Dropdown */}
-        {!isVendor && (
-          <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-            <SelectTrigger className={`w-[120px] sm:w-[140px] h-9 text-sm shrink-0 ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {caseStatuses.map(status => (
-                <SelectItem key={status.id} value={status.value}>
-                  {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        
-        {/* Vendor Status Badge */}
-        {isVendor && (
-          <Badge className="border shrink-0" style={getStatusStyle(caseData.status)}>
-            {caseData.status}
-          </Badge>
-        )}
-        
-        {/* Desktop Action Buttons */}
-        {!isVendor && !isMobile && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" className="h-9 px-3" onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
-              <Mail className="h-4 w-4 mr-2" />
-              Send Email
-            </Button>
-            {hasPermission('view_reports') && (
-              <Button variant="outline" className="h-9 px-3" onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
-                <FileText className="h-4 w-4 mr-2" />
-                Report
+        {/* Status + Actions Group */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Status Dropdown */}
+          {!isVendor && (
+            <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
+              <SelectTrigger className={`w-[120px] sm:w-[140px] h-9 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {caseStatuses.map(status => (
+                  <SelectItem key={status.id} value={status.value}>
+                    {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
+          {/* Vendor Status Badge */}
+          {isVendor && (
+            <Badge className="border" style={getStatusStyle(caseData.status)}>
+              {caseData.status}
+            </Badge>
+          )}
+          
+          {/* Desktop Action Buttons */}
+          {!isVendor && !isMobile && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" className="h-9 px-3" onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
+                <Mail className="h-4 w-4 mr-2" />
+                Send Email
               </Button>
-            )}
-            {hasPermission('edit_cases') && (
-              <Button variant="outline" className="h-9 px-3" onClick={() => setEditFormOpen(true)} disabled={isClosed}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            )}
-            {hasPermission('delete_cases') && (
-              <Button variant="outline" className="h-9 px-3 text-destructive hover:bg-destructive/10" onClick={handleDelete} disabled={deleting}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                {deleting ? "Deleting..." : "Delete"}
-              </Button>
-            )}
-          </div>
-        )}
-        
-        {/* Mobile Action Menu */}
-        {!isVendor && isMobile && (
+              {hasPermission('view_reports') && (
+                <Button variant="outline" className="h-9 px-3" onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Report
+                </Button>
+              )}
+              {hasPermission('edit_cases') && (
+                <Button variant="outline" className="h-9 px-3" onClick={() => setEditFormOpen(true)} disabled={isClosed}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              {hasPermission('delete_cases') && (
+                <Button variant="outline" className="h-9 px-3 text-destructive hover:bg-destructive/10" onClick={handleDelete} disabled={deleting}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleting ? "Deleting..." : "Delete"}
+                </Button>
+              )}
+            </div>
+          )}
+          
+          {/* Mobile Action Menu */}
+          {!isVendor && isMobile && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" className="shrink-0 h-9 w-9">
@@ -693,7 +695,8 @@ const CaseDetail = () => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Tabs - Now at top */}
