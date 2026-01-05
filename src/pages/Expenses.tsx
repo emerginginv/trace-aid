@@ -127,22 +127,14 @@ export default function Expenses() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) throw new Error("User not in organization");
+      if (!organization?.id) throw new Error("Organization not found");
 
       const { error } = await supabase
         .from("case_finances")
         .insert({
           case_id: selectedCaseId,
           user_id: user.id,
-          organization_id: orgMember.organization_id,
+          organization_id: organization.id,
           finance_type: "expense",
           description,
           amount: parseFloat(amount),

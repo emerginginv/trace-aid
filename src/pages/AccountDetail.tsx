@@ -7,6 +7,7 @@ import { ArrowLeft, Building2, Mail, Phone, MapPin, Edit, Users } from "lucide-r
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AccountDetailSkeleton } from "@/components/ui/detail-page-skeleton";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface Account {
   id: string;
@@ -32,37 +33,26 @@ interface Contact {
 const AccountDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { organization } = useOrganization();
   const [account, setAccount] = useState<Account | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAccountDetails();
-  }, [id]);
+    if (organization?.id) {
+      fetchAccountDetails();
+    }
+  }, [id, organization?.id]);
 
   const fetchAccountDetails = async () => {
+    if (!organization?.id) return;
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get user's organization
-      const { data: orgMember } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!orgMember) {
-        setLoading(false);
-        return;
-      }
-
       const { data: accountData, error: accountError } = await supabase
         .from("accounts")
         .select("*")
         .eq("id", id)
-        .eq("organization_id", orgMember.organization_id)
+        .eq("organization_id", organization.id)
         .single();
 
       if (accountError) throw accountError;
@@ -72,7 +62,7 @@ const AccountDetail = () => {
         .from("contacts")
         .select("id, first_name, last_name, email, phone")
         .eq("account_id", id)
-        .eq("organization_id", orgMember.organization_id);
+        .eq("organization_id", organization.id);
 
       if (contactsError) throw contactsError;
       setContacts(contactsData || []);
