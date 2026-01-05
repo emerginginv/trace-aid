@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -6,6 +6,7 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { AttachmentViewerHeader } from "@/components/attachment-viewer/AttachmentViewerHeader";
 import { FullscreenPdfViewer } from "@/components/attachment-viewer/FullscreenPdfViewer";
 import { ImageViewer } from "@/components/attachment-viewer/ImageViewer";
+import { usePreviewLogging } from "@/hooks/use-preview-logging";
 import { Loader2, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -27,6 +28,8 @@ export default function AttachmentViewer() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const caseId = searchParams.get("caseId");
+  const { logPreview } = usePreviewLogging();
+  const hasLoggedPreview = useRef(false);
 
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [caseAttachments, setCaseAttachments] = useState<Attachment[]>([]);
@@ -120,15 +123,22 @@ export default function AttachmentViewer() {
         setFileData(arrayBuffer);
       }
 
+      // Log the preview for audit
+      if (!hasLoggedPreview.current) {
+        logPreview(attachmentData.id, 'case', 'fullscreen');
+        hasLoggedPreview.current = true;
+      }
+
       setLoading(false);
     } catch (err) {
       console.error("Error fetching attachment:", err);
       setError("Failed to load attachment");
       setLoading(false);
     }
-  }, [id]);
+  }, [id, logPreview]);
 
   useEffect(() => {
+    hasLoggedPreview.current = false;
     fetchAttachmentData();
 
     return () => {

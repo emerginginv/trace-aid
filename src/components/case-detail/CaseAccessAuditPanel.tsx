@@ -9,7 +9,8 @@ import {
   CheckCircle, 
   Clock, 
   ShieldOff,
-  Filter
+  Filter,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,13 +34,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { PreviewAuditLog } from "./PreviewAuditLog";
 
 interface Attachment {
   id: string;
   file_name: string;
+  file_type?: string;
   name?: string | null;
 }
 
@@ -107,6 +111,7 @@ export function CaseAccessAuditPanel({
   canExport = false,
 }: CaseAccessAuditPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"external" | "internal">("external");
   const [logs, setLogs] = useState<AccessLogEntry[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileInfo>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -248,113 +253,132 @@ export function CaseAccessAuditPanel({
 
       <CollapsibleContent>
         <div className="p-4 pt-0 space-y-4">
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={fileFilter} onValueChange={setFileFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="All files" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All files</SelectItem>
-                  {attachments.map((attachment) => (
-                    <SelectItem key={attachment.id} value={attachment.id}>
-                      {attachment.name || attachment.file_name}
-                    </SelectItem>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "external" | "internal")}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="external" className="gap-2">
+                <Link2 className="h-4 w-4" />
+                External Access
+              </TabsTrigger>
+              <TabsTrigger value="internal" className="gap-2">
+                <Eye className="h-4 w-4" />
+                Internal Previews
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="external" className="space-y-4 mt-0">
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select value={fileFilter} onValueChange={setFileFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="All files" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All files</SelectItem>
+                      {attachments.map((attachment) => (
+                        <SelectItem key={attachment.id} value={attachment.id}>
+                          {attachment.name || attachment.file_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="All status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                    <SelectItem value="revoked">Revoked</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="flex-1" />
+
+                <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={isLoading}>
+                  <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                </Button>
+
+                {canExport && filteredLogs.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                )}
+              </div>
+
+              {/* Table */}
+              {isLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="All status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
-                <SelectItem value="revoked">Revoked</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="flex-1" />
-
-            <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={isLoading}>
-              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-            </Button>
-
-            {canExport && filteredLogs.length > 0 && (
-              <Button variant="outline" size="sm" onClick={handleExportCSV}>
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-            )}
-          </div>
-
-          {/* Table */}
-          {isLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : filteredLogs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Link2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>
-                {logs.length === 0
-                  ? "No access links have been created for this case."
-                  : "No links match the current filters."}
-              </p>
-            </div>
-          ) : (
-            <div className="border rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>File</TableHead>
-                    <TableHead>Created By</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Accessed</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredLogs.map((log) => {
-                    const attachment = attachmentMap.get(log.attachment_id);
-                    const creator = profiles[log.created_by_user_id];
-                    const { status, label } = getAccessStatus(log);
-
-                    return (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-medium max-w-[200px] truncate">
-                          {attachment?.name || attachment?.file_name || "Unknown"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {creator?.full_name || creator?.email || "Unknown"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {format(new Date(log.created_at), "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={status} label={label} />
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {log.access_count > 0 ? (
-                            <span>{log.access_count} time{log.access_count !== 1 ? "s" : ""}</span>
-                          ) : (
-                            <span className="italic">Never</span>
-                          )}
-                        </TableCell>
+                </div>
+              ) : filteredLogs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Link2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>
+                    {logs.length === 0
+                      ? "No access links have been created for this case."
+                      : "No links match the current filters."}
+                  </p>
+                </div>
+              ) : (
+                <div className="border rounded-md overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>File</TableHead>
+                        <TableHead>Created By</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Accessed</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLogs.map((log) => {
+                        const attachment = attachmentMap.get(log.attachment_id);
+                        const creator = profiles[log.created_by_user_id];
+                        const { status, label } = getAccessStatus(log);
+
+                        return (
+                          <TableRow key={log.id}>
+                            <TableCell className="font-medium max-w-[200px] truncate">
+                              {attachment?.name || attachment?.file_name || "Unknown"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {creator?.full_name || creator?.email || "Unknown"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {format(new Date(log.created_at), "MMM d, yyyy")}
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge status={status} label={label} />
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground">
+                              {log.access_count > 0 ? (
+                                <span>{log.access_count} time{log.access_count !== 1 ? "s" : ""}</span>
+                              ) : (
+                                <span className="italic">Never</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="internal" className="mt-0">
+              <PreviewAuditLog caseId={caseId} attachments={attachments} />
+            </TabsContent>
+          </Tabs>
         </div>
       </CollapsibleContent>
     </Collapsible>
