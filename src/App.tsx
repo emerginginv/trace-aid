@@ -45,6 +45,7 @@ import BudgetAnalytics from "./pages/BudgetAnalytics";
 import TimeExpenseAnalytics from "./pages/TimeExpenseAnalytics";
 import ActivityAnalytics from "./pages/ActivityAnalytics";
 import ReportAnalytics from "./pages/ReportAnalytics";
+import SystemSecurityAnalytics from "./pages/SystemSecurityAnalytics";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -211,6 +212,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <ReportAnalytics />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics/system"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <DashboardLayout>
+                <SystemSecurityAnalytics />
               </DashboardLayout>
             </ProtectedRoute>
           }
