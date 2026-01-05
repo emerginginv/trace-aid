@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar, FileText, Info, Wallet, Receipt, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Building2, LogOut, Shield, DollarSign, Settings, Calendar, FileText, Info, Wallet, Receipt, BarChart3, ClipboardList } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
@@ -56,6 +56,11 @@ const allMenuItems = [{
   icon: BarChart3,
   url: "/analytics",
   roles: ['admin', 'manager', 'investigator']
+}, {
+  title: "Reports",
+  icon: ClipboardList,
+  url: "/reports",
+  roles: ['admin', 'manager']
 }, {
   title: "Accounts",
   icon: Building2,

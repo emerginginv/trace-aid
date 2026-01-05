@@ -46,6 +46,8 @@ import TimeExpenseAnalytics from "./pages/TimeExpenseAnalytics";
 import ActivityAnalytics from "./pages/ActivityAnalytics";
 import ReportAnalytics from "./pages/ReportAnalytics";
 import SystemSecurityAnalytics from "./pages/SystemSecurityAnalytics";
+import ReportsHub from "./pages/reports/index";
+import ReportViewer from "./pages/reports/ReportViewer";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -403,6 +405,27 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <AttachmentViewer />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Reports Hub */}
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <ReportsHub />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports/:reportId"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <ReportViewer />
               </DashboardLayout>
             </ProtectedRoute>
           }
