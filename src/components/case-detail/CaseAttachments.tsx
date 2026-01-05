@@ -34,6 +34,7 @@ import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { AttachmentPreviewThumbnail } from "./AttachmentPreviewThumbnail";
 import { useSortPreference } from "@/hooks/use-sort-preference";
+import { PdfViewer } from "./PdfViewer";
 
 interface Attachment {
   id: string;
@@ -109,11 +110,12 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const [accessLogDialogOpen, setAccessLogDialogOpen] = useState(false);
   const [accessLogAttachment, setAccessLogAttachment] = useState<Attachment | null>(null);
   
-  // PDF Blob URL state (to bypass blocked signed URLs)
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [pdfBlobLoading, setPdfBlobLoading] = useState(false);
-  const [pdfBlobError, setPdfBlobError] = useState<string | null>(null);
-  const pdfBlobUrlRef = useRef<string | null>(null);
+  // File Blob state (to bypass blocked signed URLs for all file types)
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewBlobData, setPreviewBlobData] = useState<ArrayBuffer | null>(null);
+  const [previewBlobLoading, setPreviewBlobLoading] = useState(false);
+  const [previewBlobError, setPreviewBlobError] = useState<string | null>(null);
+  const previewBlobUrlRef = useRef<string | null>(null);
   
   // Confirmation hook for single revoke
   const { confirm, ConfirmDialog } = useConfirmation();
@@ -133,26 +135,27 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     fetchAttachments();
   }, [caseId]);
 
-  // Effect to load PDF as blob when previewing
+  // Effect to load file as blob when previewing (for all file types to avoid signed URL blocking)
   useEffect(() => {
     // Cleanup function for blob URL
     const cleanupBlobUrl = () => {
-      if (pdfBlobUrlRef.current) {
-        URL.revokeObjectURL(pdfBlobUrlRef.current);
-        pdfBlobUrlRef.current = null;
+      if (previewBlobUrlRef.current) {
+        URL.revokeObjectURL(previewBlobUrlRef.current);
+        previewBlobUrlRef.current = null;
       }
-      setPdfBlobUrl(null);
-      setPdfBlobError(null);
+      setPreviewBlobUrl(null);
+      setPreviewBlobData(null);
+      setPreviewBlobError(null);
     };
 
-    const loadPdfBlob = async () => {
-      if (!previewAttachment || !previewAttachment.file_type.includes("pdf")) {
+    const loadPreviewBlob = async () => {
+      if (!previewAttachment) {
         cleanupBlobUrl();
         return;
       }
 
-      setPdfBlobLoading(true);
-      setPdfBlobError(null);
+      setPreviewBlobLoading(true);
+      setPreviewBlobError(null);
       cleanupBlobUrl();
 
       try {
@@ -163,18 +166,24 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
         if (error) throw error;
         if (!data) throw new Error("No data received");
 
+        // Store ArrayBuffer for PdfViewer
+        if (previewAttachment.file_type.includes("pdf")) {
+          const arrayBuffer = await data.arrayBuffer();
+          setPreviewBlobData(arrayBuffer);
+        }
+
         const blobUrl = URL.createObjectURL(data);
-        pdfBlobUrlRef.current = blobUrl;
-        setPdfBlobUrl(blobUrl);
+        previewBlobUrlRef.current = blobUrl;
+        setPreviewBlobUrl(blobUrl);
       } catch (error) {
-        console.error("Error loading PDF:", error);
-        setPdfBlobError("Failed to load PDF preview");
+        console.error("Error loading file preview:", error);
+        setPreviewBlobError("Failed to load file preview");
       } finally {
-        setPdfBlobLoading(false);
+        setPreviewBlobLoading(false);
       }
     };
 
-    loadPdfBlob();
+    loadPreviewBlob();
 
     return cleanupBlobUrl;
   }, [previewAttachment]);
@@ -185,29 +194,9 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     }
   }, [attachments]);
 
-  useEffect(() => {
-    // Generate signed URLs for all attachments
-    const generatePreviewUrls = async () => {
-      const urls: Record<string, string> = {};
-      for (const attachment of attachments) {
-        try {
-          const { data, error } = await supabase.storage
-            .from("case-attachments")
-            .createSignedUrl(attachment.file_path, 3600);
-          if (data && !error) {
-            urls[attachment.id] = data.signedUrl;
-          }
-        } catch (error) {
-          console.error("Error generating signed URL:", error);
-        }
-      }
-      setPreviewUrls(urls);
-    };
-
-    if (attachments.length > 0) {
-      generatePreviewUrls();
-    }
-  }, [attachments]);
+  // Note: We no longer generate signed URLs for all attachments
+  // Instead, we use authenticated downloads (blob URLs) which bypass blocked signed URL patterns
+  // The previewUrls state is kept for compatibility but no longer populated
 
   const fetchAttachments = async () => {
     try {
@@ -651,62 +640,60 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const renderPreviewContent = () => {
     if (!previewAttachment) return null;
 
-    const signedUrl = previewUrls[previewAttachment.id];
+    // Show loading state while fetching file blob
+    if (previewBlobLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 h-[70vh] bg-muted/30 rounded">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4" />
+          <p className="text-muted-foreground">Loading preview...</p>
+        </div>
+      );
+    }
 
-    // Handle PDFs first - they use blob URLs, not signed URLs
+    // Show error state with download option
+    if (previewBlobError || !previewBlobUrl) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 h-[70vh] bg-muted/30 rounded">
+          <FileText className="h-16 w-16 mb-4 text-muted-foreground" />
+          <p className="text-lg font-medium mb-2">Preview not available</p>
+          <p className="text-muted-foreground mb-4">
+            {previewBlobError || "Loading..."}
+          </p>
+          <Button onClick={() => handleDownload(previewAttachment)}>
+            <Download className="h-4 w-4 mr-2" />
+            Download File
+          </Button>
+        </div>
+      );
+    }
+
+    // Handle PDFs with PdfViewer component
     if (previewAttachment.file_type.includes("pdf")) {
-      // Show loading state while fetching PDF blob
-      if (pdfBlobLoading) {
-        return (
-          <div className="flex flex-col items-center justify-center py-12 h-[70vh] bg-muted/30 rounded">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4" />
-            <p className="text-muted-foreground">Loading PDF...</p>
-          </div>
-        );
-      }
-
-      // Show error state with download option
-      if (pdfBlobError || !pdfBlobUrl) {
+      if (!previewBlobData) {
         return (
           <div className="flex flex-col items-center justify-center py-12 h-[70vh] bg-muted/30 rounded">
             <FileText className="h-16 w-16 mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium mb-2">PDF preview not available</p>
-            <p className="text-muted-foreground mb-4">
-              {pdfBlobError || "Loading..."}
-            </p>
-            <Button onClick={() => handleDownload(previewAttachment)}>
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </Button>
+            <p className="text-lg font-medium mb-2">PDF preview loading...</p>
           </div>
         );
       }
 
-      // Render PDF from blob URL (bypasses blocked signed URLs)
       return (
-        <div className="flex flex-col h-full">
-          <object
-            data={pdfBlobUrl}
-            type="application/pdf"
-            className="w-full h-[70vh] rounded"
-            title={previewAttachment.file_name}
-          >
-            <div className="flex flex-col items-center justify-center py-12 h-[70vh] bg-muted/30 rounded">
-              <FileText className="h-16 w-16 mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium mb-2">PDF preview not available</p>
-              <p className="text-muted-foreground mb-4">
-                Your browser cannot display this PDF inline.
-              </p>
-              <Button onClick={() => handleDownload(previewAttachment)}>
-                <Download className="h-4 w-4 mr-2" />
-                Download PDF
-              </Button>
-            </div>
-          </object>
-          
-          {/* Action buttons below the PDF viewer */}
-          <div className="flex gap-2 justify-center mt-4 pt-4 border-t">
-            <Button variant="outline" size="sm" onClick={() => window.open(pdfBlobUrl, '_blank', 'noopener,noreferrer')}>
+        <PdfViewer
+          pdfData={previewBlobData}
+          fileName={previewAttachment.file_name}
+          onDownload={() => handleDownload(previewAttachment)}
+        />
+      );
+    }
+
+    // Handle images with blob URL
+    if (previewAttachment.file_type.startsWith("image/")) {
+      return (
+        <div className="flex flex-col items-center">
+          <img src={previewBlobUrl} alt={previewAttachment.file_name} className="max-w-full max-h-[80vh] rounded" />
+          <div className="flex gap-2 justify-center mt-4 pt-4 border-t w-full">
+            <Button variant="outline" size="sm" onClick={() => window.open(previewBlobUrl, '_blank', 'noopener,noreferrer')}>
               <ExternalLink className="h-4 w-4 mr-2" />
               Open in New Tab
             </Button>
@@ -719,35 +706,39 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
       );
     }
 
-    // For non-PDF files, we still need signed URLs
-    if (!signedUrl) {
+    // Handle videos with blob URL
+    if (previewAttachment.file_type.startsWith("video/")) {
       return (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading preview...</p>
+        <div className="flex flex-col">
+          <video controls className="w-full max-h-[80vh] rounded">
+            <source src={previewBlobUrl} type={previewAttachment.file_type} />
+          </video>
+          <div className="flex gap-2 justify-center mt-4 pt-4 border-t">
+            <Button variant="outline" size="sm" onClick={() => handleDownload(previewAttachment)}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
         </div>
       );
     }
 
-    if (previewAttachment.file_type.startsWith("image/")) {
-      return <img src={signedUrl} alt={previewAttachment.file_name} className="max-w-full max-h-[80vh] rounded" />;
-    }
-
-    if (previewAttachment.file_type.startsWith("video/")) {
-      return (
-        <video controls className="w-full max-h-[80vh] rounded">
-          <source src={signedUrl} type={previewAttachment.file_type} />
-        </video>
-      );
-    }
-
+    // Handle audio with blob URL
     if (previewAttachment.file_type.startsWith("audio/")) {
       return (
-        <audio controls className="w-full">
-          <source src={signedUrl} type={previewAttachment.file_type} />
-        </audio>
+        <div className="flex flex-col items-center gap-4">
+          <audio controls className="w-full">
+            <source src={previewBlobUrl} type={previewAttachment.file_type} />
+          </audio>
+          <Button variant="outline" size="sm" onClick={() => handleDownload(previewAttachment)}>
+            <Download className="h-4 w-4 mr-2" />
+            Download
+          </Button>
+        </div>
       );
     }
 
+    // Fallback for unsupported file types
     return (
       <div className="text-center py-12">
         <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
