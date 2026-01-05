@@ -10,6 +10,8 @@ import { toast } from "@/hooks/use-toast";
 import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical, Loader2, Maximize } from "lucide-react";
 import { generatePdfThumbnail, isPdfFile } from "@/lib/pdfThumbnail";
 import { useConfirmation } from "@/components/ui/confirmation-dialog";
+import { useBackgroundThumbnailGeneration, canGenerateThumbnail } from "@/hooks/use-background-thumbnail-generation";
+import { ThumbnailGenerationProgress } from "./ThumbnailGenerationProgress";
 import { RevokeMode } from "./RevokeAccessDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
@@ -126,6 +128,18 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   
   // Confirmation hook for single revoke
   const { confirm, ConfirmDialog } = useConfirmation();
+  
+  // Background thumbnail generation hook
+  const {
+    queue: thumbnailQueue,
+    isProcessing: thumbnailProcessing,
+    progress: thumbnailGenerationProgress,
+    addToQueue: addToThumbnailQueue,
+    retryFailed: retryFailedThumbnails,
+    retryOne: retryOneThumbnail,
+    cancelPending: cancelPendingThumbnails,
+    clearCompleted: clearCompletedThumbnails,
+  } = useBackgroundThumbnailGeneration();
   
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("case-attachments", "created_at", "desc");
@@ -340,8 +354,19 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
 
           if (uploadError) throw uploadError;
 
-          // Save metadata to database
-          const { error: dbError } = await supabase
+          // Get user's organization for the attachment
+          const { data: orgMember } = await supabase
+            .from("organization_members")
+            .select("organization_id")
+            .eq("user_id", user.id)
+            .limit(1)
+            .single();
+
+          const organizationId = orgMember?.organization_id;
+
+          // Save metadata to database with pending preview status for supported types
+          const canGenerate = canGenerateThumbnail(file.type || "application/octet-stream", file.name);
+          const { data: newAttachment, error: dbError } = await supabase
             .from("case_attachments")
             .insert({
               case_id: caseId,
@@ -350,9 +375,18 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
               file_path: filePath,
               file_type: file.type || "application/octet-stream",
               file_size: file.size,
-            });
+              organization_id: organizationId,
+              preview_status: canGenerate ? 'pending' : null,
+            })
+            .select()
+            .single();
 
           if (dbError) throw dbError;
+
+          // Add to thumbnail generation queue if supported
+          if (newAttachment && canGenerate) {
+            addToThumbnailQueue([newAttachment]);
+          }
 
           // Update status to complete
           setUploadingFiles((prev) =>
@@ -907,6 +941,17 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   return (
     <TooltipProvider>
       <div className="space-y-4">
+        {/* Thumbnail Generation Progress */}
+        <ThumbnailGenerationProgress
+          jobs={thumbnailQueue}
+          progress={thumbnailGenerationProgress}
+          isProcessing={thumbnailProcessing}
+          onRetryAll={retryFailedThumbnails}
+          onRetryOne={retryOneThumbnail}
+          onCancel={cancelPendingThumbnails}
+          onClearCompleted={clearCompletedThumbnails}
+        />
+
         {/* Selection Bar */}
         <AttachmentSelectionBar
           selectedCount={selectedIds.size}
