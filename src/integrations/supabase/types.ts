@@ -1520,6 +1520,7 @@ export type Database = {
           signature_name: string | null
           signature_phone: string | null
           signature_title: string | null
+          square_logo_url: string | null
           state: string | null
           terms: string | null
           timezone: string | null
@@ -1548,6 +1549,7 @@ export type Database = {
           signature_name?: string | null
           signature_phone?: string | null
           signature_title?: string | null
+          square_logo_url?: string | null
           state?: string | null
           terms?: string | null
           timezone?: string | null
@@ -1576,6 +1578,7 @@ export type Database = {
           signature_name?: string | null
           signature_phone?: string | null
           signature_title?: string | null
+          square_logo_url?: string | null
           state?: string | null
           terms?: string | null
           timezone?: string | null
