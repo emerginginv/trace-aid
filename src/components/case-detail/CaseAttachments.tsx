@@ -166,15 +166,16 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
         if (error) throw error;
         if (!data) throw new Error("No data received");
 
-        // Store ArrayBuffer for PdfViewer
+        // Create blob URL first (for non-PDF previews and download)
+        const blobUrl = URL.createObjectURL(data);
+        previewBlobUrlRef.current = blobUrl;
+        setPreviewBlobUrl(blobUrl);
+
+        // For PDFs, get ArrayBuffer from a fresh blob read
         if (previewAttachment.file_type.includes("pdf")) {
           const arrayBuffer = await data.arrayBuffer();
           setPreviewBlobData(arrayBuffer);
         }
-
-        const blobUrl = URL.createObjectURL(data);
-        previewBlobUrlRef.current = blobUrl;
-        setPreviewBlobUrl(blobUrl);
       } catch (error) {
         console.error("Error loading file preview:", error);
         setPreviewBlobError("Failed to load file preview");
