@@ -413,74 +413,77 @@ const Dashboard = () => {
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/5 rounded-full blur-3xl -z-0" />
       </div>
 
-      {/* Stats Overview with Modern Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map(stat => {
-        const Icon = stat.icon;
-        return <Card key={stat.title} className="group hover-lift border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden relative">
+      {/* Stats Overview + Financial Summary Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Stats Cards - Left Half */}
+        <div className="grid grid-cols-2 gap-3">
+          {statCards.map(stat => {
+            const Icon = stat.icon;
+            return <Card key={stat.title} className="group hover-lift border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden relative">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-3 relative z-10">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
                   {stat.title}
                 </CardTitle>
-                <div className={`${stat.bgColor} p-2.5 rounded-lg transition-transform group-hover:scale-110`}>
-                  <Icon className={`w-5 h-5 ${stat.color}`} />
+                <div className={`${stat.bgColor} p-1.5 rounded-lg transition-transform group-hover:scale-110`}>
+                  <Icon className={`w-4 h-4 ${stat.color}`} />
                 </div>
               </CardHeader>
-              <CardContent className="relative z-10">
-                <div className="text-3xl font-bold">{stat.value}</div>
+              <CardContent className="relative z-10 pb-3 px-3">
+                <div className="text-2xl font-bold">{stat.value}</div>
               </CardContent>
             </Card>;
-      })}
-      </div>
+          })}
+        </div>
 
-      {/* Financial Summary Card */}
-      <Card className="border-border/50 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 shadow-lg">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-emerald-500/10">
-              <Wallet className="w-5 h-5 text-emerald-500" />
-            </div>
-            <span className="text-lg font-semibold">Financial Summary</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Retainer Funds */}
-            <div className="p-4 rounded-xl bg-card/80 border border-border/50">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Wallet className="w-4 h-4" />
-                <span>Retainer Funds</span>
+        {/* Financial Summary Card - Right Half */}
+        <Card className="border-border/50 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 shadow-lg h-full">
+          <CardHeader className="pb-3 pt-3">
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/10">
+                <Wallet className="w-4 h-4 text-emerald-500" />
               </div>
-              <p className="text-2xl font-bold text-emerald-500">
-                ${financialSummary.totalRetainerFunds.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
-            
-            {/* Outstanding Expenses */}
-            <div className="p-4 rounded-xl bg-card/80 border border-border/50">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Receipt className="w-4 h-4" />
-                <span>Outstanding Expenses</span>
+              <span className="text-base font-semibold">Financial Summary</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Retainer Funds */}
+              <div className="p-3 rounded-xl bg-card/80 border border-border/50">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Wallet className="w-3.5 h-3.5" />
+                  <span>Retainer Funds</span>
+                </div>
+                <p className="text-xl font-bold text-emerald-500">
+                  ${financialSummary.totalRetainerFunds.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
               </div>
-              <p className="text-2xl font-bold text-amber-500">
-                ${financialSummary.outstandingExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
-            
-            {/* Unpaid Invoices */}
-            <div className="p-4 rounded-xl bg-card/80 border border-border/50">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <FileText className="w-4 h-4" />
-                <span>Unpaid Invoices</span>
+              
+              {/* Outstanding Expenses */}
+              <div className="p-3 rounded-xl bg-card/80 border border-border/50">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>Outstanding Expenses</span>
+                </div>
+                <p className="text-xl font-bold text-amber-500">
+                  ${financialSummary.outstandingExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
               </div>
-              <p className="text-2xl font-bold text-blue-500">
-                ${financialSummary.unpaidInvoices.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
+              
+              {/* Unpaid Invoices */}
+              <div className="p-3 rounded-xl bg-card/80 border border-border/50">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Unpaid Invoices</span>
+                </div>
+                <p className="text-xl font-bold text-blue-500">
+                  ${financialSummary.unpaidInvoices.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Main Dashboard Grid with Enhanced Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
