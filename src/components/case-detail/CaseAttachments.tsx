@@ -6,10 +6,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical } from "lucide-react";
 import { useConfirmation } from "@/components/ui/confirmation-dialog";
 import { RevokeMode } from "./RevokeAccessDialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1131,85 +1131,60 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                     <div className="text-xs text-muted-foreground mt-1">
                       {formatFileSize(attachment.file_size)} • {new Date(attachment.created_at).toLocaleDateString()}
                     </div>
-                    <div className="flex flex-wrap justify-end gap-1 sm:gap-2 mt-3">
-                      {canEditAttachments && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(attachment);
-                          }}
-                          disabled={isClosedCase}
-                          className="h-7 sm:h-8 text-xs px-2"
-                        >
-                          <Pencil className="h-3 w-3 sm:mr-1" />
-                          <span className="hidden sm:inline">Edit</span>
-                        </Button>
-                      )}
-                      {canEditAttachments && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleShare(attachment);
-                          }}
-                          className="h-7 sm:h-8 text-xs px-2"
-                        >
-                          <Share2 className="h-3 w-3 sm:mr-1" />
-                          <span className="hidden sm:inline">Share</span>
-                        </Button>
-                      )}
-                      {canEditAttachments && isShared && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => handleSingleRevoke(attachment, e)}
-                          className="h-7 sm:h-8 text-xs px-2 text-destructive hover:text-destructive"
-                        >
-                          <ShieldOff className="h-3 w-3 sm:mr-1" />
-                          <span className="hidden sm:inline">Revoke</span>
-                        </Button>
-                      )}
-                      {isShared && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => handleViewAccessLog(attachment, e)}
-                          className="h-7 sm:h-8 text-xs px-2"
-                        >
-                          <History className="h-3 w-3 sm:mr-1" />
-                          <span className="hidden sm:inline">Log</span>
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownload(attachment);
-                        }}
-                        className="h-7 sm:h-8 text-xs px-2"
-                      >
-                        <Download className="h-3 w-3 sm:mr-1" />
-                        <span className="hidden sm:inline">Download</span>
-                      </Button>
-                      {canDeleteAttachments && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(attachment);
-                          }}
-                          disabled={isClosedCase}
-                          className="h-7 sm:h-8 text-xs px-2 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3 sm:mr-1" />
-                          <span className="hidden sm:inline">Delete</span>
-                        </Button>
-                      )}
+                    <div className="flex justify-end mt-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          {canEditAttachments && !isClosedCase && (
+                            <DropdownMenuItem onClick={() => handleEdit(attachment)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
+                          {canEditAttachments && (
+                            <DropdownMenuItem onClick={() => handleShare(attachment)}>
+                              <Share2 className="h-4 w-4 mr-2" />
+                              Share
+                            </DropdownMenuItem>
+                          )}
+                          {canEditAttachments && isShared && (
+                            <DropdownMenuItem 
+                              onClick={() => handleSingleRevoke(attachment)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <ShieldOff className="h-4 w-4 mr-2" />
+                              Revoke
+                            </DropdownMenuItem>
+                          )}
+                          {isShared && (
+                            <DropdownMenuItem onClick={() => handleViewAccessLog(attachment)}>
+                              <History className="h-4 w-4 mr-2" />
+                              Access Log
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleDownload(attachment)}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </DropdownMenuItem>
+                          {canDeleteAttachments && !isClosedCase && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(attachment)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </CardContent>
                 </Card>
