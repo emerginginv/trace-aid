@@ -755,7 +755,6 @@ export type Database = {
           investigator_ids: string[] | null
           organization_id: string | null
           parent_case_id: string | null
-          received: string | null
           status: string
           surveillance_end_date: string | null
           surveillance_start_date: string | null
@@ -787,7 +786,6 @@ export type Database = {
           investigator_ids?: string[] | null
           organization_id?: string | null
           parent_case_id?: string | null
-          received?: string | null
           status?: string
           surveillance_end_date?: string | null
           surveillance_start_date?: string | null
@@ -819,7 +817,6 @@ export type Database = {
           investigator_ids?: string[] | null
           organization_id?: string | null
           parent_case_id?: string | null
-          received?: string | null
           status?: string
           surveillance_end_date?: string | null
           surveillance_start_date?: string | null

@@ -538,7 +538,6 @@ export class ImportService {
             investigator_ids: investigatorIds,
             claim_number: cleanString(caseRecord.claim_number),
             status: caseRecord.status || 'open',
-            received: parseDate(caseRecord.start_date) || new Date().toISOString().split('T')[0],
             due_date: parseDate(caseRecord.due_date),
             surveillance_start_date: parseDate(caseRecord.surveillance_start_date),
             surveillance_end_date: parseDate(caseRecord.surveillance_end_date),

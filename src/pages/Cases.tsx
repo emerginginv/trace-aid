@@ -33,7 +33,6 @@ interface Case {
   title: string;
   description: string;
   status: string;
-  received: string;
   due_date: string;
   created_at: string;
 }
@@ -42,7 +41,7 @@ const COLUMNS: ColumnDefinition[] = [
   { key: "case_number", label: "Case Number" },
   { key: "title", label: "Title" },
   { key: "status", label: "Status" },
-  { key: "received", label: "Received" },
+  { key: "created_at", label: "Created" },
   { key: "due_date", label: "Due Date" },
   { key: "actions", label: "Actions", hideable: false },
 ];
@@ -268,7 +267,7 @@ const Cases = () => {
     { key: "case_number", label: "Case Number" },
     { key: "title", label: "Title" },
     { key: "status", label: "Status" },
-    { key: "received", label: "Received", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+    { key: "created_at", label: "Created", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
     { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
   ];
 
@@ -404,7 +403,7 @@ const Cases = () => {
                   {caseItem.description || "No description provided"}
                 </p>
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
-                  <span>Received: {new Date(caseItem.received).toLocaleDateString()}</span>
+                  <span>Created: {new Date(caseItem.created_at).toLocaleDateString()}</span>
                   {caseItem.due_date && <span>Due: {new Date(caseItem.due_date).toLocaleDateString()}</span>}
                 </div>
                 <div className="flex justify-end gap-2">
@@ -451,7 +450,7 @@ const Cases = () => {
                   </div>
 
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <div>Received: {new Date(caseItem.received).toLocaleDateString()}</div>
+                    <div>Created: {new Date(caseItem.created_at).toLocaleDateString()}</div>
                     {caseItem.due_date && <div>Due: {new Date(caseItem.due_date).toLocaleDateString()}</div>}
                   </div>
 
@@ -503,10 +502,10 @@ const Cases = () => {
                       onSort={handleSort}
                     />
                   )}
-                  {isVisible("received") && (
+                  {isVisible("created_at") && (
                     <SortableTableHead
-                      column="received"
-                      label="Received"
+                      column="created_at"
+                      label="Created"
                       sortColumn={sortColumn}
                       sortDirection={sortDirection}
                       onSort={handleSort}
@@ -582,8 +581,8 @@ const Cases = () => {
                         )}
                       </TableCell>
                     )}
-                    {isVisible("received") && (
-                      <TableCell>{new Date(caseItem.received).toLocaleDateString()}</TableCell>
+                    {isVisible("created_at") && (
+                      <TableCell>{new Date(caseItem.created_at).toLocaleDateString()}</TableCell>
                     )}
                     {isVisible("due_date") && (
                       <TableCell>
