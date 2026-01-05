@@ -33,6 +33,8 @@ interface OrganizationTabProps {
   setTimezone: (value: string) => void;
   logoUrl: string;
   setLogoUrl: (value: string) => void;
+  squareLogoUrl: string;
+  setSquareLogoUrl: (value: string) => void;
   address: string;
   setAddress: (value: string) => void;
   city: string;
@@ -73,6 +75,8 @@ export function OrganizationTab({
   setTimezone,
   logoUrl,
   setLogoUrl,
+  squareLogoUrl,
+  setSquareLogoUrl,
   address,
   setAddress,
   city,
@@ -103,6 +107,7 @@ export function OrganizationTab({
 }: OrganizationTabProps) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingSquareLogo, setUploadingSquareLogo] = useState(false);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -167,6 +172,69 @@ export function OrganizationTab({
     }
   };
 
+  const handleSquareLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!e.target.files || e.target.files.length === 0) return;
+      if (!currentUserId) return;
+
+      const file = e.target.files[0];
+      
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please upload an image file");
+        return;
+      }
+
+      setUploadingSquareLogo(true);
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentUserId}/square-logo.${fileExt}`;
+      const filePath = fileName;
+
+      if (squareLogoUrl) {
+        const oldPath = squareLogoUrl.split('/').slice(-2).join('/');
+        await supabase.storage.from('organization-logos').remove([oldPath]);
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from('organization-logos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('organization-logos')
+        .getPublicUrl(filePath);
+
+      setSquareLogoUrl(data.publicUrl);
+      toast.success("Square logo uploaded successfully");
+    } catch (error: any) {
+      console.error("Error uploading square logo:", error);
+      toast.error("Failed to upload square logo");
+    } finally {
+      setUploadingSquareLogo(false);
+    }
+  };
+
+  const removeSquareLogo = async () => {
+    try {
+      if (!squareLogoUrl || !currentUserId) return;
+
+      const filePath = squareLogoUrl.split('/').slice(-2).join('/');
+      
+      const { error } = await supabase.storage
+        .from('organization-logos')
+        .remove([filePath]);
+
+      if (error) throw error;
+
+      setSquareLogoUrl("");
+      toast.success("Square logo removed");
+    } catch (error: any) {
+      console.error("Error removing square logo:", error);
+      toast.error("Failed to remove square logo");
+    }
+  };
+
   const saveOrganizationSettings = async () => {
     try {
       const validation = organizationSchema.safeParse({
@@ -201,6 +269,7 @@ export function OrganizationTab({
         default_currency: defaultCurrency,
         timezone: timezone,
         logo_url: logoUrl,
+        square_logo_url: squareLogoUrl,
         address: address,
         city: city,
         state: state,
@@ -291,7 +360,44 @@ export function OrganizationTab({
                   className="cursor-pointer"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Upload a logo for your invoices and system branding
+                  Upload a logo for your invoices, reports, and documents
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="squareLogo">Square Logo (App Branding)</Label>
+            <div className="mt-2 space-y-3">
+              {squareLogoUrl && (
+                <div className="relative inline-block">
+                  <img 
+                    src={squareLogoUrl} 
+                    alt="Square logo" 
+                    className="h-16 w-16 rounded-lg border border-border object-contain bg-background"
+                  />
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                    onClick={removeSquareLogo}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+              <div>
+                <Input
+                  id="squareLogo"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSquareLogoUpload}
+                  disabled={uploadingSquareLogo}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Upload a square logo (1:1 aspect ratio recommended) for the app sidebar. 
+                  This appears in the top-left corner of the application.
                 </p>
               </div>
             </div>

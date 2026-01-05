@@ -70,6 +70,7 @@ const Settings = () => {
   const [defaultCurrency, setDefaultCurrency] = useState("USD");
   const [timezone, setTimezone] = useState("America/New_York");
   const [logoUrl, setLogoUrl] = useState("");
+  const [squareLogoUrl, setSquareLogoUrl] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -161,6 +162,7 @@ const Settings = () => {
         setDefaultCurrency(orgSettings.default_currency || "USD");
         setTimezone(orgSettings.timezone || "America/New_York");
         setLogoUrl(orgSettings.logo_url || "");
+        setSquareLogoUrl((orgSettings as any).square_logo_url || "");
         setAddress(orgSettings.address || "");
         setCity((orgSettings as any).city || "");
         setState((orgSettings as any).state || "");
@@ -175,7 +177,7 @@ const Settings = () => {
         setSignatureName(orgSettings.signature_name || "");
         setSignatureTitle(orgSettings.signature_title || "");
         setSignaturePhone(orgSettings.signature_phone || "");
-        setSignatureEmail(orgSettings.signature_email || "");
+        setSignatureEmail(orgSettings.sender_email || "");
         setSenderEmail(orgSettings.sender_email || "");
       }
 
@@ -524,6 +526,8 @@ const Settings = () => {
                 setTimezone={setTimezone}
                 logoUrl={logoUrl}
                 setLogoUrl={setLogoUrl}
+                squareLogoUrl={squareLogoUrl}
+                setSquareLogoUrl={setSquareLogoUrl}
                 address={address}
                 setAddress={setAddress}
                 city={city}

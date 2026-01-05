@@ -88,6 +88,7 @@ export function AppSidebar() {
   } | null>(null);
   const [orgSettings, setOrgSettings] = useState<{
     logo_url: string | null;
+    square_logo_url: string | null;
     company_name: string | null;
   } | null>(null);
 
@@ -144,7 +145,7 @@ export function AppSidebar() {
     const fetchOrgSettings = async () => {
       const { data } = await supabase
         .from("organization_settings")
-        .select("logo_url, company_name")
+        .select("logo_url, square_logo_url, company_name")
         .eq("organization_id", organization.id)
         .maybeSingle();
       
@@ -159,10 +160,10 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border p-4 space-y-3">
         <div className="flex items-center gap-2">
-          {orgSettings?.logo_url ? (
+          {orgSettings?.square_logo_url ? (
             <>
               <img 
-                src={orgSettings.logo_url} 
+                src={orgSettings.square_logo_url} 
                 alt={orgSettings.company_name || "Organization"} 
                 className="w-8 h-8 rounded-lg object-contain"
               />
@@ -180,7 +181,7 @@ export function AppSidebar() {
               </div>
               <div>
                 <h2 className="text-sky-300 font-medium text-base">CaseWyze</h2>
-                <p className="text-xs text-sidebar-foreground/60">Investigation Management</p>
+                <p className="text-xs text-sidebar-foreground/60">Case Management</p>
               </div>
             </>
           )}
