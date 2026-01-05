@@ -60,20 +60,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get user's organization
-    const { data: orgMember } = await supabase
+    // Get user's organization (use limit(1) instead of single() to handle multiple orgs)
+    const { data: orgMembers, error: orgError } = await supabase
       .from('organization_members')
       .select('organization_id')
       .eq('user_id', user.id)
-      .single();
+      .limit(1);
 
-    if (!orgMember) {
+    if (orgError || !orgMembers || orgMembers.length === 0) {
+      console.error('Organization lookup error:', orgError);
       return new Response(JSON.stringify({ error: 'No organization found' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    const orgMember = orgMembers[0];
     const orgId = orgMember.organization_id;
 
     // Parse request body
