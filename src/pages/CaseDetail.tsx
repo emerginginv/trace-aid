@@ -737,9 +737,10 @@ const CaseDetail = () => {
         {/* Info Tab - New consolidated tab */}
         {!isVendor && (
           <TabsContent value="info" className="mt-4 sm:mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-              {/* Case Details Card */}
-              <Card className="xl:col-span-1 lg:col-span-2 xl:row-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
+            {/* Case Details Card */}
+            <div className="xl:col-span-1 lg:col-span-2 flex flex-col">
+            <Card className="flex-1">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Briefcase className="h-5 w-5" />
@@ -773,9 +774,10 @@ const CaseDetail = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
 
               {/* Budget + Retainer Column */}
-              <div className="space-y-4">
+              <div className="space-y-4 flex flex-col">
                 <CaseBudgetWidget 
                   caseId={id!} 
                   refreshKey={budgetRefreshKey}
