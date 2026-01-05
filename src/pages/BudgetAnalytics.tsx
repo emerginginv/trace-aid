@@ -54,7 +54,7 @@ export default function BudgetAnalytics() {
 
   const breadcrumbItems = [
     { label: "Analytics", href: "/analytics" },
-    { label: "Budget Analytics" },
+    { label: "Financial Analytics" },
   ];
 
   useEffect(() => {
@@ -175,7 +175,7 @@ export default function BudgetAnalytics() {
               <DollarSign className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Budget Analytics</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Financial & Budget Analytics</h1>
               <p className="text-muted-foreground">
                 Track budget authorization and utilization across cases
               </p>
