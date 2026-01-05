@@ -44,6 +44,7 @@ import CaseAnalytics from "./pages/CaseAnalytics";
 import BudgetAnalytics from "./pages/BudgetAnalytics";
 import TimeExpenseAnalytics from "./pages/TimeExpenseAnalytics";
 import ActivityAnalytics from "./pages/ActivityAnalytics";
+import ReportAnalytics from "./pages/ReportAnalytics";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -200,6 +201,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <ActivityAnalytics />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics/reports"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <ReportAnalytics />
               </DashboardLayout>
             </ProtectedRoute>
           }
