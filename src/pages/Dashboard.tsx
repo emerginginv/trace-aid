@@ -435,21 +435,58 @@ const Dashboard = () => {
   const getStatusDotDisplay = (status: string, type: 'task' | 'event' = 'task') => {
     switch (status) {
       case 'in_progress':
-        return { label: 'In Progress', dotColor: 'bg-blue-500' };
+        return { 
+          label: 'In Progress', 
+          bgColor: 'bg-blue-500',
+          textColor: 'text-white'
+        };
       case 'done':
       case 'completed':
-        return { label: 'Done', dotColor: 'bg-green-500' };
+        return { 
+          label: 'Done', 
+          bgColor: 'bg-emerald-500',
+          textColor: 'text-white'
+        };
+      case 'scheduled':
+        return { 
+          label: 'Scheduled', 
+          bgColor: 'bg-purple-500',
+          textColor: 'text-white'
+        };
+      case 'cancelled':
+        return { 
+          label: 'Cancelled', 
+          bgColor: 'bg-red-500',
+          textColor: 'text-white'
+        };
+      case 'on_hold':
+        return { 
+          label: 'On Hold', 
+          bgColor: 'bg-orange-500',
+          textColor: 'text-white'
+        };
       case 'to_do':
       default:
-        return { label: type === 'event' ? 'Scheduled' : 'To Do', dotColor: 'bg-muted-foreground/50' };
+        if (type === 'event') {
+          return { 
+            label: 'Scheduled', 
+            bgColor: 'bg-purple-500',
+            textColor: 'text-white'
+          };
+        }
+        return { 
+          label: 'To Do', 
+          bgColor: 'bg-amber-400',
+          textColor: 'text-amber-900'
+        };
     }
   };
 
   const StatusDot = ({ status, type = 'task' }: { status: string; type?: 'task' | 'event' }) => {
-    const { label, dotColor } = getStatusDotDisplay(status, type);
+    const { label, bgColor, textColor } = getStatusDotDisplay(status, type);
     return (
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} aria-hidden="true" />
+      <span className={`flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full shrink-0 font-medium ${bgColor} ${textColor}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" aria-hidden="true" />
         {label}
       </span>
     );
