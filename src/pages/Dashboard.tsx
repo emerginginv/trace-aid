@@ -47,6 +47,9 @@ interface Update {
   message: string;
   timestamp: string;
   type: "info" | "success" | "warning";
+  updateType: string;
+  authorId: string;
+  authorName: string | null;
   caseId: string;
   updateData: any;
 }
@@ -269,14 +272,20 @@ const Dashboard = () => {
       const { data: updatesData } = await updatesQuery;
 
       if (updatesData) {
-        const recentUpdates: Update[] = updatesData.map(update => ({
-          id: update.id,
-          message: update.title || update.description || "Update",
-          timestamp: update.created_at,
-          type: update.update_type === "status_change" ? "warning" : "info",
-          caseId: update.case_id,
-          updateData: update
-        }));
+        const recentUpdates: Update[] = updatesData.map(update => {
+          const author = orgUsers?.find(u => u.id === update.user_id);
+          return {
+            id: update.id,
+            message: update.title || update.description || "Update",
+            timestamp: update.created_at,
+            type: update.update_type === "status_change" ? "warning" : "info",
+            updateType: update.update_type || "general",
+            authorId: update.user_id,
+            authorName: author?.full_name || author?.email || null,
+            caseId: update.case_id,
+            updateData: update
+          };
+        });
         setUpdates(recentUpdates);
       }
 
@@ -760,49 +769,63 @@ const Dashboard = () => {
               </Select>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 pt-6">
-            {updates.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
+          <CardContent className="pt-4">
+            {updates.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <Bell className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">No recent updates</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Updates will appear here</p>
-              </div> : updates.map(update => <div key={update.id} className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
-                <div onClick={() => setEditingUpdate(update)} className="flex items-start gap-3 p-4 transition-colors cursor-pointer hover:bg-muted/50">
-                  <div className="mt-0.5 p-1.5 rounded-lg bg-background">
-                    {getUpdateIcon(update.type)}
-                  </div>
-                  <div className="flex-1 space-y-1.5">
-                    <p className="text-sm font-medium leading-tight">{update.message}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(parseISO(update.timestamp), {
-                    addSuffix: true
-                  })}
-                    </p>
-                  </div>
-                  {expandedUpdate === update.id ? <ChevronUp className="w-4 h-4 text-muted-foreground mt-1" /> : <ChevronDown className="w-4 h-4 text-muted-foreground mt-1" />}
-                </div>
-                {expandedUpdate === update.id && <div className="px-4 pb-4 text-sm border-t border-border/50 pt-4 bg-muted/30">
-                    <p className="font-semibold mb-3 text-foreground">Update Details</p>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Type:</span>
-                        <Badge variant="outline" className="capitalize">{update.type}</Badge>
+              </div>
+            ) : (
+              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+                {updates.map(update => {
+                  const typeLabel = update.updateType === 'status_change' ? 'Status Change' 
+                    : update.updateType === 'note' ? 'Note' 
+                    : update.updateType === 'activity' ? 'Activity' 
+                    : update.updateType || 'General';
+                  const typeClass = update.updateType === 'status_change' ? 'bg-warning/10 text-warning'
+                    : update.updateType === 'note' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    : update.updateType === 'activity' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-secondary/10 text-secondary-foreground';
+                  
+                  return (
+                    <div 
+                      key={update.id} 
+                      onClick={() => setEditingUpdate(update)} 
+                      className="group flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-accent/20 transition-all hover:shadow-sm cursor-pointer bg-muted/30 hover:bg-muted/50"
+                    >
+                      {/* Title - Primary anchor */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{update.message}</p>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Time:</span>
-                        <span className="text-xs">{format(parseISO(update.timestamp), "PPpp")}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Status:</span>
-                        <span className="flex items-center gap-1.5 text-xs">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
-                          Active
-                        </span>
-                      </div>
+                      
+                      {/* Update Type Badge */}
+                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 capitalize ${typeClass}`}>
+                        {typeLabel}
+                      </span>
+                      
+                      {/* Date Added */}
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                        <Clock className="w-3 h-3" />
+                        {formatDistanceToNow(parseISO(update.timestamp), { addSuffix: true })}
+                      </span>
+                      
+                      {/* Author Avatar */}
+                      {update.authorName && (
+                        <div 
+                          className="w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-medium shrink-0"
+                          title={update.authorName}
+                        >
+                          {getUserInitials(update.authorName)}
+                        </div>
+                      )}
                     </div>
-                  </div>}
-              </div>)}
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
