@@ -91,7 +91,6 @@ export default function InvoiceDetail() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useSetBreadcrumbs([
-    { label: "Finance", href: "/finance" },
     { label: "Invoices", href: "/invoices" },
     { label: invoice?.invoice_number || "Invoice" },
   ]);
@@ -135,7 +134,7 @@ export default function InvoiceDetail() {
           title: "Invoice not found",
           variant: "destructive",
         });
-        navigate("/finance");
+        navigate("/invoices");
         return;
       }
 
@@ -249,11 +248,11 @@ export default function InvoiceDetail() {
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            onClick={() => navigate("/finance")}
+            onClick={() => navigate("/invoices")}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Finance
+            Back to Invoices
           </Button>
           <StatusBadge status={invoice.status} />
         </div>

@@ -49,7 +49,7 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 const Finance = () => {
-  useSetBreadcrumbs([{ label: "Finance" }]);
+  useSetBreadcrumbs([{ label: "Retainers" }]);
   
   const navigate = useNavigate();
   const { organization } = useOrganization();

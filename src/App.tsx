@@ -131,7 +131,7 @@ const App = () => {
           }
         />
         <Route
-          path="/finance"
+          path="/retainers"
           element={
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
@@ -141,7 +141,7 @@ const App = () => {
           }
         />
         <Route
-          path="/all-expenses"
+          path="/expenses"
           element={
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
@@ -151,7 +151,7 @@ const App = () => {
           }
         />
         <Route
-          path="/all-invoices"
+          path="/invoices"
           element={
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
@@ -160,6 +160,10 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        {/* Redirects from old URLs */}
+        <Route path="/finance" element={<Navigate to="/retainers" replace />} />
+        <Route path="/all-expenses" element={<Navigate to="/expenses" replace />} />
+        <Route path="/all-invoices" element={<Navigate to="/invoices" replace />} />
         <Route
           path="/analytics"
           element={
@@ -261,7 +265,7 @@ const App = () => {
           }
         />
         <Route
-          path="/expenses"
+          path="/my-expenses"
           element={
             <ProtectedRoute>
               <DashboardLayout>

@@ -68,7 +68,7 @@ export const BUDGET_METRICS: MetricDefinition[] = [
       ],
     },
     drillDownTarget: {
-      route: "/all-expenses",
+      route: "/expenses",
       params: {},
     },
     auditInfo: {
@@ -91,7 +91,7 @@ export const BUDGET_METRICS: MetricDefinition[] = [
       field: "hours",
     },
     drillDownTarget: {
-      route: "/all-expenses",
+      route: "/expenses",
       params: {},
     },
     auditInfo: {

@@ -56,10 +56,7 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 const AllExpenses = () => {
-  useSetBreadcrumbs([
-    { label: "Finance", href: "/finance" },
-    { label: "Expenses" },
-  ]);
+  useSetBreadcrumbs([{ label: "Expenses" }]);
   
   const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
