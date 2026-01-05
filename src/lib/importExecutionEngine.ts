@@ -278,7 +278,7 @@ export class ImportExecutionEngine {
           investigator_emails: row.investigator_emails,
           claim_number: cleanString(row.claim_number as string),
           status: row.status || 'open',
-          start_date: parseDate(row.start_date as string),
+          received: parseDate(row.start_date as string) || new Date().toISOString().split('T')[0],
           due_date: parseDate(row.due_date as string),
           surveillance_start_date: parseDate(row.surveillance_start_date as string),
           surveillance_end_date: parseDate(row.surveillance_end_date as string),
