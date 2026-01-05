@@ -51,7 +51,6 @@ const caseSchema = z.object({
   status: z.string().min(1, "Status is required"),
   account_id: z.string().optional(),
   contact_id: z.string().optional(),
-  start_date: z.date(),
   due_date: z.date().optional(),
   use_primary_subject_as_title: z.boolean().default(false),
   budget_hours: z.coerce.number().min(0).optional().nullable(),
@@ -76,7 +75,7 @@ interface CaseFormProps {
     status: string;
     account_id: string | null;
     contact_id: string | null;
-    start_date: string;
+    received: string;
     due_date: string | null;
     use_primary_subject_as_title?: boolean;
     budget_hours?: number | null;
@@ -107,7 +106,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const [profiles, setProfiles] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
   const [caseManagerId, setCaseManagerId] = useState<string>("");
   const [investigators, setInvestigators] = useState<string[]>([]);
-  const [startDateOpen, setStartDateOpen] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [surveillanceStartOpen, setSurveillanceStartOpen] = useState(false);
   const [surveillanceEndOpen, setSurveillanceEndOpen] = useState(false);
@@ -122,7 +120,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       status: "open",
       account_id: "",
       contact_id: "",
-      start_date: new Date(),
       use_primary_subject_as_title: false,
       budget_hours: null,
       budget_dollars: null,
@@ -149,7 +146,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           status: editingCase.status,
           account_id: editingCase.account_id || "",
           contact_id: editingCase.contact_id || "",
-          start_date: new Date(editingCase.start_date),
           due_date: editingCase.due_date ? new Date(editingCase.due_date) : undefined,
           use_primary_subject_as_title: editingCase.use_primary_subject_as_title || false,
           budget_hours: editingCase.budget_hours ?? null,
@@ -173,7 +169,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           status: "open",
           account_id: "",
           contact_id: "",
-          start_date: new Date(),
           use_primary_subject_as_title: false,
           budget_hours: null,
           budget_dollars: null,
@@ -397,7 +392,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         status: data.status,
         account_id: data.account_id || null,
         contact_id: data.contact_id || null,
-        start_date: data.start_date.toISOString().split('T')[0],
         due_date: data.due_date ? data.due_date.toISOString().split('T')[0] : null,
         case_manager_id: caseManagerId || null,
         investigator_ids: investigators,
@@ -437,6 +431,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       } else {
         const { data: newCase, error } = await supabase.from("cases").insert([{
           ...caseData,
+          received: new Date().toISOString().split('T')[0], // Auto-set received date on creation
           user_id: user.id,
           organization_id: organization.id,
           instance_number: 1, // New cases always start at instance 1
@@ -675,48 +670,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="start_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Start Date *</FormLabel>
-                    <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            field.onChange(date);
-                            setStartDateOpen(false);
-                          }}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}

@@ -43,7 +43,7 @@ interface Case {
   status: string;
   account_id: string | null;
   contact_id: string | null;
-  start_date: string | null;
+  received: string | null;
   due_date: string | null;
   created_at: string;
   case_manager_id: string | null;
@@ -758,7 +758,7 @@ const CaseDetail = () => {
                     <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
                     <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
                     <InfoItem label="Claim Number" value={caseData.claim_number} />
-                    <InfoItem label="Start Date" value={caseData.start_date ? new Date(caseData.start_date).toLocaleDateString() : null} />
+                    <InfoItem label="Received" value={caseData.received ? new Date(caseData.received).toLocaleDateString() : null} />
                     <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
                     {caseData.surveillance_start_date && (
                       <InfoItem label="Surveillance Start" value={new Date(caseData.surveillance_start_date).toLocaleDateString()} />
