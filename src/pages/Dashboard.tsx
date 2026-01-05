@@ -102,6 +102,7 @@ const Dashboard = () => {
     unpaidInvoices: 0
   });
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [updateTypePicklists, setUpdateTypePicklists] = useState<{value: string, color: string | null}[]>([]);
 
   useEffect(() => {
     if (!organization?.id) return;
@@ -127,12 +128,25 @@ const Dashboard = () => {
         .eq("organization_id", orgId);
 
       // Fetch status picklists filtered by organization
-      const { data: statusPicklists } = await supabase
-        .from("picklists")
-        .select("value, status_type")
-        .eq("type", "case_status")
-        .eq("is_active", true)
-        .or(`organization_id.eq.${orgId},organization_id.is.null`);
+      const [statusPicklistsResult, updateTypePicklistsResult] = await Promise.all([
+        supabase
+          .from("picklists")
+          .select("value, status_type")
+          .eq("type", "case_status")
+          .eq("is_active", true)
+          .or(`organization_id.eq.${orgId},organization_id.is.null`),
+        supabase
+          .from("picklists")
+          .select("value, color")
+          .eq("type", "update_type")
+          .eq("is_active", true)
+          .or(`organization_id.eq.${orgId},organization_id.is.null`)
+      ]);
+      
+      const statusPicklists = statusPicklistsResult.data;
+      if (updateTypePicklistsResult.data) {
+        setUpdateTypePicklists(updateTypePicklistsResult.data);
+      }
 
       let openCasesCount = 0;
       let closedCasesCount = 0;
@@ -459,6 +473,28 @@ const Dashboard = () => {
     return (
       <span className={`flex items-center gap-1.5 text-xs shrink-0 font-medium ${textColor}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} aria-hidden="true" />
+        {label}
+      </span>
+    );
+  };
+
+  const UpdateTypeDot = ({ updateType }: { updateType: string }) => {
+    const picklist = updateTypePicklists.find(p => p.value === updateType);
+    const color = picklist?.color || '#6b7280';
+    const label = updateType
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+    
+    return (
+      <span 
+        className="flex items-center gap-1.5 text-xs shrink-0 font-medium"
+        style={{ color }}
+      >
+        <span 
+          className="w-1.5 h-1.5 rounded-full" 
+          style={{ backgroundColor: color }}
+          aria-hidden="true" 
+        />
         {label}
       </span>
     );
@@ -797,15 +833,6 @@ const Dashboard = () => {
             ) : (
               <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
                 {updates.map(update => {
-                  const typeLabel = update.updateType === 'status_change' ? 'Status Change' 
-                    : update.updateType === 'note' ? 'Note' 
-                    : update.updateType === 'activity' ? 'Activity' 
-                    : update.updateType || 'General';
-                  const typeClass = update.updateType === 'status_change' ? 'bg-warning/10 text-warning'
-                    : update.updateType === 'note' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                    : update.updateType === 'activity' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-secondary/10 text-secondary-foreground';
-                  
                   return (
                     <div 
                       key={update.id} 
@@ -817,10 +844,8 @@ const Dashboard = () => {
                         <p className="font-medium text-sm truncate">{update.message}</p>
                       </div>
                       
-                      {/* Update Type Badge */}
-                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 capitalize ${typeClass}`}>
-                        {typeLabel}
-                      </span>
+                      {/* Update Type with colored dot */}
+                      <UpdateTypeDot updateType={update.updateType} />
                       
                       {/* Date Added */}
                       <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
