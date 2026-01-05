@@ -805,8 +805,8 @@ const Dashboard = () => {
           <CardHeader className="pb-4 border-b border-border">
             <CardTitle className="flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-accent/10">
-                  <Bell className="w-5 h-5 text-accent" />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Bell className="w-5 h-5 text-primary" />
                 </div>
                 <span className="text-lg font-semibold">Updates</span>
               </div>
@@ -856,7 +856,7 @@ const Dashboard = () => {
                       {/* Author Avatar */}
                       {update.authorName && (
                         <div 
-                          className="w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-medium shrink-0"
+                          className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium shrink-0"
                           title={update.authorName}
                         >
                           {getUserInitials(update.authorName)}
