@@ -39,6 +39,7 @@ import PremiumShowcase from "./pages/PremiumShowcase";
 import TestNotifications from "./pages/TestNotifications";
 import AttachmentAccess from "./pages/AttachmentAccess";
 import AttachmentViewer from "./pages/AttachmentViewer";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -145,6 +146,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <AllInvoices />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <Analytics />
               </DashboardLayout>
             </ProtectedRoute>
           }
