@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { TimeRangeSelector } from "@/components/analytics/TimeRangeSelector";
 import { MetricKpiCard } from "@/components/analytics/MetricKpiCard";
 import { BudgetUtilizationChart } from "@/components/analytics/BudgetUtilizationChart";
@@ -49,13 +49,13 @@ export default function BudgetAnalytics() {
   const [summary, setSummary] = useState<BudgetSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const timeRange = createPresetTimeRange(timeRangePreset);
-  const organizationId = organization?.id || "";
-
-  const breadcrumbItems = [
+  useSetBreadcrumbs([
     { label: "Analytics", href: "/analytics" },
     { label: "Financial Analytics" },
-  ];
+  ]);
+
+  const timeRange = createPresetTimeRange(timeRangePreset);
+  const organizationId = organization?.id || "";
 
   useEffect(() => {
     async function fetchBudgetSummary() {
@@ -168,7 +168,6 @@ export default function BudgetAnalytics() {
     <div className="space-y-8">
       {/* Header */}
       <div className="space-y-4">
-        <BreadcrumbNav items={breadcrumbItems} />
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">

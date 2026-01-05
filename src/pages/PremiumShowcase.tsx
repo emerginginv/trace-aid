@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotificationCenter } from "@/components/ui/notification-center";
 import { KeyboardShortcuts } from "@/components/ui/keyboard-shortcuts";
-import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { PrintLayout } from "@/components/ui/print-layout";
 import {
   Sparkles,
@@ -23,10 +23,10 @@ import {
 export default function PremiumShowcase() {
   const [activeTab, setActiveTab] = useState("visual");
 
-  const breadcrumbs = [
+  useSetBreadcrumbs([
     { label: "Documentation" },
     { label: "Premium Features" },
-  ];
+  ]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -46,7 +46,6 @@ export default function PremiumShowcase() {
 
       <main className="container-comfortable py-12">
         <div className="mb-8">
-          <BreadcrumbNav items={breadcrumbs} className="mb-6" />
           <div className="gradient-overlay-primary rounded-2xl p-12 text-center mb-12">
             <h2 className="text-display text-foreground mb-4">
               Enterprise-Grade Design Excellence
