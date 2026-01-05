@@ -2,11 +2,11 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail, FileText } from "lucide-react";
+import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail, FileText, Briefcase, Calendar, Users, FileArchive, ClipboardList, DollarSign, Clock, BarChart3, FilePenLine } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CaseDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
+
 interface Case {
   id: string;
   case_number: string;
@@ -55,32 +56,34 @@ interface Case {
   surveillance_start_date?: string | null;
   surveillance_end_date?: string | null;
 }
+
 interface Account {
   id: string;
   name: string;
 }
+
 interface Contact {
   id: string;
   first_name: string;
   last_name: string;
 }
+
+interface CaseManager {
+  id: string;
+  full_name: string | null;
+  email: string;
+}
+
 const CaseDetail = () => {
-  const {
-    id
-  } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const {
-    isVendor,
-    isAdmin,
-    isManager
-  } = useUserRole();
-  const {
-    hasPermission
-  } = usePermissions();
+  const { isVendor, isAdmin, isManager } = useUserRole();
+  const { hasPermission } = usePermissions();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
+  const [caseManager, setCaseManager] = useState<CaseManager | null>(null);
   const [loading, setLoading] = useState(true);
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -94,7 +97,7 @@ const CaseDetail = () => {
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState(isVendor ? "updates" : "subjects");
+  const [activeTab, setActiveTab] = useState(isVendor ? "updates" : "info");
   const [highlightHistory, setHighlightHistory] = useState(false);
   const budgetTabRef = useRef<HTMLDivElement>(null);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -104,13 +107,12 @@ const CaseDetail = () => {
   const handleViewBudgetHistory = () => {
     setActiveTab("budget");
     setHighlightHistory(true);
-    // Scroll to budget tab content after state update
     setTimeout(() => {
       budgetTabRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      // Remove highlight after animation
       setTimeout(() => setHighlightHistory(false), 2000);
     }, 100);
   };
+
   const fetchUpdatesForReport = async () => {
     const { data } = await supabase
       .from("case_updates")
@@ -135,14 +137,13 @@ const CaseDetail = () => {
     fetchUpdatesForReport();
     fetchUserProfilesForReport();
   }, [id]);
+
   const fetchCaseStatuses = async () => {
     try {
       const { getCurrentUserOrganizationId } = await import("@/lib/organizationHelpers");
       const organizationId = await getCurrentUserOrganizationId();
       
-      const {
-        data
-      } = await supabase.from("picklists").select("id, value, color, status_type").eq("type", "case_status").eq("is_active", true).or(`organization_id.eq.${organizationId},organization_id.is.null`).order("display_order");
+      const { data } = await supabase.from("picklists").select("id, value, color, status_type").eq("type", "case_status").eq("is_active", true).or(`organization_id.eq.${organizationId},organization_id.is.null`).order("display_order");
       if (data) {
         setCaseStatuses(data);
       }
@@ -150,16 +151,12 @@ const CaseDetail = () => {
       console.error("Error fetching case statuses:", error);
     }
   };
+
   const fetchCaseData = async () => {
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get user's organizations
       const { data: userOrgs } = await supabase
         .from("organization_members")
         .select("organization_id")
@@ -167,14 +164,10 @@ const CaseDetail = () => {
       
       const userOrgIds = userOrgs?.map(o => o.organization_id) || [];
 
-      const {
-        data,
-        error
-      } = await supabase.from("cases").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await supabase.from("cases").select("*").eq("id", id).maybeSingle();
       
       if (error) throw error;
 
-      // Handle case not found
       if (!data) {
         toast({
           title: "Not Found",
@@ -185,7 +178,6 @@ const CaseDetail = () => {
         return;
       }
 
-      // Verify access: user owns the case, is in investigator_ids, or is in same org
       const hasAccess = 
         data.user_id === user.id || 
         data.investigator_ids?.includes(user.id) ||
@@ -202,20 +194,19 @@ const CaseDetail = () => {
       }
       setCaseData(data);
 
-      // Fetch account if exists
       if (data.account_id) {
-        const {
-          data: accountData
-        } = await supabase.from("accounts").select("id, name").eq("id", data.account_id).maybeSingle();
+        const { data: accountData } = await supabase.from("accounts").select("id, name").eq("id", data.account_id).maybeSingle();
         if (accountData) setAccount(accountData);
       }
 
-      // Fetch contact if exists
       if (data.contact_id) {
-        const {
-          data: contactData
-        } = await supabase.from("contacts").select("id, first_name, last_name").eq("id", data.contact_id).maybeSingle();
+        const { data: contactData } = await supabase.from("contacts").select("id, first_name, last_name").eq("id", data.contact_id).maybeSingle();
         if (contactData) setContact(contactData);
+      }
+
+      if (data.case_manager_id) {
+        const { data: managerData } = await supabase.from("profiles").select("id, full_name, email").eq("id", data.case_manager_id).maybeSingle();
+        if (managerData) setCaseManager(managerData);
       }
     } catch (error) {
       console.error("Error fetching case:", error);
@@ -229,6 +220,7 @@ const CaseDetail = () => {
       setLoading(false);
     }
   };
+
   const getStatusColor = (status: string) => {
     const statusItem = caseStatuses.find(s => s.value === status);
     if (statusItem?.color) {
@@ -236,6 +228,7 @@ const CaseDetail = () => {
     }
     return "bg-muted";
   };
+
   const getStatusStyle = (status: string) => {
     const statusItem = caseStatuses.find(s => s.value === status);
     if (statusItem?.color) {
@@ -247,22 +240,21 @@ const CaseDetail = () => {
     }
     return {};
   };
+
   const isClosedCase = () => {
     if (!caseData) return false;
     const statusItem = caseStatuses.find(s => s.value === caseData.status);
     return statusItem?.status_type === 'closed';
   };
+
   const handleStatusChange = async (newStatus: string): Promise<boolean> => {
     if (!caseData) return false;
 
-    // Don't log if status hasn't actually changed
     const oldStatus = caseData.status;
     if (oldStatus === newStatus) return true;
     
-    // Store previous state for rollback
     const previousCaseData = { ...caseData };
     
-    // Optimistic update - update UI immediately
     const newStatusItem = caseStatuses.find(s => s.value === newStatus);
     const isClosing = newStatusItem?.status_type === 'closed';
     const oldStatusItem = caseStatuses.find(s => s.value === oldStatus);
@@ -284,44 +276,27 @@ const CaseDetail = () => {
     
     setUpdatingStatus(true);
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Get user profile for activity log
-      const {
-        data: profile
-      } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
 
-      // Prepare update data
-      const updateData: any = {
-        status: newStatus
-      };
+      const updateData: any = { status: newStatus };
 
-      // If transitioning from open to closed, record who closed it and when
       if (isClosing && wasOpen) {
         updateData.closed_by_user_id = user.id;
         updateData.closed_at = new Date().toISOString();
       }
 
-      // Update case status
-      const {
-        error
-      } = await supabase.from("cases").update(updateData).eq("id", id).eq("user_id", user.id);
+      const { error } = await supabase.from("cases").update(updateData).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
 
-      // Create activity log entry
       let activityDescription = `Status changed from "${oldStatus}" to "${newStatus}" by ${userName}`;
       if (isClosing && wasOpen) {
         activityDescription = `Case closed by ${userName}`;
       }
-      const {
-        error: activityError
-      } = await supabase.from("case_activities").insert({
+      const { error: activityError } = await supabase.from("case_activities").insert({
         case_id: id,
         user_id: user.id,
         activity_type: "Status Change",
@@ -333,10 +308,8 @@ const CaseDetail = () => {
         console.error("Error creating activity log:", activityError);
       }
 
-      // Create notification
       await NotificationHelpers.caseStatusChanged(caseData.case_number, newStatus, id!);
 
-      // Update local state with correct user id
       setCaseData(prev => prev ? {
         ...prev,
         status: newStatus,
@@ -349,7 +322,6 @@ const CaseDetail = () => {
       return true;
     } catch (error) {
       console.error("Error updating status:", error);
-      // Rollback to previous state
       setCaseData(previousCaseData);
       toast({
         title: "Error",
@@ -361,6 +333,7 @@ const CaseDetail = () => {
       setUpdatingStatus(false);
     }
   };
+
   const handleReopenCase = async () => {
     if (!caseData) return;
 
@@ -368,7 +341,6 @@ const CaseDetail = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Check if this case has already been reopened
       const { data: existingReopen } = await supabase
         .from("cases")
         .select("id")
@@ -385,7 +357,6 @@ const CaseDetail = () => {
         return;
       }
 
-      // Get user profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
@@ -393,7 +364,6 @@ const CaseDetail = () => {
         .single();
       const userName = profile?.full_name || user.email || "Unknown User";
 
-      // Find a default "open" status
       const openStatus = caseStatuses.find((s) => s.status_type === "open");
       if (!openStatus) {
         toast({
@@ -404,10 +374,8 @@ const CaseDetail = () => {
         return;
       }
 
-      // Get the root case (the original case in the series)
       const rootCaseId = caseData.parent_case_id || caseData.id;
 
-      // Get all related cases to determine the next instance number
       const { data: relatedCases } = await supabase.rpc("get_related_cases", {
         case_id: caseData.id,
       });
@@ -417,11 +385,8 @@ const CaseDetail = () => {
         : caseData.instance_number;
       const newInstanceNumber = maxInstance + 1;
 
-      // For the base case number, use the original case number (without any instance suffix)
-      // If this is already an instance (has a suffix), get the root case's number
       let baseCaseNumber = caseData.case_number;
       if (caseData.parent_case_id) {
-        // This is already a reopened case, get the root case number
         const { data: rootCase } = await supabase
           .from("cases")
           .select("case_number")
@@ -432,18 +397,14 @@ const CaseDetail = () => {
         }
       }
       
-      // Create the new case number with instance suffix
-      // Instance 2 becomes -01, instance 3 becomes -02, etc.
       const instanceSuffix = String(newInstanceNumber - 1).padStart(2, "0");
       const newCaseNumber = `${baseCaseNumber}-${instanceSuffix}`;
 
-      // Get current case subjects to copy
       const { data: subjects } = await supabase
         .from("case_subjects")
         .select("*")
         .eq("case_id", caseData.id);
 
-      // Create new case instance
       const { data: newCase, error: caseError } = await supabase
         .from("cases")
         .insert({
@@ -464,7 +425,6 @@ const CaseDetail = () => {
 
       if (caseError) throw caseError;
 
-      // Copy subjects to new case instance
       if (subjects && subjects.length > 0) {
         const subjectsToInsert = subjects.map((subject) => ({
           case_id: newCase.id,
@@ -486,7 +446,6 @@ const CaseDetail = () => {
         }
       }
 
-      // Create activity log entry on the OLD case
       await supabase.from("case_activities").insert({
         case_id: caseData.id,
         user_id: user.id,
@@ -496,7 +455,6 @@ const CaseDetail = () => {
         status: "completed",
       });
 
-      // Create activity log entry on the NEW case
       await supabase.from("case_activities").insert({
         case_id: newCase.id,
         user_id: user.id,
@@ -506,7 +464,6 @@ const CaseDetail = () => {
         status: "completed",
       });
 
-      // Create notification
       await NotificationHelpers.caseStatusChanged(
         newCaseNumber,
         openStatus.value,
@@ -518,7 +475,6 @@ const CaseDetail = () => {
         description: `Case reopened as ${newCaseNumber}`,
       });
 
-      // Navigate to the new case
       navigate(`/cases/${newCase.id}`);
     } catch (error) {
       console.error("Error reopening case:", error);
@@ -529,6 +485,7 @@ const CaseDetail = () => {
       });
     }
   };
+
   const handleDelete = async () => {
     if (!caseData) return;
     if (!confirm(`Are you sure you want to delete case "${caseData.title}"? This action cannot be undone.`)) {
@@ -536,15 +493,9 @@ const CaseDetail = () => {
     }
     setDeleting(true);
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-      const {
-        error
-      } = await supabase.from("cases").delete().eq("id", id).eq("user_id", user.id);
+      const { error } = await supabase.from("cases").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       toast({
         title: "Success",
@@ -562,46 +513,71 @@ const CaseDetail = () => {
       setDeleting(false);
     }
   };
+
   if (loading) {
     return <CaseDetailSkeleton />;
   }
+
   if (!caseData) {
-    return <div className="text-center py-12">
+    return (
+      <div className="text-center py-12">
         <p className="text-muted-foreground">Case not found</p>
         <Button asChild className="mt-4">
           <Link to="/cases">Back to Cases</Link>
         </Button>
-      </div>;
+      </div>
+    );
   }
+
   const isClosed = isClosedCase();
-  return <div className="space-y-4 sm:space-y-6">
-      {isVendor && <Alert className="bg-muted/50 border-primary/20">
+
+  // Info item helper component
+  const InfoItem = ({ label, value, className = "" }: { label: string; value: string | undefined | null; className?: string }) => {
+    if (!value) return null;
+    return (
+      <div>
+        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+        <p className={`text-sm font-medium ${className}`}>{value}</p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      {isVendor && (
+        <Alert className="bg-muted/50 border-primary/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
             Vendor Access - You can view case details and submit updates. Contact and account information is restricted.
           </AlertDescription>
-        </Alert>}
+        </Alert>
+      )}
 
-      {isClosed && <Alert className="bg-muted/50 border-muted">
+      {isClosed && (
+        <Alert className="bg-muted/50 border-muted">
           <Info className="h-4 w-4" />
           <AlertDescription>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex flex-col gap-1">
                 <span className="font-semibold">This case is closed.</span>
-                {caseData.closed_by_user_id && caseData.closed_at && <span className="text-sm text-muted-foreground">
+                {caseData.closed_by_user_id && caseData.closed_at && (
+                  <span className="text-sm text-muted-foreground">
                     Closed on {new Date(caseData.closed_at).toLocaleDateString()} at {new Date(caseData.closed_at).toLocaleTimeString()}
-                  </span>}
+                  </span>
+                )}
               </div>
-              {(isAdmin || isManager) && <Button variant="outline" size="sm" onClick={() => setReopenDialogOpen(true)} className="self-start sm:self-auto">
+              {(isAdmin || isManager) && (
+                <Button variant="outline" size="sm" onClick={() => setReopenDialogOpen(true)} className="self-start sm:self-auto">
                   Reopen Case
-                </Button>}
+                </Button>
+              )}
             </div>
           </AlertDescription>
-        </Alert>}
+        </Alert>
+      )}
       
-      {/* Mobile-optimized header layout */}
+      {/* Header */}
       <div className="flex flex-col gap-3">
-        {/* Row 1: Back button + Title + Mobile actions */}
         <div className="flex items-start gap-2 sm:gap-4">
           <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
             <Link to="/cases">
@@ -617,7 +593,7 @@ const CaseDetail = () => {
             </p>
           </div>
           
-          {/* Mobile action menu (visible only on mobile) */}
+          {/* Mobile action menu */}
           {!isVendor && isMobile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -657,7 +633,7 @@ const CaseDetail = () => {
           )}
         </div>
         
-        {/* Row 2: Status dropdown (full width on mobile) */}
+        {/* Status + Desktop actions */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {!isVendor && (
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -673,11 +649,6 @@ const CaseDetail = () => {
                   ))}
                 </SelectContent>
               </Select>
-              {caseStatuses.find(s => s.value === caseData.status)?.status_type && (
-                <span className="text-xs">
-                  {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
-                </span>
-              )}
             </div>
           )}
           {isVendor && (
@@ -685,11 +656,6 @@ const CaseDetail = () => {
               <Badge className="border" style={getStatusStyle(caseData.status)}>
                 {caseData.status}
               </Badge>
-              {caseStatuses.find(s => s.value === caseData.status)?.status_type && (
-                <span className="text-xs">
-                  {caseStatuses.find(s => s.value === caseData.status)?.status_type === "open" ? "🟢" : "⚪"}
-                </span>
-              )}
             </div>
           )}
           
@@ -722,86 +688,122 @@ const CaseDetail = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-        <Card className="xl:col-span-2">
-          <CardHeader className="p-3 sm:p-4 md:p-6">
-            <CardTitle className="text-base sm:text-lg">Case Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4 md:p-6 pt-0">
-            {caseData.description && <div>
-                <p className="text-sm font-medium mb-1">Case Objective   </p>
-                <p className="text-muted-foreground">{caseData.description}</p>
-              </div>}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              {!isVendor && account && <div>
-                  <p className="text-sm font-medium mb-1">Account</p>
-                  <p className="text-muted-foreground">{account.name}</p>
-                </div>}
-              {!isVendor && contact && <div>
-                  <p className="text-sm font-medium mb-1">Contact</p>
-                  <p className="text-muted-foreground">{contact.first_name} {contact.last_name}</p>
-                </div>}
-              {caseData.start_date && <div>
-                  <p className="text-sm font-medium mb-1">Start Date</p>
-                  <p className="text-muted-foreground">{new Date(caseData.start_date).toLocaleDateString()}</p>
-                </div>}
-              {caseData.due_date && <div>
-                  <p className="text-sm font-medium mb-1">Due Date</p>
-                  <p className="text-red-500 font-normal">{new Date(caseData.due_date).toLocaleDateString()}</p>
-                </div>}
-              {caseData.claim_number && <div>
-                  <p className="text-sm font-medium mb-1">Claim Number</p>
-                  <p className="text-muted-foreground">{caseData.claim_number}</p>
-                </div>}
-              {(caseData.surveillance_start_date || caseData.surveillance_end_date) && <div>
-                  <p className="text-sm font-medium mb-1">Surveillance Dates</p>
-                  <p className="text-muted-foreground">
-                    {caseData.surveillance_start_date && caseData.surveillance_end_date
-                      ? `${new Date(caseData.surveillance_start_date).toLocaleDateString()} - ${new Date(caseData.surveillance_end_date).toLocaleDateString()}`
-                      : caseData.surveillance_start_date
-                        ? `Starting ${new Date(caseData.surveillance_start_date).toLocaleDateString()}`
-                        : `Through ${new Date(caseData.surveillance_end_date!).toLocaleDateString()}`
-                    }
-                  </p>
-                </div>}
-            </div>
-          </CardContent>
-        </Card>
-
-        {!isVendor && <div className="space-y-4 sm:space-y-6">
-            <CaseBudgetWidget 
-              caseId={id!} 
-              refreshKey={budgetRefreshKey}
-              onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)}
-              onViewHistory={handleViewBudgetHistory}
-            />
-            <RetainerFundsWidget caseId={id!} />
-            <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} investigatorIds={caseData.investigator_ids || []} onUpdate={fetchCaseData} />
-            <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
-          </div>}
-      </div>
-
+      {/* Tabs - Now at top */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        {/* Mobile: horizontal scroll, Desktop: grid layout */}
         <div className="overflow-x-auto -mx-1 px-1 scrollbar-hide">
           <TabsList className={`
             inline-flex sm:grid w-auto sm:w-full gap-1
-            ${isVendor ? 'sm:grid-cols-2' : 'sm:grid-cols-8'}
+            ${isVendor ? 'sm:grid-cols-2' : 'sm:grid-cols-9'}
           `}>
-            {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Subjects</TabsTrigger>}
-            <TabsTrigger value="updates" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Updates</TabsTrigger>
-            {!isVendor && <TabsTrigger value="reports" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Reports</TabsTrigger>}
-            {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Activities</TabsTrigger>}
-            {!isVendor && <TabsTrigger value="calendar" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Calendar</TabsTrigger>}
-            {!isVendor && <TabsTrigger value="finances" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Finances</TabsTrigger>}
-            {!isVendor && <TabsTrigger value="budget" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Budget</TabsTrigger>}
-            <TabsTrigger value="attachments" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">Attachments</TabsTrigger>
+            {!isVendor && <TabsTrigger value="info" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <Briefcase className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Info
+            </TabsTrigger>}
+            {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <Users className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Subjects
+            </TabsTrigger>}
+            <TabsTrigger value="updates" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <FilePenLine className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Updates
+            </TabsTrigger>
+            {!isVendor && <TabsTrigger value="reports" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <BarChart3 className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Reports
+            </TabsTrigger>}
+            {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <ClipboardList className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Activities
+            </TabsTrigger>}
+            {!isVendor && <TabsTrigger value="calendar" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <Calendar className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Calendar
+            </TabsTrigger>}
+            {!isVendor && <TabsTrigger value="finances" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <DollarSign className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Finances
+            </TabsTrigger>}
+            {!isVendor && <TabsTrigger value="budget" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <Clock className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Budget
+            </TabsTrigger>}
+            <TabsTrigger value="attachments" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <FileArchive className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Attachments
+            </TabsTrigger>
           </TabsList>
         </div>
 
-        {!isVendor && <TabsContent value="subjects" className="mt-4 sm:mt-6">
+        {/* Info Tab - New consolidated tab */}
+        {!isVendor && (
+          <TabsContent value="info" className="mt-4 sm:mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+              {/* Case Details Card */}
+              <Card className="xl:col-span-1 lg:col-span-2 xl:row-span-2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Briefcase className="h-5 w-5" />
+                    Case Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {caseData.description && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Case Objective</p>
+                      <p className="text-sm">{caseData.description}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <InfoItem label="Account" value={account?.name} />
+                    <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
+                    <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
+                    <InfoItem label="Claim Number" value={caseData.claim_number} />
+                    <InfoItem label="Start Date" value={caseData.start_date ? new Date(caseData.start_date).toLocaleDateString() : null} />
+                    <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
+                    {caseData.surveillance_start_date && (
+                      <InfoItem label="Surveillance Start" value={new Date(caseData.surveillance_start_date).toLocaleDateString()} />
+                    )}
+                    {caseData.surveillance_end_date && (
+                      <InfoItem label="Surveillance End" value={new Date(caseData.surveillance_end_date).toLocaleDateString()} />
+                    )}
+                    <InfoItem label="Created" value={new Date(caseData.created_at).toLocaleDateString()} />
+                    {isClosed && caseData.closed_at && (
+                      <InfoItem label="Closed" value={new Date(caseData.closed_at).toLocaleDateString()} className="text-muted-foreground" />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Budget + Retainer Column */}
+              <div className="space-y-4">
+                <CaseBudgetWidget 
+                  caseId={id!} 
+                  refreshKey={budgetRefreshKey}
+                  onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)}
+                  onViewHistory={handleViewBudgetHistory}
+                />
+                <RetainerFundsWidget caseId={id!} />
+              </div>
+
+              {/* Team + Related Cases Column */}
+              <div className="space-y-4">
+                <CaseTeamManager 
+                  caseId={id!} 
+                  caseManagerId={caseData.case_manager_id} 
+                  investigatorIds={caseData.investigator_ids || []} 
+                  onUpdate={fetchCaseData} 
+                />
+                <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
+              </div>
+            </div>
+          </TabsContent>
+        )}
+
+        {!isVendor && (
+          <TabsContent value="subjects" className="mt-4 sm:mt-6">
             <CaseSubjects caseId={id!} isClosedCase={isClosed} />
-          </TabsContent>}
+          </TabsContent>
+        )}
 
         <TabsContent value="updates" className="mt-4 sm:mt-6">
           <CaseUpdates caseId={id!} isClosedCase={isClosed} />
@@ -813,31 +815,33 @@ const CaseDetail = () => {
           </TabsContent>
         )}
 
-        {!isVendor && <>
+        {!isVendor && (
+          <>
             <TabsContent value="activities" className="mt-4 sm:mt-6">
               <CaseActivities caseId={id!} isClosedCase={isClosed} />
             </TabsContent>
 
             <TabsContent value="calendar" className="mt-4 sm:mt-6">
-          <CaseCalendar caseId={id!} isClosedCase={isClosed} />
-        </TabsContent>
+              <CaseCalendar caseId={id!} isClosedCase={isClosed} />
+            </TabsContent>
 
-        <TabsContent value="finances" className="mt-4 sm:mt-6">
-          <CaseFinances caseId={id!} isClosedCase={isClosed} />
-        </TabsContent>
+            <TabsContent value="finances" className="mt-4 sm:mt-6">
+              <CaseFinances caseId={id!} isClosedCase={isClosed} />
+            </TabsContent>
 
-        <TabsContent value="budget" className="mt-4 sm:mt-6">
-          <div ref={budgetTabRef} className="space-y-6 scroll-mt-4">
-            <BudgetSummary 
-              caseId={id!} 
-              refreshKey={budgetRefreshKey} 
-              onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
-            />
-            <BudgetConsumptionSnapshot caseId={id!} refreshKey={budgetRefreshKey} />
-            <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} highlight={highlightHistory} />
-          </div>
-        </TabsContent>
-          </>}
+            <TabsContent value="budget" className="mt-4 sm:mt-6">
+              <div ref={budgetTabRef} className="space-y-6 scroll-mt-4">
+                <BudgetSummary 
+                  caseId={id!} 
+                  refreshKey={budgetRefreshKey} 
+                  onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
+                />
+                <BudgetConsumptionSnapshot caseId={id!} refreshKey={budgetRefreshKey} />
+                <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} highlight={highlightHistory} />
+              </div>
+            </TabsContent>
+          </>
+        )}
 
         <TabsContent value="attachments" className="mt-4 sm:mt-6">
           <CaseAttachments caseId={id!} isClosedCase={isClosed} />
@@ -873,6 +877,8 @@ const CaseDetail = () => {
         onConfirm={handleReopenCase}
         variant="default"
       />
-    </div>;
+    </div>
+  );
 };
+
 export default CaseDetail;

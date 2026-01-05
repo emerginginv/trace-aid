@@ -5,20 +5,23 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, UserPlus } from "lucide-react";
+import { X, UserPlus, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 interface Profile {
   id: string;
   full_name: string;
   email: string;
 }
+
 interface CaseTeamManagerProps {
   caseId: string;
   caseManagerId: string | null;
   investigatorIds: string[];
   onUpdate: () => void;
 }
+
 export const CaseTeamManager = ({
   caseId,
   caseManagerId,
@@ -31,15 +34,16 @@ export const CaseTeamManager = ({
   const [showAddInvestigator, setShowAddInvestigator] = useState(false);
   const [selectedInvestigator, setSelectedInvestigator] = useState<string>("");
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     fetchProfiles();
   }, [caseManagerId, investigatorIds]);
+
   const fetchProfiles = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get user's organization
       const { data: orgMember } = await supabase
         .from("organization_members")
         .select("organization_id")
@@ -49,7 +53,6 @@ export const CaseTeamManager = ({
 
       if (!orgMember) return;
 
-      // Get all organization member user_ids
       const { data: orgMembers } = await supabase
         .from("organization_members")
         .select("user_id")
@@ -59,7 +62,6 @@ export const CaseTeamManager = ({
 
       const userIds = orgMembers.map(m => m.user_id);
 
-      // Fetch profiles only for users in the same organization
       const { data: allProfiles } = await supabase
         .from("profiles")
         .select("id, full_name, email")
@@ -69,7 +71,6 @@ export const CaseTeamManager = ({
       if (allProfiles) {
         setProfiles(allProfiles);
 
-        // Set case manager
         if (caseManagerId) {
           const manager = allProfiles.find(p => p.id === caseManagerId);
           setCaseManager(manager || null);
@@ -77,7 +78,6 @@ export const CaseTeamManager = ({
           setCaseManager(null);
         }
 
-        // Set investigators
         if (investigatorIds && investigatorIds.length > 0) {
           const invs = allProfiles.filter(p => investigatorIds.includes(p.id));
           setInvestigators(invs);
@@ -91,17 +91,12 @@ export const CaseTeamManager = ({
       setLoading(false);
     }
   };
+
   const handleUpdateCaseManager = async (managerId: string) => {
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const {
-        error
-      } = await supabase.from("cases").update({
+      const { error } = await supabase.from("cases").update({
         case_manager_id: managerId
       }).eq("id", caseId).eq("user_id", user.id);
       if (error) throw error;
@@ -119,19 +114,14 @@ export const CaseTeamManager = ({
       });
     }
   };
+
   const handleAddInvestigator = async () => {
     if (!selectedInvestigator) return;
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const newInvestigatorIds = [...(investigatorIds || []), selectedInvestigator];
-      const {
-        error
-      } = await supabase.from("cases").update({
+      const { error } = await supabase.from("cases").update({
         investigator_ids: newInvestigatorIds
       }).eq("id", caseId).eq("user_id", user.id);
       if (error) throw error;
@@ -151,18 +141,13 @@ export const CaseTeamManager = ({
       });
     }
   };
+
   const handleRemoveInvestigator = async (investigatorId: string) => {
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const newInvestigatorIds = (investigatorIds || []).filter(id => id !== investigatorId);
-      const {
-        error
-      } = await supabase.from("cases").update({
+      const { error } = await supabase.from("cases").update({
         investigator_ids: newInvestigatorIds
       }).eq("id", caseId).eq("user_id", user.id);
       if (error) throw error;
@@ -180,88 +165,112 @@ export const CaseTeamManager = ({
       });
     }
   };
+
   const getInitials = (name: string) => {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
+
   const availableInvestigators = profiles.filter(p => p.id !== caseManagerId && !(investigatorIds || []).includes(p.id));
+
   if (loading) {
-    return <Card>
-      <CardHeader>
-        <CardTitle>Team</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </CardContent>
-    </Card>;
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Team
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </CardContent>
+      </Card>
+    );
   }
-  return <Card>
-      <CardHeader>
-        <CardTitle>Team</CardTitle>
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          Team
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Case Manager */}
         <div>
-          <p className="text-sm font-medium mb-2">Case Manager</p>
+          <p className="text-xs text-muted-foreground mb-1.5">Case Manager</p>
           <Select value={caseManagerId || ""} onValueChange={handleUpdateCaseManager}>
-            <SelectTrigger>
+            <SelectTrigger className="h-9">
               <SelectValue placeholder="Select case manager..." />
             </SelectTrigger>
             <SelectContent>
-              {profiles.map(profile => <SelectItem key={profile.id} value={profile.id}>
+              {profiles.map(profile => (
+                <SelectItem key={profile.id} value={profile.id}>
                   {profile.full_name || profile.email}
-                </SelectItem>)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
         {/* Investigators */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium">Investigators</p>
-            <Button variant="ghost" size="sm" onClick={() => setShowAddInvestigator(!showAddInvestigator)}>
-              <UserPlus className="h-4 w-4 mr-1" />
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs text-muted-foreground">Investigators</p>
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowAddInvestigator(!showAddInvestigator)}>
+              <UserPlus className="h-3.5 w-3.5 mr-1" />
               Add
             </Button>
           </div>
 
-          {/* Add Investigator Form */}
-          {showAddInvestigator && <div className="flex gap-2 mb-3">
+          {showAddInvestigator && (
+            <div className="flex gap-2 mb-3">
               <Select value={selectedInvestigator} onValueChange={setSelectedInvestigator}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1 h-9">
                   <SelectValue placeholder="Select investigator..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableInvestigators.map(profile => <SelectItem key={profile.id} value={profile.id}>
+                  {availableInvestigators.map(profile => (
+                    <SelectItem key={profile.id} value={profile.id}>
                       {profile.full_name || profile.email}
-                    </SelectItem>)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <Button size="sm" onClick={handleAddInvestigator} disabled={!selectedInvestigator}>
+              <Button size="sm" className="h-9" onClick={handleAddInvestigator} disabled={!selectedInvestigator}>
                 Add
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => {
-            setShowAddInvestigator(false);
-            setSelectedInvestigator("");
-          }}>
+              <Button size="sm" variant="ghost" className="h-9" onClick={() => {
+                setShowAddInvestigator(false);
+                setSelectedInvestigator("");
+              }}>
                 Cancel
               </Button>
-            </div>}
+            </div>
+          )}
 
-          {/* Investigators List */}
           <div className="flex flex-wrap gap-2">
-            {investigators.length === 0 ? <p className="text-sm text-muted-foreground">No investigators assigned</p> : investigators.map(investigator => <TooltipProvider key={investigator.id}>
+            {investigators.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No investigators assigned</p>
+            ) : (
+              investigators.map(investigator => (
+                <TooltipProvider key={investigator.id}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1.5 cursor-pointer bg-blue-300">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-xs">
+                      <Badge variant="secondary" className="flex items-center gap-2 px-2.5 py-1 cursor-pointer">
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback className="text-[10px]">
                             {getInitials(investigator.full_name || investigator.email)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">
+                        <span className="text-xs">
                           {investigator.full_name || investigator.email}
                         </span>
-                        <button onClick={() => handleRemoveInvestigator(investigator.id)} className="ml-1 hover:bg-destructive/20 rounded-full p-0.5">
+                        <button 
+                          onClick={() => handleRemoveInvestigator(investigator.id)} 
+                          className="ml-0.5 hover:bg-destructive/20 rounded-full p-0.5"
+                        >
                           <X className="h-3 w-3" />
                         </button>
                       </Badge>
@@ -271,9 +280,12 @@ export const CaseTeamManager = ({
                       <p className="text-xs text-muted-foreground">{investigator.email}</p>
                     </TooltipContent>
                   </Tooltip>
-                </TooltipProvider>)}
+                </TooltipProvider>
+              ))
+            )}
           </div>
         </div>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
