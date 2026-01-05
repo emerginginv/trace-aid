@@ -2,11 +2,11 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Download, RefreshCw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { RefreshCw } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { getReport, ReportDefinition, ReportColumn } from "@/lib/analytics/reports";
-import { calculateReportTotals, formatTotalValue } from "@/lib/analytics/reports/totals";
+import { calculateReportTotals } from "@/lib/analytics/reports/totals";
+import { executeReportQuery } from "@/lib/analytics/reports/queryBuilder";
 import { TimeRange } from "@/lib/analytics/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,21 @@ interface AnalyticsReportViewerProps {
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
+/**
+ * Parse date range from URL JSON string
+ */
+function parseDateRangeFromUrl(value: string): { start?: Date; end?: Date } | undefined {
+  try {
+    const parsed = JSON.parse(value);
+    return {
+      start: parsed.start ? new Date(parsed.start) : undefined,
+      end: parsed.end ? new Date(parsed.end) : undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 export function AnalyticsReportViewer({ reportId, initialFilters = {} }: AnalyticsReportViewerProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const { organization } = useOrganization();
@@ -37,7 +52,13 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
     const urlFilters: Record<string, unknown> = {};
     searchParams.forEach((value, key) => {
       if (key !== "page" && key !== "pageSize" && key !== "sortField" && key !== "sortDir") {
-        urlFilters[key] = value;
+        // Parse date_range as JSON
+        if (key === "date_range") {
+          const parsed = parseDateRangeFromUrl(value);
+          if (parsed) urlFilters[key] = parsed;
+        } else {
+          urlFilters[key] = value;
+        }
       }
     });
     return { ...initialFilters, ...urlFilters };
@@ -53,7 +74,7 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
     return urlPageSize ? parseInt(urlPageSize, 10) : 25;
   });
   
-  // Sort state
+  // Sort state - use actual DB field for sorting
   const [sort, setSort] = useState<{ field: string; direction: "asc" | "desc" }>(() => ({
     field: searchParams.get("sortField") || report?.defaultSort.field || "created_at",
     direction: (searchParams.get("sortDir") as "asc" | "desc") || report?.defaultSort.direction || "desc",
@@ -91,44 +112,20 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
     setSearchParams(newParams, { replace: true });
   }, [filters, page, pageSize, sort, setSearchParams]);
   
-  // Fetch report data
+  // Fetch report data using queryBuilder
   const { data: reportData, isLoading, refetch } = useQuery({
     queryKey: ["report", reportId, organization?.id, filters, page, pageSize, sort],
     queryFn: async () => {
       if (!organization?.id || !report) return { data: [], count: 0 };
       
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      
-      // Build query based on source table - use any to avoid type instantiation issues
-      const baseQuery = supabase.from(report.sourceTable as "cases");
-      
-      let query = baseQuery
-        .select("*, accounts(*), profiles!cases_case_manager_id_fkey(*)", { count: "exact" })
-        .eq("organization_id", organization.id)
-        .order(sort.field as "id", { ascending: sort.direction === "asc" })
-        .range(from, to);
-      
-      // Apply filters
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value === undefined || value === null || value === "" || key === "date_range") return;
-        if (typeof value === "string") {
-          query = query.eq(key as "id", value);
-        }
+      return executeReportQuery(report, {
+        organizationId: organization.id,
+        filters,
+        sort,
+        page,
+        pageSize,
+        timeRange: timeRange ? { start: timeRange.start, end: timeRange.end } : undefined,
       });
-      
-      // Apply time range
-      if (timeRange?.start) {
-        query = query.gte("created_at", timeRange.start.toISOString());
-      }
-      if (timeRange?.end) {
-        query = query.lte("created_at", timeRange.end.toISOString());
-      }
-      
-      const { data, count, error } = await query;
-      if (error) throw error;
-      
-      return { data: (data || []) as Record<string, unknown>[], count: count || 0 };
     },
     enabled: !!organization?.id && !!report,
   });
@@ -157,12 +154,16 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
     setPage(1); // Reset to first page on filter change
   }, []);
   
-  const handleSort = useCallback((field: string) => {
+  const handleSort = useCallback((columnKey: string) => {
+    // Find the column to get the actual sort field
+    const column = report?.columns.find(c => c.key === columnKey);
+    const sortField = column?.sortField || columnKey;
+    
     setSort((prev) => ({
-      field,
-      direction: prev.field === field && prev.direction === "asc" ? "desc" : "asc",
+      field: sortField,
+      direction: prev.field === sortField && prev.direction === "asc" ? "desc" : "asc",
     }));
-  }, []);
+  }, [report]);
   
   const handlePageChange = useCallback((newPage: number) => {
     setPage(newPage);
@@ -215,6 +216,12 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
   
   const totalPages = Math.ceil((reportData?.count || 0) / pageSize);
   
+  // Check if current sort field matches column (handle both key and sortField)
+  const isSortedByColumn = (column: ReportColumn): boolean => {
+    const sortField = column.sortField || column.key;
+    return sort.field === sortField || sort.field === column.key;
+  };
+  
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -233,6 +240,9 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
             data={reportData?.data || []}
             totals={totals || {}}
             filters={filters}
+            organizationId={organization?.id}
+            timeRange={timeRange ? { start: timeRange.start, end: timeRange.end } : undefined}
+            sort={sort}
           />
         </div>
       </div>
@@ -270,7 +280,7 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
                     >
                       <div className="flex items-center gap-1">
                         {column.header}
-                        {column.sortable && sort.field === column.key && (
+                        {column.sortable && isSortedByColumn(column) && (
                           <span className="text-xs">{sort.direction === "asc" ? "↑" : "↓"}</span>
                         )}
                       </div>

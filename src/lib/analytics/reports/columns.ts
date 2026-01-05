@@ -49,7 +49,7 @@ export const caseColumns: Record<string, ReportColumn> = {
     key: "investigator_name",
     header: "Investigator",
     accessor: (row) => {
-      const profile = row.case_manager as Record<string, unknown>;
+      const profile = row.profiles as Record<string, unknown>;
       return profile?.full_name || "—";
     },
     sortable: false,
