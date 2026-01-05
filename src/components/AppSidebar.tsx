@@ -174,6 +174,20 @@ export function AppSidebar() {
                 <p className="text-xs text-sidebar-foreground/60">Case Management</p>
               </div>
             </>
+          ) : orgSettings?.logo_url ? (
+            <>
+              <img 
+                src={orgSettings.logo_url} 
+                alt={orgSettings.company_name || "Organization"} 
+                className="w-8 h-8 rounded-lg object-contain"
+              />
+              <div>
+                <h2 className="text-sky-300 font-medium text-base truncate max-w-[140px]">
+                  {orgSettings.company_name || "Organization"}
+                </h2>
+                <p className="text-xs text-sidebar-foreground/60">Case Management</p>
+              </div>
+            </>
           ) : (
             <>
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
