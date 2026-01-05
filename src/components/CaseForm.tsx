@@ -75,7 +75,6 @@ interface CaseFormProps {
     status: string;
     account_id: string | null;
     contact_id: string | null;
-    received: string;
     due_date: string | null;
     use_primary_subject_as_title?: boolean;
     budget_hours?: number | null;
@@ -431,7 +430,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       } else {
         const { data: newCase, error } = await supabase.from("cases").insert([{
           ...caseData,
-          received: new Date().toISOString().split('T')[0], // Auto-set received date on creation
           user_id: user.id,
           organization_id: organization.id,
           instance_number: 1, // New cases always start at instance 1

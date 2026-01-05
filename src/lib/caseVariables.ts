@@ -244,7 +244,7 @@ export async function getCaseVariables(caseId: string): Promise<CaseVariables | 
       investigatorList: investigatorList || "Not assigned",
       locationList: locationList || "None",
 
-      assignmentDate: formatDate(caseData.received),
+      assignmentDate: formatDate(caseData.created_at),
       surveillanceStartDate: formatDate((caseData as any).surveillance_start_date),
       surveillanceEndDate: formatDate((caseData as any).surveillance_end_date),
       surveillanceDateRange: formatDateRange(
