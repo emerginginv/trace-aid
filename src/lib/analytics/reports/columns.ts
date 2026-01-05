@@ -385,12 +385,21 @@ export const budgetColumns: Record<string, ReportColumn> = {
   },
   budget_utilization: {
     key: "utilization",
-    header: "Utilization",
-    accessor: "utilization",
-    format: "percentage",
+    header: "Utilization ($ / Hrs)",
+    accessor: (row) => {
+      const dollarUtil = row.dollars_utilization as number | null;
+      const hoursUtil = row.hours_utilization as number | null;
+      
+      const dollarStr = dollarUtil !== null ? `${dollarUtil.toFixed(1)}%` : "—";
+      const hoursStr = hoursUtil !== null ? `${hoursUtil.toFixed(1)}%` : "—";
+      
+      return `${dollarStr} / ${hoursStr}`;
+    },
+    format: "text",
     sortable: true,
+    sortField: "dollars_utilization",
     align: "right",
-    width: "110px",
+    width: "150px",
   },
 };
 
