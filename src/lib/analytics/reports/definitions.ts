@@ -388,6 +388,8 @@ export const budgetStatusReport: ReportDefinition = {
     budgetColumns.budget_authorized_dollars,
     budgetColumns.budget_consumed_dollars,
     budgetColumns.budget_remaining_dollars,
+    budgetColumns.budget_authorized_hours,
+    budgetColumns.budget_consumed_hours,
     budgetColumns.budget_utilization,
   ],
   filters: [
