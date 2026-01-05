@@ -118,7 +118,11 @@ export async function calculateReportTotals(
             timeRange: params.timeRange,
           });
           
-          totals[totalConfig.key] = result.data[totalConfig.metricId] ?? 0;
+          // Analytics engine returns data as an array of rows
+          const row = Array.isArray(result.data) && result.data.length > 0 
+            ? result.data[0] 
+            : result.data;
+          totals[totalConfig.key] = (row as Record<string, number>)?.[totalConfig.metricId] ?? 0;
           continue;
         }
       }
