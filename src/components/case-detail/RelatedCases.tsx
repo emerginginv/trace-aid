@@ -97,8 +97,8 @@ export function RelatedCases({ caseId, currentInstanceNumber }: RelatedCasesProp
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
           <FolderOpen className="h-5 w-5" />
           Related Cases
         </CardTitle>
