@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, User, Search, LayoutGrid, List, Edit, Trash2, Mail, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { toast } from "sonner";
 import { ContactForm } from "@/components/ContactForm";
 import { EmailComposer } from "@/components/EmailComposer";
@@ -234,10 +235,13 @@ const Contacts = () => {
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-10">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+            <ResponsiveButton
+              icon={<Download className="h-4 w-4" />}
+              label="Export"
+              variant="outline"
+              size="sm"
+              className="h-10"
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleExportCSV}>

@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
 import { Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck } from "lucide-react";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
 import { InvoiceFromExpenses } from "@/components/case-detail/InvoiceFromExpenses";
@@ -454,10 +455,13 @@ const AllInvoices = () => {
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-10">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+            <ResponsiveButton
+              icon={<Download className="h-4 w-4" />}
+              label="Export"
+              variant="outline"
+              size="sm"
+              className="h-10"
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={exportToCSV}>

@@ -19,7 +19,8 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Search, Trash2, Mail, Loader2, Palette, Download, FileSpreadsheet, FileText, LayoutGrid, List, Users as UsersIcon } from "lucide-react";
+import { UserPlus, Search, Trash2, Mail, Loader2, Palette, Download, FileSpreadsheet, FileText, LayoutGrid, List, Users as UsersIcon, CheckCheck } from "lucide-react";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -404,10 +405,13 @@ const Users = () => {
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-10">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+            <ResponsiveButton
+              icon={<Download className="h-4 w-4" />}
+              label="Export"
+              variant="outline"
+              size="sm"
+              className="h-10"
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleExportCSV}>

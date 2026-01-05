@@ -18,7 +18,9 @@ import {
   ArrowRight,
   X,
   Loader2,
+  CheckCheck,
 } from "lucide-react";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { formatDistanceToNow } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
@@ -268,9 +270,14 @@ const Notifications = () => {
               {unreadCount} Unread
             </Badge>
           )}
-          <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0}>
-            Mark All Read
-          </Button>
+          <ResponsiveButton
+            icon={<CheckCheck className="h-4 w-4" />}
+            label="Mark All Read"
+            variant="outline"
+            size="sm"
+            onClick={markAllAsRead}
+            disabled={unreadCount === 0}
+          />
         </div>
       </div>
 

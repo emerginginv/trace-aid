@@ -460,6 +460,39 @@ xl: 1280px  /* Large desktop */
 - Simplify navigation (hamburger)
 - Optimize images for device
 - Test one-handed usage patterns
+- **Use `ResponsiveButton` for icon-only mobile buttons** (see below)
+
+### Mobile-Responsive Buttons (Global Standard)
+
+**Standard**: All buttons with text labels MUST use icon-only display on mobile.
+
+**Component**: Use `ResponsiveButton` for automatic responsive behavior:
+
+```tsx
+import { ResponsiveButton } from "@/components/ui/responsive-button";
+import { Download } from "lucide-react";
+
+// Basic usage - shows icon-only on mobile, full text on sm+
+<ResponsiveButton
+  icon={<Download className="h-4 w-4" />}
+  label="Export"
+  variant="outline"
+/>
+
+// Custom breakpoint - show text starting at md (768px+)
+<ResponsiveButton
+  icon={<Download className="h-4 w-4" />}
+  label="Export"
+  showLabelBreakpoint="md"
+  variant="outline"
+/>
+```
+
+**Guidelines**:
+- Mobile (< 640px): Icon only + tooltip on hover/focus
+- Desktop (≥ 640px): Icon + text label
+- Maintain minimum 44px touch target on mobile
+- Always include descriptive tooltip for accessibility
 
 ---
 
