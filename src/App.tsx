@@ -43,6 +43,7 @@ import Analytics from "./pages/Analytics";
 import CaseAnalytics from "./pages/CaseAnalytics";
 import BudgetAnalytics from "./pages/BudgetAnalytics";
 import TimeExpenseAnalytics from "./pages/TimeExpenseAnalytics";
+import ActivityAnalytics from "./pages/ActivityAnalytics";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -189,6 +190,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <TimeExpenseAnalytics />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics/activity"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <ActivityAnalytics />
               </DashboardLayout>
             </ProtectedRoute>
           }
