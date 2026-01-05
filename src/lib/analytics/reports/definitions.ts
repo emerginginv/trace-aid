@@ -381,6 +381,7 @@ export const budgetStatusReport: ReportDefinition = {
   description: "Budget utilization across all budgeted cases",
   category: "finances",
   sourceTable: "cases",
+  baseFilters: [{ field: "budget_dollars", operator: "is_not_null", value: null }],
   columns: [
     budgetColumns.budget_case_number,
     budgetColumns.budget_case_title,
