@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink } from "lucide-react";
 import { useConfirmation } from "@/components/ui/confirmation-dialog";
 import { RevokeMode } from "./RevokeAccessDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -625,7 +625,47 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     }
 
     if (previewAttachment.file_type.includes("pdf")) {
-      return <iframe src={signedUrl} className="w-full h-[80vh] rounded" title={previewAttachment.file_name} />;
+      return (
+        <div className="flex flex-col h-full">
+          <object
+            data={signedUrl}
+            type="application/pdf"
+            className="w-full h-[70vh] rounded"
+            title={previewAttachment.file_name}
+          >
+            {/* Fallback content if object tag fails */}
+            <div className="flex flex-col items-center justify-center py-12 h-[70vh] bg-muted/30 rounded">
+              <FileText className="h-16 w-16 mb-4 text-muted-foreground" />
+              <p className="text-lg font-medium mb-2">PDF preview not available</p>
+              <p className="text-muted-foreground mb-4">
+                Your browser cannot display this PDF inline.
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={() => window.open(signedUrl, '_blank')}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open in New Tab
+                </Button>
+                <Button variant="outline" onClick={() => handleDownload(previewAttachment)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          </object>
+          
+          {/* Always show action buttons below the PDF viewer */}
+          <div className="flex gap-2 justify-center mt-4 pt-4 border-t">
+            <Button variant="outline" size="sm" onClick={() => window.open(signedUrl, '_blank')}>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open in New Tab
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleDownload(previewAttachment)}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
+        </div>
+      );
     }
 
     return (

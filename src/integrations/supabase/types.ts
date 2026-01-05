@@ -245,6 +245,9 @@ export type Database = {
           id: string
           name: string | null
           organization_id: string | null
+          preview_generated_at: string | null
+          preview_path: string | null
+          preview_status: string | null
           tags: string[] | null
           user_id: string
         }
@@ -259,6 +262,9 @@ export type Database = {
           id?: string
           name?: string | null
           organization_id?: string | null
+          preview_generated_at?: string | null
+          preview_path?: string | null
+          preview_status?: string | null
           tags?: string[] | null
           user_id: string
         }
@@ -273,6 +279,9 @@ export type Database = {
           id?: string
           name?: string | null
           organization_id?: string | null
+          preview_generated_at?: string | null
+          preview_path?: string | null
+          preview_status?: string | null
           tags?: string[] | null
           user_id?: string
         }
