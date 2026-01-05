@@ -38,19 +38,30 @@ export function ReportFilters({ config, values, onChange, onReset }: ReportFilte
     enabled: !!organization?.id && config.some((f) => f.type === "client"),
   });
   
-  // Fetch investigators for investigator filter
+  // Fetch investigators for investigator filter (two-step query to avoid embedding issues)
   const { data: investigators } = useQuery({
     queryKey: ["investigators-filter", organization?.id],
     queryFn: async () => {
       if (!organization?.id) return [];
-      const { data } = await supabase
+      
+      // Step 1: Get member user IDs
+      const { data: members } = await supabase
         .from("organization_members")
-        .select("user_id, profiles(id, full_name, email)")
+        .select("user_id")
         .eq("organization_id", organization.id);
-      return data?.map((m) => ({
-        id: m.user_id,
-        name: (m.profiles as unknown as { full_name?: string; email?: string })?.full_name || 
-              (m.profiles as unknown as { full_name?: string; email?: string })?.email || "Unknown",
+      
+      if (!members || members.length === 0) return [];
+      
+      // Step 2: Get profiles for those user IDs
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      
+      return profiles?.map((p) => ({
+        id: p.id,
+        name: p.full_name || p.email || "Unknown",
       })) || [];
     },
     enabled: !!organization?.id && config.some((f) => f.type === "investigator"),
