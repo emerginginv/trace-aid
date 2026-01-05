@@ -77,12 +77,13 @@ function SortableSection({ section, onUpdate, onDelete, isReadOnly }: SortableSe
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style}>
       <SectionEditor
         section={section}
         onUpdate={onUpdate}
         onDelete={onDelete}
         isReadOnly={isReadOnly}
+        dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>
   );
