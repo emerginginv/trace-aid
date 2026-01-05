@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { toast } from "@/hooks/use-toast";
 import { PageTransition } from "@/components/ui/page-transition";
 import { AttachmentViewerHeader } from "@/components/attachment-viewer/AttachmentViewerHeader";
@@ -38,6 +39,15 @@ export default function AttachmentViewer() {
   const [error, setError] = useState<string | null>(null);
   const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useSetBreadcrumbs(
+    attachment
+      ? [
+          { label: "Cases", href: "/cases" },
+          { label: attachment.name || attachment.file_name },
+        ]
+      : []
+  );
 
   // Fetch single attachment and all case attachments
   const fetchAttachmentData = useCallback(async () => {

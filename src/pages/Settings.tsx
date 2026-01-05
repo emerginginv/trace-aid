@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -52,6 +53,8 @@ interface PicklistItem {
 }
 
 const Settings = () => {
+  useSetBreadcrumbs([{ label: "Settings" }]);
+  
   const { impersonatedUserId } = useImpersonation();
   const { role: currentUserRole, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);

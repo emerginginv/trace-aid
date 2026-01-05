@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RefreshCw } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { getReport, ReportDefinition, ReportColumn } from "@/lib/analytics/reports";
 import { calculateReportTotals } from "@/lib/analytics/reports/totals";
 import { executeReportQuery } from "@/lib/analytics/reports/queryBuilder";
@@ -46,6 +47,13 @@ export function AnalyticsReportViewer({ reportId, initialFilters = {} }: Analyti
   
   // Get report definition
   const report = useMemo(() => getReport(reportId), [reportId]);
+
+  // Set breadcrumbs for report
+  useSetBreadcrumbs([
+    { label: "Analytics", href: "/analytics" },
+    { label: "Reports", href: "/analytics/reports" },
+    { label: report?.name || "Report" },
+  ]);
   
   // Parse filters from URL or use initial
   const [filters, setFilters] = useState<Record<string, unknown>>(() => {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, User, Mail, Phone, MapPin, Edit, Building2 } from "lucide-react";
@@ -32,6 +33,15 @@ const ContactDetail = () => {
   const [contact, setContact] = useState<Contact | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useSetBreadcrumbs(
+    contact
+      ? [
+          { label: "Contacts", href: "/contacts" },
+          { label: `${contact.first_name} ${contact.last_name}` },
+        ]
+      : []
+  );
 
   useEffect(() => {
     fetchContactDetails();

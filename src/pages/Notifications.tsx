@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,8 @@ interface Notification {
 }
 
 const Notifications = () => {
+  useSetBreadcrumbs([{ label: "Notifications" }]);
+  
   const { organization } = useOrganization();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState("all");

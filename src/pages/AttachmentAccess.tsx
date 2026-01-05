@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileX, Download, Loader2, AlertCircle, Clock, ShieldX } from "lucide-react";
@@ -8,6 +9,8 @@ import { FileX, Download, Loader2, AlertCircle, Clock, ShieldX } from "lucide-re
 type AccessState = "loading" | "success" | "expired" | "revoked" | "invalid" | "error";
 
 export default function AttachmentAccess() {
+  useSetBreadcrumbs([{ label: "Shared Attachment" }]);
+  
   const { token } = useParams<{ token: string }>();
   const [state, setState] = useState<AccessState>("loading");
   const [fileName, setFileName] = useState<string | null>(null);

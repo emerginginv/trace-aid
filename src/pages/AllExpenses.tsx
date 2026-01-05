@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,11 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 const AllExpenses = () => {
+  useSetBreadcrumbs([
+    { label: "Finance", href: "/finance" },
+    { label: "Expenses" },
+  ]);
+  
   const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
