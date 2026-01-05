@@ -316,7 +316,8 @@ export function SectionEditor({
                 <RichTextEditor
                   value={section.content || ''}
                   onChange={handleContentChange}
-                  placeholder="Enter static text content. You can use placeholders like {{company_name}}, {{case_manager}}, etc."
+                  placeholder="Enter static text content. Use the Insert Placeholder dropdown to add dynamic values."
+                  showPlaceholderDropdown={!isReadOnly}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
