@@ -35,6 +35,7 @@ interface SectionEditorProps {
   onUpdate: (updates: Partial<TemplateSection>) => void;
   onDelete: () => void;
   isReadOnly?: boolean;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 export function SectionEditor({
@@ -42,6 +43,7 @@ export function SectionEditor({
   onUpdate,
   onDelete,
   isReadOnly = false,
+  dragHandleProps,
 }: SectionEditorProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -210,8 +212,11 @@ export function SectionEditor({
     <Card className={`${!section.isVisible ? 'opacity-60' : ''}`}>
       <CardHeader className="p-3 sm:p-4">
         <div className="flex items-center gap-2">
-          {!isReadOnly && (
-            <div className="cursor-move text-muted-foreground">
+          {!isReadOnly && dragHandleProps && (
+            <div 
+              className="cursor-move text-muted-foreground touch-none"
+              {...dragHandleProps}
+            >
               <GripVertical className="h-4 w-4" />
             </div>
           )}
