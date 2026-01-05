@@ -59,6 +59,7 @@ export const openCasesReport: ReportDefinition = {
   description: "Active cases currently in progress",
   category: "cases",
   sourceTable: "cases",
+  baseFilters: [{ field: "status", operator: "in", value: ["active", "pending", "on_hold"] }],
   columns: [
     caseColumns.case_number,
     caseColumns.title,
@@ -87,6 +88,7 @@ export const closedCasesReport: ReportDefinition = {
   description: "Completed cases with closure information",
   category: "cases",
   sourceTable: "cases",
+  baseFilters: [{ field: "status", operator: "eq", value: "closed" }],
   columns: [
     caseColumns.case_number,
     caseColumns.title,
@@ -119,6 +121,7 @@ export const timeEntriesReport: ReportDefinition = {
   description: "All time logged against cases",
   category: "finances",
   sourceTable: "case_finances",
+  baseFilters: [{ field: "finance_type", operator: "eq", value: "time" }],
   columns: [
     financeColumns.date,
     financeColumns.case_number_finance,
@@ -157,6 +160,7 @@ export const expenseEntriesReport: ReportDefinition = {
   description: "All expenses logged against cases",
   category: "finances",
   sourceTable: "case_finances",
+  baseFilters: [{ field: "finance_type", operator: "eq", value: "expense" }],
   columns: [
     financeColumns.date,
     financeColumns.case_number_finance,

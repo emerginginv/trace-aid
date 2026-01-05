@@ -6,6 +6,7 @@ export interface ReportColumn {
   accessor: string | ((row: Record<string, unknown>) => unknown);
   format?: "date" | "datetime" | "currency" | "hours" | "percentage" | "text" | "status";
   sortable: boolean;
+  sortField?: string; // Actual DB column to sort by when different from key
   width?: string;
   align?: "left" | "right" | "center";
 }
@@ -27,6 +28,12 @@ export interface ReportTotalConfig {
   metricId?: string; // Optional: reference analytics engine metric for audit
 }
 
+export interface BaseFilter {
+  field: string;
+  operator: string;
+  value: unknown;
+}
+
 export interface ReportDefinition {
   id: string;
   name: string;
@@ -38,6 +45,7 @@ export interface ReportDefinition {
   defaultSort: { field: string; direction: "asc" | "desc" };
   totals: ReportTotalConfig[];
   relatedMetrics: string[]; // Links to analytics engine metrics
+  baseFilters?: BaseFilter[]; // Pre-applied filters (e.g., finance_type)
 }
 
 export interface ReportQueryParams {

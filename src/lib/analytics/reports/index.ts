@@ -10,7 +10,11 @@ export type {
   ReportResult,
   ReportCategory,
   ReportCategoryInfo,
+  BaseFilter,
 } from "./types";
+
+// Query Builder
+export { executeReportQuery, fetchAllReportData } from "./queryBuilder";
 
 // Columns
 export {
