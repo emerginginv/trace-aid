@@ -69,7 +69,9 @@ export function UpdateTypeMappingEditor({
         .order('display_order', { ascending: true });
 
       if (!error && data && data.length > 0) {
-        setAvailableUpdateTypes(data.map(item => item.value));
+        // Deduplicate update types to prevent React key conflicts
+        const uniqueTypes = [...new Set(data.map(item => item.value))];
+        setAvailableUpdateTypes(uniqueTypes);
       }
     }
 
@@ -172,8 +174,8 @@ export function UpdateTypeMappingEditor({
                 Select update types to include in this section:
               </Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                {availableUpdateTypes.map((updateType) => (
-                  <div key={updateType} className="flex items-center gap-2">
+                {availableUpdateTypes.map((updateType, index) => (
+                  <div key={`${updateType}-${index}`} className="flex items-center gap-2">
                     <Checkbox
                       id={`update-type-${updateType}`}
                       checked={currentMapping.updateTypes.includes(updateType)}
