@@ -4,6 +4,7 @@ import { FINANCIAL_METRICS } from "./financial-metrics";
 import { ACTIVITY_METRICS } from "./activity-metrics";
 import { USER_METRICS } from "./user-metrics";
 import { ATTACHMENT_METRICS } from "./attachment-metrics";
+import { BUDGET_METRICS } from "./budget-metrics";
 
 /**
  * All metric definitions combined
@@ -14,6 +15,7 @@ export const ALL_METRICS: MetricDefinition[] = [
   ...ACTIVITY_METRICS,
   ...USER_METRICS,
   ...ATTACHMENT_METRICS,
+  ...BUDGET_METRICS,
 ];
 
 /**
@@ -106,3 +108,4 @@ export { FINANCIAL_METRICS } from "./financial-metrics";
 export { ACTIVITY_METRICS } from "./activity-metrics";
 export { USER_METRICS } from "./user-metrics";
 export { ATTACHMENT_METRICS } from "./attachment-metrics";
+export { BUDGET_METRICS } from "./budget-metrics";
