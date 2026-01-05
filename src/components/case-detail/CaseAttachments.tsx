@@ -1411,7 +1411,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
             <DialogHeader>
               <DialogTitle>{previewAttachment?.name || previewAttachment?.file_name}</DialogTitle>
             </DialogHeader>
-            <div className="flex items-center justify-center">
+            <div className="w-full overflow-hidden">
               {renderPreviewContent()}
             </div>
           </DialogContent>
