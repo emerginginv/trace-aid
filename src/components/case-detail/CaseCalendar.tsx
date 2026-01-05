@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react";
 import { CalendarTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -83,6 +83,7 @@ export const CaseCalendar = forwardRef<
   const [editingActivity, setEditingActivity] = useState<any>(null);
   const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>(caseId);
   const [taskListFilter, setTaskListFilter] = useState<string>("all");
+  const isDuplicatingRef = useRef(false);
   
   // Internal task list visibility state (used when parent doesn't control it)
   const { isVisible: internalShowTaskList, toggle: internalToggleTaskList } = usePanelVisibility(
@@ -432,9 +433,10 @@ export const CaseCalendar = forwardRef<
         open={activityFormOpen}
         onOpenChange={(open) => {
           setActivityFormOpen(open);
-          if (!open) {
+          if (!open && !isDuplicatingRef.current) {
             setEditingActivity(null);
           }
+          isDuplicatingRef.current = false;
         }}
         caseId={selectedCaseId || ""}
         editingActivity={editingActivity}
@@ -448,13 +450,16 @@ export const CaseCalendar = forwardRef<
         users={users}
         prefilledDate={createDate || undefined}
         onDuplicate={(duplicateData) => {
-          // Close current form, then re-open with duplicate data in create mode
-          setEditingActivity({
-            ...duplicateData,
-            id: undefined,
-          });
-          setActivityType("event");
-          setActivityFormOpen(true);
+          isDuplicatingRef.current = true;
+          setActivityFormOpen(false);
+          setTimeout(() => {
+            setEditingActivity({
+              ...duplicateData,
+              id: undefined,
+            });
+            setActivityType("event");
+            setActivityFormOpen(true);
+          }, 50);
         }}
       />
 

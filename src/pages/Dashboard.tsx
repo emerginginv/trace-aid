@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,6 +98,7 @@ const Dashboard = () => {
   const [editingUpdate, setEditingUpdate] = useState<Update | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const isDuplicatingEventRef = useRef(false);
   const [stats, setStats] = useState({
     totalCases: 0,
     activeCases: 0,
@@ -870,16 +871,26 @@ const Dashboard = () => {
       window.location.reload();
     }} editingActivity={editingTask.activityData} organizationId={organization?.id || ""} />}
 
-      {editingEvent && <ActivityForm caseId={editingEvent.caseId} activityType="event" users={users} open={!!editingEvent} onOpenChange={open => !open && setEditingEvent(null)} onSuccess={() => {
+      {editingEvent && <ActivityForm caseId={editingEvent.caseId} activityType="event" users={users} open={!!editingEvent} onOpenChange={open => {
+        if (!open && !isDuplicatingEventRef.current) {
+          setEditingEvent(null);
+        }
+        isDuplicatingEventRef.current = false;
+      }} onSuccess={() => {
       setEditingEvent(null);
       window.location.reload();
     }} editingActivity={editingEvent.activityData} organizationId={organization?.id || ""} onDuplicate={(duplicateData) => {
-      setEditingEvent({
-        ...editingEvent,
-        id: `duplicate-${Date.now()}`,
-        title: duplicateData.title,
-        activityData: { ...duplicateData, id: undefined },
-      });
+      isDuplicatingEventRef.current = true;
+      const currentEvent = editingEvent;
+      setEditingEvent(null);
+      setTimeout(() => {
+        setEditingEvent({
+          ...currentEvent,
+          id: `duplicate-${Date.now()}`,
+          title: duplicateData.title,
+          activityData: { ...duplicateData, id: undefined },
+        });
+      }, 50);
     }} />}
 
       {editingUpdate && <UpdateForm caseId={editingUpdate.caseId} open={!!editingUpdate} onOpenChange={open => !open && setEditingUpdate(null)} onSuccess={() => {

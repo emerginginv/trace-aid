@@ -654,7 +654,6 @@ export function ActivityForm({
                         id: undefined,
                         title: `${formValues.title} (Copy)`,
                       });
-                      onOpenChange(false);
                     }}
                     className="w-full sm:w-auto"
                   >
