@@ -4,20 +4,17 @@ import { reportCategories, getReportsByCategory } from "@/lib/analytics/reports"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
 const iconMap: Record<string, React.ElementType> = {
   Briefcase,
   DollarSign,
   Activity,
-  PieChart,
+  PieChart
 };
-
 export default function ReportsHub() {
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Analytics Reports</h1>
+        <h1 className="text-3xl font-bold">Reports</h1>
         <p className="text-muted-foreground mt-1">
           Detailed, filterable reports with export capabilities
         </p>
@@ -25,12 +22,10 @@ export default function ReportsHub() {
       
       {/* Category Grid */}
       <div className="grid gap-6 md:grid-cols-2">
-        {reportCategories.map((category) => {
-          const Icon = iconMap[category.icon] || FileText;
-          const reports = getReportsByCategory(category.id);
-          
-          return (
-            <Card key={category.id} className="group hover:shadow-md transition-shadow">
+        {reportCategories.map(category => {
+        const Icon = iconMap[category.icon] || FileText;
+        const reports = getReportsByCategory(category.id);
+        return <Card key={category.id} className="group hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -47,12 +42,7 @@ export default function ReportsHub() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {reports.map((report) => (
-                    <Link
-                      key={report.id}
-                      to={`/reports/${report.id}`}
-                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group/item"
-                    >
+                  {reports.map(report => <Link key={report.id} to={`/reports/${report.id}`} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group/item">
                       <div>
                         <p className="font-medium">{report.name}</p>
                         <p className="text-sm text-muted-foreground line-clamp-1">
@@ -60,13 +50,11 @@ export default function ReportsHub() {
                         </p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground group-hover/item:text-foreground transition-colors" />
-                    </Link>
-                  ))}
+                    </Link>)}
                 </div>
               </CardContent>
-            </Card>
-          );
-        })}
+            </Card>;
+      })}
       </div>
       
       {/* Quick Access */}
@@ -95,6 +83,5 @@ export default function ReportsHub() {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
