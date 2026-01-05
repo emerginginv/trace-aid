@@ -33,7 +33,10 @@ export function PdfViewer({ pdfData, fileName, onDownload }: PdfViewerProps) {
         setLoading(true);
         setError(null);
 
-        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+        // Make a copy of the ArrayBuffer since PDF.js transfers it to a worker
+        // and it becomes detached (unusable) after transfer
+        const pdfDataCopy = pdfData.slice(0);
+        const loadingTask = pdfjsLib.getDocument({ data: pdfDataCopy });
         const doc = await loadingTask.promise;
 
         if (cancelled) return;
