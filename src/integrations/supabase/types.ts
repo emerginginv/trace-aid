@@ -152,6 +152,50 @@ export type Database = {
           },
         ]
       }
+      attachment_preview_logs: {
+        Row: {
+          attachment_id: string
+          attachment_type: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          organization_id: string
+          preview_type: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          attachment_id: string
+          attachment_type?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          organization_id: string
+          preview_type: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          attachment_id?: string
+          attachment_type?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          organization_id?: string
+          preview_type?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachment_preview_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_activities: {
         Row: {
           activity_type: string

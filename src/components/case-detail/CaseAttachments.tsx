@@ -37,6 +37,7 @@ import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibi
 import { AttachmentPreviewThumbnail } from "./AttachmentPreviewThumbnail";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { PdfViewer } from "./PdfViewer";
+import { usePreviewLogging } from "@/hooks/use-preview-logging";
 
 interface Attachment {
   id: string;
@@ -82,6 +83,7 @@ const COLUMNS: ColumnDefinition[] = [
 export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false }: CaseAttachmentsProps) => {
   const navigate = useNavigate();
   const { organization } = useOrganization();
+  const { logPreview } = usePreviewLogging();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -181,6 +183,9 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
           const arrayBuffer = await data.arrayBuffer();
           setPreviewBlobData(arrayBuffer);
         }
+
+        // Log the modal preview for audit
+        logPreview(previewAttachment.id, 'case', 'modal');
       } catch (error) {
         console.error("Error loading file preview:", error);
         setPreviewBlobError("Failed to load file preview");
