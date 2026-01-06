@@ -59,6 +59,17 @@ export function ReportPreviewPanel({
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
+  // Extract all <style> blocks from the preview HTML
+  const extractedStyles = useMemo(() => {
+    if (!preview?.html) return '';
+    const styleMatches = preview.html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
+    if (!styleMatches) return '';
+    // Extract inner content from each style tag
+    return styleMatches
+      .map(tag => tag.replace(/<\/?style[^>]*>/gi, ''))
+      .join('\n');
+  }, [preview?.html]);
+
   // Parse HTML into pages
   const pages = useMemo<ParsedPage[]>(() => {
     if (!preview?.html) return [];
@@ -405,6 +416,10 @@ export function ReportPreviewPanel({
 
       {/* Preview content - clean document-focused layout */}
       <ScrollArea className="flex-1" ref={containerRef}>
+        {/* Inject extracted styles so they apply to page content */}
+        {extractedStyles && (
+          <style dangerouslySetInnerHTML={{ __html: extractedStyles }} />
+        )}
         <div 
           className="min-h-full flex justify-center"
           style={{
