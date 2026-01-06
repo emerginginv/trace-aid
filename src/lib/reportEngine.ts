@@ -9,6 +9,7 @@ import {
   TemplateCustomization,
   applyCustomizations,
   CoverPageConfig,
+  SubjectFilterConfig,
 } from "@/lib/reportTemplates";
 import {
   renderStaticTextSection,
@@ -287,7 +288,7 @@ export async function generateReport(input: ReportInput): Promise<GenerationResu
           break;
 
         case 'case_variable_block':
-          rendered = renderVariableBlockSection(section, caseVariables);
+          rendered = renderVariableBlockSection(section, caseVariables, input.customization?.subjectFilterConfig);
           break;
 
         case 'update_collection':

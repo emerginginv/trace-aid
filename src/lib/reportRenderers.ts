@@ -8,9 +8,10 @@ import {
   AVAILABLE_CASE_VARIABLES,
   CoverPageConfig,
   getDefaultCoverPageConfig,
+  SubjectFilterConfig,
 } from "@/lib/reportTemplates";
 import { OrganizationProfile } from "@/lib/organizationProfile";
-import { CaseVariables, formatCaseVariablesForTemplate } from "@/lib/caseVariables";
+import { CaseVariables, formatCaseVariablesForTemplate, formatCaseVariablesForTemplateWithFilters } from "@/lib/caseVariables";
 import type { RenderedSection, CaseUpdate, CaseEvent, UserProfile } from "@/lib/reportEngine";
 import { formatReportDate } from "@/lib/reportStyles";
 
@@ -176,14 +177,18 @@ export function renderStaticTextSection(
  */
 export function renderVariableBlockSection(
   section: TemplateSection,
-  caseVariables: CaseVariables | null
+  caseVariables: CaseVariables | null,
+  subjectFilterConfig?: SubjectFilterConfig
 ): RenderedSection {
   const config = section.variableConfig;
   const variableKeys = config?.variables || [];
   const layout = config?.layout || 'table';
   const showLabels = config?.showLabels !== false;
 
-  const vars = caseVariables ? formatCaseVariablesForTemplate(caseVariables) : {};
+  // Use filtered variables if subject filter config is provided
+  const vars = caseVariables 
+    ? formatCaseVariablesForTemplateWithFilters(caseVariables, subjectFilterConfig) 
+    : {};
   const variableMeta = AVAILABLE_CASE_VARIABLES.reduce((acc, v) => {
     acc[v.key] = v.label;
     return acc;

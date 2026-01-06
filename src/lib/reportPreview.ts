@@ -12,6 +12,7 @@ import {
   SectionCustomization,
   applyCustomizations,
   CoverPageConfig,
+  SubjectFilterConfig,
 } from "@/lib/reportTemplates";
 import { CaseUpdate, CaseEvent, UserProfile, RenderedSection } from "@/lib/reportEngine";
 import {
@@ -166,7 +167,7 @@ export function generatePreview(input: PreviewInput): PreviewResult {
           break;
 
         case 'case_variable_block':
-          rendered = renderVariableBlockSection(section, caseVariables);
+          rendered = renderVariableBlockSection(section, caseVariables, customization?.subjectFilterConfig);
           break;
 
         case 'update_collection':
@@ -804,11 +805,13 @@ function assemblePreviewHtml(
 export function buildCustomization(
   templateId: string,
   customizations: Map<string, SectionCustomization>,
-  coverPageConfig?: CoverPageConfig
+  coverPageConfig?: CoverPageConfig,
+  subjectFilterConfig?: SubjectFilterConfig
 ): TemplateCustomization {
   return {
     templateId,
     sectionCustomizations: Array.from(customizations.values()),
     coverPageConfig,
+    subjectFilterConfig,
   };
 }

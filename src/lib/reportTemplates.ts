@@ -567,6 +567,22 @@ export function getDefaultCoverPageConfig(): CoverPageConfig {
   };
 }
 
+// Subject filter configuration for controlling which subject types appear in reports
+export interface SubjectFilterConfig {
+  includeVehicles: boolean;   // Toggle for vehicle subjects (default: true)
+  includeLocations: boolean;  // Toggle for location subjects (default: true)
+  includeItems: boolean;      // Toggle for item subjects (default: true)
+}
+
+// Get default subject filter configuration
+export function getDefaultSubjectFilterConfig(): SubjectFilterConfig {
+  return {
+    includeVehicles: true,
+    includeLocations: true,
+    includeItems: true,
+  };
+}
+
 // Represents per-section customizations applied before report generation
 export interface SectionCustomization {
   sectionId: string;
@@ -581,6 +597,7 @@ export interface TemplateCustomization {
   templateId: string;
   sectionCustomizations: SectionCustomization[];
   coverPageConfig?: CoverPageConfig;  // Cover page display options
+  subjectFilterConfig?: SubjectFilterConfig;  // Subject type filter options
 }
 
 // Reordering constraints for sections
