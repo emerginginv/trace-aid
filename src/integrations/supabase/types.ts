@@ -987,6 +987,133 @@ export type Database = {
           },
         ]
       }
+      document_instances: {
+        Row: {
+          case_id: string
+          case_variables_snapshot: Json | null
+          created_at: string | null
+          document_type: string
+          export_format: string | null
+          exported_at: string | null
+          generated_at: string | null
+          id: string
+          org_profile_snapshot: Json | null
+          organization_id: string
+          rendered_html: string
+          template_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          case_variables_snapshot?: Json | null
+          created_at?: string | null
+          document_type: string
+          export_format?: string | null
+          exported_at?: string | null
+          generated_at?: string | null
+          id?: string
+          org_profile_snapshot?: Json | null
+          organization_id: string
+          rendered_html: string
+          template_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          case_variables_snapshot?: Json | null
+          created_at?: string | null
+          document_type?: string
+          export_format?: string | null
+          exported_at?: string | null
+          generated_at?: string | null
+          id?: string
+          org_profile_snapshot?: Json | null
+          organization_id?: string
+          rendered_html?: string
+          template_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_instances_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_instances_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_instances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          body: string
+          created_at: string | null
+          description: string | null
+          document_type: string
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string | null
+          description?: string | null
+          document_type?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          description?: string | null
+          document_type?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_change_requests: {
         Row: {
           completed_at: string | null

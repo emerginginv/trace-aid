@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Copy, FileText, LayoutTemplate, Layers } from "lucide-react";
+import { Plus, Edit, Trash2, Copy, FileText, LayoutTemplate, Layers, FileType } from "lucide-react";
 import { TemplateEditor } from "./TemplateEditor";
 import { ReportTemplateEditor } from "./ReportTemplateEditor";
 import {
@@ -15,6 +15,7 @@ import {
   duplicateSystemTemplate,
 } from "@/lib/reportTemplates";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { DocumentTemplateList } from "@/components/documents";
 
 interface LegacyTemplate {
   id: string;
@@ -231,15 +232,19 @@ export const TemplateList = () => {
       <Tabs defaultValue="report" className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-base sm:text-lg font-semibold">Report Templates</h3>
+            <h3 className="text-base sm:text-lg font-semibold">Templates</h3>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Create and manage structured report templates
+              Create and manage report and document templates
             </p>
           </div>
           <TabsList>
             <TabsTrigger value="report" className="gap-1">
               <LayoutTemplate className="h-4 w-4" />
-              <span className="hidden sm:inline">Structured</span>
+              <span className="hidden sm:inline">Reports</span>
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-1">
+              <FileType className="h-4 w-4" />
+              <span className="hidden sm:inline">Documents</span>
             </TabsTrigger>
             <TabsTrigger value="legacy" className="gap-1">
               <FileText className="h-4 w-4" />
@@ -381,6 +386,11 @@ export const TemplateList = () => {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* Letters & Documents */}
+        <TabsContent value="documents">
+          <DocumentTemplateList />
         </TabsContent>
 
         {/* Legacy Templates */}
