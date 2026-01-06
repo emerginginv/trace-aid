@@ -448,8 +448,12 @@ export function ReportPreviewPanel({
                     }}
                   >
                     <div 
-                      className="w-full h-full overflow-hidden report-document"
+                      className="overflow-hidden report-document"
                       style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
                         fontFamily: "Georgia, 'Times New Roman', serif",
                         fontSize: '11pt',
                         lineHeight: 1.6,
