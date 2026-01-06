@@ -580,6 +580,77 @@ export function getDefaultSubjectFilterConfig(): SubjectFilterConfig {
   };
 }
 
+// ============= Header/Footer Configuration Types =============
+
+// Header configuration options - uses Organization Settings data
+export interface HeaderFooterConfig {
+  // Header options
+  headerShowLogo: boolean;
+  headerShowOrgName: boolean;
+  headerShowOrgAddress: boolean;
+  headerShowOrgPhone: boolean;
+  headerShowOrgEmail: boolean;
+  headerShowReportTitle: boolean;
+  headerShowCaseNumber: boolean;
+  headerShowReportDate: boolean;
+  
+  // Footer options
+  footerShowOrgName: boolean;
+  footerShowPageNumber: boolean;
+  footerShowConfidentiality: boolean;
+  footerShowWebsite: boolean;
+  footerShowPhone: boolean;
+  footerShowGeneratedDate: boolean;
+  footerConfidentialityText: string;
+}
+
+// Get default header/footer configuration
+export function getDefaultHeaderFooterConfig(): HeaderFooterConfig {
+  return {
+    // Header defaults
+    headerShowLogo: true,
+    headerShowOrgName: true,
+    headerShowOrgAddress: false,
+    headerShowOrgPhone: false,
+    headerShowOrgEmail: false,
+    headerShowReportTitle: true,
+    headerShowCaseNumber: true,
+    headerShowReportDate: true,
+    
+    // Footer defaults
+    footerShowOrgName: true,
+    footerShowPageNumber: true,
+    footerShowConfidentiality: true,
+    footerShowWebsite: false,
+    footerShowPhone: false,
+    footerShowGeneratedDate: false,
+    footerConfidentialityText: 'CONFIDENTIAL - This report contains privileged information intended solely for the recipient.',
+  };
+}
+
+// Check if header/footer config differs from defaults
+export function hasHeaderFooterChanges(config: HeaderFooterConfig | undefined): boolean {
+  if (!config) return false;
+  const defaults = getDefaultHeaderFooterConfig();
+  return (
+    config.headerShowLogo !== defaults.headerShowLogo ||
+    config.headerShowOrgName !== defaults.headerShowOrgName ||
+    config.headerShowOrgAddress !== defaults.headerShowOrgAddress ||
+    config.headerShowOrgPhone !== defaults.headerShowOrgPhone ||
+    config.headerShowOrgEmail !== defaults.headerShowOrgEmail ||
+    config.headerShowReportTitle !== defaults.headerShowReportTitle ||
+    config.headerShowCaseNumber !== defaults.headerShowCaseNumber ||
+    config.headerShowReportDate !== defaults.headerShowReportDate ||
+    config.footerShowOrgName !== defaults.footerShowOrgName ||
+    config.footerShowPageNumber !== defaults.footerShowPageNumber ||
+    config.footerShowConfidentiality !== defaults.footerShowConfidentiality ||
+    config.footerShowWebsite !== defaults.footerShowWebsite ||
+    config.footerShowPhone !== defaults.footerShowPhone ||
+    config.footerShowGeneratedDate !== defaults.footerShowGeneratedDate ||
+    config.footerConfidentialityText !== defaults.footerConfidentialityText
+  );
+}
+
 // Represents per-section customizations applied before report generation
 export interface SectionCustomization {
   sectionId: string;
@@ -595,6 +666,7 @@ export interface TemplateCustomization {
   sectionCustomizations: SectionCustomization[];
   coverPageConfig?: CoverPageConfig;  // Cover page display options
   subjectFilterConfig?: SubjectFilterConfig;  // Subject type filter options
+  headerFooterConfig?: HeaderFooterConfig;  // Running header/footer options
 }
 
 // Reordering constraints for sections
