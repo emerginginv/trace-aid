@@ -559,7 +559,6 @@ function assemblePreviewHtml(
       text-align: center !important;
       padding-top: 24px !important;
       border-top: 1px solid #e2e8f0 !important;
-    }
       margin-top: auto !important;
     }
     
