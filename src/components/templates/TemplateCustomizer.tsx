@@ -248,16 +248,16 @@ export function TemplateCustomizer({
 
   // Cover page settings component
   const coverPageSettings = (
-    <Card className="mb-4">
-      <CardHeader className="py-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <FileText className="h-4 w-4" />
-          Cover Page Settings
+    <Card className="mb-3 border-border/60 shadow-sm">
+      <CardHeader className="py-2.5 px-3">
+        <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
+          <FileText className="h-3.5 w-3.5" />
+          Cover Page
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 pb-3">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="showPreparedBy" className="text-sm cursor-pointer">
+      <CardContent className="space-y-2.5 px-3 pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="showPreparedBy" className="text-sm cursor-pointer leading-tight">
             Show "Prepared by" section
           </Label>
           <Switch
@@ -269,8 +269,8 @@ export function TemplateCustomizer({
             }))}
           />
         </div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="showCompanyName" className="text-sm cursor-pointer">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="showCompanyName" className="text-sm cursor-pointer leading-tight">
             Show company name with logo
           </Label>
           <Switch
@@ -288,17 +288,17 @@ export function TemplateCustomizer({
 
   // Subject display settings component
   const subjectDisplaySettings = (
-    <Card className="mb-4">
-      <CardHeader className="py-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          Subject Display Settings
+    <Card className="mb-3 border-border/60 shadow-sm">
+      <CardHeader className="py-2.5 px-3">
+        <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
+          <Users className="h-3.5 w-3.5" />
+          Subject Display
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 pb-3">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="includeVehicles" className="text-sm cursor-pointer">
-            Include vehicles in subject list
+      <CardContent className="space-y-2.5 px-3 pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="includeVehicles" className="text-sm cursor-pointer leading-tight">
+            Include vehicles
           </Label>
           <Switch
             id="includeVehicles"
@@ -309,9 +309,9 @@ export function TemplateCustomizer({
             }))}
           />
         </div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="includeLocations" className="text-sm cursor-pointer">
-            Include locations in subject list
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="includeLocations" className="text-sm cursor-pointer leading-tight">
+            Include locations
           </Label>
           <Switch
             id="includeLocations"
@@ -322,9 +322,9 @@ export function TemplateCustomizer({
             }))}
           />
         </div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="includeItems" className="text-sm cursor-pointer">
-            Include items in subject list
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="includeItems" className="text-sm cursor-pointer leading-tight">
+            Include items
           </Label>
           <Switch
             id="includeItems"
@@ -350,16 +350,18 @@ export function TemplateCustomizer({
         items={sectionOrder}
         strategy={verticalListSortingStrategy}
       >
-        {orderedSections.map((section) => (
-          <SectionCustomizationRow
-            key={section.id}
-            section={section}
-            customization={customizations.get(section.id)}
-            onCustomizationChange={handleSectionCustomizationChange}
-            onHover={handleSectionHover}
-            isHighlighted={highlightedSectionId === section.id}
-          />
-        ))}
+        <div className="space-y-2">
+          {orderedSections.map((section) => (
+            <SectionCustomizationRow
+              key={section.id}
+              section={section}
+              customization={customizations.get(section.id)}
+              onCustomizationChange={handleSectionCustomizationChange}
+              onHover={handleSectionHover}
+              isHighlighted={highlightedSectionId === section.id}
+            />
+          ))}
+        </div>
       </SortableContext>
     </DndContext>
   );
@@ -453,59 +455,65 @@ export function TemplateCustomizer({
   // Desktop layout with side-by-side panels
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-6xl h-[85vh] p-0 flex flex-col">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+      <DialogContent className="w-full max-w-7xl h-[90vh] p-0 flex flex-col gap-0">
+        {/* Compact Header */}
+        <DialogHeader className="px-5 py-3 border-b bg-muted/20 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="flex items-center gap-2">
-                Customize Template
-                {hasModifications && (
-                  <Badge variant="secondary" className="text-xs">
-                    {modificationCount} change{modificationCount !== 1 ? 's' : ''}
-                  </Badge>
-                )}
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-base font-semibold">
+                Customize Report
               </DialogTitle>
-              <DialogDescription>
-                Customize section headers, visibility, and mappings. Drag to reorder sections.
-              </DialogDescription>
+              {hasModifications && (
+                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-700 border-amber-300 dark:text-amber-400">
+                  {modificationCount} unsaved change{modificationCount !== 1 ? 's' : ''}
+                </Badge>
+              )}
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Template:</span>
-              <span className="font-medium text-foreground">{template.name}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{template.name}</span>
               {template.isSystemTemplate && (
                 <Badge variant="outline" className="text-xs">System</Badge>
               )}
             </div>
           </div>
+          <DialogDescription className="sr-only">
+            Customize section headers, visibility, and mappings. Drag to reorder sections.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Main content area with two panels */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left Panel - Customization */}
-          <div className="w-2/5 flex flex-col border-r">
-            <div className="flex items-center gap-2 px-4 py-2 bg-muted/30 border-b">
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          {/* Left Panel - Customization (fixed width) */}
+          <div className="w-[360px] flex-shrink-0 flex flex-col border-r bg-background">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/40 border-b">
               <Settings2 className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Sections</span>
+              <span className="text-xs text-muted-foreground ml-auto">
+                Drag to reorder
+              </span>
             </div>
 
             {validationError && (
-              <Alert variant="destructive" className="mx-4 mt-4">
+              <Alert variant="destructive" className="mx-3 mt-3">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{validationError}</AlertDescription>
+                <AlertDescription className="text-sm">{validationError}</AlertDescription>
               </Alert>
             )}
 
             <ScrollArea className="flex-1">
-              <div className="space-y-2 p-4">
+              <div className="p-3">
                 {coverPageSettings}
                 {subjectDisplaySettings}
+                <div className="text-xs text-muted-foreground mb-2 px-1 font-medium uppercase tracking-wide">
+                  Report Sections
+                </div>
                 {sectionList}
               </div>
             </ScrollArea>
           </div>
 
-          {/* Right Panel - Preview */}
-          <div className="w-3/5 flex flex-col">
+          {/* Right Panel - Preview (fluid width) */}
+          <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
             <ReportPreviewPanel
               preview={preview}
               isLoading={isGeneratingPreview}
@@ -517,11 +525,13 @@ export function TemplateCustomizer({
         </div>
 
         {/* Footer Actions */}
-        <DialogFooter className="flex-row gap-2 border-t px-6 py-4">
+        <DialogFooter className="flex-row gap-2 border-t px-5 py-3 bg-muted/20 flex-shrink-0">
           <Button
-            variant="outline"
+            variant="ghost"
+            size="sm"
             onClick={handleReset}
             disabled={!hasModifications}
+            className="text-muted-foreground"
           >
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
@@ -529,13 +539,14 @@ export function TemplateCustomizer({
           <div className="flex-1" />
           <Button
             variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button onClick={handleApply}>
+          <Button onClick={handleApply} size="sm">
             <Check className="h-4 w-4 mr-2" />
-            Apply
+            Apply Changes
           </Button>
         </DialogFooter>
       </DialogContent>

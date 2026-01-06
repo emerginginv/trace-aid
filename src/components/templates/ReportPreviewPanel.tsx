@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { ZoomIn, ZoomOut, RotateCcw, FileText, Eye, Maximize, ArrowLeftRight, PanelLeftClose, PanelLeft } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, FileText, Eye, Maximize, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,16 +31,12 @@ interface ReportPreviewPanelProps {
 // US Letter page dimensions in pixels at 96 DPI
 const PAGE_WIDTH_PX = 816;  // 8.5 inches * 96 DPI
 const PAGE_HEIGHT_PX = 1056; // 11 inches * 96 DPI
-const PAGE_GAP = 24; // Gap between pages in pixels
-const CONTAINER_PADDING = 32; // Padding around the pages
+const PAGE_GAP = 32; // Gap between pages in pixels
+const CONTAINER_PADDING = 40; // Padding around the pages
 
 const ZOOM_LEVELS = [50, 75, 100, 125, 150];
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 150;
-
-// Thumbnail dimensions
-const THUMB_WIDTH = 80;
-const THUMB_HEIGHT = Math.round(THUMB_WIDTH * (PAGE_HEIGHT_PX / PAGE_WIDTH_PX));
 
 type ZoomMode = "manual" | "fit-width" | "fit-page";
 
@@ -58,8 +54,7 @@ export function ReportPreviewPanel({
   className,
 }: ReportPreviewPanelProps) {
   const [zoomLevel, setZoomLevel] = useState(75);
-  const [zoomMode, setZoomMode] = useState<ZoomMode>("manual");
-  const [showNav, setShowNav] = useState(true);
+  const [zoomMode, setZoomMode] = useState<ZoomMode>("fit-width");
   const [activePage, setActivePage] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -205,8 +200,7 @@ export function ReportPreviewPanel({
   };
 
   const handleResetZoom = () => {
-    setZoomMode("manual");
-    setZoomLevel(75);
+    setZoomMode("fit-width");
   };
 
   const handleFitWidth = () => {
@@ -244,23 +238,26 @@ export function ReportPreviewPanel({
   const scaledPageHeight = PAGE_HEIGHT_PX * scale;
   const scaledGap = PAGE_GAP * scale;
 
-  // Thumbnail scale
-  const thumbScale = THUMB_WIDTH / PAGE_WIDTH_PX;
-
   if (isLoading) {
     return (
       <div className={cn("flex flex-col h-full", className)}>
-        <div className="flex items-center justify-between p-3 border-b bg-muted/30">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b bg-background/80">
           <div className="flex items-center gap-2">
             <Eye className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Preview</span>
+            <span className="text-sm font-medium">Document Preview</span>
           </div>
         </div>
-        <div className="flex-1 p-4">
-          <Skeleton className="w-full h-[300px] rounded-lg" />
-          <Skeleton className="w-3/4 h-4 mt-4" />
-          <Skeleton className="w-1/2 h-4 mt-2" />
-          <Skeleton className="w-full h-[200px] mt-4 rounded-lg" />
+        <div className="flex-1 flex items-center justify-center p-8 bg-muted/40">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <Skeleton className="w-[200px] h-[260px] rounded shadow-lg" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="animate-pulse text-muted-foreground text-sm">
+                  Generating...
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -269,15 +266,15 @@ export function ReportPreviewPanel({
   if (!preview) {
     return (
       <div className={cn("flex flex-col h-full", className)}>
-        <div className="flex items-center justify-between p-3 border-b bg-muted/30">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b bg-background/80">
           <div className="flex items-center gap-2">
             <Eye className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Preview</span>
+            <span className="text-sm font-medium">Document Preview</span>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center p-8">
+        <div className="flex-1 flex items-center justify-center p-8 bg-muted/40">
           <div className="text-center">
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+            <FileText className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
             <p className="text-sm text-muted-foreground">
               Select a template to see preview
             </p>
@@ -289,37 +286,31 @@ export function ReportPreviewPanel({
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      {/* Header with zoom controls */}
-      <div className="flex items-center justify-between p-3 border-b bg-muted/30">
-        <div className="flex items-center gap-2">
-          {/* Toggle nav button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setShowNav(!showNav)}
-                >
-                  {showNav ? (
-                    <PanelLeftClose className="h-3.5 w-3.5" />
-                  ) : (
-                    <PanelLeft className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{showNav ? "Hide pages" : "Show pages"}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <div className="h-4 w-px bg-border" />
-
-          <Eye className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Preview</span>
-          <Badge variant="outline" className="text-xs">
-            {activePage}/{pages.length}
-          </Badge>
+      {/* Compact toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-background/80 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Preview</span>
+          </div>
+          
+          {/* Page indicator pills */}
+          <div className="flex items-center gap-1">
+            {pages.map((page) => (
+              <button
+                key={page.pageNumber}
+                onClick={() => handlePageClick(page.pageNumber)}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                  activePage === page.pageNumber
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                )}
+              >
+                {page.pageType === 'cover' ? 'Cover' : `Page ${page.pageNumber}`}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center gap-1">
@@ -331,13 +322,15 @@ export function ReportPreviewPanel({
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant={zoomMode !== "manual" ? "secondary" : "ghost"}
-                      size="icon"
-                      className="h-7 w-7"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
                     >
                       {zoomMode === "fit-width" ? (
-                        <ArrowLeftRight className="h-3.5 w-3.5" />
+                        <><ArrowLeftRight className="h-3.5 w-3.5 mr-1" /> Fit</>
+                      ) : zoomMode === "fit-page" ? (
+                        <><Maximize className="h-3.5 w-3.5 mr-1" /> Page</>
                       ) : (
-                        <Maximize className="h-3.5 w-3.5" />
+                        <><Maximize className="h-3.5 w-3.5 mr-1" /> View</>
                       )}
                     </Button>
                   </DropdownMenuTrigger>
@@ -363,7 +356,7 @@ export function ReportPreviewPanel({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleResetZoom}>
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Reset to 75%
+                Reset view
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -387,7 +380,7 @@ export function ReportPreviewPanel({
             </Tooltip>
           </TooltipProvider>
 
-          <span className="text-xs text-muted-foreground w-12 text-center tabular-nums">
+          <span className="text-xs text-muted-foreground w-10 text-center tabular-nums font-medium">
             {zoomLevel}%
           </span>
 
@@ -410,154 +403,93 @@ export function ReportPreviewPanel({
         </div>
       </div>
 
-      {/* Main content area with optional nav sidebar */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Page navigation sidebar */}
-        {showNav && (
-          <div className="w-[120px] border-r bg-muted/20 flex-shrink-0">
-            <ScrollArea className="h-full">
-              <div className="p-3 space-y-3">
-                {pages.map((page) => (
-                  <button
-                    key={page.pageNumber}
-                    onClick={() => handlePageClick(page.pageNumber)}
-                    className={cn(
-                      "w-full rounded-md overflow-hidden transition-all",
-                      "hover:ring-2 hover:ring-primary/50",
-                      "focus:outline-none focus:ring-2 focus:ring-primary",
-                      activePage === page.pageNumber
-                        ? "ring-2 ring-primary shadow-md"
-                        : "ring-1 ring-border"
-                    )}
-                  >
-                    {/* Thumbnail */}
-                    <div
-                      className="relative bg-white overflow-hidden"
-                      style={{
-                        width: `${THUMB_WIDTH}px`,
-                        height: `${THUMB_HEIGHT}px`,
-                        margin: '0 auto',
-                      }}
-                    >
-                      <div
-                        className="absolute top-0 left-0 origin-top-left pointer-events-none"
-                        style={{
-                          width: `${PAGE_WIDTH_PX}px`,
-                          height: `${PAGE_HEIGHT_PX}px`,
-                          transform: `scale(${thumbScale})`,
-                        }}
-                      >
-                        <div 
-                          className="w-full h-full overflow-hidden report-document"
-                          style={{
-                            fontFamily: "Georgia, 'Times New Roman', serif",
-                            fontSize: '11pt',
-                            lineHeight: 1.6,
-                            color: '#1a1a1a',
-                            backgroundColor: '#ffffff',
-                          }}
-                          dangerouslySetInnerHTML={{ __html: page.html }}
-                        />
-                      </div>
-                    </div>
-                    {/* Page label */}
-                    <div className={cn(
-                      "py-1.5 text-xs font-medium text-center",
-                      activePage === page.pageNumber
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted/50 text-muted-foreground"
-                    )}>
-                      {page.pageType === 'cover' ? 'Cover' : `Page ${page.pageNumber}`}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
-
-        {/* Preview content - page-based layout */}
-        <ScrollArea className="flex-1" ref={containerRef}>
+      {/* Preview content - clean document-focused layout */}
+      <ScrollArea className="flex-1" ref={containerRef}>
+        <div 
+          className="min-h-full flex justify-center"
+          style={{
+            padding: CONTAINER_PADDING,
+            background: 'linear-gradient(180deg, hsl(var(--muted) / 0.5) 0%, hsl(var(--muted) / 0.7) 100%)',
+          }}
+          onClick={handlePreviewClick}
+        >
+          {/* Pages container - centered flex column */}
           <div 
-            className="min-h-full"
-            style={{
-              padding: CONTAINER_PADDING,
-              background: 'linear-gradient(180deg, hsl(var(--muted) / 0.4) 0%, hsl(var(--muted) / 0.6) 100%)',
-            }}
-            onClick={handlePreviewClick}
+            className="flex flex-col items-center"
+            style={{ gap: `${scaledGap}px` }}
           >
-            {/* Pages container - centered flex column */}
-            <div 
-              className="flex flex-col items-center mx-auto"
-              style={{ gap: `${scaledGap}px` }}
-            >
-              {pages.map((page) => (
-                <div 
-                  key={page.pageNumber} 
-                  className="flex flex-col items-center"
-                  data-page-number={page.pageNumber}
-                  ref={(el) => {
-                    if (el) pageRefs.current.set(page.pageNumber, el);
+            {pages.map((page) => (
+              <div 
+                key={page.pageNumber} 
+                className="flex flex-col items-center"
+                data-page-number={page.pageNumber}
+                ref={(el) => {
+                  if (el) pageRefs.current.set(page.pageNumber, el);
+                }}
+              >
+                {/* Page card with professional shadow */}
+                <div
+                  className="relative bg-white overflow-hidden transition-shadow"
+                  style={{
+                    width: `${scaledPageWidth}px`,
+                    height: `${scaledPageHeight}px`,
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 32px rgba(0, 0, 0, 0.04)',
+                    borderRadius: `${Math.max(1, 2 * scale)}px`,
+                    border: '1px solid rgba(0, 0, 0, 0.06)',
                   }}
                 >
-                  {/* Page card */}
+                  {/* Inner content with transform scaling */}
                   <div
-                    className="relative bg-white overflow-hidden"
+                    className="absolute top-0 left-0 origin-top-left"
                     style={{
-                      width: `${scaledPageWidth}px`,
-                      height: `${scaledPageHeight}px`,
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                      borderRadius: `${Math.max(2, 4 * scale)}px`,
+                      width: `${PAGE_WIDTH_PX}px`,
+                      height: `${PAGE_HEIGHT_PX}px`,
+                      transform: `scale(${scale})`,
                     }}
                   >
-                    {/* Inner content with transform scaling */}
-                    <div
-                      className="absolute top-0 left-0 origin-top-left"
+                    <div 
+                      className="w-full h-full overflow-hidden report-document"
                       style={{
-                        width: `${PAGE_WIDTH_PX}px`,
-                        height: `${PAGE_HEIGHT_PX}px`,
-                        transform: `scale(${scale})`,
+                        fontFamily: "Georgia, 'Times New Roman', serif",
+                        fontSize: '11pt',
+                        lineHeight: 1.6,
+                        color: '#1a1a1a',
+                        backgroundColor: '#ffffff',
                       }}
-                    >
-                      <div 
-                        className="w-full h-full overflow-hidden report-document"
-                        style={{
-                          fontFamily: "Georgia, 'Times New Roman', serif",
-                          fontSize: '11pt',
-                          lineHeight: 1.6,
-                          color: '#1a1a1a',
-                          backgroundColor: '#ffffff',
-                        }}
-                        dangerouslySetInnerHTML={{ __html: page.html }}
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Page number indicator */}
-                  <div 
-                    className="mt-2 px-3 py-1 rounded-full bg-background/80 border shadow-sm"
-                    style={{ 
-                      fontSize: `${Math.max(10, 11 * scale)}px`,
-                    }}
-                  >
-                    <span className="text-muted-foreground font-medium">
-                      Page {page.pageNumber} of {pages.length}
-                    </span>
+                      dangerouslySetInnerHTML={{ __html: page.html }}
+                    />
                   </div>
                 </div>
-              ))}
-              
-              {/* Spacer at bottom */}
-              <div style={{ height: CONTAINER_PADDING }} />
-            </div>
+                
+                {/* Subtle page indicator */}
+                <div 
+                  className="mt-3 text-center"
+                  style={{ 
+                    fontSize: `${Math.max(10, 11 * scale)}px`,
+                  }}
+                >
+                  <span className="text-muted-foreground/70 font-medium">
+                    {page.pageType === 'cover' ? 'Cover Page' : `Page ${page.pageNumber}`}
+                  </span>
+                </div>
+              </div>
+            ))}
+            
+            {/* Spacer at bottom */}
+            <div style={{ height: CONTAINER_PADDING }} />
           </div>
-        </ScrollArea>
-      </div>
+        </div>
+      </ScrollArea>
 
-      {/* Section count footer */}
-      <div className="px-3 py-2 border-t bg-muted/20 text-xs text-muted-foreground">
-        {preview.sectionPreviews.filter((s) => s.isVisible).length} of{" "}
-        {preview.sectionPreviews.length} sections visible
+      {/* Minimal footer */}
+      <div className="px-4 py-1.5 border-t bg-background/60 text-xs text-muted-foreground flex items-center justify-between">
+        <span>
+          {preview.sectionPreviews.filter((s) => s.isVisible).length} of{" "}
+          {preview.sectionPreviews.length} sections visible
+        </span>
+        <span className="text-muted-foreground/60">
+          US Letter • 8.5" × 11"
+        </span>
       </div>
     </div>
   );
