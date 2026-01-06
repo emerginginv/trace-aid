@@ -133,7 +133,7 @@ export interface CaseImport {
   external_parent_case_id?: string;
   
   // Case Variables
-  claim_number?: string;
+  reference_number?: string;
   status?: string;
   start_date?: string;
   due_date?: string;

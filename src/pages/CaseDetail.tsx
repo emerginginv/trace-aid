@@ -53,7 +53,7 @@ interface Case {
   closed_at: string | null;
   parent_case_id: string | null;
   instance_number: number;
-  claim_number?: string | null;
+  reference_number?: string | null;
 }
 
 interface Account {
@@ -767,7 +767,7 @@ const CaseDetail = () => {
                     <InfoItem label="Account" value={account?.name} />
                     <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
                     <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
-                    <InfoItem label="Claim Number" value={caseData.claim_number} />
+                    <InfoItem label="Reference No." value={caseData.reference_number} />
                     <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
                     <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
                     {isClosed && caseData.closed_at && (

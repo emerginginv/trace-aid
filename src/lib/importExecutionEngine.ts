@@ -276,7 +276,7 @@ export class ImportExecutionEngine {
           external_parent_case_id: row.external_parent_case_id,
           case_manager_email: row.case_manager_email,
           investigator_emails: row.investigator_emails,
-          claim_number: cleanString(row.claim_number as string),
+          reference_number: cleanString(row.reference_number as string),
           status: row.status || 'open',
           due_date: parseDate(row.due_date as string),
           budget_hours: parseNumber(row.budget_hours as string),

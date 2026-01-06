@@ -164,7 +164,7 @@ export const GenerateReportDialog = ({
       .replace(/\{\{case_manager\}\}/g, caseManagerName)
       .replace(/\{\{current_date\}\}/g, new Date().toLocaleDateString())
       .replace(/\{\{update_list\}\}/g, updateList)
-      .replace(/\{\{claim_number\}\}/g, caseVars.claim_number || "")
+      .replace(/\{\{reference_number\}\}/g, caseVars.reference_number || "")
       .replace(/\{\{client_list\}\}/g, caseVars.client_list || "")
       .replace(/\{\{subject_list\}\}/g, caseVars.subject_list || "")
       .replace(/\{\{primary_subject\}\}/g, caseVars.primary_subject || "")

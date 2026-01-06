@@ -126,7 +126,7 @@ export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: Temp
     // Case placeholders
     .replace(/\{\{case_title\}\}/g, "Sample Investigation Case")
     .replace(/\{\{case_number\}\}/g, "CASE-2024-001")
-    .replace(/\{\{claim_number\}\}/g, "CLM-2024-98765")
+    .replace(/\{\{reference_number\}\}/g, "REF-2024-98765")
     .replace(/\{\{case_manager\}\}/g, "John Doe")
     .replace(/\{\{current_date\}\}/g, new Date().toLocaleDateString())
     // Client/Subject/Investigator placeholders
@@ -204,7 +204,7 @@ Case is progressing well. Waiting for additional information.</p>`
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
                     <div><code className="bg-muted px-1 rounded">{"{{case_title}}"}</code> - Case title</div>
                     <div><code className="bg-muted px-1 rounded">{"{{case_number}}"}</code> - Case number</div>
-                    <div><code className="bg-muted px-1 rounded">{"{{claim_number}}"}</code> - Claim/reference number</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{reference_number}}"}</code> - Reference number</div>
                     <div><code className="bg-muted px-1 rounded">{"{{case_manager}}"}</code> - Case manager name</div>
                     <div><code className="bg-muted px-1 rounded">{"{{current_date}}"}</code> - Current date</div>
                     <div><code className="bg-muted px-1 rounded">{"{{due_date}}"}</code> - Due date</div>

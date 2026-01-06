@@ -753,7 +753,6 @@ export type Database = {
           budget_notes: string | null
           case_manager_id: string | null
           case_number: string
-          claim_number: string | null
           closed_at: string | null
           closed_by_user_id: string | null
           contact_id: string | null
@@ -769,6 +768,7 @@ export type Database = {
           investigator_ids: string[] | null
           organization_id: string | null
           parent_case_id: string | null
+          reference_number: string | null
           status: string
           title: string
           updated_at: string | null
@@ -782,7 +782,6 @@ export type Database = {
           budget_notes?: string | null
           case_manager_id?: string | null
           case_number: string
-          claim_number?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
           contact_id?: string | null
@@ -798,6 +797,7 @@ export type Database = {
           investigator_ids?: string[] | null
           organization_id?: string | null
           parent_case_id?: string | null
+          reference_number?: string | null
           status?: string
           title: string
           updated_at?: string | null
@@ -811,7 +811,6 @@ export type Database = {
           budget_notes?: string | null
           case_manager_id?: string | null
           case_number?: string
-          claim_number?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
           contact_id?: string | null
@@ -827,6 +826,7 @@ export type Database = {
           investigator_ids?: string[] | null
           organization_id?: string | null
           parent_case_id?: string | null
+          reference_number?: string | null
           status?: string
           title?: string
           updated_at?: string | null
@@ -2180,22 +2180,25 @@ export type Database = {
         Row: {
           account_id: string | null
           budget_dollars: number | null
+          budget_dollars_authorized: number | null
           budget_hours: number | null
+          budget_hours_authorized: number | null
           budget_notes: string | null
           case_manager_id: string | null
           case_number: string | null
-          claim_number: string | null
           closed_at: string | null
           closed_by_user_id: string | null
-          consumed_dollars: number | null
-          consumed_hours: number | null
           contact_id: string | null
           created_at: string | null
           description: string | null
+          dollars_consumed: number | null
+          dollars_remaining: number | null
           dollars_utilization_pct: number | null
           due_date: string | null
           external_record_id: string | null
           external_system_name: string | null
+          hours_consumed: number | null
+          hours_remaining: number | null
           hours_utilization_pct: number | null
           id: string | null
           import_batch_id: string | null
@@ -2204,8 +2207,7 @@ export type Database = {
           investigator_ids: string[] | null
           organization_id: string | null
           parent_case_id: string | null
-          remaining_dollars: number | null
-          remaining_hours: number | null
+          reference_number: string | null
           status: string | null
           title: string | null
           updated_at: string | null

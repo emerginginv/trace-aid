@@ -114,7 +114,7 @@ export interface ReportTemplate {
 export const AVAILABLE_CASE_VARIABLES = [
   { key: 'case_title', label: 'Case Title', category: 'Case Info' },
   { key: 'case_number', label: 'Case Number', category: 'Case Info' },
-  { key: 'claim_number', label: 'Claim Number', category: 'Case Info' },
+  { key: 'reference_number', label: 'Reference No.', category: 'Case Info' },
   { key: 'assignment_date', label: 'Assignment Date', category: 'Dates' },
   { key: 'due_date', label: 'Due Date', category: 'Dates' },
   { key: 'client_list', label: 'All Clients', category: 'People' },

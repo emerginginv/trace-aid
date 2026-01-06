@@ -60,7 +60,7 @@ export const caseImportSchema = z.object({
   external_account_id: z.string().optional(),
   external_contact_id: z.string().optional(),
   external_parent_case_id: z.string().optional(),
-  claim_number: z.string().optional(),
+  reference_number: z.string().optional(),
   status: z.string().optional(),
   start_date: dateSchema,
   due_date: dateSchema,

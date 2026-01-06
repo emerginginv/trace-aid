@@ -30,7 +30,7 @@ const PLACEHOLDER_OPTIONS = [
   // Case placeholders
   { key: 'case_title', label: 'Case Title', category: 'Case Info' },
   { key: 'case_number', label: 'Case Number', category: 'Case Info' },
-  { key: 'claim_number', label: 'Claim Number', category: 'Case Info' },
+  { key: 'reference_number', label: 'Reference No.', category: 'Case Info' },
   // People placeholders
   { key: 'client_list', label: 'All Clients', category: 'People' },
   { key: 'primary_client', label: 'Primary Client', category: 'People' },

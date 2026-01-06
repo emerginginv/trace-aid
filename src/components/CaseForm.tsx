@@ -56,7 +56,7 @@ const caseSchema = z.object({
   budget_hours: z.coerce.number().min(0).optional().nullable(),
   budget_dollars: z.coerce.number().min(0).optional().nullable(),
   budget_notes: z.string().max(500).optional().nullable(),
-  claim_number: z.string().max(100).optional().nullable(),
+  reference_number: z.string().max(100).optional().nullable(),
 });
 
 type CaseFormData = z.infer<typeof caseSchema>;
@@ -78,7 +78,7 @@ interface CaseFormProps {
     budget_hours?: number | null;
     budget_dollars?: number | null;
     budget_notes?: string | null;
-    claim_number?: string | null;
+    reference_number?: string | null;
   };
 }
 
@@ -117,7 +117,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       budget_hours: null,
       budget_dollars: null,
       budget_notes: null,
-      claim_number: null,
+      reference_number: null,
     },
   });
 
@@ -142,7 +142,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_hours: editingCase.budget_hours ?? null,
           budget_dollars: editingCase.budget_dollars ?? null,
           budget_notes: editingCase.budget_notes ?? null,
-          claim_number: editingCase.claim_number ?? null,
+          reference_number: editingCase.reference_number ?? null,
         });
         // @ts-ignore - case_manager_id and investigator_ids exist on editingCase
         setCaseManagerId(editingCase.case_manager_id || "");
@@ -162,7 +162,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_hours: null,
           budget_dollars: null,
           budget_notes: null,
-          claim_number: null,
+          reference_number: null,
         });
         setCaseManagerId("");
         setInvestigators([]);
@@ -386,7 +386,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         budget_hours: data.budget_hours || null,
         budget_dollars: data.budget_dollars || null,
         budget_notes: data.budget_notes || null,
-        claim_number: data.claim_number || null,
+        reference_number: data.reference_number || null,
       };
 
       if (editingCase) {
@@ -699,16 +699,16 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               />
             </div>
 
-            {/* Claim Number */}
+            {/* Reference Number */}
             <FormField
               control={form.control}
-              name="claim_number"
+              name="reference_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Claim Number (Optional)</FormLabel>
+                  <FormLabel>Reference No. (Optional)</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="Reference or claim number" 
+                      placeholder="External reference number" 
                       {...field} 
                       value={field.value || ""}
                     />
