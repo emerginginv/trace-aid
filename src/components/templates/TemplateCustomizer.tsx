@@ -326,7 +326,7 @@ export function TemplateCustomizer({
   // Desktop layout with side-by-side panels
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-5xl h-[85vh] p-0 flex flex-col">
+      <DialogContent className="w-full max-w-6xl h-[85vh] p-0 flex flex-col">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-center justify-between">
             <div>
@@ -355,7 +355,7 @@ export function TemplateCustomizer({
         {/* Main content area with two panels */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Panel - Customization */}
-          <div className="w-1/2 flex flex-col border-r">
+          <div className="w-2/5 flex flex-col border-r">
             <div className="flex items-center gap-2 px-4 py-2 bg-muted/30 border-b">
               <Settings2 className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Sections</span>
@@ -376,7 +376,7 @@ export function TemplateCustomizer({
           </div>
 
           {/* Right Panel - Preview */}
-          <div className="w-1/2 flex flex-col">
+          <div className="w-3/5 flex flex-col">
             <ReportPreviewPanel
               preview={preview}
               isLoading={isGeneratingPreview}
