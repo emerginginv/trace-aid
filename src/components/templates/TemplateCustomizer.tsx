@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, RotateCcw, Check, Settings2, Eye, FileText } from "lucide-react";
+import { AlertCircle, RotateCcw, Check, Settings2, Eye, FileText, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -35,8 +35,10 @@ import {
   type SectionCustomization,
   type TemplateCustomization,
   type CoverPageConfig,
+  type SubjectFilterConfig,
   validateCustomization,
   getDefaultCoverPageConfig,
+  getDefaultSubjectFilterConfig,
 } from "@/lib/reportTemplates";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -71,6 +73,9 @@ export function TemplateCustomizer({
   // Cover page config state
   const [coverPageConfig, setCoverPageConfig] = useState<CoverPageConfig>(getDefaultCoverPageConfig());
   
+  // Subject filter config state
+  const [subjectFilterConfig, setSubjectFilterConfig] = useState<SubjectFilterConfig>(getDefaultSubjectFilterConfig());
+  
   // Validation error
   const [validationError, setValidationError] = useState<string | null>(null);
   
@@ -99,9 +104,13 @@ export function TemplateCustomizer({
         
         // Initialize cover page config
         setCoverPageConfig(initialCustomization.coverPageConfig || getDefaultCoverPageConfig());
+        
+        // Initialize subject filter config
+        setSubjectFilterConfig(initialCustomization.subjectFilterConfig || getDefaultSubjectFilterConfig());
       } else {
         setCustomizations(new Map());
         setCoverPageConfig(getDefaultCoverPageConfig());
+        setSubjectFilterConfig(getDefaultSubjectFilterConfig());
       }
       
       setValidationError(null);
@@ -120,10 +129,10 @@ export function TemplateCustomizer({
     
     const timeoutId = setTimeout(() => {
       try {
-        const customization = buildCustomization(template.id, customizations, coverPageConfig);
+        const customization = buildCustomization(template.id, customizations, coverPageConfig, subjectFilterConfig);
         const result = generatePreview({
           template,
-          customization: customizations.size > 0 || coverPageConfig ? customization : null,
+          customization: customizations.size > 0 || coverPageConfig || subjectFilterConfig ? customization : null,
           orgProfile,
           caseVariables,
         });
@@ -136,7 +145,7 @@ export function TemplateCustomizer({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [open, template, customizations, coverPageConfig, orgProfile, caseVariables]);
+  }, [open, template, customizations, coverPageConfig, subjectFilterConfig, orgProfile, caseVariables]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -185,6 +194,7 @@ export function TemplateCustomizer({
     setSectionOrder(sortedSections.map(s => s.id));
     setCustomizations(new Map());
     setCoverPageConfig(getDefaultCoverPageConfig());
+    setSubjectFilterConfig(getDefaultSubjectFilterConfig());
     setValidationError(null);
   }, [template]);
 
@@ -194,6 +204,7 @@ export function TemplateCustomizer({
       templateId: template.id,
       sectionCustomizations: Array.from(customizations.values()),
       coverPageConfig,
+      subjectFilterConfig,
     };
 
     // Validate
@@ -224,11 +235,15 @@ export function TemplateCustomizer({
     [sectionOrder, template.sections]
   );
 
-  // Count modifications - include cover page changes
+  // Count modifications - include cover page and subject filter changes
   const defaultCoverConfig = getDefaultCoverPageConfig();
+  const defaultSubjectConfig = getDefaultSubjectFilterConfig();
   const hasCoverPageChanges = coverPageConfig.showPreparedBy !== defaultCoverConfig.showPreparedBy ||
     coverPageConfig.showCompanyNameWithLogo !== defaultCoverConfig.showCompanyNameWithLogo;
-  const modificationCount = customizations.size + (hasCoverPageChanges ? 1 : 0);
+  const hasSubjectFilterChanges = subjectFilterConfig.includeVehicles !== defaultSubjectConfig.includeVehicles ||
+    subjectFilterConfig.includeLocations !== defaultSubjectConfig.includeLocations ||
+    subjectFilterConfig.includeItems !== defaultSubjectConfig.includeItems;
+  const modificationCount = customizations.size + (hasCoverPageChanges ? 1 : 0) + (hasSubjectFilterChanges ? 1 : 0);
   const hasModifications = modificationCount > 0;
 
   // Cover page settings component
@@ -264,6 +279,59 @@ export function TemplateCustomizer({
             onCheckedChange={(checked) => setCoverPageConfig(prev => ({
               ...prev,
               showCompanyNameWithLogo: checked
+            }))}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  // Subject display settings component
+  const subjectDisplaySettings = (
+    <Card className="mb-4">
+      <CardHeader className="py-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Subject Display Settings
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 pb-3">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="includeVehicles" className="text-sm cursor-pointer">
+            Include vehicles in subject list
+          </Label>
+          <Switch
+            id="includeVehicles"
+            checked={subjectFilterConfig.includeVehicles}
+            onCheckedChange={(checked) => setSubjectFilterConfig(prev => ({
+              ...prev,
+              includeVehicles: checked
+            }))}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="includeLocations" className="text-sm cursor-pointer">
+            Include locations in subject list
+          </Label>
+          <Switch
+            id="includeLocations"
+            checked={subjectFilterConfig.includeLocations}
+            onCheckedChange={(checked) => setSubjectFilterConfig(prev => ({
+              ...prev,
+              includeLocations: checked
+            }))}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="includeItems" className="text-sm cursor-pointer">
+            Include items in subject list
+          </Label>
+          <Switch
+            id="includeItems"
+            checked={subjectFilterConfig.includeItems}
+            onCheckedChange={(checked) => setSubjectFilterConfig(prev => ({
+              ...prev,
+              includeItems: checked
             }))}
           />
         </div>
@@ -337,6 +405,7 @@ export function TemplateCustomizer({
               <ScrollArea className="h-full px-4">
                 <div className="space-y-2 pb-4">
                   {coverPageSettings}
+                  {subjectDisplaySettings}
                   {sectionList}
                 </div>
               </ScrollArea>
@@ -429,6 +498,7 @@ export function TemplateCustomizer({
             <ScrollArea className="flex-1">
               <div className="space-y-2 p-4">
                 {coverPageSettings}
+                {subjectDisplaySettings}
                 {sectionList}
               </div>
             </ScrollArea>

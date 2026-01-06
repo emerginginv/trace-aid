@@ -303,3 +303,52 @@ export function formatCaseVariablesForTemplate(variables: CaseVariables): Record
     case_manager: variables.caseManager,
   };
 }
+
+/**
+ * Subject filter configuration for controlling which subject types appear in reports
+ */
+export interface SubjectFilterConfig {
+  includeVehicles: boolean;
+  includeLocations: boolean;
+  includeItems: boolean;
+}
+
+/**
+ * Convert CaseVariables to a flat record with filtered subjects based on config
+ */
+export function formatCaseVariablesForTemplateWithFilters(
+  variables: CaseVariables,
+  subjectFilter?: SubjectFilterConfig
+): Record<string, string> {
+  // If no filter provided, use default (all included)
+  if (!subjectFilter) {
+    return formatCaseVariablesForTemplate(variables);
+  }
+
+  // Filter subjects based on configuration
+  const filteredSubjects = variables.subjects.filter(s => {
+    if (s.type === 'person') return true; // Always include persons
+    if (s.type === 'vehicle') return subjectFilter.includeVehicles;
+    if (s.type === 'item') return subjectFilter.includeItems;
+    return true; // Include any other types by default
+  });
+
+  // Filter locations based on configuration
+  const filteredLocations = subjectFilter.includeLocations ? variables.locations : [];
+
+  // Rebuild the lists
+  const subjectNames = filteredSubjects.map(s => 
+    s.isPrimary ? `${s.name} (Primary)` : s.name
+  );
+  const subjectList = formatAsHtmlList(subjectNames);
+  const locationList = formatAsHtmlList(
+    filteredLocations.map(l => l.address || l.name)
+  );
+
+  // Return base format with overridden lists
+  return {
+    ...formatCaseVariablesForTemplate(variables),
+    subject_list: subjectList || "None",
+    location_list: locationList || "None",
+  };
+}
