@@ -547,11 +547,12 @@ function assemblePreviewHtml(
     
     /* Content pages */
     .report-content {
-      padding: 48px !important;
+      padding: 72px 72px 100px 72px !important;
       height: 100% !important;
       box-sizing: border-box !important;
       overflow: hidden !important;
       background: #ffffff !important;
+      position: relative !important;
     }
     
     .report-page-header {
@@ -560,7 +561,7 @@ function assemblePreviewHtml(
       align-items: center !important;
       padding-bottom: 12px !important;
       border-bottom: 1px solid #cbd5e0 !important;
-      margin-bottom: 24px !important;
+      margin-bottom: 32px !important;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
       font-size: 9pt !important;
       color: #4a5568 !important;
@@ -568,9 +569,9 @@ function assemblePreviewHtml(
     
     .report-page-footer {
       position: absolute !important;
-      bottom: 36px !important;
-      left: 48px !important;
-      right: 48px !important;
+      bottom: 48px !important;
+      left: 72px !important;
+      right: 72px !important;
       display: flex !important;
       justify-content: space-between !important;
       align-items: center !important;
@@ -582,13 +583,21 @@ function assemblePreviewHtml(
     }
     
     /* Section styling */
+    .report-section {
+      margin-bottom: 32px !important;
+    }
+    
+    .report-section:last-child {
+      margin-bottom: 0 !important;
+    }
+    
     .section-title {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
       font-size: 16pt !important;
       font-weight: 600 !important;
       color: #1a1a1a !important;
-      margin-bottom: 16px !important;
-      padding-bottom: 8px !important;
+      margin-bottom: 20px !important;
+      padding-bottom: 10px !important;
       border-bottom: 2px solid #e2e8f0 !important;
     }
     
@@ -655,14 +664,29 @@ function assemblePreviewHtml(
     
     /* Entry/update styling */
     .entry-item {
-      margin-bottom: 20px !important;
-      padding-bottom: 16px !important;
+      margin-bottom: 24px !important;
+      padding-bottom: 20px !important;
       border-bottom: 1px solid #edf2f7 !important;
+    }
+    
+    .entry-item:last-child {
+      margin-bottom: 0 !important;
+      padding-bottom: 0 !important;
+      border-bottom: none !important;
+    }
+    
+    .entry-header {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: baseline !important;
+      margin-bottom: 12px !important;
+      flex-wrap: wrap !important;
+      gap: 8px !important;
     }
     
     .entry-title {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-      font-size: 11pt !important;
+      font-size: 12pt !important;
       font-weight: 600 !important;
       color: #1a1a1a !important;
     }
@@ -675,8 +699,9 @@ function assemblePreviewHtml(
     
     .entry-content {
       font-size: 11pt !important;
-      line-height: 1.65 !important;
+      line-height: 1.7 !important;
       color: #2d3748 !important;
+      margin-top: 8px !important;
     }
 
     /* Force readable rich-text content (remove accidental low opacity / muted colors) */
