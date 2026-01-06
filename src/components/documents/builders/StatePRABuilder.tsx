@@ -1,0 +1,348 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Save, FileText, Building } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { US_STATES, getStateInfo } from "@/lib/letterCategories";
+import { generateStatePRALetter } from "@/lib/letterGenerators";
+
+interface StatePRABuilderProps {
+  organizationId: string;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+export function StatePRABuilder({ organizationId, onSave, onCancel }: StatePRABuilderProps) {
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    templateName: '',
+    state: '',
+    agencyName: '',
+    agencyAddress: '',
+    recordsRequested: '',
+    dateRangeStart: '',
+    dateRangeEnd: '',
+    formatPreference: 'electronic',
+    expeditedProcessing: false,
+    expeditedReason: '',
+    requestFeeWaiver: false,
+    feeWaiverJustification: '',
+  });
+
+  const selectedStateInfo = formData.state ? getStateInfo(formData.state) : null;
+
+  const handleChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!formData.templateName.trim()) {
+      toast.error('Please enter a template name');
+      return;
+    }
+    if (!formData.state) {
+      toast.error('Please select a state');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const letterBody = generateStatePRALetter(formData, selectedStateInfo);
+
+      const { error } = await supabase
+        .from('document_templates')
+        .insert({
+          organization_id: organizationId,
+          user_id: user.id,
+          name: formData.templateName,
+          description: `${selectedStateInfo?.label || formData.state} Public Records Act request template`,
+          document_type: 'request',
+          letter_category: 'state_pra',
+          body: letterBody,
+        });
+
+      if (error) throw error;
+
+      toast.success('Template saved successfully');
+      onSave();
+    } catch (error: any) {
+      console.error('Error saving template:', error);
+      toast.error(error.message || 'Failed to save template');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Form Section */}
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Template Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="templateName">Template Name *</Label>
+              <Input
+                id="templateName"
+                placeholder="e.g., California PRA Request Template"
+                value={formData.templateName}
+                onChange={(e) => handleChange('templateName', e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              State & Agency Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>State *</Label>
+              <Select 
+                value={formData.state} 
+                onValueChange={(v) => handleChange('state', v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a state..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {US_STATES.map((state) => (
+                    <SelectItem key={state.value} value={state.value}>
+                      {state.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedStateInfo && (
+              <div className="bg-muted/50 rounded-lg p-3">
+                <p className="text-sm font-medium">Applicable Statute:</p>
+                <p className="text-sm text-muted-foreground">{selectedStateInfo.statute}</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="agencyName">Agency/Department Name</Label>
+              <Input
+                id="agencyName"
+                placeholder="e.g., City Police Department"
+                value={formData.agencyName}
+                onChange={(e) => handleChange('agencyName', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agencyAddress">Agency Address</Label>
+              <Textarea
+                id="agencyAddress"
+                placeholder="Full mailing address..."
+                value={formData.agencyAddress}
+                onChange={(e) => handleChange('agencyAddress', e.target.value)}
+                rows={3}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Records Request Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="recordsRequested">Records Requested *</Label>
+              <Textarea
+                id="recordsRequested"
+                placeholder="Describe the specific records you are requesting..."
+                value={formData.recordsRequested}
+                onChange={(e) => handleChange('recordsRequested', e.target.value)}
+                rows={4}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dateRangeStart">Date Range Start</Label>
+                <Input
+                  id="dateRangeStart"
+                  type="date"
+                  value={formData.dateRangeStart}
+                  onChange={(e) => handleChange('dateRangeStart', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dateRangeEnd">Date Range End</Label>
+                <Input
+                  id="dateRangeEnd"
+                  type="date"
+                  value={formData.dateRangeEnd}
+                  onChange={(e) => handleChange('dateRangeEnd', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Format Preference</Label>
+              <Select 
+                value={formData.formatPreference} 
+                onValueChange={(v) => handleChange('formatPreference', v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="electronic">Electronic (PDF preferred)</SelectItem>
+                  <SelectItem value="paper">Paper Copies</SelectItem>
+                  <SelectItem value="either">Either Format</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="expedited"
+                checked={formData.expeditedProcessing}
+                onCheckedChange={(checked) => handleChange('expeditedProcessing', !!checked)}
+              />
+              <Label htmlFor="expedited" className="cursor-pointer">
+                Request expedited processing
+              </Label>
+            </div>
+
+            {formData.expeditedProcessing && (
+              <div className="space-y-2">
+                <Label htmlFor="expeditedReason">Reason for Expedited Processing</Label>
+                <Textarea
+                  id="expeditedReason"
+                  placeholder="Explain urgency..."
+                  value={formData.expeditedReason}
+                  onChange={(e) => handleChange('expeditedReason', e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="feeWaiver"
+                checked={formData.requestFeeWaiver}
+                onCheckedChange={(checked) => handleChange('requestFeeWaiver', !!checked)}
+              />
+              <Label htmlFor="feeWaiver" className="cursor-pointer">
+                Request fee waiver
+              </Label>
+            </div>
+
+            {formData.requestFeeWaiver && (
+              <div className="space-y-2">
+                <Label htmlFor="feeWaiverJustification">Fee Waiver Justification</Label>
+                <Textarea
+                  id="feeWaiverJustification"
+                  placeholder="Explain why fees should be waived..."
+                  value={formData.feeWaiverJustification}
+                  onChange={(e) => handleChange('feeWaiverJustification', e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-3 justify-end">
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveTemplate} disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save Template'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Preview Section */}
+      <div className="lg:sticky lg:top-4 lg:self-start">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Live Preview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-muted/50 rounded-lg p-6 min-h-[400px] font-serif text-sm">
+              <div className="space-y-4">
+                <p className="text-right">{"{{current_date}}"}</p>
+                
+                <div>
+                  <p>{formData.agencyName || "{{agency_name}}"}</p>
+                  <p className="whitespace-pre-line">{formData.agencyAddress || "{{agency_address}}"}</p>
+                </div>
+
+                <p><strong>RE: Public Records Request Pursuant to {selectedStateInfo?.statute || '[State Statute]'}</strong></p>
+
+                <p>Dear Records Custodian,</p>
+
+                <p>
+                  Pursuant to {selectedStateInfo?.statute || 'the applicable state public records act'}, I hereby request access to and copies of the following records:
+                </p>
+
+                <div className="pl-4 border-l-2 border-muted-foreground/30">
+                  <p className="whitespace-pre-line">
+                    {formData.recordsRequested || "{{records_requested}}"}
+                  </p>
+                </div>
+
+                {(formData.dateRangeStart || formData.dateRangeEnd) && (
+                  <p>
+                    <strong>Date Range:</strong> {formData.dateRangeStart || 'N/A'} to {formData.dateRangeEnd || 'Present'}
+                  </p>
+                )}
+
+                {formData.expeditedProcessing && (
+                  <p>
+                    <strong>Request for Expedited Processing:</strong> {formData.expeditedReason || 'Urgent matter requiring immediate attention.'}
+                  </p>
+                )}
+
+                {formData.requestFeeWaiver && (
+                  <p>
+                    <strong>Fee Waiver Request:</strong> {formData.feeWaiverJustification || 'Request waiver of applicable fees.'}
+                  </p>
+                )}
+
+                <p>
+                  Please respond within the statutory time period. Contact me with any questions.
+                </p>
+
+                <div className="pt-4">
+                  <p>Sincerely,</p>
+                  <p className="pt-4">{"{{signature_name}}"}</p>
+                  <p>{"{{company_name}}"}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

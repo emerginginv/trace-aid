@@ -3,3 +3,5 @@ export { DocumentTemplateEditor } from "./DocumentTemplateEditor";
 export { GenerateDocumentDialog } from "./GenerateDocumentDialog";
 export { DocumentInstanceViewer } from "./DocumentInstanceViewer";
 export { CaseDocuments } from "./CaseDocuments";
+export { LetterCategorySelector } from "./LetterCategorySelector";
+export { GuidedLetterBuilder } from "./GuidedLetterBuilder";

@@ -22,13 +22,19 @@ import {
   DOCUMENT_TYPE_LABELS,
 } from "@/lib/documentTemplates";
 import { DocumentTemplateEditor } from "./DocumentTemplateEditor";
+import { LetterCategorySelector } from "./LetterCategorySelector";
+import { GuidedLetterBuilder } from "./GuidedLetterBuilder";
+import { LetterCategory, getCategoryConfig } from "@/lib/letterCategories";
+
+type ViewMode = 'list' | 'category-select' | 'guided-builder' | 'free-editor';
 
 export function DocumentTemplateList() {
   const { organization } = useOrganization();
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [selectedCategory, setSelectedCategory] = useState<LetterCategory | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplate | null>(null);
 
@@ -60,22 +66,61 @@ export function DocumentTemplateList() {
 
   const handleSave = () => {
     setEditingTemplate(null);
-    setIsCreating(false);
+    setViewMode('list');
+    setSelectedCategory(null);
     loadTemplates();
   };
 
-  if (isCreating || editingTemplate) {
+  const handleBackToList = () => {
+    setViewMode('list');
+    setSelectedCategory(null);
+    setEditingTemplate(null);
+  };
+
+  const handleCategorySelect = (category: LetterCategory) => {
+    setSelectedCategory(category);
+    setViewMode('guided-builder');
+  };
+
+  // Category selection screen
+  if (viewMode === 'category-select') {
+    return (
+      <LetterCategorySelector
+        onSelectCategory={handleCategorySelect}
+        onBack={handleBackToList}
+      />
+    );
+  }
+
+  // Guided builder for selected category
+  if (viewMode === 'guided-builder' && selectedCategory && organization?.id) {
+    return (
+      <GuidedLetterBuilder
+        category={selectedCategory}
+        organizationId={organization.id}
+        onBack={() => setViewMode('category-select')}
+        onSave={handleSave}
+      />
+    );
+  }
+
+  // Free-form editor for editing existing templates
+  if (viewMode === 'free-editor' || editingTemplate) {
     return (
       <DocumentTemplateEditor
         template={editingTemplate}
         onSave={handleSave}
-        onCancel={() => {
-          setEditingTemplate(null);
-          setIsCreating(false);
-        }}
+        onCancel={handleBackToList}
       />
     );
   }
+
+  // Get category info for display
+  const getCategoryLabel = (category: string | undefined): string => {
+    if (!category) return '';
+    const config = getCategoryConfig(category as LetterCategory);
+    return config?.shortName || category;
+  };
 
   return (
     <div className="space-y-6">
@@ -86,7 +131,7 @@ export function DocumentTemplateList() {
             Create templates for letters, notices, requests, and agreements
           </p>
         </div>
-        <Button onClick={() => setIsCreating(true)}>
+        <Button onClick={() => setViewMode('category-select')}>
           <Plus className="h-4 w-4 mr-2" />
           New Template
         </Button>
@@ -104,7 +149,7 @@ export function DocumentTemplateList() {
             <p className="text-sm text-muted-foreground mb-4 text-center">
               Create your first template to generate letters and documents from case data.
             </p>
-            <Button onClick={() => setIsCreating(true)}>
+            <Button onClick={() => setViewMode('category-select')}>
               <Plus className="h-4 w-4 mr-2" />
               Create Template
             </Button>
@@ -112,50 +157,59 @@ export function DocumentTemplateList() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {templates.map((template) => (
-            <Card key={template.id} className={!template.isActive ? "opacity-60" : ""}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <CardTitle className="text-base">{template.name}</CardTitle>
-                      {template.description && (
-                        <CardDescription className="mt-1">
-                          {template.description}
-                        </CardDescription>
+          {templates.map((template) => {
+            const categoryLabel = getCategoryLabel((template as any).letterCategory);
+            return (
+              <Card key={template.id} className={!template.isActive ? "opacity-60" : ""}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <CardTitle className="text-base">{template.name}</CardTitle>
+                        {template.description && (
+                          <CardDescription className="mt-1">
+                            {template.description}
+                          </CardDescription>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {DOCUMENT_TYPE_LABELS[template.documentType]}
+                      </Badge>
+                      {categoryLabel && (
+                        <Badge variant="secondary">{categoryLabel}</Badge>
                       )}
+                      {!template.isActive && (
+                        <Badge variant="secondary">Inactive</Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingTemplate(template);
+                          setViewMode('free-editor');
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setTemplateToDelete(template);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">
-                      {DOCUMENT_TYPE_LABELS[template.documentType]}
-                    </Badge>
-                    {!template.isActive && (
-                      <Badge variant="secondary">Inactive</Badge>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditingTemplate(template)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setTemplateToDelete(template);
-                        setDeleteDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
+                </CardHeader>
+              </Card>
+            );
+          })}
         </div>
       )}
 

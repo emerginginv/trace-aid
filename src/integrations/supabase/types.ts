@@ -1075,6 +1075,7 @@ export type Database = {
           document_type: string
           id: string
           is_active: boolean | null
+          letter_category: string | null
           name: string
           organization_id: string | null
           updated_at: string | null
@@ -1087,6 +1088,7 @@ export type Database = {
           document_type?: string
           id?: string
           is_active?: boolean | null
+          letter_category?: string | null
           name: string
           organization_id?: string | null
           updated_at?: string | null
@@ -1099,6 +1101,7 @@ export type Database = {
           document_type?: string
           id?: string
           is_active?: boolean | null
+          letter_category?: string | null
           name?: string
           organization_id?: string | null
           updated_at?: string | null
