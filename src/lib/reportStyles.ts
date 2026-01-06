@@ -489,6 +489,137 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
       font-size: 7pt;
     }
 
+    /* === CONFIGURABLE RUNNING HEADER === */
+
+    .report-running-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid #cbd5e0;
+      margin-bottom: 24px;
+      font-family: ${opts.fontSans};
+      font-size: 9pt;
+      color: #4a5568;
+    }
+
+    .running-header-left,
+    .running-header-right {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .running-header-left {
+      align-items: flex-start;
+    }
+
+    .running-header-right {
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .running-header-logo {
+      max-width: 100px;
+      max-height: 40px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .running-header-org {
+      font-weight: 600;
+      color: #1a1a1a;
+      font-size: 10pt;
+    }
+
+    .running-header-contact,
+    .running-header-address {
+      font-size: 8pt;
+      color: #718096;
+    }
+
+    .running-header-title {
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .running-header-case,
+    .running-header-date {
+      font-size: 8pt;
+      color: #718096;
+    }
+
+    /* === CONFIGURABLE RUNNING FOOTER === */
+
+    .report-running-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid #cbd5e0;
+      margin-top: 32px;
+      font-family: ${opts.fontSans};
+      font-size: 8pt;
+      color: #718096;
+    }
+
+    .running-footer-left,
+    .running-footer-center,
+    .running-footer-right {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .running-footer-left {
+      align-items: flex-start;
+      flex: 1;
+    }
+
+    .running-footer-center {
+      align-items: center;
+      flex: 2;
+      text-align: center;
+    }
+
+    .running-footer-right {
+      align-items: flex-end;
+      text-align: right;
+      flex: 1;
+    }
+
+    .running-footer-org {
+      font-weight: 600;
+      color: #4a5568;
+    }
+
+    .running-footer-website,
+    .running-footer-phone {
+      font-size: 7pt;
+      color: #a0aec0;
+    }
+
+    .running-footer-confidential {
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: ${opts.primaryColor};
+      font-size: 9pt;
+    }
+
+    .running-footer-page {
+      font-weight: 400;
+    }
+
+    .running-footer-date {
+      font-size: 7pt;
+    }
+
+    .running-footer-id {
+      font-family: 'Courier New', monospace;
+      font-size: 7pt;
+    }
+
     /* === UTILITY CLASSES === */
 
     .text-muted {

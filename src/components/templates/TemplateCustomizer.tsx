@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { SectionCustomizationRow } from "./SectionCustomizationRow";
 import { ReportPreviewPanel } from "./ReportPreviewPanel";
+import { HeaderFooterConfigEditor } from "./HeaderFooterConfigEditor";
 import { generatePreview, buildCustomization, PreviewResult } from "@/lib/reportPreview";
 import { OrganizationProfile } from "@/lib/organizationProfile";
 import { CaseVariables } from "@/lib/caseVariables";
@@ -36,9 +37,12 @@ import {
   type TemplateCustomization,
   type CoverPageConfig,
   type SubjectFilterConfig,
+  type HeaderFooterConfig,
   validateCustomization,
   getDefaultCoverPageConfig,
   getDefaultSubjectFilterConfig,
+  getDefaultHeaderFooterConfig,
+  hasHeaderFooterChanges,
 } from "@/lib/reportTemplates";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -76,6 +80,9 @@ export function TemplateCustomizer({
   // Subject filter config state
   const [subjectFilterConfig, setSubjectFilterConfig] = useState<SubjectFilterConfig>(getDefaultSubjectFilterConfig());
   
+  // Header/footer config state
+  const [headerFooterConfig, setHeaderFooterConfig] = useState<HeaderFooterConfig>(getDefaultHeaderFooterConfig());
+  
   // Validation error
   const [validationError, setValidationError] = useState<string | null>(null);
   
@@ -107,10 +114,14 @@ export function TemplateCustomizer({
         
         // Initialize subject filter config
         setSubjectFilterConfig(initialCustomization.subjectFilterConfig || getDefaultSubjectFilterConfig());
+        
+        // Initialize header/footer config
+        setHeaderFooterConfig(initialCustomization.headerFooterConfig || getDefaultHeaderFooterConfig());
       } else {
         setCustomizations(new Map());
         setCoverPageConfig(getDefaultCoverPageConfig());
         setSubjectFilterConfig(getDefaultSubjectFilterConfig());
+        setHeaderFooterConfig(getDefaultHeaderFooterConfig());
       }
       
       setValidationError(null);
@@ -129,10 +140,10 @@ export function TemplateCustomizer({
     
     const timeoutId = setTimeout(() => {
       try {
-        const customization = buildCustomization(template.id, customizations, coverPageConfig, subjectFilterConfig);
+        const customization = buildCustomization(template.id, customizations, coverPageConfig, subjectFilterConfig, headerFooterConfig);
         const result = generatePreview({
           template,
-          customization: customizations.size > 0 || coverPageConfig || subjectFilterConfig ? customization : null,
+          customization: customizations.size > 0 || coverPageConfig || subjectFilterConfig || headerFooterConfig ? customization : null,
           orgProfile,
           caseVariables,
         });
@@ -145,7 +156,7 @@ export function TemplateCustomizer({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [open, template, customizations, coverPageConfig, subjectFilterConfig, orgProfile, caseVariables]);
+  }, [open, template, customizations, coverPageConfig, subjectFilterConfig, headerFooterConfig, orgProfile, caseVariables]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -195,6 +206,7 @@ export function TemplateCustomizer({
     setCustomizations(new Map());
     setCoverPageConfig(getDefaultCoverPageConfig());
     setSubjectFilterConfig(getDefaultSubjectFilterConfig());
+    setHeaderFooterConfig(getDefaultHeaderFooterConfig());
     setValidationError(null);
   }, [template]);
 
@@ -205,6 +217,7 @@ export function TemplateCustomizer({
       sectionCustomizations: Array.from(customizations.values()),
       coverPageConfig,
       subjectFilterConfig,
+      headerFooterConfig,
     };
 
     // Validate
@@ -216,7 +229,7 @@ export function TemplateCustomizer({
 
     onApply(templateCustomization);
     onOpenChange(false);
-  }, [template, customizations, coverPageConfig, onApply, onOpenChange]);
+  }, [template, customizations, coverPageConfig, subjectFilterConfig, headerFooterConfig, onApply, onOpenChange]);
 
   const handleSectionHover = useCallback((sectionId: string | null) => {
     setHighlightedSectionId(sectionId);
@@ -235,7 +248,7 @@ export function TemplateCustomizer({
     [sectionOrder, template.sections]
   );
 
-  // Count modifications - include cover page and subject filter changes
+  // Count modifications - include cover page, subject filter, and header/footer changes
   const defaultCoverConfig = getDefaultCoverPageConfig();
   const defaultSubjectConfig = getDefaultSubjectFilterConfig();
   const hasCoverPageChanges = coverPageConfig.showPreparedBy !== defaultCoverConfig.showPreparedBy ||
@@ -243,7 +256,8 @@ export function TemplateCustomizer({
   const hasSubjectFilterChanges = subjectFilterConfig.includeVehicles !== defaultSubjectConfig.includeVehicles ||
     subjectFilterConfig.includeLocations !== defaultSubjectConfig.includeLocations ||
     subjectFilterConfig.includeItems !== defaultSubjectConfig.includeItems;
-  const modificationCount = customizations.size + (hasCoverPageChanges ? 1 : 0) + (hasSubjectFilterChanges ? 1 : 0);
+  const hasHFChanges = hasHeaderFooterChanges(headerFooterConfig);
+  const modificationCount = customizations.size + (hasCoverPageChanges ? 1 : 0) + (hasSubjectFilterChanges ? 1 : 0) + (hasHFChanges ? 1 : 0);
   const hasModifications = modificationCount > 0;
 
   // Cover page settings component
@@ -339,6 +353,14 @@ export function TemplateCustomizer({
     </Card>
   );
 
+  // Header/footer settings component
+  const headerFooterSettings = (
+    <HeaderFooterConfigEditor
+      config={headerFooterConfig}
+      onChange={setHeaderFooterConfig}
+    />
+  );
+
   // Section list component (shared between desktop and mobile)
   const sectionList = (
     <DndContext
@@ -408,6 +430,7 @@ export function TemplateCustomizer({
                 <div className="space-y-2 pb-4">
                   {coverPageSettings}
                   {subjectDisplaySettings}
+                  {headerFooterSettings}
                   {sectionList}
                 </div>
               </ScrollArea>
@@ -504,6 +527,7 @@ export function TemplateCustomizer({
               <div className="p-3">
                 {coverPageSettings}
                 {subjectDisplaySettings}
+                {headerFooterSettings}
                 <div className="text-xs text-muted-foreground mb-2 px-1 font-medium uppercase tracking-wide">
                   Report Sections
                 </div>

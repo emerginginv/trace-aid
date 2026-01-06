@@ -13,6 +13,7 @@ import {
   applyCustomizations,
   CoverPageConfig,
   SubjectFilterConfig,
+  HeaderFooterConfig,
 } from "@/lib/reportTemplates";
 import { CaseUpdate, CaseEvent, UserProfile, RenderedSection } from "@/lib/reportEngine";
 import {
@@ -21,6 +22,8 @@ import {
   renderUpdateCollectionSection,
   renderEventCollectionSection,
   renderCoverPage,
+  renderReportHeader,
+  renderReportFooter,
 } from "@/lib/reportRenderers";
 import { generateReportStyles, generateReportHash } from "@/lib/reportStyles";
 
@@ -228,7 +231,9 @@ export function generatePreview(input: PreviewInput): PreviewResult {
     coverPageHtml,
     previewTitle,
     orgProfile,
-    caseVariables
+    caseVariables,
+    generatedAt,
+    customization?.headerFooterConfig
   );
 
   // Estimate pages (rough calculation based on content length)
@@ -322,7 +327,9 @@ function assemblePreviewHtml(
   coverPageHtml: string,
   title: string,
   orgProfile: OrganizationProfile | null,
-  caseVariables: CaseVariables | null
+  caseVariables: CaseVariables | null,
+  generatedAt: Date,
+  headerFooterConfig?: HeaderFooterConfig
 ): string {
   const sortedSections = [...sections].sort((a, b) => a.displayOrder - b.displayOrder);
 
@@ -842,22 +849,9 @@ function assemblePreviewHtml(
     }
   `;
 
-  // Running header (for content pages)
-  const headerHtml = `
-    <div class="report-page-header">
-      <span class="header-company">${orgProfile?.companyName || 'Company Name'}</span>
-      <span class="header-case">${caseVariables?.caseNumber ? `Case #: ${caseVariables.caseNumber}` : 'Case #: INV-2026-PREVIEW'}</span>
-    </div>
-  `;
-
-  // Running footer
-  const footerHtml = `
-    <div class="report-page-footer">
-      <span class="footer-confidential">CONFIDENTIAL</span>
-      <span class="footer-page">Preview</span>
-      <span class="footer-report-id">Report ID: PREVIEW</span>
-    </div>
-  `;
+  // Use configurable header/footer renderers for live preview
+  const headerHtml = renderReportHeader(orgProfile, caseVariables, title, generatedAt, headerFooterConfig);
+  const footerHtml = renderReportFooter(orgProfile, generatedAt, 'PREVIEW', headerFooterConfig);
 
   return `
     <style>${styles}</style>
@@ -882,12 +876,14 @@ export function buildCustomization(
   templateId: string,
   customizations: Map<string, SectionCustomization>,
   coverPageConfig?: CoverPageConfig,
-  subjectFilterConfig?: SubjectFilterConfig
+  subjectFilterConfig?: SubjectFilterConfig,
+  headerFooterConfig?: HeaderFooterConfig
 ): TemplateCustomization {
   return {
     templateId,
     sectionCustomizations: Array.from(customizations.values()),
     coverPageConfig,
     subjectFilterConfig,
+    headerFooterConfig,
   };
 }

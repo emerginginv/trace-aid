@@ -9,6 +9,8 @@ import {
   CoverPageConfig,
   getDefaultCoverPageConfig,
   SubjectFilterConfig,
+  HeaderFooterConfig,
+  getDefaultHeaderFooterConfig,
 } from "@/lib/reportTemplates";
 import { OrganizationProfile } from "@/lib/organizationProfile";
 import { CaseVariables, formatCaseVariablesForTemplate, formatCaseVariablesForTemplateWithFilters } from "@/lib/caseVariables";
@@ -531,4 +533,142 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ============= Running Header/Footer Renderers =============
+
+/**
+ * Render configurable running header for report pages
+ */
+export function renderReportHeader(
+  orgProfile: OrganizationProfile | null,
+  caseVariables: CaseVariables | null,
+  reportTitle: string,
+  generatedAt: Date,
+  config?: HeaderFooterConfig
+): string {
+  const cfg = config || getDefaultHeaderFooterConfig();
+  
+  // Build header elements based on config
+  const leftElements: string[] = [];
+  const rightElements: string[] = [];
+  
+  // Left side: Organization info
+  if (cfg.headerShowLogo && orgProfile?.logoUrl) {
+    leftElements.push(`<img src="${orgProfile.logoUrl}" alt="Logo" class="running-header-logo" />`);
+  }
+  if (cfg.headerShowOrgName && orgProfile?.companyName) {
+    leftElements.push(`<span class="running-header-org">${escapeHtml(orgProfile.companyName)}</span>`);
+  }
+  
+  // Contact details (if any enabled)
+  const contactParts: string[] = [];
+  if (cfg.headerShowOrgPhone && orgProfile?.phone) {
+    contactParts.push(escapeHtml(orgProfile.phone));
+  }
+  if (cfg.headerShowOrgEmail && orgProfile?.email) {
+    contactParts.push(escapeHtml(orgProfile.email));
+  }
+  if (contactParts.length > 0) {
+    leftElements.push(`<span class="running-header-contact">${contactParts.join(' | ')}</span>`);
+  }
+  
+  if (cfg.headerShowOrgAddress && orgProfile?.fullAddress) {
+    leftElements.push(`<span class="running-header-address">${escapeHtml(orgProfile.fullAddress)}</span>`);
+  }
+  
+  // Right side: Report info
+  if (cfg.headerShowReportTitle) {
+    rightElements.push(`<span class="running-header-title">${escapeHtml(reportTitle)}</span>`);
+  }
+  if (cfg.headerShowCaseNumber && caseVariables?.caseNumber) {
+    rightElements.push(`<span class="running-header-case">Case #: ${escapeHtml(caseVariables.caseNumber)}</span>`);
+  }
+  if (cfg.headerShowReportDate) {
+    rightElements.push(`<span class="running-header-date">${formatReportDate(generatedAt)}</span>`);
+  }
+  
+  // If nothing to show, return empty
+  if (leftElements.length === 0 && rightElements.length === 0) {
+    return '';
+  }
+  
+  return `
+    <div class="report-running-header">
+      <div class="running-header-left">
+        ${leftElements.join('\n        ')}
+      </div>
+      <div class="running-header-right">
+        ${rightElements.join('\n        ')}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render configurable running footer for report pages
+ */
+export function renderReportFooter(
+  orgProfile: OrganizationProfile | null,
+  generatedAt: Date,
+  reportHash: string,
+  config?: HeaderFooterConfig
+): string {
+  const cfg = config || getDefaultHeaderFooterConfig();
+  
+  const leftElements: string[] = [];
+  const centerElements: string[] = [];
+  const rightElements: string[] = [];
+  
+  // Left: Org info
+  if (cfg.footerShowOrgName && orgProfile?.companyName) {
+    leftElements.push(`<span class="running-footer-org">${escapeHtml(orgProfile.companyName)}</span>`);
+  }
+  if (cfg.footerShowWebsite && orgProfile?.websiteUrl) {
+    leftElements.push(`<span class="running-footer-website">${escapeHtml(orgProfile.websiteUrl)}</span>`);
+  }
+  if (cfg.footerShowPhone && orgProfile?.phone) {
+    leftElements.push(`<span class="running-footer-phone">${escapeHtml(orgProfile.phone)}</span>`);
+  }
+  
+  // Center: Confidentiality notice
+  if (cfg.footerShowConfidentiality && cfg.footerConfidentialityText) {
+    // Truncate for footer display
+    const notice = cfg.footerConfidentialityText.length > 60 
+      ? 'CONFIDENTIAL' 
+      : cfg.footerConfidentialityText;
+    centerElements.push(`<span class="running-footer-confidential">${escapeHtml(notice)}</span>`);
+  }
+  
+  // Right: Page/date info
+  if (cfg.footerShowPageNumber) {
+    rightElements.push(`<span class="running-footer-page">Page</span>`);
+  }
+  if (cfg.footerShowGeneratedDate) {
+    rightElements.push(`<span class="running-footer-date">Generated: ${formatReportDate(generatedAt)}</span>`);
+  }
+  rightElements.push(`<span class="running-footer-id">Report ID: ${reportHash}</span>`);
+  
+  // If nothing to show except ID, return minimal footer
+  if (leftElements.length === 0 && centerElements.length === 0 && rightElements.length <= 1) {
+    return `
+      <div class="report-running-footer">
+        <span class="running-footer-id">Report ID: ${reportHash}</span>
+      </div>
+    `;
+  }
+  
+  return `
+    <div class="report-running-footer">
+      <div class="running-footer-left">
+        ${leftElements.join('\n        ')}
+      </div>
+      <div class="running-footer-center">
+        ${centerElements.join('\n        ')}
+      </div>
+      <div class="running-footer-right">
+        ${rightElements.join('\n        ')}
+      </div>
+    </div>
+  `;
 }

@@ -2103,6 +2103,90 @@ export type Database = {
           },
         ]
       }
+      template_header_footer_config: {
+        Row: {
+          created_at: string | null
+          footer_confidentiality_text: string | null
+          footer_show_confidentiality: boolean | null
+          footer_show_generated_date: boolean | null
+          footer_show_org_name: boolean | null
+          footer_show_page_number: boolean | null
+          footer_show_phone: boolean | null
+          footer_show_website: boolean | null
+          header_show_case_number: boolean | null
+          header_show_logo: boolean | null
+          header_show_org_address: boolean | null
+          header_show_org_email: boolean | null
+          header_show_org_name: boolean | null
+          header_show_org_phone: boolean | null
+          header_show_report_date: boolean | null
+          header_show_report_title: boolean | null
+          id: string
+          organization_id: string
+          template_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          footer_confidentiality_text?: string | null
+          footer_show_confidentiality?: boolean | null
+          footer_show_generated_date?: boolean | null
+          footer_show_org_name?: boolean | null
+          footer_show_page_number?: boolean | null
+          footer_show_phone?: boolean | null
+          footer_show_website?: boolean | null
+          header_show_case_number?: boolean | null
+          header_show_logo?: boolean | null
+          header_show_org_address?: boolean | null
+          header_show_org_email?: boolean | null
+          header_show_org_name?: boolean | null
+          header_show_org_phone?: boolean | null
+          header_show_report_date?: boolean | null
+          header_show_report_title?: boolean | null
+          id?: string
+          organization_id: string
+          template_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          footer_confidentiality_text?: string | null
+          footer_show_confidentiality?: boolean | null
+          footer_show_generated_date?: boolean | null
+          footer_show_org_name?: boolean | null
+          footer_show_page_number?: boolean | null
+          footer_show_phone?: boolean | null
+          footer_show_website?: boolean | null
+          header_show_case_number?: boolean | null
+          header_show_logo?: boolean | null
+          header_show_org_address?: boolean | null
+          header_show_org_email?: boolean | null
+          header_show_org_name?: boolean | null
+          header_show_org_phone?: boolean | null
+          header_show_report_date?: boolean | null
+          header_show_report_title?: boolean | null
+          id?: string
+          organization_id?: string
+          template_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_header_footer_config_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_header_footer_config_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: true
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_sections: {
         Row: {
           collection_config: Json | null

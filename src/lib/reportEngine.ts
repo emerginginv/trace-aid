@@ -10,6 +10,8 @@ import {
   applyCustomizations,
   CoverPageConfig,
   SubjectFilterConfig,
+  HeaderFooterConfig,
+  getDefaultHeaderFooterConfig,
 } from "@/lib/reportTemplates";
 import {
   renderStaticTextSection,
@@ -17,6 +19,8 @@ import {
   renderUpdateCollectionSection,
   renderEventCollectionSection,
   renderCoverPage,
+  renderReportHeader,
+  renderReportFooter,
 } from "@/lib/reportRenderers";
 import { generateReportStyles, generateReportHash, formatReportDate } from "@/lib/reportStyles";
 
@@ -146,9 +150,11 @@ function assembleReportHtml(
   caseVariables: CaseVariables | null,
   generatedAt: Date,
   inputHash: string,
-  coverPageConfig?: CoverPageConfig
+  coverPageConfig?: CoverPageConfig,
+  headerFooterConfig?: HeaderFooterConfig
 ): string {
   const sortedSections = [...sections].sort((a, b) => a.displayOrder - b.displayOrder);
+  const hfConfig = headerFooterConfig || getDefaultHeaderFooterConfig();
   
   // Generate professional stylesheet
   const styles = generateReportStyles({
@@ -185,22 +191,11 @@ function assembleReportHtml(
   // Generate report hash for identification
   const reportHash = generateReportHash(inputHash).substring(0, 8);
 
-  // Running header
-  const headerHtml = `
-    <div class="report-page-header screen-only">
-      <span class="header-company">${orgProfile?.companyName || 'Investigation Report'}</span>
-      <span class="header-case">${caseVariables?.caseNumber ? `Case #: ${caseVariables.caseNumber}` : ''}</span>
-    </div>
-  `;
+  // Configurable running header
+  const headerHtml = renderReportHeader(orgProfile, caseVariables, title, generatedAt, hfConfig);
 
-  // Running footer
-  const footerHtml = `
-    <div class="report-page-footer">
-      <span class="footer-confidential">CONFIDENTIAL</span>
-      <span class="footer-page"></span>
-      <span class="footer-report-id">Report ID: ${reportHash}</span>
-    </div>
-  `;
+  // Configurable running footer
+  const footerHtml = renderReportFooter(orgProfile, generatedAt, reportHash, hfConfig);
 
   return `
     <div class="report-document">
@@ -334,7 +329,8 @@ export async function generateReport(input: ReportInput): Promise<GenerationResu
       caseVariables,
       generatedAt,
       inputHash,
-      input.customization?.coverPageConfig
+      input.customization?.coverPageConfig,
+      input.customization?.headerFooterConfig
     );
 
     // Step 5: Save to database
