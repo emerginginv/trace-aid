@@ -24,6 +24,7 @@ import type {
   SectionType,
 } from "@/lib/reportTemplates";
 import { SECTION_TYPE_LABELS } from "@/lib/reportTemplates";
+import { cn } from "@/lib/utils";
 
 interface SectionCustomizationRowProps {
   section: TemplateSection;
@@ -173,10 +174,10 @@ export function SectionCustomizationRow({
 
   const getSectionTypeColor = (type: SectionType) => {
     switch (type) {
-      case 'static_text': return 'bg-slate-500/10 text-slate-700 dark:text-slate-300';
-      case 'case_variable_block': return 'bg-blue-500/10 text-blue-700 dark:text-blue-300';
-      case 'update_collection': return 'bg-green-500/10 text-green-700 dark:text-green-300';
-      case 'event_collection': return 'bg-purple-500/10 text-purple-700 dark:text-purple-300';
+      case 'static_text': return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+      case 'case_variable_block': return 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'update_collection': return 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400';
+      case 'event_collection': return 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -185,29 +186,31 @@ export function SectionCustomizationRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`border rounded-lg bg-card transition-all ${
-        isDragging ? 'shadow-lg ring-2 ring-primary/50' : ''
-      } ${!effectiveVisible ? 'opacity-60' : ''} ${
-        isHighlighted ? 'ring-2 ring-primary' : ''
-      }`}
+      className={cn(
+        "border rounded-lg bg-card transition-all duration-150",
+        "hover:border-primary/30 hover:shadow-sm",
+        isDragging && "shadow-lg ring-2 ring-primary/50 z-50",
+        !effectiveVisible && "opacity-50 bg-muted/30",
+        isHighlighted && "ring-2 ring-primary border-primary/50 shadow-md"
+      )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <div className="flex items-center gap-2 p-3">
+        <div className="flex items-center gap-2 p-2.5">
           {/* Drag Handle */}
           <button
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+            className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors touch-none"
           >
-            <GripVertical className="h-5 w-5" />
+            <GripVertical className="h-4 w-4" />
           </button>
 
           {/* Expand Toggle (only for collection sections) */}
           {hasExpandableContent ? (
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground">
                 {isExpanded ? (
                   <ChevronDown className="h-4 w-4" />
                 ) : (
@@ -233,24 +236,27 @@ export function SectionCustomizationRow({
                     setIsEditingTitle(false);
                   }
                 }}
-                className="h-8 text-sm"
+                className="h-7 text-sm"
                 autoFocus
               />
             ) : (
               <button
                 onClick={() => setIsEditingTitle(true)}
-                className="text-left w-full text-sm font-medium hover:bg-muted/50 rounded px-2 py-1 -ml-2 truncate"
+                className={cn(
+                  "text-left w-full text-sm font-medium hover:bg-muted/50 rounded px-2 py-1 -ml-2 truncate transition-colors",
+                  !effectiveVisible && "text-muted-foreground"
+                )}
               >
                 {effectiveTitle}
                 {isModified && (
-                  <span className="ml-2 text-xs text-primary">(modified)</span>
+                  <span className="ml-1.5 text-xs text-primary/70">•</span>
                 )}
               </button>
             )}
           </div>
 
           {/* Section Type Badge */}
-          <Badge variant="outline" className={`text-xs shrink-0 ${getSectionTypeColor(section.sectionType)}`}>
+          <Badge variant="secondary" className={cn("text-[10px] shrink-0 font-normal px-1.5 py-0", getSectionTypeColor(section.sectionType))}>
             {SECTION_TYPE_LABELS[section.sectionType]}
           </Badge>
 
@@ -261,13 +267,16 @@ export function SectionCustomizationRow({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className={cn(
+                    "h-7 w-7 p-0",
+                    effectiveVisible ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground/50"
+                  )}
                   onClick={handleVisibilityToggle}
                 >
                   {effectiveVisible ? (
                     <Eye className="h-4 w-4" />
                   ) : (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    <EyeOff className="h-4 w-4" />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -280,7 +289,7 @@ export function SectionCustomizationRow({
 
         {/* Expandable Content */}
         <CollapsibleContent>
-          <div className="border-t px-3 py-4 bg-muted/20">
+          <div className="border-t px-3 py-3 bg-muted/30">
             {section.sectionType === 'update_collection' && (
               <UpdateTypeMappingEditor
                 mapping={effectiveCollectionConfig?.updateTypeMapping ?? null}
