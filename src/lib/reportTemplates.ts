@@ -45,6 +45,8 @@ export interface CollectionConfig {
   // Event type mapping for event_collection sections
   eventTypeMapping?: EventTypeMapping;
   eventDisplayConfig?: EventDisplayConfig;
+  // Display options for update_collection sections
+  showAuthor?: boolean;  // Whether to show author attribution in updates (default: true)
 }
 
 // Default update types for reference

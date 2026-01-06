@@ -153,6 +153,17 @@ export function SectionCustomizationRow({
     });
   };
 
+  const handleShowAuthorChange = (showAuthor: boolean) => {
+    onCustomizationChange({
+      sectionId: section.id,
+      ...customization,
+      collectionConfigOverride: {
+        ...customization?.collectionConfigOverride,
+        showAuthor,
+      },
+    });
+  };
+
   const hasExpandableContent = section.sectionType === 'update_collection' || section.sectionType === 'event_collection';
   const isModified = customization && (
     customization.customTitle !== undefined ||
@@ -275,9 +286,11 @@ export function SectionCustomizationRow({
                 mapping={effectiveCollectionConfig?.updateTypeMapping ?? null}
                 sortOrder={effectiveCollectionConfig?.sortOrder ?? 'asc'}
                 limit={effectiveCollectionConfig?.limit ?? null}
+                showAuthor={effectiveCollectionConfig?.showAuthor !== false}
                 onMappingChange={handleUpdateMappingChange}
                 onSortOrderChange={handleSortOrderChange}
                 onLimitChange={handleLimitChange}
+                onShowAuthorChange={handleShowAuthorChange}
               />
             )}
 

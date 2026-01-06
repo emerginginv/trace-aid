@@ -295,6 +295,9 @@ export function renderUpdateCollectionSection(
                       'Unknown';
         const dateStr = formatDate(update.created_at);
         
+        // Check if author should be shown (default to true for backwards compatibility)
+        const showAuthor = section.collectionConfig?.showAuthor !== false;
+        
         return `
           <div class="entry-item">
             <div class="entry-header">
@@ -302,7 +305,7 @@ export function renderUpdateCollectionSection(
               <span class="entry-meta">${escapeHtml(dateStr)}</span>
             </div>
             ${update.description ? `<div class="entry-content">${update.description}</div>` : ''}
-            <div class="entry-attribution">— ${escapeHtml(author)}</div>
+            ${showAuthor ? `<div class="entry-attribution">— ${escapeHtml(author)}</div>` : ''}
           </div>
         `;
       }).join('')
