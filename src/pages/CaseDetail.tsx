@@ -710,6 +710,10 @@ const CaseDetail = () => {
               <Briefcase className="h-4 w-4 mr-1.5 hidden sm:inline" />
               Info
             </TabsTrigger>}
+            {!isVendor && <TabsTrigger value="budget" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <Clock className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Budget
+            </TabsTrigger>}
             {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
               <Users className="h-4 w-4 mr-1.5 hidden sm:inline" />
               Subjects
@@ -718,10 +722,6 @@ const CaseDetail = () => {
               <FilePenLine className="h-4 w-4 mr-1.5 hidden sm:inline" />
               Updates
             </TabsTrigger>
-            {!isVendor && <TabsTrigger value="reports" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <BarChart3 className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Reports
-            </TabsTrigger>}
             {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
               <ClipboardList className="h-4 w-4 mr-1.5 hidden sm:inline" />
               Activities
@@ -734,14 +734,14 @@ const CaseDetail = () => {
               <DollarSign className="h-4 w-4 mr-1.5 hidden sm:inline" />
               Finances
             </TabsTrigger>}
-            {!isVendor && <TabsTrigger value="budget" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <Clock className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Budget
-            </TabsTrigger>}
             <TabsTrigger value="attachments" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
               <FileArchive className="h-4 w-4 mr-1.5 hidden sm:inline" />
               Attachments
             </TabsTrigger>
+            {!isVendor && <TabsTrigger value="reports" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
+              <BarChart3 className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              Reports
+            </TabsTrigger>}
           </TabsList>
         </div>
 
@@ -812,6 +812,20 @@ const CaseDetail = () => {
         )}
 
         {!isVendor && (
+          <TabsContent value="budget" className="mt-4 sm:mt-6">
+            <div ref={budgetTabRef} className="space-y-6 scroll-mt-4">
+              <BudgetSummary 
+                caseId={id!} 
+                refreshKey={budgetRefreshKey} 
+                onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
+              />
+              <BudgetConsumptionSnapshot caseId={id!} refreshKey={budgetRefreshKey} />
+              <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} highlight={highlightHistory} />
+            </div>
+          </TabsContent>
+        )}
+
+        {!isVendor && (
           <TabsContent value="subjects" className="mt-4 sm:mt-6">
             <CaseSubjects caseId={id!} isClosedCase={isClosed} />
           </TabsContent>
@@ -821,43 +835,33 @@ const CaseDetail = () => {
           <CaseUpdates caseId={id!} isClosedCase={isClosed} />
         </TabsContent>
 
-        {!isVendor && hasPermission('view_reports') && (
-          <TabsContent value="reports" className="mt-4 sm:mt-6">
-            <CaseReports caseId={id!} />
+        {!isVendor && (
+          <TabsContent value="activities" className="mt-4 sm:mt-6">
+            <CaseActivities caseId={id!} isClosedCase={isClosed} />
           </TabsContent>
         )}
 
         {!isVendor && (
-          <>
-            <TabsContent value="activities" className="mt-4 sm:mt-6">
-              <CaseActivities caseId={id!} isClosedCase={isClosed} />
-            </TabsContent>
+          <TabsContent value="calendar" className="mt-4 sm:mt-6">
+            <CaseCalendar caseId={id!} isClosedCase={isClosed} />
+          </TabsContent>
+        )}
 
-            <TabsContent value="calendar" className="mt-4 sm:mt-6">
-              <CaseCalendar caseId={id!} isClosedCase={isClosed} />
-            </TabsContent>
-
-            <TabsContent value="finances" className="mt-4 sm:mt-6">
-              <CaseFinances caseId={id!} isClosedCase={isClosed} />
-            </TabsContent>
-
-            <TabsContent value="budget" className="mt-4 sm:mt-6">
-              <div ref={budgetTabRef} className="space-y-6 scroll-mt-4">
-                <BudgetSummary 
-                  caseId={id!} 
-                  refreshKey={budgetRefreshKey} 
-                  onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
-                />
-                <BudgetConsumptionSnapshot caseId={id!} refreshKey={budgetRefreshKey} />
-                <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} highlight={highlightHistory} />
-              </div>
-            </TabsContent>
-          </>
+        {!isVendor && (
+          <TabsContent value="finances" className="mt-4 sm:mt-6">
+            <CaseFinances caseId={id!} isClosedCase={isClosed} />
+          </TabsContent>
         )}
 
         <TabsContent value="attachments" className="mt-4 sm:mt-6">
           <CaseAttachments caseId={id!} isClosedCase={isClosed} />
         </TabsContent>
+
+        {!isVendor && hasPermission('view_reports') && (
+          <TabsContent value="reports" className="mt-4 sm:mt-6">
+            <CaseReports caseId={id!} />
+          </TabsContent>
+        )}
       </Tabs>
 
       <CaseForm open={editFormOpen} onOpenChange={setEditFormOpen} onSuccess={fetchCaseData} editingCase={caseData || undefined} />
