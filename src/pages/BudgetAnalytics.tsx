@@ -63,7 +63,7 @@ export default function BudgetAnalytics() {
       setLoading(true);
 
       try {
-        // Get all cases with budgets
+        // Get all cases with budgets (no time filter - budgets are always authorized)
         const { data: cases } = await supabase
           .from("cases")
           .select("id, budget_dollars, budget_hours")
@@ -87,12 +87,14 @@ export default function BudgetAnalytics() {
 
         const caseIds = cases.map((c) => c.id);
 
-        // Get consumed amounts
+        // Get consumed amounts filtered by time range
         const { data: finances } = await supabase
           .from("case_finances")
           .select("case_id, amount, hours, finance_type")
           .in("case_id", caseIds)
-          .in("finance_type", ["time", "expense"]);
+          .in("finance_type", ["time", "expense"])
+          .gte("date", timeRange.start.toISOString())
+          .lte("date", timeRange.end.toISOString());
 
         // Calculate totals
         const totalAuthorizedDollars = cases.reduce((sum, c) => sum + (c.budget_dollars || 0), 0);
@@ -104,7 +106,7 @@ export default function BudgetAnalytics() {
           const current = consumptionMap.get(f.case_id) || { dollars: 0, hours: 0 };
           consumptionMap.set(f.case_id, {
             dollars: current.dollars + (f.amount || 0),
-            hours: current.hours + (f.hours || 0),
+            hours: current.hours + (f.finance_type === "time" ? (f.hours || 0) : 0),
           });
         }
 
@@ -158,7 +160,7 @@ export default function BudgetAnalytics() {
     }
 
     fetchBudgetSummary();
-  }, [organizationId]);
+  }, [organizationId, timeRange]);
 
   const utilizationStyles = summary
     ? getBudgetStatusStyles(summary.utilizationPercent)
@@ -303,7 +305,7 @@ export default function BudgetAnalytics() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BudgetUtilizationChart organizationId={organizationId} timeRange={timeRange} />
-        <BudgetStatusDistribution organizationId={organizationId} />
+        <BudgetStatusDistribution organizationId={organizationId} timeRange={timeRange} />
       </div>
 
       {/* Charts Row 2 */}
@@ -312,16 +314,18 @@ export default function BudgetAnalytics() {
           organizationId={organizationId}
           dimension="client"
           title="Budget by Client (Top 10)"
+          timeRange={timeRange}
         />
         <BudgetByDimensionChart
           organizationId={organizationId}
           dimension="investigator"
           title="Budget by Investigator"
+          timeRange={timeRange}
         />
       </div>
 
       {/* Case Budget Distribution */}
-      <CaseBudgetDistribution organizationId={organizationId} />
+      <CaseBudgetDistribution organizationId={organizationId} timeRange={timeRange} />
     </div>
   );
 }
