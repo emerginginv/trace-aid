@@ -292,10 +292,7 @@ export function renderUpdateCollectionSection(
               <span class="entry-title">${escapeHtml(update.title)}</span>
               <span class="entry-meta">${escapeHtml(dateStr)}</span>
             </div>
-            <div class="entry-meta">
-              <span class="entry-type-badge">${escapeHtml(update.update_type)}</span>
-            </div>
-            ${update.description ? `<div class="entry-content"><p>${escapeHtml(update.description)}</p></div>` : ''}
+            ${update.description ? `<div class="entry-content">${update.description}</div>` : ''}
             <div class="entry-attribution">— ${escapeHtml(author)}</div>
           </div>
         `;
