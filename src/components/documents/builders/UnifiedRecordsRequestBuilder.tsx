@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -13,15 +14,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Sparkles, RefreshCw, Save } from "lucide-react";
+import { 
+  Loader2, 
+  Sparkles, 
+  RefreshCw, 
+  Save, 
+  Scale, 
+  Clock, 
+  DollarSign,
+  Gavel,
+  Info
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { useOrganizationId } from "@/hooks/use-organization-id";
 import { 
   getAllJurisdictions, 
   getJurisdictionInfo, 
   DELIVERY_PREFERENCES,
+  formatFeeStructure,
   type DeliveryPreference 
 } from "@/lib/foiaStatutes";
 
@@ -81,7 +92,9 @@ export function UnifiedRecordsRequestBuilder({
     requestFeeWaiver: false,
     feeWaiverJustification: '',
     expeditedProcessing: false,
-    expeditedJustification: ''
+    expeditedJustification: '',
+    includeAppealRights: true,
+    includeFeeNotice: true
   });
 
   const jurisdictions = getAllJurisdictions();
@@ -151,12 +164,18 @@ export function UnifiedRecordsRequestBuilder({
             requestFeeWaiver: formData.requestFeeWaiver,
             feeWaiverJustification: formData.feeWaiverJustification,
             expeditedProcessing: formData.expeditedProcessing,
-            expeditedJustification: formData.expeditedJustification
+            expeditedJustification: formData.expeditedJustification,
+            includeAppealRights: formData.includeAppealRights,
+            includeFeeNotice: formData.includeFeeNotice
           },
           statuteInfo: {
             statute: jurisdictionInfo.statute,
             statuteName: jurisdictionInfo.statuteName,
             responseDeadline: jurisdictionInfo.responseDeadline,
+            appealProvision: jurisdictionInfo.appealProvision,
+            appealDeadline: jurisdictionInfo.appealDeadline,
+            appealBody: jurisdictionInfo.appealBody,
+            feeStructure: jurisdictionInfo.feeStructure,
             legalLanguage: jurisdictionInfo.legalLanguage
           }
         }
@@ -225,7 +244,10 @@ export function UnifiedRecordsRequestBuilder({
         {/* Jurisdiction Selection */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Jurisdiction</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Scale className="h-4 w-4" />
+              Jurisdiction
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -246,12 +268,75 @@ export function UnifiedRecordsRequestBuilder({
                 </SelectContent>
               </Select>
             </div>
-            <div className="p-3 bg-muted rounded-lg text-sm">
-              <p className="font-medium">{jurisdictionInfo.statuteName}</p>
-              <p className="text-muted-foreground">{jurisdictionInfo.statute}</p>
-              <p className="text-muted-foreground mt-1">
-                Response deadline: {jurisdictionInfo.responseDeadline}
-              </p>
+            
+            {/* Enhanced Jurisdiction Info Card */}
+            <div className="p-4 bg-muted rounded-lg space-y-3 border">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-sm">{jurisdictionInfo.statuteName}</h4>
+                <Badge variant="outline" className="text-xs">
+                  {formData.jurisdiction === 'federal' ? 'Federal' : formData.jurisdiction}
+                </Badge>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <Scale className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-muted-foreground">Statute:</span>
+                    <span className="ml-1 font-medium">{jurisdictionInfo.statute}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-muted-foreground">Response:</span>
+                    <span className="ml-1 font-medium">{jurisdictionInfo.responseDeadline}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2">
+                  <Gavel className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-muted-foreground">Appeal to:</span>
+                    <span className="ml-1 font-medium">{jurisdictionInfo.appealBody}</span>
+                    <span className="text-muted-foreground ml-1">
+                      (within {jurisdictionInfo.appealDeadline})
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-muted-foreground">Fees:</span>
+                    <span className="ml-1 font-medium text-xs">
+                      {formatFeeStructure(jurisdictionInfo.feeStructure)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {jurisdictionInfo.exemptions.length > 0 && (
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                    <Info className="h-3 w-3" />
+                    Common Exemptions
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {jurisdictionInfo.exemptions.slice(0, 4).map((exemption, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs">
+                        {exemption.length > 30 ? exemption.slice(0, 30) + '...' : exemption}
+                      </Badge>
+                    ))}
+                    {jurisdictionInfo.exemptions.length > 4 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{jurisdictionInfo.exemptions.length - 4} more
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -527,6 +612,30 @@ export function UnifiedRecordsRequestBuilder({
                 )}
               </div>
             )}
+
+            <div className="pt-3 border-t space-y-3">
+              <p className="text-sm text-muted-foreground">Letter Content Options</p>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="includeAppeal"
+                  checked={formData.includeAppealRights}
+                  onCheckedChange={(checked) => handleChange('includeAppealRights', !!checked)}
+                />
+                <Label htmlFor="includeAppeal" className="text-sm">
+                  Include Appeal Rights Language
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="includeFee"
+                  checked={formData.includeFeeNotice}
+                  onCheckedChange={(checked) => handleChange('includeFeeNotice', !!checked)}
+                />
+                <Label htmlFor="includeFee" className="text-sm">
+                  Include Fee Acknowledgment
+                </Label>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -609,7 +718,7 @@ export function UnifiedRecordsRequestBuilder({
                 <div className="text-center">
                   <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Fill in the form and click "Generate Letter"</p>
-                  <p className="text-sm mt-2">AI will create a legally structured letter for you</p>
+                  <p className="text-sm mt-2">AI will create a legally structured letter with proper statutory language</p>
                 </div>
               </div>
             )}

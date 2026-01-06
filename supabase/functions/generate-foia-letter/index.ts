@@ -36,16 +36,29 @@ interface RequestData {
     feeWaiverJustification?: string;
     expeditedProcessing: boolean;
     expeditedJustification?: string;
+    includeAppealRights: boolean;
+    includeFeeNotice: boolean;
   };
   statuteInfo: {
     statute: string;
     statuteName: string;
     responseDeadline: string;
+    appealProvision: string;
+    appealDeadline: string;
+    appealBody: string;
+    feeStructure: {
+      searchFee: string;
+      duplicationFee: string;
+      reviewFee: string;
+      freePages: number;
+    };
     legalLanguage: {
       opening: string;
       closing: string;
       feeWaiver: string;
       expedited: string;
+      appeal: string;
+      feeNotice: string;
     };
   };
 }
@@ -63,38 +76,49 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Enhanced system prompt with strict requirements
     const systemPrompt = `You are a legal document specialist generating FOIA and public records request letters.
 
 Your task is to generate a formal, legally compliant records request letter in HTML format.
 
-Requirements:
-1. Use the exact statutory citation provided
-2. Include all required legal elements
-3. Use professional, formal business letter language
-4. Format as proper HTML for a printable business letter
-5. Include response deadline per statute
-6. Do NOT invent case citations or legal references
-7. Do NOT include threatening language
+## MANDATORY REQUIREMENTS (DO NOT OMIT):
+1. Include the EXACT statutory citation provided (e.g., "Fla. Stat. § 119.01", "5 U.S.C. § 552")
+2. Use the EXACT opening legal language provided to introduce the request
+3. Include the EXACT response deadline statement from the closing language
+4. If appeal rights are requested, include the EXACT appeal language provided
+5. If fee notice is requested, include the EXACT fee acknowledgment language provided
+6. If fee waiver is requested, include the EXACT fee waiver language provided
+7. If expedited processing is requested, include the EXACT expedited language provided
 
-The letter should include:
-- Current date
-- Recipient agency address
-- "RE: Public Records Request" or "RE: Freedom of Information Act Request"
-- Formal salutation
-- Opening paragraph with statutory citation
-- Detailed description of records requested
-- Date range if provided
-- Delivery preference statement
-- Fee waiver section if requested (with justification)
-- Expedited processing section if requested (with justification)
-- Closing with response deadline
-- Signature block with requester information
+## YOU MUST:
+- Use the exact statutory citations - never paraphrase or abbreviate them
+- Include all legal elements as provided
+- Use professional, formal business letter format
+- Format as proper HTML for a printable letter
+- Structure the letter logically with clear paragraphs
+
+## YOU MUST NOT:
+- Remove, modify, or paraphrase any statutory citations
+- Omit the response deadline requirement
+- Remove appeal rights language when requested
+- Invent case citations or make up legal references
+- Add threatening, adversarial, or demanding language beyond what's provided
+- Use casual or informal tone
+- Include personal opinions
+
+## YOU MAY:
+- Adjust paragraph structure for better readability
+- Add professional courtesies and transitions
+- Format lists for clarity when describing multiple records
+- Improve sentence flow while preserving exact legal language
 
 Output only the HTML content for the letter body, starting with the date. Use proper HTML tags like <p>, <br>, <strong>, <ul>, <li> for formatting. Do not include <html>, <head>, or <body> tags.`;
 
     const userPrompt = buildUserPrompt(requestData);
 
     console.log("Generating FOIA letter for jurisdiction:", requestData.jurisdiction);
+    console.log("Including appeal rights:", requestData.options.includeAppealRights);
+    console.log("Including fee notice:", requestData.options.includeFeeNotice);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -152,74 +176,97 @@ function buildUserPrompt(data: RequestData): string {
   
   let prompt = `Generate a formal public records request letter with the following details:
 
-JURISDICTION & STATUTE:
-- Statute: ${statuteInfo.statute}
+## JURISDICTION & STATUTE INFORMATION
+- Statute Citation: ${statuteInfo.statute}
 - Statute Name: ${statuteInfo.statuteName}
 - Response Deadline: ${statuteInfo.responseDeadline}
-- Opening Legal Language: "${statuteInfo.legalLanguage.opening}"
-- Closing Legal Language: "${statuteInfo.legalLanguage.closing}"
+- Appeal Body: ${statuteInfo.appealBody}
+- Appeal Deadline: ${statuteInfo.appealDeadline}
 
-REQUESTING PARTY:
+## MANDATORY LEGAL LANGUAGE (USE EXACTLY AS PROVIDED)
+Opening Paragraph Language: "${statuteInfo.legalLanguage.opening}"
+Closing Paragraph Language: "${statuteInfo.legalLanguage.closing}"
+`;
+
+  if (options.includeAppealRights && statuteInfo.legalLanguage.appeal) {
+    prompt += `\nAppeal Rights Language (MUST INCLUDE): "${statuteInfo.legalLanguage.appeal}"`;
+  }
+
+  if (options.includeFeeNotice && statuteInfo.legalLanguage.feeNotice) {
+    prompt += `\nFee Notice Language (MUST INCLUDE): "${statuteInfo.legalLanguage.feeNotice}"`;
+  }
+
+  prompt += `
+
+## REQUESTING PARTY
 - Name: ${requestingParty.name}
 - Address: ${requestingParty.address}
 - City, State, ZIP: ${requestingParty.city}, ${requestingParty.state} ${requestingParty.zipCode}
 - Phone: ${requestingParty.phone}
 - Email: ${requestingParty.email}
 
-RECEIVING AGENCY:
+## RECEIVING AGENCY
 - Agency Name: ${receivingAgency.name}
 ${receivingAgency.department ? `- Department: ${receivingAgency.department}` : ''}
 - Address: ${receivingAgency.address}
 
-RECORDS REQUESTED:
+## RECORDS REQUESTED
 ${requestDetails.recordsDescription}
 `;
 
   if (requestDetails.dateRangeStart || requestDetails.dateRangeEnd) {
     prompt += `
-DATE RANGE:
-- From: ${requestDetails.dateRangeStart || 'N/A'}
+## DATE RANGE FOR RECORDS
+- From: ${requestDetails.dateRangeStart || 'Beginning of available records'}
 - To: ${requestDetails.dateRangeEnd || 'Present'}
 `;
   }
 
   if (requestDetails.caseNumber) {
     prompt += `
-REFERENCE CASE NUMBER: ${requestDetails.caseNumber}
+## REFERENCE NUMBER
+Case/Reference Number: ${requestDetails.caseNumber}
 `;
   }
 
   if (requestDetails.purpose) {
     prompt += `
-PURPOSE OF REQUEST:
+## PURPOSE OF REQUEST
 ${requestDetails.purpose}
 `;
   }
 
   prompt += `
-DELIVERY PREFERENCE: ${options.deliveryPreference}
-${options.deliveryPreference === 'email' && options.deliveryEmail ? `Email Address: ${options.deliveryEmail}` : ''}
+## DELIVERY PREFERENCE
+Preferred delivery method: ${options.deliveryPreference === 'email' ? 'Electronic delivery via email' : options.deliveryPreference === 'mail' ? 'Physical mail' : 'Agency online portal'}
+${options.deliveryPreference === 'email' && options.deliveryEmail ? `Email Address for delivery: ${options.deliveryEmail}` : ''}
 ${options.deliveryPreference === 'portal' && options.portalUrl ? `Portal URL: ${options.portalUrl}` : ''}
 `;
 
   if (options.requestFeeWaiver) {
     prompt += `
-FEE WAIVER REQUESTED: Yes
+## FEE WAIVER REQUEST (MUST INCLUDE)
 Fee Waiver Justification: ${options.feeWaiverJustification || 'Disclosure serves the public interest.'}
-Fee Waiver Legal Language: "${statuteInfo.legalLanguage.feeWaiver}"
+Fee Waiver Legal Language (USE EXACTLY): "${statuteInfo.legalLanguage.feeWaiver}"
 `;
   }
 
   if (options.expeditedProcessing && statuteInfo.legalLanguage.expedited) {
     prompt += `
-EXPEDITED PROCESSING REQUESTED: Yes
-Expedited Justification: ${options.expeditedJustification || 'Time-sensitive matter.'}
-Expedited Legal Language: "${statuteInfo.legalLanguage.expedited}"
+## EXPEDITED PROCESSING REQUEST (MUST INCLUDE)
+Expedited Justification: ${options.expeditedJustification || 'This is a time-sensitive matter.'}
+Expedited Legal Language (USE EXACTLY): "${statuteInfo.legalLanguage.expedited}"
 `;
   }
 
   prompt += `
-Generate the complete formal letter in HTML format. Use today's date.`;
+## FEE STRUCTURE FOR REFERENCE
+- Search fees: ${statuteInfo.feeStructure.searchFee}
+- Duplication fees: ${statuteInfo.feeStructure.duplicationFee}
+- Review fees: ${statuteInfo.feeStructure.reviewFee}
+${statuteInfo.feeStructure.freePages > 0 ? `- Free pages: First ${statuteInfo.feeStructure.freePages} pages at no charge` : ''}
+
+Generate the complete formal letter in HTML format. Use today's date. The letter should be professional, legally compliant, and include ALL mandatory language exactly as provided.`;
 
   return prompt;
 }
