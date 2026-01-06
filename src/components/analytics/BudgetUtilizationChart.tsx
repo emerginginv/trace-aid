@@ -13,8 +13,8 @@ import {
   ReferenceLine,
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import type { TimeRange } from "@/lib/analytics/types";
-import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, startOfWeek } from "date-fns";
+import { type TimeRange, resolveTimeRange } from "@/lib/analytics";
+import { format, parseISO, eachDayOfInterval, eachWeekOfInterval } from "date-fns";
 
 interface BudgetUtilizationChartProps {
   organizationId: string;
@@ -43,6 +43,8 @@ export function BudgetUtilizationChart({ organizationId, timeRange }: BudgetUtil
       setLoading(true);
 
       try {
+        const { start, end } = resolveTimeRange(timeRange);
+        
         // Get ALL cases with budgets (no time filter on cases - budgets are authorized values)
         const { data: cases } = await supabase
           .from("cases")
@@ -64,20 +66,20 @@ export function BudgetUtilizationChart({ organizationId, timeRange }: BudgetUtil
           .select("case_id, amount, date, finance_type")
           .in("case_id", caseIds)
           .in("finance_type", ["time", "expense"])
-          .gte("date", timeRange.start.toISOString())
-          .lte("date", timeRange.end.toISOString())
+          .gte("date", start.toISOString())
+          .lte("date", end.toISOString())
           .order("date", { ascending: true });
 
         // Calculate cumulative utilization per day/week
         const totalBudget = cases.reduce((sum, c) => sum + (c.budget_dollars || 0), 0);
         
         // Determine granularity based on time range
-        const daysDiff = Math.ceil((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24));
+        const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
         const useWeekly = daysDiff > 60;
 
         const intervals = useWeekly
-          ? eachWeekOfInterval({ start: timeRange.start, end: timeRange.end }, { weekStartsOn: 1 })
-          : eachDayOfInterval({ start: timeRange.start, end: timeRange.end });
+          ? eachWeekOfInterval({ start, end }, { weekStartsOn: 1 })
+          : eachDayOfInterval({ start, end });
 
         let cumulativeSpend = 0;
         const utilizationData: UtilizationDataPoint[] = [];

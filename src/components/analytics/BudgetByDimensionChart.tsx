@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { formatBudgetCurrency } from "@/lib/budgetUtils";
-import type { TimeRange } from "@/lib/analytics/types";
+import { type TimeRange, resolveTimeRange } from "@/lib/analytics";
 
 interface BudgetByDimensionChartProps {
   organizationId: string;
@@ -55,6 +55,8 @@ export function BudgetByDimensionChart({
       setLoading(true);
 
       try {
+        const { start, end } = resolveTimeRange(timeRange);
+        
         if (dimension === "client") {
           // Get cases with budgets and their accounts
           const { data: cases } = await supabase
@@ -82,8 +84,8 @@ export function BudgetByDimensionChart({
             .select("case_id, amount, finance_type")
             .in("case_id", caseIds)
             .in("finance_type", ["time", "expense"])
-            .gte("date", timeRange.start.toISOString())
-            .lte("date", timeRange.end.toISOString());
+            .gte("date", start.toISOString())
+            .lte("date", end.toISOString());
 
           // Aggregate by client
           const clientMap = new Map<string, { authorized: number; consumed: number }>();
@@ -157,8 +159,8 @@ export function BudgetByDimensionChart({
             .select("case_id, amount, finance_type")
             .in("case_id", caseIds)
             .in("finance_type", ["time", "expense"])
-            .gte("date", timeRange.start.toISOString())
-            .lte("date", timeRange.end.toISOString());
+            .gte("date", start.toISOString())
+            .lte("date", end.toISOString());
 
           // Calculate consumption per case
           const caseConsumption = new Map<string, number>();

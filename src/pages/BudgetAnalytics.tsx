@@ -7,7 +7,7 @@ import { BudgetUtilizationChart } from "@/components/analytics/BudgetUtilization
 import { BudgetStatusDistribution } from "@/components/analytics/BudgetStatusDistribution";
 import { BudgetByDimensionChart } from "@/components/analytics/BudgetByDimensionChart";
 import { CaseBudgetDistribution } from "@/components/analytics/CaseBudgetDistribution";
-import { createPresetTimeRange, type TimeRangePreset } from "@/lib/analytics";
+import { createPresetTimeRange, resolveTimeRange, type TimeRangePreset } from "@/lib/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,8 @@ export default function BudgetAnalytics() {
       setLoading(true);
 
       try {
+        const { start, end } = resolveTimeRange(timeRange);
+        
         // Get all cases with budgets (no time filter - budgets are always authorized)
         const { data: cases } = await supabase
           .from("cases")
@@ -93,8 +95,8 @@ export default function BudgetAnalytics() {
           .select("case_id, amount, hours, finance_type")
           .in("case_id", caseIds)
           .in("finance_type", ["time", "expense"])
-          .gte("date", timeRange.start.toISOString())
-          .lte("date", timeRange.end.toISOString());
+          .gte("date", start.toISOString())
+          .lte("date", end.toISOString());
 
         // Calculate totals
         const totalAuthorizedDollars = cases.reduce((sum, c) => sum + (c.budget_dollars || 0), 0);
