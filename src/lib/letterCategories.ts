@@ -168,10 +168,27 @@ export const CORRESPONDENCE_TYPES = [
 ];
 
 export const LETTER_TONES = [
-  { value: 'formal', label: 'Formal', description: 'Professional and business-like' },
-  { value: 'professional', label: 'Professional', description: 'Courteous but direct' },
-  { value: 'friendly', label: 'Friendly', description: 'Warm and approachable' },
-  { value: 'urgent', label: 'Urgent', description: 'Time-sensitive and action-oriented' },
+  { value: 'professional', label: 'Professional', description: 'Courteous and business-like' },
+  { value: 'formal', label: 'Formal', description: 'Traditional and ceremonial' },
+  { value: 'firm', label: 'Firm', description: 'Direct and assertive but respectful' },
+  { value: 'neutral', label: 'Neutral', description: 'Balanced and objective' },
+];
+
+export const RECIPIENT_TYPES = [
+  { value: 'client', label: 'Client' },
+  { value: 'attorney', label: 'Attorney / Legal Counsel' },
+  { value: 'insurance', label: 'Insurance Company' },
+  { value: 'government', label: 'Government Agency' },
+  { value: 'vendor', label: 'Vendor / Contractor' },
+  { value: 'employer', label: 'Employer / HR Department' },
+  { value: 'witness', label: 'Witness / Subject' },
+  { value: 'other', label: 'Other' },
+];
+
+export const LETTER_LENGTHS = [
+  { value: 'brief', label: 'Brief', description: '2-3 paragraphs, straight to the point' },
+  { value: 'standard', label: 'Standard', description: '4-5 paragraphs, balanced detail' },
+  { value: 'detailed', label: 'Detailed', description: '6-8 paragraphs, comprehensive' },
 ];
 
 export function getCategoryConfig(category: LetterCategory): LetterCategoryConfig | undefined {
