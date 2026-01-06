@@ -37,9 +37,11 @@ interface UpdateTypeMappingEditorProps {
   mapping: UpdateTypeMapping | null;
   sortOrder: 'asc' | 'desc';
   limit: number | null;
+  showAuthor?: boolean;
   onMappingChange: (mapping: UpdateTypeMapping) => void;
   onSortOrderChange: (sortOrder: 'asc' | 'desc') => void;
   onLimitChange: (limit: number | null) => void;
+  onShowAuthorChange?: (showAuthor: boolean) => void;
   isReadOnly?: boolean;
 }
 
@@ -47,9 +49,11 @@ export function UpdateTypeMappingEditor({
   mapping,
   sortOrder,
   limit,
+  showAuthor = true,
   onMappingChange,
   onSortOrderChange,
   onLimitChange,
+  onShowAuthorChange,
   isReadOnly = false,
 }: UpdateTypeMappingEditorProps) {
   const { organization } = useOrganization();
@@ -241,6 +245,34 @@ export function UpdateTypeMappingEditor({
           </Tooltip>
         </TooltipProvider>
       </div>
+
+      {/* Show Author Attribution */}
+      {onShowAuthorChange && (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="show-author"
+            checked={showAuthor}
+            onCheckedChange={(checked) => onShowAuthorChange(checked === true)}
+            disabled={isReadOnly}
+          />
+          <Label htmlFor="show-author" className="text-sm cursor-pointer">
+            Show author name on updates
+          </Label>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p className="text-xs">
+                  When enabled, shows the name of the user who created each update.
+                  Disable this to hide author attribution from reports.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
     </div>
   );
 }
