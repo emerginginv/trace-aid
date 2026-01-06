@@ -105,8 +105,6 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sharedAttachmentIds, setSharedAttachmentIds] = useState<Set<string>>(new Set());
-  const [generatingThumbnails, setGeneratingThumbnails] = useState(false);
-  const [thumbnailProgress, setThumbnailProgress] = useState({ current: 0, total: 0 });
   
   // Bulk actions dialogs
   const [bulkShareDialogOpen, setBulkShareDialogOpen] = useState(false);
@@ -829,85 +827,35 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     clearSelection();
   };
 
-  const handleGenerateMissingThumbnails = async () => {
-    const pdfsNeedingThumbnails = attachments.filter(
-      (a) => isPdfFile(a.file_type, a.file_name) && 
+  const handleGenerateMissingPreviews = () => {
+    // Find ALL files needing previews (PDFs, images, videos, DOCX)
+    const attachmentsNeedingPreviews = attachments.filter(
+      (a) => canGenerateThumbnail(a.file_type, a.file_name) && 
              (!a.preview_status || a.preview_status === 'failed')
     );
 
-    if (pdfsNeedingThumbnails.length === 0) {
+    if (attachmentsNeedingPreviews.length === 0) {
       toast({
-        title: "No Missing Thumbnails",
-        description: "All PDF attachments already have thumbnails.",
+        title: "No Missing Previews",
+        description: "All supported attachments already have preview thumbnails.",
       });
       return;
     }
 
-    setGeneratingThumbnails(true);
-    setThumbnailProgress({ current: 0, total: pdfsNeedingThumbnails.length });
-
-    let successCount = 0;
-    let failCount = 0;
-
-    for (let i = 0; i < pdfsNeedingThumbnails.length; i++) {
-      const attachment = pdfsNeedingThumbnails[i];
-      setThumbnailProgress({ current: i + 1, total: pdfsNeedingThumbnails.length });
-
-      try {
-        const { data: pdfBlob, error: downloadError } = await supabase.storage
-          .from('case-attachments')
-          .download(attachment.file_path);
-
-        if (downloadError) throw downloadError;
-
-        const thumbnailBlob = await generatePdfThumbnail(pdfBlob, {
-          width: 400,
-          height: 300,
-        });
-
-        const previewPath = `${attachment.file_path.replace(/\.[^/.]+$/, '')}_preview.jpg`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('case-attachments')
-          .upload(previewPath, thumbnailBlob, {
-            contentType: 'image/jpeg',
-            upsert: true,
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { error: updateError } = await supabase
-          .from('case_attachments')
-          .update({
-            preview_path: previewPath,
-            preview_status: 'complete',
-            preview_generated_at: new Date().toISOString(),
-          })
-          .eq('id', attachment.id);
-
-        if (updateError) throw updateError;
-
-        successCount++;
-      } catch (error) {
-        console.error(`Failed to generate thumbnail for ${attachment.file_name}:`, error);
-        
-        await supabase
-          .from('case_attachments')
-          .update({ preview_status: 'failed' })
-          .eq('id', attachment.id);
-
-        failCount++;
-      }
-    }
-
-    setGeneratingThumbnails(false);
-    fetchAttachments();
+    // Add to background queue - it handles all file types
+    addToThumbnailQueue(attachmentsNeedingPreviews);
 
     toast({
-      title: "Thumbnail Generation Complete",
-      description: `Generated ${successCount} thumbnail${successCount !== 1 ? 's' : ''}${failCount > 0 ? `, ${failCount} failed` : ''}.`,
+      title: "Preview Generation Started",
+      description: `Generating previews for ${attachmentsNeedingPreviews.length} file${attachmentsNeedingPreviews.length !== 1 ? 's' : ''} in the background.`,
     });
   };
+
+  // Count files needing previews for button display
+  const filesNeedingPreviews = attachments.filter(
+    (a) => canGenerateThumbnail(a.file_type, a.file_name) && 
+           (!a.preview_status || a.preview_status === 'failed')
+  ).length;
 
   if (permissionsLoading || loading) {
     return <AttachmentsTabSkeleton />;
@@ -982,23 +930,14 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                 </TooltipContent>
               </Tooltip>
             )}
-            {canEditAttachments && (
+            {canEditAttachments && filesNeedingPreviews > 0 && (
               <Button 
                 variant="outline" 
-                onClick={handleGenerateMissingThumbnails}
-                disabled={generatingThumbnails}
+                onClick={handleGenerateMissingPreviews}
+                disabled={thumbnailProcessing}
               >
-                {generatingThumbnails ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {thumbnailProgress.current}/{thumbnailProgress.total}
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon className="h-4 w-4 mr-2" />
-                    Generate Thumbnails
-                  </>
-                )}
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Generate Previews ({filesNeedingPreviews})
               </Button>
             )}
             <DropdownMenu>
