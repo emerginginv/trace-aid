@@ -10,6 +10,18 @@ import { Loader2, Sparkles, RefreshCw, Pencil, Check, X, Lock, Save, Plus, Trash
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LETTER_TONES, RECIPIENT_TYPES, LETTER_LENGTHS } from "@/lib/letterCategories";
+import { LetterBrandingConfigEditor } from "@/components/documents/LetterBrandingConfig";
+import { 
+  type LetterBrandingConfig, 
+  getDefaultLetterBrandingConfig,
+  wrapLetterWithBranding,
+  renderLetterhead,
+  renderDateBlock,
+  renderSignatureBlock,
+  renderConfidentialityFooter 
+} from "@/lib/letterBranding";
+import { getOrganizationProfile, type OrganizationProfile } from "@/lib/organizationProfile";
+import { useQuery } from "@tanstack/react-query";
 
 interface CustomAIBuilderProps {
   organizationId: string;
@@ -39,6 +51,16 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
   const [keyPoints, setKeyPoints] = useState<string[]>(['']);
   const [additionalContext, setAdditionalContext] = useState('');
   const [templateName, setTemplateName] = useState('');
+  
+  // Branding config
+  const [brandingConfig, setBrandingConfig] = useState<LetterBrandingConfig>(getDefaultLetterBrandingConfig());
+  
+  // Fetch organization profile
+  const { data: orgProfile } = useQuery({
+    queryKey: ['org-profile-branding', organizationId],
+    queryFn: () => getOrganizationProfile(organizationId),
+    enabled: !!organizationId,
+  });
   
   // Generated content
   const [sections, setSections] = useState<LetterSection[]>([]);
@@ -201,15 +223,19 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Combine sections into full HTML
-      const fullHtml = `
-        <div style="font-family: 'Times New Roman', serif; max-width: 800px; margin: 0 auto;">
-          <div style="text-align: right; margin-bottom: 40px;">
-            <p>{{current_date}}</p>
-          </div>
-          ${sections.map(s => s.content).join('\n')}
-        </div>
-      `;
+      // Combine sections into body HTML (without salutation/signature if branding handles it)
+      const bodyContent = sections
+        .filter(s => !brandingConfig.showSignatureBlock || s.type !== 'signature')
+        .map(s => s.content)
+        .join('\n');
+
+      // Wrap with branding (letterhead, date, signature block)
+      const fullHtml = wrapLetterWithBranding(
+        bodyContent,
+        orgProfile || null,
+        brandingConfig,
+        new Date()
+      );
 
       const { error } = await supabase.from('document_templates').insert({
         name: templateName,
@@ -410,6 +436,15 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
                 )}
               </Button>
             </CardContent>
+          </Card>
+
+          {/* Branding Configuration */}
+          <Card>
+            <LetterBrandingConfigEditor
+              config={brandingConfig}
+              onChange={setBrandingConfig}
+              organizationId={organizationId}
+            />
           </Card>
         </div>
 
