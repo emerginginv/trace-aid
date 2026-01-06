@@ -110,7 +110,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       title: "",
       case_number: "",
       description: "",
-      status: "open",
+      status: "",
       account_id: "",
       contact_id: "",
       use_primary_subject_as_title: false,
@@ -155,7 +155,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           title: "",
           case_number: "",
           description: "",
-          status: "open",
+          status: "",
           account_id: "",
           contact_id: "",
           use_primary_subject_as_title: false,
@@ -170,16 +170,30 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     }
   }, [open, editingCase, organization?.id]);
 
-  // Re-set status when statuses are loaded and we're editing
+  // Set default status when statuses are loaded
   useEffect(() => {
-    if (editingCase && caseStatuses.length > 0) {
-      const currentStatus = editingCase.status;
-      // Find matching status (case-insensitive)
-      const matchingStatus = caseStatuses.find(
-        s => s.value.toLowerCase() === currentStatus.toLowerCase()
-      );
-      if (matchingStatus) {
-        form.setValue("status", matchingStatus.value);
+    if (caseStatuses.length > 0) {
+      if (editingCase) {
+        // For editing, find matching status (case-insensitive)
+        const currentStatus = editingCase.status;
+        const matchingStatus = caseStatuses.find(
+          s => s.value.toLowerCase() === currentStatus.toLowerCase()
+        );
+        if (matchingStatus) {
+          form.setValue("status", matchingStatus.value);
+        }
+      } else {
+        // For new cases, default to "New" status
+        const newStatus = caseStatuses.find(
+          s => s.value.toLowerCase() === 'new' || 
+               s.value.toLowerCase() === 'new assignment'
+        );
+        if (newStatus) {
+          form.setValue("status", newStatus.value);
+        } else if (caseStatuses[0]) {
+          // Fallback to first available status
+          form.setValue("status", caseStatuses[0].value);
+        }
       }
     }
   }, [caseStatuses, editingCase]);
