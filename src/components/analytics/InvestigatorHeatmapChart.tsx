@@ -90,7 +90,7 @@ export function InvestigatorHeatmapChart({ organizationId, timeRange }: Investig
       <Card>
         <CardHeader>
           <CardTitle>Investigator Activity Heatmap</CardTitle>
-          <CardDescription>When team members are most active</CardDescription>
+          <CardDescription>When team members are most active (updates, activities, and finance entries)</CardDescription>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[250px] w-full" />

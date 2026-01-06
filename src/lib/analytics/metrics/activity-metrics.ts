@@ -278,15 +278,18 @@ export const ACTIVITY_METRICS: MetricDefinition[] = [
     unit: "count",
     sourceTable: "case_activities",
     calculation: {
-      type: "simple_count",
+      type: "conditional_count",
       table: "case_activities",
+      conditions: [
+        { field: "activity_type", operator: "in", value: ["task", "event"] },
+      ],
     },
     drillDownTarget: {
       route: "/calendar",
       params: {},
     },
     auditInfo: {
-      formula: "COUNT(case_activities)",
+      formula: "COUNT(case_activities WHERE activity_type IN ('task', 'event'))",
       dependencies: [],
       dataFreshness: "realtime",
     },

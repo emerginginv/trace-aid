@@ -21,37 +21,51 @@ const COLORS = [
 
 export function SurveillanceDaysChart({ organizationId, timeRange }: SurveillanceDaysChartProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ["surveillance-days", organizationId, timeRange],
+    queryKey: ["surveillance-days", organizationId, timeRange.start.toISOString(), timeRange.end.toISOString()],
     queryFn: async () => {
-      // Get cases with surveillance dates
+      const rangeStart = timeRange.start.toISOString().split("T")[0];
+      const rangeEnd = timeRange.end.toISOString().split("T")[0];
+
+      // Get cases with surveillance that was active during the time range
       const { data: cases, error } = await supabase
         .from("cases")
         .select("id, case_number, title, surveillance_start_date, surveillance_end_date")
         .eq("organization_id", organizationId)
-        .not("surveillance_start_date", "is", null);
+        .not("surveillance_start_date", "is", null)
+        // Surveillance must have started before or during the time range
+        .lte("surveillance_start_date", rangeEnd)
+        // Surveillance must have ended after the range start, or still be active
+        .or(`surveillance_end_date.gte.${rangeStart},surveillance_end_date.is.null`);
 
       if (error) throw error;
 
-      // Calculate surveillance days for each case
+      const rangeStartDate = timeRange.start;
+      const rangeEndDate = timeRange.end;
+
+      // Calculate surveillance days within the selected time range
       const caseData = (cases || [])
         .map(c => {
-          const startDate = c.surveillance_start_date ? parseISO(c.surveillance_start_date) : null;
-          const endDate = c.surveillance_end_date ? parseISO(c.surveillance_end_date) : new Date();
+          const survStart = c.surveillance_start_date ? parseISO(c.surveillance_start_date) : null;
+          const survEnd = c.surveillance_end_date ? parseISO(c.surveillance_end_date) : new Date();
           
-          if (!startDate) return null;
+          if (!survStart) return null;
           
-          const days = differenceInDays(endDate, startDate) + 1;
+          // Calculate days only within the selected time range
+          const effectiveStart = survStart > rangeStartDate ? survStart : rangeStartDate;
+          const effectiveEnd = survEnd < rangeEndDate ? survEnd : rangeEndDate;
+          const days = Math.max(0, differenceInDays(effectiveEnd, effectiveStart) + 1);
           
           return {
             caseId: c.id,
             name: c.case_number,
             title: c.title,
-            days: Math.max(days, 0),
+            days,
             startDate: c.surveillance_start_date,
             endDate: c.surveillance_end_date,
+            isActive: !c.surveillance_end_date,
           };
         })
-        .filter((c): c is NonNullable<typeof c> => c !== null)
+        .filter((c): c is NonNullable<typeof c> => c !== null && c.days > 0)
         .sort((a, b) => b.days - a.days)
         .slice(0, 10);
 
