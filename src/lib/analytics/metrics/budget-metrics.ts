@@ -80,7 +80,7 @@ export const BUDGET_METRICS: MetricDefinition[] = [
   {
     id: "budgets.total_consumed_hours",
     name: "Total Consumed Hours",
-    description: "Total hours consumed from budgeted cases",
+    description: "Total hours consumed from budgeted cases (time entries only)",
     category: "finances",
     dataType: "sum",
     unit: "hours",
@@ -89,13 +89,16 @@ export const BUDGET_METRICS: MetricDefinition[] = [
       type: "sum",
       table: "case_finances",
       field: "hours",
+      conditions: [
+        { field: "finance_type", operator: "eq", value: "time" },
+      ],
     },
     drillDownTarget: {
       route: "/expenses",
       params: {},
     },
     auditInfo: {
-      formula: "SUM(case_finances.hours)",
+      formula: "SUM(case_finances.hours WHERE finance_type = 'time')",
       dependencies: [],
       dataFreshness: "realtime",
     },
@@ -103,7 +106,7 @@ export const BUDGET_METRICS: MetricDefinition[] = [
   {
     id: "budgets.cases_with_budget",
     name: "Cases with Budget",
-    description: "Number of cases that have a budget set",
+    description: "Number of cases that have a budget set (dollars or hours)",
     category: "finances",
     dataType: "count",
     unit: "count",
@@ -111,8 +114,10 @@ export const BUDGET_METRICS: MetricDefinition[] = [
     calculation: {
       type: "conditional_count",
       table: "cases",
+      // Note: Uses OR logic via Supabase .or() filter - see component implementation
       conditions: [
         { field: "budget_dollars", operator: "gt", value: 0 },
+        // OR budget_hours > 0 - handled via .or() in actual queries
       ],
     },
     drillDownTarget: {

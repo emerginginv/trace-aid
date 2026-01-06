@@ -43,14 +43,12 @@ export function BudgetUtilizationChart({ organizationId, timeRange }: BudgetUtil
       setLoading(true);
 
       try {
-        // Get all cases with budgets
+        // Get ALL cases with budgets (no time filter on cases - budgets are authorized values)
         const { data: cases } = await supabase
           .from("cases")
-          .select("id, budget_dollars, created_at")
+          .select("id, budget_dollars")
           .eq("organization_id", organizationId)
-          .gt("budget_dollars", 0)
-          .gte("created_at", timeRange.start.toISOString())
-          .lte("created_at", timeRange.end.toISOString());
+          .gt("budget_dollars", 0);
 
         if (!cases || cases.length === 0) {
           setData([]);

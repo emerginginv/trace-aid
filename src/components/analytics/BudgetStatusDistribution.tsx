@@ -14,9 +14,11 @@ import {
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { getBudgetStatus, type BudgetStatus } from "@/lib/budgetUtils";
+import type { TimeRange } from "@/lib/analytics/types";
 
 interface BudgetStatusDistributionProps {
   organizationId: string;
+  timeRange: TimeRange;
 }
 
 interface StatusData {
@@ -45,7 +47,7 @@ const chartConfig = {
   },
 };
 
-export function BudgetStatusDistribution({ organizationId }: BudgetStatusDistributionProps) {
+export function BudgetStatusDistribution({ organizationId, timeRange }: BudgetStatusDistributionProps) {
   const [data, setData] = useState<StatusData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +57,7 @@ export function BudgetStatusDistribution({ organizationId }: BudgetStatusDistrib
       setLoading(true);
 
       try {
-        // Get all cases with budgets
+        // Get all cases with budgets (no time filter - budgets are authorized values)
         const { data: cases } = await supabase
           .from("cases")
           .select("id, budget_dollars, budget_hours")
@@ -70,12 +72,14 @@ export function BudgetStatusDistribution({ organizationId }: BudgetStatusDistrib
 
         const caseIds = cases.map((c) => c.id);
 
-        // Get consumed amounts for each case
+        // Get consumed amounts for each case filtered by time range
         const { data: finances } = await supabase
           .from("case_finances")
           .select("case_id, amount, hours, finance_type")
           .in("case_id", caseIds)
-          .in("finance_type", ["time", "expense"]);
+          .in("finance_type", ["time", "expense"])
+          .gte("date", timeRange.start.toISOString())
+          .lte("date", timeRange.end.toISOString());
 
         // Calculate consumption per case
         const consumptionMap = new Map<string, { dollars: number; hours: number }>();
@@ -129,7 +133,7 @@ export function BudgetStatusDistribution({ organizationId }: BudgetStatusDistrib
     }
 
     fetchData();
-  }, [organizationId]);
+  }, [organizationId, timeRange]);
 
   if (loading) {
     return (

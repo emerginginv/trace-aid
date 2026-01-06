@@ -15,9 +15,11 @@ import {
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { getBudgetStatus, formatBudgetCurrency } from "@/lib/budgetUtils";
 import { useNavigate } from "react-router-dom";
+import type { TimeRange } from "@/lib/analytics/types";
 
 interface CaseBudgetDistributionProps {
   organizationId: string;
+  timeRange: TimeRange;
 }
 
 interface CaseBudgetData {
@@ -42,7 +44,7 @@ const chartConfig = {
   },
 };
 
-export function CaseBudgetDistribution({ organizationId }: CaseBudgetDistributionProps) {
+export function CaseBudgetDistribution({ organizationId, timeRange }: CaseBudgetDistributionProps) {
   const [data, setData] = useState<CaseBudgetData[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -53,7 +55,7 @@ export function CaseBudgetDistribution({ organizationId }: CaseBudgetDistributio
       setLoading(true);
 
       try {
-        // Get all cases with budgets
+        // Get all cases with budgets (no time filter - budgets are authorized values)
         const { data: cases } = await supabase
           .from("cases")
           .select("id, title, case_number, budget_dollars")
@@ -70,12 +72,14 @@ export function CaseBudgetDistribution({ organizationId }: CaseBudgetDistributio
 
         const caseIds = cases.map((c) => c.id);
 
-        // Get consumed amounts for each case
+        // Get consumed amounts for each case filtered by time range
         const { data: finances } = await supabase
           .from("case_finances")
           .select("case_id, amount, finance_type")
           .in("case_id", caseIds)
-          .in("finance_type", ["time", "expense"]);
+          .in("finance_type", ["time", "expense"])
+          .gte("date", timeRange.start.toISOString())
+          .lte("date", timeRange.end.toISOString());
 
         // Calculate consumption per case
         const consumptionMap = new Map<string, number>();
@@ -111,7 +115,7 @@ export function CaseBudgetDistribution({ organizationId }: CaseBudgetDistributio
     }
 
     fetchData();
-  }, [organizationId]);
+  }, [organizationId, timeRange]);
 
   const handleBarClick = (data: CaseBudgetData) => {
     navigate(`/cases/${data.id}`);

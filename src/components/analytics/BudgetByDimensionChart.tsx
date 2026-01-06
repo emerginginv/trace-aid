@@ -14,11 +14,13 @@ import {
 } from "recharts";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { formatBudgetCurrency } from "@/lib/budgetUtils";
+import type { TimeRange } from "@/lib/analytics/types";
 
 interface BudgetByDimensionChartProps {
   organizationId: string;
   dimension: "client" | "investigator";
   title: string;
+  timeRange: TimeRange;
 }
 
 interface DimensionData {
@@ -42,6 +44,7 @@ export function BudgetByDimensionChart({
   organizationId,
   dimension,
   title,
+  timeRange,
 }: BudgetByDimensionChartProps) {
   const [data, setData] = useState<DimensionData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,12 +76,14 @@ export function BudgetByDimensionChart({
 
           const caseIds = cases.map((c) => c.id);
 
-          // Get consumed amounts
+          // Get consumed amounts filtered by time range
           const { data: finances } = await supabase
             .from("case_finances")
             .select("case_id, amount, finance_type")
             .in("case_id", caseIds)
-            .in("finance_type", ["time", "expense"]);
+            .in("finance_type", ["time", "expense"])
+            .gte("date", timeRange.start.toISOString())
+            .lte("date", timeRange.end.toISOString());
 
           // Aggregate by client
           const clientMap = new Map<string, { authorized: number; consumed: number }>();
@@ -146,12 +151,14 @@ export function BudgetByDimensionChart({
 
           const caseIds = cases.map((c) => c.id);
 
-          // Get consumed amounts
+          // Get consumed amounts filtered by time range
           const { data: finances } = await supabase
             .from("case_finances")
             .select("case_id, amount, finance_type")
             .in("case_id", caseIds)
-            .in("finance_type", ["time", "expense"]);
+            .in("finance_type", ["time", "expense"])
+            .gte("date", timeRange.start.toISOString())
+            .lte("date", timeRange.end.toISOString());
 
           // Calculate consumption per case
           const caseConsumption = new Map<string, number>();
@@ -200,7 +207,7 @@ export function BudgetByDimensionChart({
     }
 
     fetchData();
-  }, [organizationId, dimension]);
+  }, [organizationId, dimension, timeRange]);
 
   if (loading) {
     return (
