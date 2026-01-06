@@ -15,7 +15,7 @@ import {
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { getBudgetStatus, formatBudgetCurrency } from "@/lib/budgetUtils";
 import { useNavigate } from "react-router-dom";
-import type { TimeRange } from "@/lib/analytics/types";
+import { type TimeRange, resolveTimeRange } from "@/lib/analytics";
 
 interface CaseBudgetDistributionProps {
   organizationId: string;
@@ -55,6 +55,8 @@ export function CaseBudgetDistribution({ organizationId, timeRange }: CaseBudget
       setLoading(true);
 
       try {
+        const { start, end } = resolveTimeRange(timeRange);
+        
         // Get all cases with budgets (no time filter - budgets are authorized values)
         const { data: cases } = await supabase
           .from("cases")
@@ -78,8 +80,8 @@ export function CaseBudgetDistribution({ organizationId, timeRange }: CaseBudget
           .select("case_id, amount, finance_type")
           .in("case_id", caseIds)
           .in("finance_type", ["time", "expense"])
-          .gte("date", timeRange.start.toISOString())
-          .lte("date", timeRange.end.toISOString());
+          .gte("date", start.toISOString())
+          .lte("date", end.toISOString());
 
         // Calculate consumption per case
         const consumptionMap = new Map<string, number>();
