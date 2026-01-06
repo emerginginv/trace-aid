@@ -1,5 +1,8 @@
 project_id = "uxmezklevgkqelahibqy"
 
+[functions.generate-custom-letter]
+verify_jwt = false
+
 [functions.execute-import]
 verify_jwt = true
 
