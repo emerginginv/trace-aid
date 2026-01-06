@@ -553,6 +553,20 @@ export function getDefaultEventCollectionConfig(): CollectionConfig {
 
 // ============= Template Customization Types =============
 
+// Cover page configuration options
+export interface CoverPageConfig {
+  showCompanyNameWithLogo: boolean;  // If false, hide company name when logo exists (default: false)
+  showPreparedBy: boolean;           // Toggle "Prepared by" section visibility (default: true)
+}
+
+// Get default cover page configuration
+export function getDefaultCoverPageConfig(): CoverPageConfig {
+  return {
+    showCompanyNameWithLogo: false,
+    showPreparedBy: true,
+  };
+}
+
 // Represents per-section customizations applied before report generation
 export interface SectionCustomization {
   sectionId: string;
@@ -566,6 +580,7 @@ export interface SectionCustomization {
 export interface TemplateCustomization {
   templateId: string;
   sectionCustomizations: SectionCustomization[];
+  coverPageConfig?: CoverPageConfig;  // Cover page display options
 }
 
 // Reordering constraints for sections

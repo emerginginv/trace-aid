@@ -8,6 +8,7 @@ import {
   SectionType,
   TemplateCustomization,
   applyCustomizations,
+  CoverPageConfig,
 } from "@/lib/reportTemplates";
 import {
   renderStaticTextSection,
@@ -143,7 +144,8 @@ function assembleReportHtml(
   orgProfile: OrganizationProfile | null,
   caseVariables: CaseVariables | null,
   generatedAt: Date,
-  inputHash: string
+  inputHash: string,
+  coverPageConfig?: CoverPageConfig
 ): string {
   const sortedSections = [...sections].sort((a, b) => a.displayOrder - b.displayOrder);
   
@@ -158,7 +160,9 @@ function assembleReportHtml(
     orgProfile,
     caseVariables,
     title,
-    generatedAt
+    generatedAt,
+    undefined,
+    coverPageConfig
   );
 
   // Generate section content with page break logic
@@ -328,7 +332,8 @@ export async function generateReport(input: ReportInput): Promise<GenerationResu
       orgProfile, 
       caseVariables,
       generatedAt,
-      inputHash
+      inputHash,
+      input.customization?.coverPageConfig
     );
 
     // Step 5: Save to database

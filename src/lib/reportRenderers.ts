@@ -6,6 +6,8 @@ import {
   getUpdateQueryParams,
   getEventQueryParams,
   AVAILABLE_CASE_VARIABLES,
+  CoverPageConfig,
+  getDefaultCoverPageConfig,
 } from "@/lib/reportTemplates";
 import { OrganizationProfile } from "@/lib/organizationProfile";
 import { CaseVariables, formatCaseVariablesForTemplate } from "@/lib/caseVariables";
@@ -22,8 +24,10 @@ export function renderCoverPage(
   caseVariables: CaseVariables | null,
   reportTitle: string,
   generatedAt: Date,
-  clientName?: string
+  clientName?: string,
+  coverPageConfig?: CoverPageConfig
 ): string {
+  const config = coverPageConfig || getDefaultCoverPageConfig();
   const companyName = orgProfile?.companyName || 'Investigation Services';
   
   // Logo with inline styles to guarantee sizing
@@ -51,11 +55,16 @@ export function renderCoverPage(
   const caseInfo = caseVariables ? formatCaseVariablesForTemplate(caseVariables) : {};
   const investigatorName = caseVariables?.investigatorList || null;
   
+  // Determine if company name should be shown
+  // Only show company name if: no logo exists OR showCompanyNameWithLogo is true
+  const hasLogo = !!orgProfile?.logoUrl;
+  const showCompanyName = !hasLogo || config.showCompanyNameWithLogo;
+
   return `
     <div class="report-cover-page">
       <div class="cover-header">
         ${logoHtml}
-        <p class="cover-company-name">${escapeHtml(companyName)}</p>
+        ${showCompanyName ? `<p class="cover-company-name">${escapeHtml(companyName)}</p>` : ''}
       </div>
       
       <div class="cover-title-block">
@@ -73,12 +82,14 @@ export function renderCoverPage(
         </table>
       </div>
       
+      ${config.showPreparedBy ? `
       <div class="cover-prepared-section">
         <p class="cover-prepared-label">Prepared by:</p>
         ${investigatorName ? `<p class="cover-prepared-name">${escapeHtml(investigatorName)}</p>` : `<p class="cover-prepared-name">${escapeHtml(companyName)}</p>`}
         ${orgProfile?.email ? `<p class="cover-prepared-contact">${escapeHtml(orgProfile.email)}</p>` : ''}
         ${contactParts.length > 0 ? `<p class="cover-prepared-contact">${escapeHtml(contactParts.join(' | '))}</p>` : ''}
       </div>
+      ` : ''}
       
       <div class="cover-footer">
         <div class="cover-confidential-badge">

@@ -11,6 +11,7 @@ import {
   TemplateCustomization,
   SectionCustomization,
   applyCustomizations,
+  CoverPageConfig,
 } from "@/lib/reportTemplates";
 import { CaseUpdate, CaseEvent, UserProfile, RenderedSection } from "@/lib/reportEngine";
 import {
@@ -216,7 +217,9 @@ export function generatePreview(input: PreviewInput): PreviewResult {
     orgProfile,
     caseVariables || createPreviewCaseVariables(),
     previewTitle,
-    generatedAt
+    generatedAt,
+    undefined,
+    customization?.coverPageConfig
   );
 
   const fullHtml = assemblePreviewHtml(
@@ -800,10 +803,12 @@ function assemblePreviewHtml(
  */
 export function buildCustomization(
   templateId: string,
-  customizations: Map<string, SectionCustomization>
+  customizations: Map<string, SectionCustomization>,
+  coverPageConfig?: CoverPageConfig
 ): TemplateCustomization {
   return {
     templateId,
     sectionCustomizations: Array.from(customizations.values()),
+    coverPageConfig,
   };
 }
