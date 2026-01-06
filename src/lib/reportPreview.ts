@@ -292,7 +292,7 @@ function createPreviewCaseVariables(): CaseVariables {
     caseId: 'preview-case',
     caseNumber: 'INV-2026-PREVIEW',
     caseTitle: 'Sample Investigation Case',
-    claimNumber: 'CLM-2026-001',
+    referenceNumber: 'REF-2026-001',
     subjects: [primarySubject],
     clients: [primaryClient],
     investigators: [

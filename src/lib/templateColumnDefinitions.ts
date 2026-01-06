@@ -285,10 +285,10 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
         example: 'Surveillance and background investigation...'
       },
       {
-        name: 'claim_number',
+        name: 'reference_number',
         required: false,
         type: 'text',
-        description: 'Insurance or external claim number',
+        description: 'External reference number (e.g., insurance claim)',
         example: 'WC-2024-12345'
       },
       {

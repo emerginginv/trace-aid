@@ -36,7 +36,7 @@ export interface CaseVariables {
   caseId: string;
   caseTitle: string;
   caseNumber: string;
-  claimNumber: string | null;
+  referenceNumber: string | null;
 
   // Collections
   clients: CaseClient[];
@@ -220,7 +220,7 @@ export async function getCaseVariables(caseId: string): Promise<CaseVariables | 
       caseId,
       caseTitle: caseData.title,
       caseNumber: caseData.case_number,
-      claimNumber: (caseData as any).claim_number || null,
+      referenceNumber: (caseData as any).reference_number || null,
 
       clients,
       subjects,
@@ -255,7 +255,7 @@ export function formatCaseVariablesForTemplate(variables: CaseVariables): Record
     // Basic identifiers
     case_title: variables.caseTitle,
     case_number: variables.caseNumber,
-    claim_number: variables.claimNumber || "",
+    reference_number: variables.referenceNumber || "",
 
     // Collections as formatted strings
     client_list: variables.clientList,

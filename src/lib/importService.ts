@@ -536,7 +536,7 @@ export class ImportService {
             contact_id: contactId,
             case_manager_id: caseManagerId,
             investigator_ids: investigatorIds,
-            claim_number: cleanString(caseRecord.claim_number),
+            reference_number: cleanString(caseRecord.reference_number),
             status: caseRecord.status || 'open',
             due_date: parseDate(caseRecord.due_date),
             budget_hours: parseNumber(caseRecord.budget_hours),

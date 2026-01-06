@@ -105,7 +105,7 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   'description': ['desc', 'details', 'notes', 'summary', 'info'],
   'created_at': ['create_date', 'created', 'date_created', 'creation_date'],
   'case_number': ['file_number', 'matter_number', 'reference_number', 'ref_num'],
-  'claim_number': ['claim_no', 'claim_ref', 'insurance_claim'],
+  'reference_number': ['reference_no', 'ref_number', 'claim_number', 'claim_no', 'claim_ref', 'insurance_claim'],
   'status': ['case_status', 'current_status', 'state'],
   'account_external_id': ['client_id', 'account_id', 'customer_id'],
   'contact_external_id': ['contact_id', 'person_id'],
