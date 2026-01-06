@@ -539,8 +539,6 @@ export class ImportService {
             claim_number: cleanString(caseRecord.claim_number),
             status: caseRecord.status || 'open',
             due_date: parseDate(caseRecord.due_date),
-            surveillance_start_date: parseDate(caseRecord.surveillance_start_date),
-            surveillance_end_date: parseDate(caseRecord.surveillance_end_date),
             budget_hours: parseNumber(caseRecord.budget_hours),
             budget_dollars: parseNumber(caseRecord.budget_dollars),
             budget_notes: cleanString(caseRecord.budget_notes),

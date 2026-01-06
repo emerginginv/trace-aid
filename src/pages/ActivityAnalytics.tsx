@@ -4,7 +4,6 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { TimeRangeSelector } from "@/components/analytics/TimeRangeSelector";
 import { UpdateFrequencyChart } from "@/components/analytics/UpdateFrequencyChart";
 import { EventActivityChart } from "@/components/analytics/EventActivityChart";
-import { SurveillanceDaysChart } from "@/components/analytics/SurveillanceDaysChart";
 import { ActivityTimelineChart } from "@/components/analytics/ActivityTimelineChart";
 import { InvestigatorHeatmapChart } from "@/components/analytics/InvestigatorHeatmapChart";
 import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
@@ -262,17 +261,11 @@ export default function ActivityAnalytics() {
         />
       </div>
 
-      {/* Charts Row 2: Surveillance and Heatmap */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <SurveillanceDaysChart
-          organizationId={organization.id}
-          timeRange={timeRange}
-        />
-        <InvestigatorHeatmapChart
-          organizationId={organization.id}
-          timeRange={timeRange}
-        />
-      </div>
+      {/* Investigator Heatmap */}
+      <InvestigatorHeatmapChart
+        organizationId={organization.id}
+        timeRange={timeRange}
+      />
     </div>
   );
 }

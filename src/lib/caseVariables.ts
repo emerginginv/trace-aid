@@ -56,9 +56,6 @@ export interface CaseVariables {
 
   // Dates
   assignmentDate: string | null;
-  surveillanceStartDate: string | null;
-  surveillanceEndDate: string | null;
-  surveillanceDateRange: string;
   dueDate: string | null;
 
   // Case Manager
@@ -73,22 +70,6 @@ function formatDate(dateStr: string | null): string | null {
   } catch {
     return dateStr;
   }
-}
-
-function formatDateRange(startDate: string | null, endDate: string | null): string {
-  if (!startDate && !endDate) return "";
-  
-  const start = startDate ? formatDate(startDate) : null;
-  const end = endDate ? formatDate(endDate) : null;
-
-  if (start && end) {
-    return `${start} - ${end}`;
-  } else if (start) {
-    return `Starting ${start}`;
-  } else if (end) {
-    return `Through ${end}`;
-  }
-  return "";
 }
 
 function formatAsHtmlList(items: string[]): string {
@@ -255,12 +236,6 @@ export async function getCaseVariables(caseId: string): Promise<CaseVariables | 
       locationList: locationList || "None",
 
       assignmentDate: formatDate(caseData.created_at),
-      surveillanceStartDate: formatDate((caseData as any).surveillance_start_date),
-      surveillanceEndDate: formatDate((caseData as any).surveillance_end_date),
-      surveillanceDateRange: formatDateRange(
-        (caseData as any).surveillance_start_date,
-        (caseData as any).surveillance_end_date
-      ),
       dueDate: formatDate(caseData.due_date),
 
       caseManager,
@@ -294,9 +269,6 @@ export function formatCaseVariablesForTemplate(variables: CaseVariables): Record
 
     // Dates
     assignment_date: variables.assignmentDate || "",
-    surveillance_dates: variables.surveillanceDateRange,
-    surveillance_start: variables.surveillanceStartDate || "",
-    surveillance_end: variables.surveillanceEndDate || "",
     due_date: variables.dueDate || "",
 
     // Team

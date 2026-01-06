@@ -64,8 +64,6 @@ export const caseImportSchema = z.object({
   status: z.string().optional(),
   start_date: dateSchema,
   due_date: dateSchema,
-  surveillance_start_date: dateSchema,
-  surveillance_end_date: dateSchema,
   case_manager_email: emailSchema,
   investigator_emails: z.array(z.string().email()).optional(),
   budget_hours: positiveNumberSchema,

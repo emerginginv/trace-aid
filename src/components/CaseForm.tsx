@@ -57,8 +57,6 @@ const caseSchema = z.object({
   budget_dollars: z.coerce.number().min(0).optional().nullable(),
   budget_notes: z.string().max(500).optional().nullable(),
   claim_number: z.string().max(100).optional().nullable(),
-  surveillance_start_date: z.date().optional().nullable(),
-  surveillance_end_date: z.date().optional().nullable(),
 });
 
 type CaseFormData = z.infer<typeof caseSchema>;
@@ -81,8 +79,6 @@ interface CaseFormProps {
     budget_dollars?: number | null;
     budget_notes?: string | null;
     claim_number?: string | null;
-    surveillance_start_date?: string | null;
-    surveillance_end_date?: string | null;
   };
 }
 
@@ -106,8 +102,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const [caseManagerId, setCaseManagerId] = useState<string>("");
   const [investigators, setInvestigators] = useState<string[]>([]);
   const [dueDateOpen, setDueDateOpen] = useState(false);
-  const [surveillanceStartOpen, setSurveillanceStartOpen] = useState(false);
-  const [surveillanceEndOpen, setSurveillanceEndOpen] = useState(false);
   const [primarySubjectName, setPrimarySubjectName] = useState<string | null>(null);
 
   const form = useForm<CaseFormData>({
@@ -124,8 +118,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       budget_dollars: null,
       budget_notes: null,
       claim_number: null,
-      surveillance_start_date: null,
-      surveillance_end_date: null,
     },
   });
 
@@ -151,8 +143,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_dollars: editingCase.budget_dollars ?? null,
           budget_notes: editingCase.budget_notes ?? null,
           claim_number: editingCase.claim_number ?? null,
-          surveillance_start_date: editingCase.surveillance_start_date ? new Date(editingCase.surveillance_start_date) : null,
-          surveillance_end_date: editingCase.surveillance_end_date ? new Date(editingCase.surveillance_end_date) : null,
         });
         // @ts-ignore - case_manager_id and investigator_ids exist on editingCase
         setCaseManagerId(editingCase.case_manager_id || "");
@@ -173,8 +163,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_dollars: null,
           budget_notes: null,
           claim_number: null,
-          surveillance_start_date: null,
-          surveillance_end_date: null,
         });
         setCaseManagerId("");
         setInvestigators([]);
@@ -399,8 +387,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         budget_dollars: data.budget_dollars || null,
         budget_notes: data.budget_notes || null,
         claim_number: data.claim_number || null,
-        surveillance_start_date: data.surveillance_start_date ? data.surveillance_start_date.toISOString().split('T')[0] : null,
-        surveillance_end_date: data.surveillance_end_date ? data.surveillance_end_date.toISOString().split('T')[0] : null,
       };
 
       if (editingCase) {
@@ -731,95 +717,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                 </FormItem>
               )}
             />
-
-            {/* Surveillance Date Range */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="surveillance_start_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Surveillance Start Date</FormLabel>
-                    <Popover open={surveillanceStartOpen} onOpenChange={setSurveillanceStartOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value || undefined}
-                          onSelect={(date) => {
-                            field.onChange(date);
-                            setSurveillanceStartOpen(false);
-                          }}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="surveillance_end_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Surveillance End Date</FormLabel>
-                    <Popover open={surveillanceEndOpen} onOpenChange={setSurveillanceEndOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value || undefined}
-                          onSelect={(date) => {
-                            field.onChange(date);
-                            setSurveillanceEndOpen(false);
-                          }}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             {/* Case Manager and Investigators */}
             <div className="border-t pt-4 space-y-4">

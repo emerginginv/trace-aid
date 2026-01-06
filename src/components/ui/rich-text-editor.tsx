@@ -42,9 +42,6 @@ const PLACEHOLDER_OPTIONS = [
   // Date placeholders
   { key: 'assignment_date', label: 'Assignment Date', category: 'Dates' },
   { key: 'due_date', label: 'Due Date', category: 'Dates' },
-  { key: 'surveillance_dates', label: 'Surveillance Date Range', category: 'Dates' },
-  { key: 'surveillance_start', label: 'Surveillance Start', category: 'Dates' },
-  { key: 'surveillance_end', label: 'Surveillance End', category: 'Dates' },
   { key: 'current_date', label: 'Current Date', category: 'Dates' },
 ];
 
