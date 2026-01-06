@@ -65,8 +65,9 @@ interface Expense {
   financeData: any;
 }
 const Dashboard = () => {
-  useSetBreadcrumbs([{ label: "Dashboard" }]);
-  
+  useSetBreadcrumbs([{
+    label: "Dashboard"
+  }]);
   const {
     toast
   } = useToast();
@@ -783,7 +784,7 @@ const Dashboard = () => {
                       </span>
                       
                       {/* Author Avatar */}
-                      {update.authorName && <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium shrink-0" title={update.authorName}>
+                      {update.authorName && <div title={update.authorName} className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 bg-success-50 text-emerald-700">
                           {getUserInitials(update.authorName)}
                         </div>}
                     </div>;
@@ -872,14 +873,14 @@ const Dashboard = () => {
     }} editingActivity={editingTask.activityData} organizationId={organization?.id || ""} />}
 
       {editingEvent && <ActivityForm caseId={editingEvent.caseId} activityType="event" users={users} open={!!editingEvent} onOpenChange={open => {
-        if (!open && !isDuplicatingEventRef.current) {
-          setEditingEvent(null);
-        }
-        isDuplicatingEventRef.current = false;
-      }} onSuccess={() => {
+      if (!open && !isDuplicatingEventRef.current) {
+        setEditingEvent(null);
+      }
+      isDuplicatingEventRef.current = false;
+    }} onSuccess={() => {
       setEditingEvent(null);
       window.location.reload();
-    }} editingActivity={editingEvent.activityData} organizationId={organization?.id || ""} onDuplicate={(duplicateData) => {
+    }} editingActivity={editingEvent.activityData} organizationId={organization?.id || ""} onDuplicate={duplicateData => {
       isDuplicatingEventRef.current = true;
       const currentEvent = editingEvent;
       setEditingEvent(null);
@@ -888,7 +889,10 @@ const Dashboard = () => {
           ...currentEvent,
           id: `duplicate-${Date.now()}`,
           title: duplicateData.title,
-          activityData: { ...duplicateData, id: undefined },
+          activityData: {
+            ...duplicateData,
+            id: undefined
+          }
         });
       }, 50);
     }} />}
