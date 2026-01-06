@@ -1,10 +1,7 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { LetterCategory, getCategoryConfig } from "@/lib/letterCategories";
-import { PublicRecordsBuilder } from "./builders/PublicRecordsBuilder";
-import { StatePRABuilder } from "./builders/StatePRABuilder";
-import { FOIABuilder } from "./builders/FOIABuilder";
+import { UnifiedRecordsRequestBuilder } from "./builders/UnifiedRecordsRequestBuilder";
 import { NDABuilder } from "./builders/NDABuilder";
 import { CorrespondenceBuilder } from "./builders/CorrespondenceBuilder";
 import { CustomAIBuilder } from "./builders/CustomAIBuilder";
@@ -44,13 +41,12 @@ export function GuidedLetterBuilder({
   };
 
   const renderBuilder = () => {
+    // Route all FOIA/Public Records categories to the unified builder
     switch (category) {
       case 'public_records':
-        return <PublicRecordsBuilder {...builderProps} />;
       case 'state_pra':
-        return <StatePRABuilder {...builderProps} />;
       case 'foia_federal':
-        return <FOIABuilder {...builderProps} />;
+        return <UnifiedRecordsRequestBuilder {...builderProps} />;
       case 'nda':
         return <NDABuilder {...builderProps} />;
       case 'correspondence':
