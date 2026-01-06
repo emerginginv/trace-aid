@@ -19,8 +19,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, RotateCcw, Check, Settings2, Eye } from "lucide-react";
+import { AlertCircle, RotateCcw, Check, Settings2, Eye, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { SectionCustomizationRow } from "./SectionCustomizationRow";
 import { ReportPreviewPanel } from "./ReportPreviewPanel";
 import { generatePreview, buildCustomization, PreviewResult } from "@/lib/reportPreview";
@@ -31,7 +34,9 @@ import {
   type TemplateSection,
   type SectionCustomization,
   type TemplateCustomization,
+  type CoverPageConfig,
   validateCustomization,
+  getDefaultCoverPageConfig,
 } from "@/lib/reportTemplates";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -63,6 +68,9 @@ export function TemplateCustomizer({
   // State for all customizations by section ID
   const [customizations, setCustomizations] = useState<Map<string, SectionCustomization>>(new Map());
   
+  // Cover page config state
+  const [coverPageConfig, setCoverPageConfig] = useState<CoverPageConfig>(getDefaultCoverPageConfig());
+  
   // Validation error
   const [validationError, setValidationError] = useState<string | null>(null);
   
@@ -88,8 +96,12 @@ export function TemplateCustomizer({
           customizationMap.set(sc.sectionId, sc);
         });
         setCustomizations(customizationMap);
+        
+        // Initialize cover page config
+        setCoverPageConfig(initialCustomization.coverPageConfig || getDefaultCoverPageConfig());
       } else {
         setCustomizations(new Map());
+        setCoverPageConfig(getDefaultCoverPageConfig());
       }
       
       setValidationError(null);
@@ -108,10 +120,10 @@ export function TemplateCustomizer({
     
     const timeoutId = setTimeout(() => {
       try {
-        const customization = buildCustomization(template.id, customizations);
+        const customization = buildCustomization(template.id, customizations, coverPageConfig);
         const result = generatePreview({
           template,
-          customization: customizations.size > 0 ? customization : null,
+          customization: customizations.size > 0 || coverPageConfig ? customization : null,
           orgProfile,
           caseVariables,
         });
@@ -124,7 +136,7 @@ export function TemplateCustomizer({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [open, template, customizations, orgProfile, caseVariables]);
+  }, [open, template, customizations, coverPageConfig, orgProfile, caseVariables]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -172,6 +184,7 @@ export function TemplateCustomizer({
     const sortedSections = [...template.sections].sort((a, b) => a.displayOrder - b.displayOrder);
     setSectionOrder(sortedSections.map(s => s.id));
     setCustomizations(new Map());
+    setCoverPageConfig(getDefaultCoverPageConfig());
     setValidationError(null);
   }, [template]);
 
@@ -180,6 +193,7 @@ export function TemplateCustomizer({
     const templateCustomization: TemplateCustomization = {
       templateId: template.id,
       sectionCustomizations: Array.from(customizations.values()),
+      coverPageConfig,
     };
 
     // Validate
@@ -191,7 +205,7 @@ export function TemplateCustomizer({
 
     onApply(templateCustomization);
     onOpenChange(false);
-  }, [template, customizations, onApply, onOpenChange]);
+  }, [template, customizations, coverPageConfig, onApply, onOpenChange]);
 
   const handleSectionHover = useCallback((sectionId: string | null) => {
     setHighlightedSectionId(sectionId);
@@ -210,9 +224,52 @@ export function TemplateCustomizer({
     [sectionOrder, template.sections]
   );
 
-  // Count modifications
-  const modificationCount = customizations.size;
+  // Count modifications - include cover page changes
+  const defaultCoverConfig = getDefaultCoverPageConfig();
+  const hasCoverPageChanges = coverPageConfig.showPreparedBy !== defaultCoverConfig.showPreparedBy ||
+    coverPageConfig.showCompanyNameWithLogo !== defaultCoverConfig.showCompanyNameWithLogo;
+  const modificationCount = customizations.size + (hasCoverPageChanges ? 1 : 0);
   const hasModifications = modificationCount > 0;
+
+  // Cover page settings component
+  const coverPageSettings = (
+    <Card className="mb-4">
+      <CardHeader className="py-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <FileText className="h-4 w-4" />
+          Cover Page Settings
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 pb-3">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="showPreparedBy" className="text-sm cursor-pointer">
+            Show "Prepared by" section
+          </Label>
+          <Switch
+            id="showPreparedBy"
+            checked={coverPageConfig.showPreparedBy}
+            onCheckedChange={(checked) => setCoverPageConfig(prev => ({
+              ...prev,
+              showPreparedBy: checked
+            }))}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="showCompanyName" className="text-sm cursor-pointer">
+            Show company name with logo
+          </Label>
+          <Switch
+            id="showCompanyName"
+            checked={coverPageConfig.showCompanyNameWithLogo}
+            onCheckedChange={(checked) => setCoverPageConfig(prev => ({
+              ...prev,
+              showCompanyNameWithLogo: checked
+            }))}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   // Section list component (shared between desktop and mobile)
   const sectionList = (
@@ -279,6 +336,7 @@ export function TemplateCustomizer({
               )}
               <ScrollArea className="h-full px-4">
                 <div className="space-y-2 pb-4">
+                  {coverPageSettings}
                   {sectionList}
                 </div>
               </ScrollArea>
@@ -370,6 +428,7 @@ export function TemplateCustomizer({
 
             <ScrollArea className="flex-1">
               <div className="space-y-2 p-4">
+                {coverPageSettings}
                 {sectionList}
               </div>
             </ScrollArea>
