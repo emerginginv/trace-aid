@@ -35,6 +35,13 @@ import {
   formatFeeStructure,
   type DeliveryPreference 
 } from "@/lib/foiaStatutes";
+import { LetterBrandingConfigEditor } from "@/components/documents/LetterBrandingConfig";
+import { 
+  type LetterBrandingConfig, 
+  getDefaultLetterBrandingConfig,
+  wrapLetterWithBranding
+} from "@/lib/letterBranding";
+import { getOrganizationProfile } from "@/lib/organizationProfile";
 
 interface UnifiedRecordsRequestBuilderProps {
   organizationId: string;
@@ -51,6 +58,16 @@ export function UnifiedRecordsRequestBuilder({
   const [isSaving, setIsSaving] = useState(false);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [templateName, setTemplateName] = useState("");
+  
+  // Branding config
+  const [brandingConfig, setBrandingConfig] = useState<LetterBrandingConfig>(getDefaultLetterBrandingConfig());
+  
+  // Fetch organization profile
+  const { data: orgProfile } = useQuery({
+    queryKey: ['org-profile-branding', organizationId],
+    queryFn: () => getOrganizationProfile(organizationId),
+    enabled: !!organizationId,
+  });
 
   const { data: orgSettings } = useQuery({
     queryKey: ['organization-settings', organizationId],
@@ -214,9 +231,17 @@ export function UnifiedRecordsRequestBuilder({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
+      // Wrap generated HTML with branding
+      const brandedHtml = wrapLetterWithBranding(
+        generatedHtml,
+        orgProfile || null,
+        brandingConfig,
+        new Date()
+      );
+
       const { error } = await supabase.from('document_templates').insert({
         name: templateName,
-        body: generatedHtml,
+        body: brandedHtml,
         document_type: 'letter',
         letter_category: formData.jurisdiction === 'federal' ? 'foia_federal' : 'state_pra',
         description: `${jurisdictionInfo.statuteName} request to ${formData.agencyName}`,
@@ -662,6 +687,15 @@ export function UnifiedRecordsRequestBuilder({
             )}
           </Button>
         </div>
+
+        {/* Branding Configuration */}
+        <Card>
+          <LetterBrandingConfigEditor
+            config={brandingConfig}
+            onChange={setBrandingConfig}
+            organizationId={organizationId}
+          />
+        </Card>
       </div>
 
       {/* Preview Section */}

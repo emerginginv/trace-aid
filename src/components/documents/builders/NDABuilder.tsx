@@ -20,6 +20,14 @@ import {
   getNonCompeteStatusInfo
 } from "@/lib/ndaStatutes";
 import { cn } from "@/lib/utils";
+import { LetterBrandingConfigEditor } from "@/components/documents/LetterBrandingConfig";
+import { 
+  type LetterBrandingConfig, 
+  getDefaultLetterBrandingConfig,
+  wrapLetterWithBranding
+} from "@/lib/letterBranding";
+import { getOrganizationProfile } from "@/lib/organizationProfile";
+import { useQuery } from "@tanstack/react-query";
 
 interface NDABuilderProps {
   organizationId: string;
@@ -46,6 +54,16 @@ export function NDABuilder({ organizationId, onSave, onCancel }: NDABuilderProps
     languageStyle: 'standard' as 'standard' | 'simplified' | 'tightened',
     includeNonSolicitation: false,
     includeNonCompete: false,
+  });
+  
+  // Branding config
+  const [brandingConfig, setBrandingConfig] = useState<LetterBrandingConfig>(getDefaultLetterBrandingConfig());
+  
+  // Fetch organization profile
+  const { data: orgProfile } = useQuery({
+    queryKey: ['org-profile-branding', organizationId],
+    queryFn: () => getOrganizationProfile(organizationId),
+    enabled: !!organizationId,
   });
 
   const selectedStateProvisions = formData.governingLaw ? getNDAStateProvisions(formData.governingLaw) : null;
@@ -143,6 +161,18 @@ export function NDABuilder({ organizationId, onSave, onCancel }: NDABuilderProps
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Wrap NDA HTML with branding (letterhead for formal presentation)
+      const brandedHtml = wrapLetterWithBranding(
+        generatedHtml,
+        orgProfile || null,
+        {
+          ...brandingConfig,
+          // NDAs typically don't need full letter signature block since they have their own
+          showSignatureBlock: false,
+        },
+        new Date()
+      );
+
       const { error } = await supabase
         .from('document_templates')
         .insert({
@@ -152,7 +182,7 @@ export function NDABuilder({ organizationId, onSave, onCancel }: NDABuilderProps
           description: `${formData.agreementType === 'mutual' ? 'Mutual' : 'Unilateral'} Non-Disclosure Agreement - ${formData.governingLaw}`,
           document_type: 'agreement',
           letter_category: 'nda',
-          body: generatedHtml,
+          body: brandedHtml,
         });
 
       if (error) throw error;
@@ -479,6 +509,15 @@ export function NDABuilder({ organizationId, onSave, onCancel }: NDABuilderProps
               </div>
             </div>
           </CardContent>
+        </Card>
+
+        {/* Branding Configuration */}
+        <Card>
+          <LetterBrandingConfigEditor
+            config={brandingConfig}
+            onChange={setBrandingConfig}
+            organizationId={organizationId}
+          />
         </Card>
 
         <div className="flex gap-3 justify-end">

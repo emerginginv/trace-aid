@@ -1,0 +1,253 @@
+import { format } from "date-fns";
+import type { OrganizationProfile } from "./organizationProfile";
+
+/**
+ * Letter Branding Configuration Interface
+ */
+export interface LetterBrandingConfig {
+  // Letterhead options
+  showLogo: boolean;
+  showOrgName: boolean;
+  showOrgAddress: boolean;
+  showContactInfo: boolean;
+  logoAlignment: 'left' | 'center' | 'right';
+  
+  // Letter elements
+  showDate: boolean;
+  dateFormat: 'full' | 'short';
+  
+  // Signature block
+  showSignatureBlock: boolean;
+  signatureName: string;
+  signatureTitle: string;
+  includeSignatureLine: boolean;
+  
+  // Footer (optional for letters)
+  showConfidentiality: boolean;
+  confidentialityText: string;
+}
+
+/**
+ * Get default letter branding configuration
+ */
+export function getDefaultLetterBrandingConfig(): LetterBrandingConfig {
+  return {
+    showLogo: true,
+    showOrgName: true,
+    showOrgAddress: true,
+    showContactInfo: true,
+    logoAlignment: 'center',
+    showDate: true,
+    dateFormat: 'full',
+    showSignatureBlock: true,
+    signatureName: '',
+    signatureTitle: '',
+    includeSignatureLine: true,
+    showConfidentiality: false,
+    confidentialityText: 'This letter and any attachments are confidential and intended solely for the addressee.',
+  };
+}
+
+/**
+ * Format date according to config
+ */
+export function formatLetterDate(date: Date, format: 'full' | 'short'): string {
+  if (format === 'full') {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  }
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${month}/${day}/${date.getFullYear()}`;
+}
+
+/**
+ * Render letterhead HTML
+ */
+export function renderLetterhead(
+  orgProfile: OrganizationProfile | null,
+  config: LetterBrandingConfig
+): string {
+  if (!orgProfile) return '';
+  
+  const parts: string[] = [];
+  const alignment = config.logoAlignment;
+  
+  // Logo
+  if (config.showLogo && orgProfile.logoUrl) {
+    parts.push(`
+      <div style="text-align: ${alignment}; margin-bottom: 10px;">
+        <img src="${orgProfile.logoUrl}" alt="Company Logo" style="max-height: 60px; max-width: 200px;" />
+      </div>
+    `);
+  }
+  
+  // Organization Name
+  if (config.showOrgName && orgProfile.companyName) {
+    parts.push(`
+      <div style="text-align: ${alignment}; font-weight: bold; font-size: 16px;">
+        ${orgProfile.companyName}
+      </div>
+    `);
+  }
+  
+  // Address
+  if (config.showOrgAddress && orgProfile.fullAddress) {
+    const addressLines = [];
+    if (orgProfile.streetAddress) addressLines.push(orgProfile.streetAddress);
+    if (orgProfile.city || orgProfile.state || orgProfile.zipCode) {
+      const cityStateZip = [
+        orgProfile.city,
+        orgProfile.state
+      ].filter(Boolean).join(', ');
+      const fullLine = [cityStateZip, orgProfile.zipCode].filter(Boolean).join(' ');
+      if (fullLine) addressLines.push(fullLine);
+    }
+    
+    if (addressLines.length > 0) {
+      parts.push(`
+        <div style="text-align: ${alignment}; font-size: 12px; color: #666;">
+          ${addressLines.join('<br/>')}
+        </div>
+      `);
+    }
+  }
+  
+  // Contact Info
+  if (config.showContactInfo) {
+    const contactParts = [];
+    if (orgProfile.phone) contactParts.push(orgProfile.phone);
+    if (orgProfile.email) contactParts.push(orgProfile.email);
+    
+    if (contactParts.length > 0) {
+      parts.push(`
+        <div style="text-align: ${alignment}; font-size: 12px; color: #666;">
+          ${contactParts.join(' | ')}
+        </div>
+      `);
+    }
+  }
+  
+  if (parts.length === 0) return '';
+  
+  return `
+    <div class="letter-letterhead" style="margin-bottom: 30px;">
+      ${parts.join('')}
+      <hr style="margin-top: 20px; border: none; border-top: 1px solid #333;" />
+    </div>
+  `;
+}
+
+/**
+ * Render date block HTML
+ */
+export function renderDateBlock(
+  date: Date,
+  config: LetterBrandingConfig
+): string {
+  if (!config.showDate) return '';
+  
+  const formattedDate = formatLetterDate(date, config.dateFormat);
+  
+  return `
+    <div class="letter-date" style="text-align: right; margin-bottom: 30px;">
+      ${formattedDate}
+    </div>
+  `;
+}
+
+/**
+ * Render signature block HTML
+ */
+export function renderSignatureBlock(
+  config: LetterBrandingConfig
+): string {
+  if (!config.showSignatureBlock) return '';
+  
+  const parts: string[] = [];
+  
+  parts.push('<p style="margin-top: 40px;">Sincerely,</p>');
+  
+  // Signature line for wet signature
+  if (config.includeSignatureLine) {
+    parts.push(`
+      <div style="height: 50px; border-bottom: 1px solid #333; width: 200px; margin-top: 30px;"></div>
+    `);
+  } else {
+    parts.push('<div style="height: 50px;"></div>');
+  }
+  
+  // Name
+  if (config.signatureName) {
+    parts.push(`<p style="margin-top: 5px;"><strong>${config.signatureName}</strong></p>`);
+  } else {
+    parts.push(`<p style="margin-top: 5px;"><strong>{{signature_name}}</strong></p>`);
+  }
+  
+  // Title
+  if (config.signatureTitle) {
+    parts.push(`<p style="margin-top: 0;">${config.signatureTitle}</p>`);
+  } else {
+    parts.push(`<p style="margin-top: 0;">{{signature_title}}</p>`);
+  }
+  
+  return `
+    <div class="letter-signature">
+      ${parts.join('')}
+    </div>
+  `;
+}
+
+/**
+ * Render confidentiality footer
+ */
+export function renderConfidentialityFooter(
+  config: LetterBrandingConfig
+): string {
+  if (!config.showConfidentiality || !config.confidentialityText) return '';
+  
+  return `
+    <div class="letter-footer" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #ccc;">
+      <p style="font-size: 10px; color: #666; font-style: italic;">
+        ${config.confidentialityText}
+      </p>
+    </div>
+  `;
+}
+
+/**
+ * Wrap letter body with full branding (letterhead, date, signature, footer)
+ */
+export function wrapLetterWithBranding(
+  letterBody: string,
+  orgProfile: OrganizationProfile | null,
+  config: LetterBrandingConfig,
+  date: Date = new Date()
+): string {
+  const letterhead = renderLetterhead(orgProfile, config);
+  const dateBlock = renderDateBlock(date, config);
+  const signature = renderSignatureBlock(config);
+  const footer = renderConfidentialityFooter(config);
+  
+  return `
+    <div class="letter-document" style="font-family: 'Times New Roman', serif; max-width: 800px; margin: 0 auto; padding: 40px;">
+      ${letterhead}
+      ${dateBlock}
+      <div class="letter-body">
+        ${letterBody}
+      </div>
+      ${signature}
+      ${footer}
+    </div>
+  `;
+}
+
+/**
+ * Get current date placeholder for templates
+ */
+export function getDatePlaceholder(format: 'full' | 'short'): string {
+  return format === 'full' ? '{{current_date_full}}' : '{{current_date_short}}';
+}
