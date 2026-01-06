@@ -273,39 +273,40 @@ export function SectionEditor({
 
       {isExpanded && (
         <CardContent className="p-3 sm:p-4 pt-0 space-y-4">
-          {/* Section Title */}
-          <div className="space-y-1">
-            <Label htmlFor={`title-${section.id}`} className="text-xs">
-              Section Title
-            </Label>
-            <Input
-              id={`title-${section.id}`}
-              value={section.title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              disabled={isReadOnly}
-              placeholder="Enter section title"
-            />
-          </div>
+          {/* Section Title + Section Type on same row */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="space-y-1 flex-1">
+              <Label htmlFor={`title-${section.id}`} className="text-xs">
+                Section Title
+              </Label>
+              <Input
+                id={`title-${section.id}`}
+                value={section.title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                disabled={isReadOnly}
+                placeholder="Enter section title"
+              />
+            </div>
 
-          {/* Section Type */}
-          <div className="space-y-1">
-            <Label className="text-xs">Section Type</Label>
-            <Select
-              value={section.sectionType}
-              onValueChange={(value) => handleTypeChange(value as SectionType)}
-              disabled={isReadOnly}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(SECTION_TYPE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-1 sm:w-48">
+              <Label className="text-xs">Section Type</Label>
+              <Select
+                value={section.sectionType}
+                onValueChange={(value) => handleTypeChange(value as SectionType)}
+                disabled={isReadOnly}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(SECTION_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Type-specific content */}
@@ -367,7 +368,7 @@ export function SectionEditor({
                   {Object.entries(variablesByCategory).map(([category, variables]) => (
                     <div key={category} className="space-y-2">
                       <p className="text-xs font-medium text-muted-foreground">{category}</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                         {variables.map((variable) => (
                           <div key={variable.key} className="flex items-center gap-2">
                             <Checkbox
