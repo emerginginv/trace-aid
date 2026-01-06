@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { TimeRangeSelector } from "@/components/analytics/TimeRangeSelector";
@@ -54,7 +54,7 @@ export default function BudgetAnalytics() {
     { label: "Financial Analytics" },
   ]);
 
-  const timeRange = createPresetTimeRange(timeRangePreset);
+  const timeRange = useMemo(() => createPresetTimeRange(timeRangePreset), [timeRangePreset]);
   const organizationId = organization?.id || "";
 
   useEffect(() => {

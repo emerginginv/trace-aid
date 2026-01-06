@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { TimeRangeSelector } from "@/components/analytics/TimeRangeSelector";
@@ -36,7 +36,7 @@ export default function CaseAnalytics() {
     { label: "Case Analytics" },
   ]);
 
-  const timeRange = createPresetTimeRange(timeRangePreset);
+  const timeRange = useMemo(() => createPresetTimeRange(timeRangePreset), [timeRangePreset]);
   const comparisonPreset = COMPARISON_MAP[timeRangePreset];
   const organizationId = organization?.id || "";
 
