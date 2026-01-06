@@ -91,6 +91,12 @@ function formatDateRange(startDate: string | null, endDate: string | null): stri
   return "";
 }
 
+function formatAsHtmlList(items: string[]): string {
+  if (items.length === 0) return "None";
+  if (items.length === 1) return items[0];
+  return `<ul style="margin: 0.5em 0; padding-left: 1.5em;">${items.map(item => `<li>${item}</li>`).join("")}</ul>`;
+}
+
 export async function getCaseVariables(caseId: string): Promise<CaseVariables | null> {
   try {
     // Fetch case data
@@ -217,13 +223,17 @@ export async function getCaseVariables(caseId: string): Promise<CaseVariables | 
     const primarySubject = subjects.find((s) => s.isPrimary) || subjects[0] || null;
     const primaryClient = clients[0] || null;
 
-    const subjectList = subjects
-      .map((s) => s.isPrimary ? `${s.name} (Primary)` : s.name)
-      .join(", ");
+    const subjectNames = subjects.map((s) => s.isPrimary ? `${s.name} (Primary)` : s.name);
+    const subjectList = formatAsHtmlList(subjectNames);
 
-    const clientList = clients.map((c) => c.name).join(", ");
-    const investigatorList = investigators.map((i) => i.name).join(", ");
-    const locationList = locations.map((l) => l.address || l.name).join("; ");
+    const clientNames = clients.map((c) => c.name);
+    const clientList = formatAsHtmlList(clientNames);
+
+    const investigatorNames = investigators.map((i) => i.name);
+    const investigatorList = formatAsHtmlList(investigatorNames);
+
+    const locationNames = locations.map((l) => l.address || l.name);
+    const locationList = formatAsHtmlList(locationNames);
 
     return {
       caseId,
