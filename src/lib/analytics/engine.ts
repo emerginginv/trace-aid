@@ -27,7 +27,7 @@ function applyFiltersToQuery(query: any, filters: Filter[]): any {
       case "in": result = result.in(filter.field, filter.value); break;
       case "like": result = result.ilike(filter.field, filter.value); break;
       case "is_null": result = result.is(filter.field, null); break;
-      case "is_not_null": result = result.not.is(filter.field, null); break;
+      case "is_not_null": result = result.not(filter.field, "is", null); break;
     }
   }
   return result;
