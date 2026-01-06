@@ -484,7 +484,7 @@ export function normalizeRecord(
   
   // Date fields
   const dateFields = ['date', 'start_date', 'end_date', 'due_date', 'created_at', 
-    'completed_at', 'surveillance_start_date', 'surveillance_end_date'];
+    'completed_at'];
   
   // Currency fields
   const currencyFields = ['amount', 'hourly_rate', 'unit_price', 

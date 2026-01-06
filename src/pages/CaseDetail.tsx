@@ -54,8 +54,6 @@ interface Case {
   parent_case_id: string | null;
   instance_number: number;
   claim_number?: string | null;
-  surveillance_start_date?: string | null;
-  surveillance_end_date?: string | null;
 }
 
 interface Account {
@@ -771,12 +769,6 @@ const CaseDetail = () => {
                     <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
                     <InfoItem label="Claim Number" value={caseData.claim_number} />
                     <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
-                    {caseData.surveillance_start_date && (
-                      <InfoItem label="Surveillance Start" value={new Date(caseData.surveillance_start_date).toLocaleDateString()} />
-                    )}
-                    {caseData.surveillance_end_date && (
-                      <InfoItem label="Surveillance End" value={new Date(caseData.surveillance_end_date).toLocaleDateString()} />
-                    )}
                     <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
                     {isClosed && caseData.closed_at && (
                       <InfoItem label="Closed" value={new Date(caseData.closed_at).toLocaleDateString()} className="text-muted-foreground" />

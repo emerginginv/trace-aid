@@ -25,9 +25,8 @@ export const ENTITY_SCHEMAS: Record<string, { required: string[]; optional: stri
     required: ['external_record_id', 'case_number', 'title'],
     optional: [
       'external_account_id', 'external_contact_id', 'external_parent_case_id',
-      'claim_number', 'status', 'start_date', 'due_date', 'surveillance_start_date',
-      'surveillance_end_date', 'case_manager_email', 'investigator_emails',
-      'budget_hours', 'budget_dollars', 'budget_notes', 'description'
+      'claim_number', 'status', 'start_date', 'due_date', 'case_manager_email', 
+      'investigator_emails', 'budget_hours', 'budget_dollars', 'budget_notes', 'description'
     ]
   },
   subjects: {
@@ -462,7 +461,7 @@ function validateFieldTypes(
   }
   
   // Date validation
-  const dateFields = ['start_date', 'due_date', 'surveillance_start_date', 'surveillance_end_date', 'date', 'date_of_birth'];
+  const dateFields = ['start_date', 'due_date', 'date', 'date_of_birth'];
   for (const field of dateFields) {
     const value = row[field];
     if (value && value.trim()) {

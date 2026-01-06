@@ -138,9 +138,6 @@ export const TemplateEditor = ({ open, onOpenChange, onSuccess, template }: Temp
     .replace(/\{\{location_list\}\}/g, "123 Oak Avenue, New York, NY; 456 Pine Street, Boston, MA")
     // Date placeholders
     .replace(/\{\{assignment_date\}\}/g, "January 10, 2024")
-    .replace(/\{\{surveillance_dates\}\}/g, "January 15, 2024 - January 22, 2024")
-    .replace(/\{\{surveillance_start\}\}/g, "January 15, 2024")
-    .replace(/\{\{surveillance_end\}\}/g, "January 22, 2024")
     .replace(/\{\{due_date\}\}/g, "February 1, 2024")
     .replace(/\{\{update_list\}\}/g, 
       `<p><strong>2024-01-15</strong> - Initial Contact (John Doe)<br>
@@ -226,9 +223,7 @@ Case is progressing well. Waiting for additional information.</p>`
                   <p className="text-xs text-muted-foreground mb-2 font-medium">Dates:</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
                     <div><code className="bg-muted px-1 rounded">{"{{assignment_date}}"}</code> - Assignment/start date</div>
-                    <div><code className="bg-muted px-1 rounded">{"{{surveillance_dates}}"}</code> - Surveillance date range</div>
-                    <div><code className="bg-muted px-1 rounded">{"{{surveillance_start}}"}</code> - Surveillance start</div>
-                    <div><code className="bg-muted px-1 rounded">{"{{surveillance_end}}"}</code> - Surveillance end</div>
+                    <div><code className="bg-muted px-1 rounded">{"{{due_date}}"}</code> - Due date</div>
                   </div>
 
                   <p className="text-xs text-muted-foreground mb-2 font-medium">Updates:</p>

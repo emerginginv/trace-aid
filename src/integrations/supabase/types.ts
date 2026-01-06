@@ -770,8 +770,6 @@ export type Database = {
           organization_id: string | null
           parent_case_id: string | null
           status: string
-          surveillance_end_date: string | null
-          surveillance_start_date: string | null
           title: string
           updated_at: string | null
           use_primary_subject_as_title: boolean | null
@@ -801,8 +799,6 @@ export type Database = {
           organization_id?: string | null
           parent_case_id?: string | null
           status?: string
-          surveillance_end_date?: string | null
-          surveillance_start_date?: string | null
           title: string
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null
@@ -832,8 +828,6 @@ export type Database = {
           organization_id?: string | null
           parent_case_id?: string | null
           status?: string
-          surveillance_end_date?: string | null
-          surveillance_start_date?: string | null
           title?: string
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null
@@ -2213,8 +2207,6 @@ export type Database = {
           remaining_dollars: number | null
           remaining_hours: number | null
           status: string | null
-          surveillance_end_date: string | null
-          surveillance_start_date: string | null
           title: string | null
           updated_at: string | null
           use_primary_subject_as_title: boolean | null

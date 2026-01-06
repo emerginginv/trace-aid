@@ -137,8 +137,6 @@ export interface CaseImport {
   status?: string;
   start_date?: string;
   due_date?: string;
-  surveillance_start_date?: string;
-  surveillance_end_date?: string;
   
   // Team Assignment (by email)
   case_manager_email?: string;
