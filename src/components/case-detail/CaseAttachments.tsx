@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical, Loader2, Maximize, FolderInput } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical, Loader2, Maximize, FolderInput, Folder } from "lucide-react";
 import { generatePdfThumbnail, isPdfFile } from "@/lib/pdfThumbnail";
 import { useConfirmation } from "@/components/ui/confirmation-dialog";
 import { useBackgroundThumbnailGeneration, canGenerateThumbnail } from "@/hooks/use-background-thumbnail-generation";
@@ -33,6 +33,8 @@ import { EmailAttachmentsDialog } from "./EmailAttachmentsDialog";
 import { RevokeAccessDialog } from "./RevokeAccessDialog";
 import { AttachmentAccessLogDialog } from "./AttachmentAccessLogDialog";
 import { CaseAccessAuditPanel } from "./CaseAccessAuditPanel";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
@@ -40,6 +42,7 @@ import { AttachmentPreviewThumbnail } from "./AttachmentPreviewThumbnail";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { PdfViewer } from "./PdfViewer";
 import { usePreviewLogging } from "@/hooks/use-preview-logging";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Folder components
 import { FolderPanel, AttachmentFolder } from "./FolderPanel";
@@ -93,15 +96,17 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { logPreview } = usePreviewLogging();
+  const isMobile = useIsMobile();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"list" | "card">("list");
+  const [viewMode, setViewMode] = useState<"list" | "card">(() => isMobile ? "card" : "list");
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const [mobileFolderSheetOpen, setMobileFolderSheetOpen] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [editingAttachment, setEditingAttachment] = useState<Attachment | null>(null);
@@ -922,11 +927,25 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     );
   }
 
+  // Helper to get selected folder display name
+  const getSelectedFolderLabel = () => {
+    if (selectedFolderId === null) return "All Files";
+    if (selectedFolderId === "unfiled") return "Unfiled";
+    const folder = folders.find(f => f.id === selectedFolderId);
+    return folder?.name || "Folder";
+  };
+
+  const getSelectedFolderColor = () => {
+    if (selectedFolderId === null || selectedFolderId === "unfiled") return undefined;
+    const folder = folders.find(f => f.id === selectedFolderId);
+    return folder?.color;
+  };
+
   return (
     <TooltipProvider>
-      <div className="flex gap-0">
-        {/* Folder Panel */}
-        {organization?.id && (
+      <div className="flex flex-col md:flex-row gap-0 w-full min-w-0">
+        {/* Folder Panel - Hidden on mobile, visible on md+ */}
+        {organization?.id && !isMobile && (
           <FolderPanel
             caseId={caseId}
             organizationId={organization.id}
@@ -942,8 +961,101 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
             onToggleCollapse={() => setFolderPanelCollapsed(!folderPanelCollapsed)}
           />
         )}
+
+        {/* Mobile Folder Sheet */}
+        {organization?.id && isMobile && (
+          <Sheet open={mobileFolderSheetOpen} onOpenChange={setMobileFolderSheetOpen}>
+            <SheetContent side="left" className="w-72 p-0">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>Folders</SheetTitle>
+              </SheetHeader>
+              <ScrollArea className="h-[calc(100vh-80px)]">
+                <div className="p-2 space-y-1">
+                  {/* All Files */}
+                  <button
+                    onClick={() => {
+                      setSelectedFolderId(null);
+                      setMobileFolderSheetOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-3 rounded-md text-sm transition-colors text-left ${
+                      selectedFolderId === null
+                        ? "bg-accent text-accent-foreground"
+                        : "hover:bg-accent/50"
+                    }`}
+                  >
+                    <Folder className="h-4 w-4 shrink-0" />
+                    <span className="truncate flex-1">All Files</span>
+                    <span className="text-xs text-muted-foreground">{attachments.length}</span>
+                  </button>
+                  
+                  {/* Unfiled */}
+                  <button
+                    onClick={() => {
+                      setSelectedFolderId("unfiled");
+                      setMobileFolderSheetOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-3 rounded-md text-sm transition-colors text-left ${
+                      selectedFolderId === "unfiled"
+                        ? "bg-accent text-accent-foreground"
+                        : "hover:bg-accent/50"
+                    }`}
+                  >
+                    <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate flex-1">Unfiled</span>
+                    <span className="text-xs text-muted-foreground">{unfiledCount}</span>
+                  </button>
+                  
+                  {folders.length > 0 && <div className="border-t my-2" />}
+                  
+                  {/* Folders */}
+                  {folders.map((folder) => (
+                    <button
+                      key={folder.id}
+                      onClick={() => {
+                        setSelectedFolderId(folder.id);
+                        setMobileFolderSheetOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-3 rounded-md text-sm transition-colors text-left ${
+                        selectedFolderId === folder.id
+                          ? "bg-accent text-accent-foreground"
+                          : "hover:bg-accent/50"
+                      }`}
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: folder.color }}
+                      />
+                      <Folder
+                        className="h-4 w-4 shrink-0"
+                        style={{ color: folder.color }}
+                      />
+                      <span className="truncate flex-1">{folder.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {attachmentCounts[folder.id] || 0}
+                      </span>
+                    </button>
+                  ))}
+                  
+                  <div className="border-t my-2" />
+                  
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-2"
+                    onClick={() => {
+                      setMobileFolderSheetOpen(false);
+                      setCreateFolderOpen(true);
+                    }}
+                  >
+                    <FolderInput className="h-4 w-4" />
+                    Create New Folder
+                  </Button>
+                </div>
+              </ScrollArea>
+            </SheetContent>
+          </Sheet>
+        )}
         
-        <div className="flex-1 px-4 sm:px-6 space-y-4">
+        <div className="flex-1 px-2 sm:px-4 md:px-6 space-y-4 min-w-0">
         {/* Thumbnail Generation Progress */}
         <ThumbnailGenerationProgress
           jobs={thumbnailQueue}
@@ -972,11 +1084,32 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
 
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold">Attachments</h2>
-            <p className="text-muted-foreground">
-              {filteredAttachments.length} file{filteredAttachments.length !== 1 ? 's' : ''}
-            </p>
+          <div className="flex items-center gap-3">
+            {/* Mobile folder button */}
+            {isMobile && organization?.id && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileFolderSheetOpen(true)}
+                className="gap-2"
+              >
+                {getSelectedFolderColor() ? (
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: getSelectedFolderColor() }}
+                  />
+                ) : (
+                  <Folder className="h-4 w-4" />
+                )}
+                <span className="max-w-[100px] truncate">{getSelectedFolderLabel()}</span>
+              </Button>
+            )}
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold">Attachments</h2>
+              <p className="text-muted-foreground text-sm">
+                {filteredAttachments.length} file{filteredAttachments.length !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {/* Case-level revoke button - only show when there are shared attachments */}
@@ -1451,130 +1584,202 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                     <TableCell className="py-1.5 hidden sm:table-cell">{formatFileSize(attachment.file_size)}</TableCell>
                     <TableCell className="py-1.5 hidden md:table-cell">{new Date(attachment.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right py-1.5">
-                      <div className="flex justify-end gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
+                      {/* Mobile: kebab dropdown; Desktop: inline buttons */}
+                      {isMobile ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem onClick={(e) => openInViewer(attachment, e)}>
+                              <Maximize className="h-4 w-4 mr-2" />
+                              Open in Viewer
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {canEditAttachments && !isClosedCase && (
+                              <DropdownMenuItem onClick={() => handleEdit(attachment)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            {canEditAttachments && !isClosedCase && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setSingleMoveAttachment(attachment);
+                                setMoveToFolderOpen(true);
+                              }}>
+                                <FolderInput className="h-4 w-4 mr-2" />
+                                Move to Folder
+                              </DropdownMenuItem>
+                            )}
+                            {canEditAttachments && (
+                              <DropdownMenuItem onClick={() => handleShare(attachment)}>
+                                <Share2 className="h-4 w-4 mr-2" />
+                                Share
+                              </DropdownMenuItem>
+                            )}
+                            {canEditAttachments && isShared && (
+                              <DropdownMenuItem 
+                                onClick={() => handleSingleRevoke(attachment)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <ShieldOff className="h-4 w-4 mr-2" />
+                                Revoke Links
+                              </DropdownMenuItem>
+                            )}
+                            {isShared && (
+                              <DropdownMenuItem onClick={() => handleViewAccessLog(attachment)}>
+                                <History className="h-4 w-4 mr-2" />
+                                Access Log
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDownload(attachment)}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </DropdownMenuItem>
+                            {canDeleteAttachments && !isClosedCase && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleDelete(attachment)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <div className="flex justify-end gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => openInViewer(attachment, e)}
+                                className="h-7 w-7 sm:h-8 sm:w-8"
+                                title="Open in Viewer"
+                              >
+                                <Maximize className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Open in full viewer</TooltipContent>
+                          </Tooltip>
+                          {canEditAttachments && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) => openInViewer(attachment, e)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(attachment);
+                              }}
+                              disabled={isClosedCase}
                               className="h-7 w-7 sm:h-8 sm:w-8"
-                              title="Open in Viewer"
+                              title="Edit"
                             >
-                              <Maximize className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Open in full viewer</TooltipContent>
-                        </Tooltip>
-                        {canEditAttachments && (
+                          )}
+                          {canEditAttachments && !isClosedCase && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSingleMoveAttachment(attachment);
+                                    setMoveToFolderOpen(true);
+                                  }}
+                                  className="h-7 w-7 sm:h-8 sm:w-8"
+                                  title="Move to Folder"
+                                >
+                                  <FolderInput className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Move to folder</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {canEditAttachments && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleShare(attachment);
+                              }}
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                              title="Share"
+                            >
+                              <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          )}
+                          {canEditAttachments && isShared && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => handleSingleRevoke(attachment, e)}
+                                  className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
+                                  title="Revoke Links"
+                                >
+                                  <ShieldOff className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Revoke share links</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {isShared && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => handleViewAccessLog(attachment, e)}
+                                  className="h-7 w-7 sm:h-8 sm:w-8"
+                                  title="View Access Log"
+                                >
+                                  <History className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View access log</TooltipContent>
+                            </Tooltip>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleEdit(attachment);
+                              handleDownload(attachment);
                             }}
-                            disabled={isClosedCase}
                             className="h-7 w-7 sm:h-8 sm:w-8"
-                            title="Edit"
+                            title="Download"
                           >
-                            <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
-                        )}
-                        {canEditAttachments && !isClosedCase && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSingleMoveAttachment(attachment);
-                                  setMoveToFolderOpen(true);
-                                }}
-                                className="h-7 w-7 sm:h-8 sm:w-8"
-                                title="Move to Folder"
-                              >
-                                <FolderInput className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Move to folder</TooltipContent>
-                          </Tooltip>
-                        )}
-                        {canEditAttachments && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleShare(attachment);
-                            }}
-                            className="h-7 w-7 sm:h-8 sm:w-8"
-                            title="Share"
-                          >
-                            <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
-                        )}
-                        {canEditAttachments && isShared && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => handleSingleRevoke(attachment, e)}
-                                className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
-                                title="Revoke Links"
-                              >
-                                <ShieldOff className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Revoke share links</TooltipContent>
-                          </Tooltip>
-                        )}
-                        {isShared && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => handleViewAccessLog(attachment, e)}
-                                className="h-7 w-7 sm:h-8 sm:w-8"
-                                title="View Access Log"
-                              >
-                                <History className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>View access log</TooltipContent>
-                          </Tooltip>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(attachment);
-                          }}
-                          className="h-7 w-7 sm:h-8 sm:w-8"
-                          title="Download"
-                        >
-                          <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </Button>
-                        {canDeleteAttachments && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(attachment);
-                            }}
-                            disabled={isClosedCase}
-                            className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
-                        )}
-                      </div>
+                          {canDeleteAttachments && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(attachment);
+                              }}
+                              disabled={isClosedCase}
+                              className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
