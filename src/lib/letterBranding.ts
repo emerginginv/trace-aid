@@ -201,8 +201,9 @@ export function renderDateBlock(
   
   const formattedDate = formatLetterDate(date, config.dateFormat);
   
+  // RULE: Single authoritative date, left-aligned, below letterhead
   return `
-    <div class="letter-date" style="text-align: right; margin-bottom: 30px;">
+    <div class="letter-date" style="text-align: left; margin-bottom: 30px;">
       ${formattedDate}
     </div>
   `;

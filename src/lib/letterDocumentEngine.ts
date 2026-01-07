@@ -91,6 +91,76 @@ export interface LetterStructureValidation {
 }
 
 /**
+ * Validation result for letter date
+ */
+export interface LetterDateValidation {
+  isValid: boolean;
+  dateBlockCount: number;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Validate that letter contains exactly one primary date.
+ * 
+ * RULES:
+ * - Exactly one primary date block allowed
+ * - Date must appear below letterhead (enforced by structure)
+ * - Date must be left-aligned (enforced by CSS)
+ * - Multiple date blocks = validation error
+ * - No date block = validation error
+ * 
+ * Note: Dates within body content (e.g., "records from January 2023") 
+ * are allowed as they are content dates, not the letter date.
+ */
+export function validateLetterDate(html: string): LetterDateValidation {
+  const result: LetterDateValidation = {
+    isValid: true,
+    dateBlockCount: 0,
+    errors: [],
+    warnings: []
+  };
+  
+  // Count primary date blocks (the authoritative date location)
+  const dateBlockMatches = html.match(/<div[^>]*class="[^"]*letter-date[^"]*"[^>]*>/gi) || [];
+  result.dateBlockCount = dateBlockMatches.length;
+  
+  // Validation rules
+  if (result.dateBlockCount === 0) {
+    result.isValid = false;
+    result.errors.push('Letter is missing the primary date block');
+  }
+  
+  if (result.dateBlockCount > 1) {
+    result.isValid = false;
+    result.errors.push(`Multiple date blocks detected (${result.dateBlockCount}). Only one primary date is allowed.`);
+  }
+  
+  // Check for date in header (not allowed)
+  const headerMatch = html.match(/<div[^>]*class="[^"]*letter-letterhead[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+  if (headerMatch) {
+    const headerContent = headerMatch[1];
+    const datePatternInHeader = /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/i;
+    if (datePatternInHeader.test(headerContent)) {
+      result.isValid = false;
+      result.errors.push('Date detected in letterhead. Dates must only appear in the date block.');
+    }
+  }
+  
+  // Check for date in footer (not allowed)
+  const footerMatch = html.match(/<div[^>]*class="[^"]*letter-footer[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+  if (footerMatch) {
+    const footerContent = footerMatch[1];
+    const datePatternInFooter = /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/i;
+    if (datePatternInFooter.test(footerContent)) {
+      result.warnings.push('Date-like content detected in footer. Ensure this is not intended as the letter date.');
+    }
+  }
+  
+  return result;
+}
+
+/**
  * Validate letter structure to prevent free-form layouts
  * Ensures letters follow proper professional structure
  */
@@ -129,17 +199,18 @@ export function validateLetterStructure(html: string): LetterStructureValidation
     }
   }
   
-  // Check for proper structure indicators
-  const hasDate = /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/.test(textContent) || 
-                  /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/i.test(textContent) ||
-                  /\{\{.*date.*\}\}/i.test(html);
+  // Validate date (single authoritative date rule)
+  const dateValidation = validateLetterDate(html);
+  if (!dateValidation.isValid) {
+    result.isValid = false;
+    result.errors.push(...dateValidation.errors);
+  }
+  result.warnings.push(...dateValidation.warnings);
   
+  // Check for proper structure indicators (salutation and closing)
   const hasSalutation = /\b(?:Dear|To Whom|Attention|Re:)\b/i.test(textContent);
   const hasClosing = /\b(?:Sincerely|Regards|Best|Respectfully|Thank you)\b/i.test(textContent);
   
-  if (!hasDate) {
-    result.warnings.push("Letter may be missing a date");
-  }
   if (!hasSalutation) {
     result.warnings.push("Letter may be missing a proper salutation");
   }

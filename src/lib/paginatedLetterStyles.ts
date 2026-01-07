@@ -274,9 +274,10 @@ export function getUnifiedLetterStyles(
       border-top: 1px solid #333;
     }
 
-    /* === DATE BLOCK === */
+    /* === DATE BLOCK (Single Authoritative Date) === */
+    /* RULE: Exactly one primary date, left-aligned, below letterhead */
     .letter-date {
-      text-align: right;
+      text-align: left;
       margin-bottom: 0.5in;
       color: #000 !important;
     }
