@@ -728,7 +728,7 @@ const CaseDetail = () => {
 
       {/* Tabs - Now at top */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <div className="overflow-x-auto -mx-1 px-1 scrollbar-hide">
+        <div className="overflow-x-auto scrollbar-hide">
           <TabsList className={`
             inline-flex sm:grid w-auto sm:w-full gap-1
             ${isVendor ? 'sm:grid-cols-2' : 'sm:grid-cols-9'}

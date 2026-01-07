@@ -25,7 +25,7 @@ export function AttachmentSelectionBar({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="sticky top-0 z-10 bg-primary text-primary-foreground rounded-lg p-3 shadow-lg animate-in slide-in-from-top-2 duration-200">
+    <div className="sticky top-14 md:top-0 z-10 bg-primary text-primary-foreground rounded-lg p-3 shadow-lg animate-in slide-in-from-top-2 duration-200">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="font-medium">
