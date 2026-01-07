@@ -71,6 +71,14 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
         element.style.overflow = "visible"; // Ensure content isn't clipped
         document.body.appendChild(element);
 
+        // CRITICAL: Wait for browser to compute styles and complete layout
+        // Double requestAnimationFrame ensures the render cycle completes
+        await new Promise<void>(resolve => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve());
+          });
+        });
+
         // Generate PDF as array buffer
         const options = {
           margin: 0,
