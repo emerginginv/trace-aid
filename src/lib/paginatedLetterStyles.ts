@@ -26,7 +26,7 @@
  * The ONLY font stack for letter documents.
  * Used by preview, PDF export, DOCX export, and print.
  */
-export const LETTER_FONT_STACK = "'Times New Roman', Times, Georgia, serif";
+export const LETTER_FONT_STACK = "Arial, Calibri, 'Helvetica Neue', sans-serif";
 
 // ============================================================================
 // PAGE DIMENSION SPECIFICATIONS (96 DPI)
