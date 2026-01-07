@@ -3,9 +3,11 @@ import html2pdf from "html2pdf.js";
 import * as pdfjsLib from "pdfjs-dist";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Configure PDF.js worker using Vite import (matches PdfViewer.tsx pattern)
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Configure PDF.js worker using new URL() pattern (most reliable for Vite)
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 interface PdfReportPreviewProps {
   html: string;
