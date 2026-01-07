@@ -61,15 +61,6 @@ export interface CaseVariables {
   // Case Manager
   caseManager: string;
   caseManagerEmail: string | null;
-
-  // Document generation conditionals
-  feeWaiver: boolean;
-  expedited: boolean;
-
-  // Case-level content (AI-assisted placeholder content)
-  feeWaiverJustification: string | null;
-  expeditedJustification: string | null;
-  purposeOfRequest: string | null;
 }
 
 function formatDate(dateStr: string | null): string | null {
@@ -249,15 +240,6 @@ export async function getCaseVariables(caseId: string): Promise<CaseVariables | 
 
       caseManager,
       caseManagerEmail,
-
-      // Document generation conditionals
-      feeWaiver: (caseData as any).fee_waiver || false,
-      expedited: (caseData as any).expedited || false,
-
-      // Case-level content for AI-assisted placeholder filling
-      feeWaiverJustification: (caseData as any).fee_waiver_justification || null,
-      expeditedJustification: (caseData as any).expedited_justification || null,
-      purposeOfRequest: (caseData as any).purpose_of_request || null,
     };
   } catch (error) {
     console.error("Error fetching case variables:", error);

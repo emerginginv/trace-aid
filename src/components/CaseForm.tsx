@@ -43,7 +43,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
-import { AIDraftField } from "@/components/case-detail/AIDraftField";
 
 const caseSchema = z.object({
   title: z.string().max(200).optional(),
@@ -58,11 +57,6 @@ const caseSchema = z.object({
   budget_dollars: z.coerce.number().min(0).optional().nullable(),
   budget_notes: z.string().max(500).optional().nullable(),
   reference_number: z.string().max(100).optional().nullable(),
-  fee_waiver: z.boolean().default(false),
-  expedited: z.boolean().default(false),
-  fee_waiver_justification: z.string().max(2000).optional().nullable(),
-  expedited_justification: z.string().max(2000).optional().nullable(),
-  purpose_of_request: z.string().max(2000).optional().nullable(),
 });
 
 type CaseFormData = z.infer<typeof caseSchema>;
@@ -85,11 +79,6 @@ interface CaseFormProps {
     budget_dollars?: number | null;
     budget_notes?: string | null;
     reference_number?: string | null;
-    fee_waiver?: boolean;
-    expedited?: boolean;
-    fee_waiver_justification?: string | null;
-    expedited_justification?: string | null;
-    purpose_of_request?: string | null;
   };
 }
 
@@ -129,11 +118,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       budget_dollars: null,
       budget_notes: null,
       reference_number: null,
-      fee_waiver: false,
-      expedited: false,
-      fee_waiver_justification: null,
-      expedited_justification: null,
-      purpose_of_request: null,
     },
   });
 
@@ -159,11 +143,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_dollars: editingCase.budget_dollars ?? null,
           budget_notes: editingCase.budget_notes ?? null,
           reference_number: editingCase.reference_number ?? null,
-          fee_waiver: editingCase.fee_waiver ?? false,
-          expedited: editingCase.expedited ?? false,
-          fee_waiver_justification: editingCase.fee_waiver_justification ?? null,
-          expedited_justification: editingCase.expedited_justification ?? null,
-          purpose_of_request: editingCase.purpose_of_request ?? null,
         });
         // @ts-ignore - case_manager_id and investigator_ids exist on editingCase
         setCaseManagerId(editingCase.case_manager_id || "");
@@ -184,11 +163,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_dollars: null,
           budget_notes: null,
           reference_number: null,
-          fee_waiver: false,
-          expedited: false,
-          fee_waiver_justification: null,
-          expedited_justification: null,
-          purpose_of_request: null,
         });
         setCaseManagerId("");
         setInvestigators([]);
@@ -427,11 +401,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         budget_dollars: data.budget_dollars || null,
         budget_notes: data.budget_notes || null,
         reference_number: data.reference_number || null,
-        fee_waiver: data.fee_waiver,
-        expedited: data.expedited,
-        fee_waiver_justification: data.fee_waiver_justification || null,
-        expedited_justification: data.expedited_justification || null,
-        purpose_of_request: data.purpose_of_request || null,
       };
 
       if (editingCase) {
@@ -903,108 +872,6 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                     <FormMessage />
                   </FormItem>
                 )}
-              />
-            </div>
-
-            {/* Document Options */}
-            <div className="border-t pt-4 space-y-4">
-              <h3 className="text-sm font-semibold">Document Options</h3>
-              <p className="text-xs text-muted-foreground">
-                These options control which sections appear in generated documents (e.g., public records requests)
-              </p>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="fee_waiver"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="cursor-pointer text-sm">
-                          Request Fee Waiver
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground">
-                          Include fee waiver section in documents
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="expedited"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="cursor-pointer text-sm">
-                          Expedited Processing
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground">
-                          Request expedited processing in documents
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* AI-Assisted Justification Fields */}
-              {(form.watch("fee_waiver") || form.watch("expedited")) && (
-                <div className="space-y-4 pt-2">
-                  {form.watch("fee_waiver") && (
-                    <AIDraftField
-                      fieldType="fee_waiver"
-                      value={form.watch("fee_waiver_justification") || ""}
-                      onChange={(v) => form.setValue("fee_waiver_justification", v || null)}
-                      caseContext={{
-                        caseTitle: form.watch("title") || "",
-                        caseNumber: form.watch("case_number") || "",
-                      }}
-                      label="Fee Waiver Justification"
-                      description="This content fills the {{FEE_WAIVER_CONTENT}} placeholder in documents"
-                    />
-                  )}
-
-                  {form.watch("expedited") && (
-                    <AIDraftField
-                      fieldType="expedited"
-                      value={form.watch("expedited_justification") || ""}
-                      onChange={(v) => form.setValue("expedited_justification", v || null)}
-                      caseContext={{
-                        caseTitle: form.watch("title") || "",
-                        caseNumber: form.watch("case_number") || "",
-                      }}
-                      label="Expedited Processing Justification"
-                      description="This content fills the {{EXPEDITED_CONTENT}} placeholder in documents"
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* Purpose of Request - Always Available */}
-              <AIDraftField
-                fieldType="purpose"
-                value={form.watch("purpose_of_request") || ""}
-                onChange={(v) => form.setValue("purpose_of_request", v || null)}
-                caseContext={{
-                  caseTitle: form.watch("title") || "",
-                  caseNumber: form.watch("case_number") || "",
-                }}
-                label="Purpose of Request"
-                description="This content fills the {{PURPOSE_CONTENT}} placeholder in documents"
               />
             </div>
 

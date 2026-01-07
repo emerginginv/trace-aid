@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Copy, LayoutTemplate, Layers, FileType } from "lucide-react";
+import { Plus, Edit, Trash2, Copy, FileText, LayoutTemplate, Layers } from "lucide-react";
+import { TemplateEditor } from "./TemplateEditor";
 import { ReportTemplateEditor } from "./ReportTemplateEditor";
 import {
   type ReportTemplate,
@@ -14,13 +15,23 @@ import {
   duplicateSystemTemplate,
 } from "@/lib/reportTemplates";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { DocumentTemplateList } from "@/components/documents";
+
+interface LegacyTemplate {
+  id: string;
+  name: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export const TemplateList = () => {
   const { organization } = useOrganization();
+  const [legacyTemplates, setLegacyTemplates] = useState<LegacyTemplate[]>([]);
   const [reportTemplates, setReportTemplates] = useState<ReportTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [legacyEditorOpen, setLegacyEditorOpen] = useState(false);
   const [reportEditorOpen, setReportEditorOpen] = useState(false);
+  const [editingLegacyTemplate, setEditingLegacyTemplate] = useState<LegacyTemplate | undefined>();
   const [editingReportTemplateId, setEditingReportTemplateId] = useState<string | undefined>();
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -41,6 +52,16 @@ export const TemplateList = () => {
       if (!user) return;
       setUserId(user.id);
 
+      // Fetch legacy templates
+      const { data: legacyData, error: legacyError } = await supabase
+        .from("case_update_templates")
+        .select("*")
+        .eq("organization_id", organization.id)
+        .order("created_at", { ascending: false });
+
+      if (legacyError) throw legacyError;
+      setLegacyTemplates(legacyData || []);
+
       // Fetch report templates
       const templates = await getOrganizationTemplates(organization.id);
       setReportTemplates(templates);
@@ -54,6 +75,82 @@ export const TemplateList = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Legacy template handlers
+  const handleDeleteLegacy = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this template?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("case_update_templates")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Template deleted successfully",
+      });
+      fetchAllTemplates();
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete template",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDuplicateLegacy = async (template: LegacyTemplate) => {
+    if (!organization?.id) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase
+        .from("case_update_templates")
+        .insert({
+          user_id: user.id,
+          organization_id: organization.id,
+          name: `${template.name} (Copy)`,
+          body: template.body,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Template duplicated successfully",
+      });
+      fetchAllTemplates();
+    } catch (error) {
+      console.error("Error duplicating template:", error);
+      toast({
+        title: "Error",
+        description: "Failed to duplicate template",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditLegacy = (template: LegacyTemplate) => {
+    setEditingLegacyTemplate(template);
+    setLegacyEditorOpen(true);
+  };
+
+  const handleNewLegacy = () => {
+    setEditingLegacyTemplate(undefined);
+    setLegacyEditorOpen(true);
+  };
+
+  const handleLegacyEditorClose = () => {
+    setLegacyEditorOpen(false);
+    setEditingLegacyTemplate(undefined);
+    fetchAllTemplates();
   };
 
   // Report template handlers
@@ -134,19 +231,19 @@ export const TemplateList = () => {
       <Tabs defaultValue="report" className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-base sm:text-lg font-semibold">Templates</h3>
+            <h3 className="text-base sm:text-lg font-semibold">Report Templates</h3>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Create and manage report and document templates
+              Create and manage structured report templates
             </p>
           </div>
           <TabsList>
             <TabsTrigger value="report" className="gap-1">
               <LayoutTemplate className="h-4 w-4" />
-              <span className="hidden sm:inline">Reports</span>
+              <span className="hidden sm:inline">Structured</span>
             </TabsTrigger>
-            <TabsTrigger value="documents" className="gap-1">
-              <FileType className="h-4 w-4" />
-              <span className="hidden sm:inline">Documents</span>
+            <TabsTrigger value="legacy" className="gap-1">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Legacy</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -286,18 +383,94 @@ export const TemplateList = () => {
           </div>
         </TabsContent>
 
-        {/* Letters & Documents */}
-        <TabsContent value="documents">
-          <DocumentTemplateList />
+        {/* Legacy Templates */}
+        <TabsContent value="legacy" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Simple HTML templates for case updates
+            </p>
+            <Button onClick={handleNewLegacy} size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-1" />
+              New Legacy Template
+            </Button>
+          </div>
+
+          {legacyTemplates.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <p className="text-sm text-muted-foreground mb-4">No legacy templates</p>
+                <Button onClick={handleNewLegacy} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Legacy Template
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {legacyTemplates.map((template) => (
+                <Card key={template.id}>
+                  <CardHeader className="p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-sm break-words">{template.name}</CardTitle>
+                        <CardDescription className="text-xs">
+                          Updated {new Date(template.updated_at).toLocaleDateString()}
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditLegacy(template)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDuplicateLegacy(template)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteLegacy(template.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="bg-muted p-3 rounded-md overflow-x-auto">
+                      <pre className="text-xs whitespace-pre-wrap break-words">
+                        {template.body.substring(0, 200)}
+                        {template.body.length > 200 ? "..." : ""}
+                      </pre>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
-      {/* Report Template Editor */}
+      {/* Editors */}
+      <TemplateEditor
+        open={legacyEditorOpen}
+        onOpenChange={setLegacyEditorOpen}
+        onSuccess={handleLegacyEditorClose}
+        template={editingLegacyTemplate}
+      />
+
       <ReportTemplateEditor
         open={reportEditorOpen}
         onOpenChange={setReportEditorOpen}
-        templateId={editingReportTemplateId}
         onSuccess={handleReportEditorClose}
+        templateId={editingReportTemplateId}
       />
     </div>
   );

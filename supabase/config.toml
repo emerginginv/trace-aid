@@ -1,19 +1,7 @@
 project_id = "uxmezklevgkqelahibqy"
 
-[functions.generate-custom-letter]
-verify_jwt = false
-
 [functions.execute-import]
 verify_jwt = true
 
 [functions.access-attachment]
-verify_jwt = false
-
-[functions.generate-foia-letter]
-verify_jwt = false
-
-[functions.generate-nda]
-verify_jwt = false
-
-[functions.draft-case-content]
 verify_jwt = false
