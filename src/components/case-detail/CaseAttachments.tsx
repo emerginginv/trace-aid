@@ -131,6 +131,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const [editingFolder, setEditingFolder] = useState<AttachmentFolder | null>(null);
   const [moveToFolderOpen, setMoveToFolderOpen] = useState(false);
   const [folderPanelCollapsed, setFolderPanelCollapsed] = useState(false);
+  const [singleMoveAttachment, setSingleMoveAttachment] = useState<Attachment | null>(null);
   
   // File Blob state (to bypass blocked signed URLs for all file types)
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
@@ -923,7 +924,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
 
   return (
     <TooltipProvider>
-      <div className="flex gap-0 -mx-4 sm:-mx-6">
+      <div className="flex gap-0">
         {/* Folder Panel */}
         {organization?.id && (
           <FolderPanel
@@ -963,6 +964,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
           onEmailAttachments={() => setEmailDialogOpen(true)}
           onRevokeAccess={handleBulkRevoke}
           onClearSelection={clearSelection}
+          onMoveToFolder={() => setMoveToFolderOpen(true)}
         />
         
         {/* Confirmation dialog for single revoke */}
@@ -1302,6 +1304,16 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                               Edit
                             </DropdownMenuItem>
                           )}
+                          {canEditAttachments && !isClosedCase && (
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              setSingleMoveAttachment(attachment);
+                              setMoveToFolderOpen(true);
+                            }}>
+                              <FolderInput className="h-4 w-4 mr-2" />
+                              Move to Folder
+                            </DropdownMenuItem>
+                          )}
                           {canEditAttachments && (
                             <DropdownMenuItem onClick={() => handleShare(attachment)}>
                               <Share2 className="h-4 w-4 mr-2" />
@@ -1468,6 +1480,26 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                           >
                             <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
+                        )}
+                        {canEditAttachments && !isClosedCase && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSingleMoveAttachment(attachment);
+                                  setMoveToFolderOpen(true);
+                                }}
+                                className="h-7 w-7 sm:h-8 sm:w-8"
+                                title="Move to Folder"
+                              >
+                                <FolderInput className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Move to folder</TooltipContent>
+                          </Tooltip>
                         )}
                         {canEditAttachments && (
                           <Button
@@ -1676,12 +1708,16 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
 
         <MoveToFolderDialog
           open={moveToFolderOpen}
-          onOpenChange={setMoveToFolderOpen}
-          attachmentIds={Array.from(selectedIds)}
+          onOpenChange={(open) => {
+            setMoveToFolderOpen(open);
+            if (!open) setSingleMoveAttachment(null);
+          }}
+          attachmentIds={singleMoveAttachment ? [singleMoveAttachment.id] : Array.from(selectedIds)}
           folders={folders}
           onMoveComplete={() => {
             fetchAttachments();
             clearSelection();
+            setSingleMoveAttachment(null);
           }}
           onCreateFolder={() => setCreateFolderOpen(true)}
         />
