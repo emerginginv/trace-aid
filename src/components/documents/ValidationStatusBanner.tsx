@@ -1,12 +1,19 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
-import type { PreGenerationValidation } from "@/lib/letterDocumentEngine";
+import type { PreGenerationValidation, PreGenerationCaseValidation } from "@/lib/letterDocumentEngine";
 
 interface ValidationStatusBannerProps {
-  validation: PreGenerationValidation;
+  validation: PreGenerationValidation | PreGenerationCaseValidation;
+}
+
+// Type guard to check if validation is case-specific
+function isCaseValidation(validation: PreGenerationValidation | PreGenerationCaseValidation): validation is PreGenerationCaseValidation {
+  return 'missingCaseFields' in validation;
 }
 
 export function ValidationStatusBanner({ validation }: ValidationStatusBannerProps) {
+  const hasMissingFields = isCaseValidation(validation) && validation.missingCaseFields.length > 0;
+
   if (validation.isValid && validation.warnings.length === 0) {
     return (
       <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800">
@@ -23,14 +30,19 @@ export function ValidationStatusBanner({ validation }: ValidationStatusBannerPro
     return (
       <Alert variant="destructive">
         <XCircle className="h-4 w-4" />
-        <AlertTitle>Export Blocked</AlertTitle>
+        <AlertTitle>Generation Blocked</AlertTitle>
         <AlertDescription>
-          <p className="mb-2">The following issues must be fixed before export:</p>
+          <p className="mb-2">The following issues must be fixed before generating:</p>
           <ul className="list-disc list-inside space-y-1">
             {validation.errors.map((error, i) => (
               <li key={i}>{error}</li>
             ))}
           </ul>
+          {hasMissingFields && (
+            <p className="mt-3 text-sm font-medium">
+              💡 Tip: Add missing justifications in the case's Document Options section (Case Settings tab).
+            </p>
+          )}
         </AlertDescription>
       </Alert>
     );
