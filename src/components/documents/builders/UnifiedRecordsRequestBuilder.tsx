@@ -42,6 +42,7 @@ import {
   wrapLetterWithBranding
 } from "@/lib/letterBranding";
 import { getOrganizationProfile } from "@/lib/organizationProfile";
+import { sanitizeAiContent } from "@/lib/aiContentSanitizer";
 
 interface UnifiedRecordsRequestBuilderProps {
   organizationId: string;
@@ -201,7 +202,12 @@ export function UnifiedRecordsRequestBuilder({
       if (error) throw error;
 
       if (data?.html) {
-        setGeneratedHtml(data.html);
+        // Sanitize AI-generated FOIA letter content
+        const { clean, violations, wasModified } = sanitizeAiContent(data.html);
+        if (violations.length > 0) {
+          console.warn('AI content violations in FOIA letter:', violations);
+        }
+        setGeneratedHtml(clean);
         toast.success("Letter generated successfully!");
       } else {
         throw new Error("No content generated");

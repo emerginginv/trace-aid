@@ -28,6 +28,7 @@ import {
 } from "@/lib/letterBranding";
 import { getOrganizationProfile } from "@/lib/organizationProfile";
 import { useQuery } from "@tanstack/react-query";
+import { sanitizeAiContent } from "@/lib/aiContentSanitizer";
 
 interface NDABuilderProps {
   organizationId: string;
@@ -132,7 +133,12 @@ export function NDABuilder({ organizationId, onSave, onCancel }: NDABuilderProps
       if (error) throw error;
 
       if (data?.html) {
-        setGeneratedHtml(data.html);
+        // Sanitize AI-generated NDA content
+        const { clean, violations, wasModified } = sanitizeAiContent(data.html);
+        if (violations.length > 0) {
+          console.warn('AI content violations in NDA:', violations);
+        }
+        setGeneratedHtml(clean);
         toast.success('NDA generated successfully');
       } else {
         throw new Error('No content received from AI');

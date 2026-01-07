@@ -23,6 +23,7 @@ import {
 import { getOrganizationProfile, type OrganizationProfile } from "@/lib/organizationProfile";
 import { useQuery } from "@tanstack/react-query";
 import { extractCitations, detectLegalLanguageInCustomLetter } from "@/lib/statuteValidator";
+import { sanitizeAiContent } from "@/lib/aiContentSanitizer";
 
 interface CustomAIBuilderProps {
   organizationId: string;
@@ -125,10 +126,18 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
       }
 
       if (response.data?.sections) {
-        const newSections = response.data.sections.map((s: LetterSection) => ({
-          ...s,
-          userEdited: false,
-        }));
+        // Sanitize all AI-generated sections before using them
+        const newSections = response.data.sections.map((s: LetterSection) => {
+          const { clean, violations, wasModified } = sanitizeAiContent(s.content);
+          if (violations.length > 0) {
+            console.warn(`AI content violations in section ${s.id}:`, violations);
+          }
+          return {
+            ...s,
+            content: clean,
+            userEdited: false,
+          };
+        });
         setSections(newSections);
         
         // Post-generation validation for legal content
@@ -189,9 +198,14 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
       }
 
       if (response.data?.section) {
+        // Sanitize regenerated section content
+        const { clean, violations } = sanitizeAiContent(response.data.section.content);
+        if (violations.length > 0) {
+          console.warn(`AI content violations in regenerated section:`, violations);
+        }
         setSections(prev => prev.map(s => 
           s.id === sectionId 
-            ? { ...response.data.section, userEdited: false }
+            ? { ...response.data.section, content: clean, userEdited: false }
             : s
         ));
         toast.success('Section regenerated');

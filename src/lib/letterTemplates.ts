@@ -288,13 +288,42 @@ export interface LetterTemplate {
 
 /**
  * Constraints for AI-editable sections
+ * 
+ * IMPORTANT: AI-generated content must:
+ * 1. Insert text inside predefined HTML regions only
+ * 2. Respect existing section structure
+ * 3. Never contain raw layout or styling instructions
+ * 4. Never alter page sizing, margins, or pagination rules
  */
 export interface AiEditConstraints {
   maxParagraphs: number;
   allowedTags: string[];
   forbiddenPatterns: string[];
-  preserveBindings: string[];  // Placeholders AI must not remove
+  forbiddenCssProperties: string[];   // CSS properties that affect layout
+  forbiddenAttributes: string[];       // HTML attributes to strip
+  preserveBindings: string[];          // Placeholders AI must not remove
+  maxContentLength?: number;           // Maximum content length in characters
 }
+
+/**
+ * Default forbidden CSS properties that affect layout/pagination
+ */
+export const FORBIDDEN_CSS_PROPERTIES = [
+  'position', 'float', 'display',
+  'margin', 'padding', 'width', 'height',
+  'max-width', 'max-height', 'min-width', 'min-height',
+  'page-break', 'break-before', 'break-after', 'break-inside',
+  'font-size', 'line-height', 'font-family',
+  'top', 'left', 'right', 'bottom',
+  'grid', 'flex', 'column', 'columns', 'transform', 'z-index'
+];
+
+/**
+ * Default forbidden HTML attributes
+ */
+export const FORBIDDEN_ATTRIBUTES = [
+  'style', 'class', 'onclick', 'onload', 'onerror', 'onmouseover'
+];
 
 /**
  * Get AI-editable content from a template with constraints
@@ -313,16 +342,18 @@ export function getAiEditableContent(template: LetterTemplate): {
       currentHtml: s.html,
       constraints: {
         maxParagraphs: 20,
-        allowedTags: ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br', 'span', 'div'],
+        allowedTags: ['p', 'strong', 'em', 'b', 'i', 'u', 'ul', 'ol', 'li', 'br', 'span', 'div'],
         forbiddenPatterns: [
           '<style',
           '<script',
-          'position:',
-          'float:',
-          'display: flex',
-          'display: grid',
+          '@page',
+          '@media print',
+          'page-break',
         ],
+        forbiddenCssProperties: FORBIDDEN_CSS_PROPERTIES,
+        forbiddenAttributes: FORBIDDEN_ATTRIBUTES,
         preserveBindings: s.dataBindings.map(b => b.placeholder),
+        maxContentLength: 50000,
       },
     }));
 }
