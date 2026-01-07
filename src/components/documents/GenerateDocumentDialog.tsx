@@ -35,6 +35,7 @@ import {
 } from "@/lib/documentEngine";
 import { CaseVariables } from "@/lib/caseVariables";
 import { getOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
+import { getLetterStyles } from "@/lib/letterDocumentEngine";
 
 interface GenerateDocumentDialogProps {
   open: boolean;
@@ -46,15 +47,35 @@ interface GenerateDocumentDialogProps {
 
 const ZOOM_LEVELS = [50, 75, 100, 125, 150];
 
-// Styles that match the final document output
-const documentPreviewStyles: React.CSSProperties = {
-  fontFamily: "'Times New Roman', Times, Georgia, serif",
-  fontSize: '12pt',
-  lineHeight: 1.6,
-  color: '#000',
-  backgroundColor: '#fff',
-  padding: '1.5rem',
-};
+// Build styled preview HTML with embedded letter styles
+function buildStyledPreviewHtml(content: string): string {
+  const letterStyles = getLetterStyles();
+  // Add additional CSS reset to ensure dark mode doesn't affect colors
+  const resetStyles = `
+    .document-preview-root,
+    .document-preview-root * {
+      color: #000 !important;
+      background-color: transparent;
+    }
+    .document-preview-root {
+      background-color: #fff !important;
+      color-scheme: light;
+    }
+    .document-preview-root .letter-footer {
+      color: #666 !important;
+    }
+    .document-preview-root .org-info {
+      color: #333 !important;
+    }
+  `;
+  
+  return `
+    <style>${letterStyles}${resetStyles}</style>
+    <div class="document-preview-root letter-document" style="padding: 1in; max-width: none; margin: 0;">
+      ${content}
+    </div>
+  `;
+}
 
 export function GenerateDocumentDialog({
   open,
@@ -261,10 +282,11 @@ export function GenerateDocumentDialog({
                     </div>
                     
                     {preview ? (
-                      <ScrollArea className="h-[300px] border rounded-md bg-white">
+                      <ScrollArea className="h-[300px] border rounded-md">
                         <div
-                          style={documentPreviewStyles}
-                          dangerouslySetInnerHTML={{ __html: preview }}
+                          className="bg-white"
+                          style={{ colorScheme: 'light' }}
+                          dangerouslySetInnerHTML={{ __html: buildStyledPreviewHtml(preview) }}
                         />
                       </ScrollArea>
                     ) : (
@@ -353,22 +375,18 @@ export function GenerateDocumentDialog({
           <ScrollArea className="flex-1 bg-muted/30">
             <div className="flex justify-center p-8">
               <div
-                className="bg-white shadow-lg border"
+                className="shadow-xl"
                 style={{
                   width: `${8.5 * 96}px`, // 8.5 inches at 96 DPI
                   minHeight: `${11 * 96}px`, // 11 inches at 96 DPI
                   transform: `scale(${zoomLevel / 100})`,
                   transformOrigin: 'top center',
+                  colorScheme: 'light',
+                  backgroundColor: '#fff',
+                  border: '1px solid #ccc',
                 }}
-              >
-                <div
-                  style={{
-                    ...documentPreviewStyles,
-                    padding: '1in',
-                  }}
-                  dangerouslySetInnerHTML={{ __html: preview || '' }}
-                />
-              </div>
+                dangerouslySetInnerHTML={{ __html: buildStyledPreviewHtml(preview || '') }}
+              />
             </div>
           </ScrollArea>
         </DialogContent>
