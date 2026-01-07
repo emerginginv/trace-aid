@@ -59,25 +59,27 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
 
       try {
         // Create a temporary element with the HTML content
-        // Must have explicit dimensions for html2pdf to paginate correctly
+        // CRITICAL: Use visible-but-hidden approach instead of off-screen positioning
+        // html2canvas fails with off-screen elements in many browsers
         const element = document.createElement("div");
         element.innerHTML = htmlContent;
-        element.style.position = "absolute";
-        element.style.left = "-9999px";
+        element.style.position = "fixed";
+        element.style.left = "0";
         element.style.top = "0";
         element.style.width = "8.5in"; // Letter page width for accurate pagination
         element.style.minHeight = "11in"; // Letter page height
         element.style.background = "white";
-        element.style.overflow = "visible"; // Ensure content isn't clipped
-        // CRITICAL: Explicit visibility enforcement for html2canvas
+        element.style.overflow = "visible";
+        element.style.zIndex = "-9999"; // Behind everything
+        element.style.pointerEvents = "none"; // Non-interactive
+        element.style.opacity = "0.01"; // Nearly invisible but still rendered
         element.style.visibility = "visible";
-        element.style.opacity = "1";
         element.style.display = "block";
         element.style.color = "#000000";
         element.style.fontFamily = "Georgia, 'Times New Roman', serif";
         document.body.appendChild(element);
 
-        // CRITICAL: Force the cover page to auto-height for capture
+        // Force all cover page elements to have explicit styles
         const coverPage = element.querySelector('.report-cover-page') as HTMLElement;
         if (coverPage) {
           coverPage.style.height = 'auto';
@@ -89,12 +91,36 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
           coverPage.style.padding = '72px';
         }
 
-        // CRITICAL: Wait for browser to compute styles and complete layout
-        // Double requestAnimationFrame ensures the render cycle completes
+        // Wait for images and fonts to load before capture
         await new Promise<void>(resolve => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve());
+          const images = element.querySelectorAll('img');
+          let loadedCount = 0;
+          const totalImages = images.length;
+          
+          if (totalImages === 0) {
+            // No images, just wait for layout
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+            return;
+          }
+          
+          const checkComplete = () => {
+            loadedCount++;
+            if (loadedCount >= totalImages) {
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+            }
+          };
+          
+          images.forEach(img => {
+            if (img.complete) {
+              checkComplete();
+            } else {
+              img.onload = checkComplete;
+              img.onerror = checkComplete; // Still resolve even if image fails
+            }
           });
+          
+          // Timeout fallback after 3 seconds
+          setTimeout(() => resolve(), 3000);
         });
 
         // Generate PDF as array buffer
