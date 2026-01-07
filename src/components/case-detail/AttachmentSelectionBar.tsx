@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { X, Share2, Mail, ShieldOff } from "lucide-react";
+import { X, Share2, Mail, ShieldOff, FolderInput } from "lucide-react";
 
 interface AttachmentSelectionBarProps {
   selectedCount: number;
@@ -9,6 +9,7 @@ interface AttachmentSelectionBarProps {
   onEmailAttachments: () => void;
   onRevokeAccess: () => void;
   onClearSelection: () => void;
+  onMoveToFolder?: () => void;
 }
 
 export function AttachmentSelectionBar({
@@ -19,6 +20,7 @@ export function AttachmentSelectionBar({
   onEmailAttachments,
   onRevokeAccess,
   onClearSelection,
+  onMoveToFolder,
 }: AttachmentSelectionBarProps) {
   if (selectedCount === 0) return null;
 
@@ -34,6 +36,19 @@ export function AttachmentSelectionBar({
         <div className="flex flex-wrap items-center gap-2">
           {canEditAttachments && (
             <>
+              {onMoveToFolder && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onMoveToFolder}
+                  className="gap-1.5"
+                >
+                  <FolderInput className="h-4 w-4" />
+                  <span className="hidden sm:inline">Move to Folder</span>
+                  <span className="sm:hidden">Move</span>
+                </Button>
+              )}
+              
               <Button
                 variant="secondary"
                 size="sm"
