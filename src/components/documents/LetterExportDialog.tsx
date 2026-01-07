@@ -1,4 +1,13 @@
-// Letter Export Dialog - PDF/DOCX export with proper formatting
+/**
+ * LETTER EXPORT DIALOG
+ * 
+ * NON-NEGOTIABLE: All exports derive from letterDocument.html
+ * 
+ * The PDF, DOCX, and Print functions receive the SAME HTML
+ * that was displayed in the preview. No separate layout engine.
+ * 
+ * Page dimensions are defined in paginatedLetterStyles.ts
+ */
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +32,8 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { toast } from "sonner";
-import { type LetterDocument, getPdfExportOptions } from "@/lib/letterDocumentEngine";
+import { type LetterDocument } from "@/lib/letterDocumentEngine";
+import { getPdfExportOptions, PAGE_SPECS } from "@/lib/paginatedLetterStyles";
 
 interface LetterExportDialogProps {
   open: boolean;
@@ -294,7 +304,7 @@ export function LetterExportDialog({
             </div>
           )}
 
-          {/* Page Info */}
+          {/* Page Info - Uses PAGE_SPECS for consistent dimensions */}
           <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
             <div className="flex justify-between">
               <span>Estimated pages:</span>
@@ -302,7 +312,9 @@ export function LetterExportDialog({
             </div>
             <div className="flex justify-between mt-1">
               <span>Page size:</span>
-              <span className="font-medium">Letter (8.5" × 11")</span>
+              <span className="font-medium">
+                {PAGE_SPECS[letterDocument.pageSettings.size].name} ({PAGE_SPECS[letterDocument.pageSettings.size].width} × {PAGE_SPECS[letterDocument.pageSettings.size].height})
+              </span>
             </div>
           </div>
         </div>

@@ -1,12 +1,87 @@
-// Paged media styles for print-accurate letter preview
-// These styles work with Paged.js to render true page breaks
+/**
+ * PRINT-ACCURATE PAGINATION STYLES
+ * 
+ * SINGLE SOURCE OF TRUTH for page dimensions and rendering.
+ * These constants and styles are used by:
+ * - PaginatedDocumentViewer (preview)
+ * - PDF export (html2pdf.js)
+ * - DOCX export
+ * - Print
+ * 
+ * NON-NEGOTIABLE: Preview and export MUST use identical dimensions.
+ */
 
-export function getPagedMediaStyles(): string {
+// ============================================================================
+// PAGE DIMENSION SPECIFICATIONS (96 DPI)
+// ============================================================================
+
+export type PageSize = 'letter' | 'a4';
+
+export interface PageSpec {
+  name: string;
+  width: string;
+  height: string;
+  widthPx: number;
+  heightPx: number;
+  margins: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+  usableWidthPx: number;
+  usableHeightPx: number;
+}
+
+/**
+ * Exact page specifications at 96 DPI
+ * These values are used for both preview rendering and PDF export
+ */
+export const PAGE_SPECS: Record<PageSize, PageSpec> = {
+  letter: {
+    name: 'US Letter',
+    width: '8.5in',
+    height: '11in',
+    widthPx: 816,       // 8.5 * 96
+    heightPx: 1056,     // 11 * 96
+    margins: {
+      top: 96,          // 1in = 96px
+      right: 96,
+      bottom: 96,
+      left: 96,
+    },
+    usableWidthPx: 624,  // 6.5in = 624px
+    usableHeightPx: 864, // 9in = 864px
+  },
+  a4: {
+    name: 'A4',
+    width: '210mm',
+    height: '297mm',
+    widthPx: 794,       // 210mm at 96 DPI
+    heightPx: 1123,     // 297mm at 96 DPI
+    margins: {
+      top: 95,          // ~25mm
+      right: 95,
+      bottom: 95,
+      left: 95,
+    },
+    usableWidthPx: 604,
+    usableHeightPx: 933,
+  },
+};
+
+// ============================================================================
+// PAGED MEDIA STYLES (for Paged.js rendering)
+// ============================================================================
+
+export function getPagedMediaStyles(pageSize: PageSize = 'letter'): string {
+  const spec = PAGE_SPECS[pageSize];
+  
   return `
     /* === PAGE SETUP === */
     @page {
-      size: 8.5in 11in;
-      margin: 1in;
+      size: ${spec.width} ${spec.height};
+      margin: ${spec.margins.top / 96}in ${spec.margins.right / 96}in ${spec.margins.bottom / 96}in ${spec.margins.left / 96}in;
     }
 
     @page:first {
@@ -203,38 +278,55 @@ export function getPagedMediaStyles(): string {
   `;
 }
 
-// Additional viewer-specific styles for displaying pages
-export function getPageViewerStyles(): string {
+// ============================================================================
+// PAGE VIEWER STYLES (for displaying pages in preview)
+// ============================================================================
+
+export function getPageViewerStyles(pageSize: PageSize = 'letter'): string {
+  const spec = PAGE_SPECS[pageSize];
+  
   return `
-    /* === PAGED.JS PAGE STYLES === */
+    /* === PAGED.JS PAGE CONTAINER === */
     .pagedjs_pages {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 32px;
-      padding: 32px;
+      gap: 40px;
+      padding: 40px;
+      background: #525659;
     }
 
+    /* === INDIVIDUAL PAGE STYLING === */
     .pagedjs_page {
+      width: ${spec.widthPx}px !important;
+      min-height: ${spec.heightPx}px !important;
+      max-width: ${spec.widthPx}px !important;
       background: white !important;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-      border: 1px solid #ddd;
+      box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+      border-radius: 2px;
       position: relative;
     }
 
-    /* Page number display */
+    /* === PAGE NUMBER BADGE === */
     .pagedjs_page::after {
       content: attr(data-page-number);
       position: absolute;
-      bottom: -24px;
+      bottom: -32px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 12px;
-      color: #666;
+      color: #9ca3af;
       font-family: system-ui, -apple-system, sans-serif;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 12px;
+      border-radius: 4px;
+      white-space: nowrap;
     }
 
-    /* Ensure content within pages is visible */
+    /* === PAGE CONTENT AREA === */
     .pagedjs_page_content {
       color: #000 !important;
       background: white !important;
@@ -244,10 +336,48 @@ export function getPageViewerStyles(): string {
       color: inherit;
     }
 
-    /* Reset any dark mode interference */
+    /* === RESET DARK MODE INTERFERENCE === */
     .pagedjs_page,
     .pagedjs_page * {
       color-scheme: light;
     }
+
+    /* === PAGE MARGIN BOXES (for running headers/footers) === */
+    .pagedjs_margin-top-center,
+    .pagedjs_margin-bottom-center {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 10pt;
+      color: #666;
+    }
   `;
+}
+
+// ============================================================================
+// PDF EXPORT OPTIONS (uses same PAGE_SPECS for consistency)
+// ============================================================================
+
+export function getPdfExportOptions(filename: string, pageSize: PageSize = 'letter') {
+  const spec = PAGE_SPECS[pageSize];
+  
+  return {
+    margin: 0, // Margins are in the HTML document itself
+    filename: `${filename}.pdf`,
+    image: { type: 'jpeg' as const, quality: 0.98 },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      letterRendering: true,
+      logging: false,
+      width: spec.widthPx,
+    },
+    jsPDF: {
+      unit: 'in' as const,
+      format: pageSize as 'letter' | 'a4',
+      orientation: 'portrait' as const,
+    },
+    pagebreak: {
+      mode: ['avoid-all', 'css', 'legacy'] as const,
+      avoid: ['.avoid-break', '.letter-signature', '.nda-clause'],
+    },
+  };
 }
