@@ -1,5 +1,15 @@
-// Letter Preview Component - Shows exactly what will be exported
-// Uses PaginatedDocumentViewer for true print-accurate pagination
+/**
+ * LETTER PREVIEW COMPONENT
+ * 
+ * ══════════════════════════════════════════════════════════════════════════════
+ * Shows exactly what will be exported - TRUE WYSIWYG
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Uses PaginatedDocumentViewer for print-accurate pagination.
+ * All styling comes from getUnifiedLetterStyles() - SINGLE SOURCE OF TRUTH.
+ * 
+ * If preview ≠ export, it is a DEFECT.
+ */
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,10 +58,12 @@ export function LetterPreview({
     );
   };
 
-  // Extract the inner content from the letter document HTML
-  // The letterDocument.html includes <style> and wrapper, we need the content
+  /**
+   * Extract body content from the letter document HTML.
+   * The letterDocument.html includes <style> wrapper - we extract just the content
+   * since PaginatedDocumentViewer applies styles via getUnifiedLetterStyles().
+   */
   const extractContent = () => {
-    // Remove the style tag and extract just the letter-document content
     const html = letterDocument.html;
     const match = html.match(/<div class="letter-document">([\s\S]*)<\/div>\s*$/);
     if (match) {
@@ -98,11 +110,12 @@ export function LetterPreview({
         </div>
       )}
 
-      {/* Paginated Preview */}
+      {/* Paginated Preview - Uses unified styles via PaginatedDocumentViewer */}
       <div className="flex-1 overflow-hidden">
         <PaginatedDocumentViewer
           content={extractContent()}
           title={title}
+          pageSize={letterDocument.pageSettings.size}
           showHeader={!validationResult && !onExport}
         />
       </div>

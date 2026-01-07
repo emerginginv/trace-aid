@@ -1,12 +1,17 @@
 /**
  * LETTER EXPORT DIALOG
  * 
- * NON-NEGOTIABLE: All exports derive from letterDocument.html
+ * ══════════════════════════════════════════════════════════════════════════════
+ * NON-NEGOTIABLE: All exports use IDENTICAL styles from getUnifiedLetterStyles()
+ * ══════════════════════════════════════════════════════════════════════════════
  * 
- * The PDF, DOCX, and Print functions receive the SAME HTML
- * that was displayed in the preview. No separate layout engine.
+ * The PDF, DOCX, and Print functions use the SAME:
+ * - HTML content from letterDocument.html
+ * - CSS styles from getUnifiedLetterStyles()
+ * - Font definitions from LETTER_FONT_STACK
+ * - Page dimensions from PAGE_SPECS
  * 
- * Page dimensions are defined in paginatedLetterStyles.ts
+ * If preview ≠ export, it is a DEFECT.
  */
 
 import { useState } from "react";
@@ -33,7 +38,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { type LetterDocument } from "@/lib/letterDocumentEngine";
-import { getPdfExportOptions, PAGE_SPECS } from "@/lib/paginatedLetterStyles";
+import { 
+  getPdfExportOptions, 
+  PAGE_SPECS, 
+  getUnifiedLetterStyles,
+  LETTER_FONT_STACK 
+} from "@/lib/paginatedLetterStyles";
 
 interface LetterExportDialogProps {
   open: boolean;
@@ -43,6 +53,18 @@ interface LetterExportDialogProps {
 }
 
 type ExportFormat = 'pdf' | 'docx' | 'print';
+
+/**
+ * Extract body content from letter HTML (without embedded styles)
+ */
+function extractBodyContent(html: string): string {
+  const match = html.match(/<div class="letter-document">([\s\S]*)<\/div>\s*$/);
+  if (match) {
+    return match[1];
+  }
+  // Fallback: remove style tags
+  return html.replace(/<style>[\s\S]*?<\/style>/g, '');
+}
 
 export function LetterExportDialog({
   open,
@@ -68,15 +90,26 @@ export function LetterExportDialog({
     try {
       const html2pdf = (await import('html2pdf.js')).default;
       
-      // Create a container for PDF generation
+      // Get UNIFIED styles - same as preview
+      const styles = getUnifiedLetterStyles(letterDocument.pageSettings.size, {
+        draftMode: includeDraftWatermark,
+        forExport: true
+      });
+      
+      // Create container with SAME HTML and styles as preview
       const container = document.createElement('div');
-      container.innerHTML = letterDocument.html;
+      container.innerHTML = `
+        <style>${styles}</style>
+        <div class="letter-document">
+          ${extractBodyContent(letterDocument.html)}
+        </div>
+      `;
       container.style.position = 'absolute';
       container.style.left = '-9999px';
       container.style.top = '0';
       document.body.appendChild(container);
 
-      const options = getPdfExportOptions(sanitizeFilename(filename));
+      const options = getPdfExportOptions(sanitizeFilename(filename), letterDocument.pageSettings.size);
       
       await html2pdf().set(options).from(container).save();
       
@@ -100,8 +133,17 @@ export function LetterExportDialog({
   const handleExportDocx = async () => {
     setIsExporting(true);
     try {
-      // For DOCX, we'll export a well-formatted HTML that Word can open
-      // This preserves formatting better than plain text
+      const pageSize = letterDocument.pageSettings.size;
+      const spec = PAGE_SPECS[pageSize];
+      
+      // Use SAME unified styles as preview and PDF
+      const styles = getUnifiedLetterStyles(pageSize, {
+        draftMode: includeDraftWatermark,
+        forExport: true
+      });
+      
+      // For DOCX, export well-formatted HTML that Word can open
+      // Uses SAME font stack and page settings as preview/PDF
       const htmlContent = `
         <!DOCTYPE html>
         <html xmlns:o="urn:schemas-microsoft-com:office:office" 
@@ -120,24 +162,55 @@ export function LetterExportDialog({
           </xml>
           <![endif]-->
           <style>
-            @page { size: letter; margin: 1in; }
+            /* Page setup - matches PAGE_SPECS */
+            @page { 
+              size: ${spec.width} ${spec.height}; 
+              margin: ${spec.margins.top / 96}in ${spec.margins.right / 96}in ${spec.margins.bottom / 96}in ${spec.margins.left / 96}in; 
+            }
+            
+            /* Base styles - uses SAME font stack as preview */
             body { 
-              font-family: 'Times New Roman', Times, serif; 
+              font-family: ${LETTER_FONT_STACK}; 
               font-size: 12pt; 
               line-height: 1.5;
               margin: 0;
               padding: 0;
             }
-            .letter-document { max-width: 6.5in; }
-            .letter-letterhead { text-align: center; margin-bottom: 36pt; }
-            .letter-date { text-align: right; margin-bottom: 24pt; }
-            .letter-body p { margin-bottom: 12pt; text-align: justify; }
-            .letter-signature { margin-top: 48pt; }
-            .signature-line { border-bottom: 1px solid black; width: 3in; margin-bottom: 6pt; height: 24pt; }
+            
+            /* Letter document styles - simplified for Word compatibility */
+            .letter-document { max-width: ${spec.usableWidthPx / 96}in; }
+            .letter-letterhead { text-align: center; margin-bottom: 0.75in; }
+            .letter-letterhead .org-name { font-weight: bold; font-size: 16pt; margin-bottom: 4px; }
+            .letter-letterhead .org-info { font-size: 10pt; color: #333; line-height: 1.4; }
+            .letter-date { text-align: right; margin-bottom: 0.5in; }
+            .letter-recipient { margin-bottom: 0.25in; line-height: 1.4; }
+            .letter-body { text-align: justify; }
+            .letter-body p { margin-bottom: 1em; text-indent: 0; }
+            .letter-signature { margin-top: 1in; page-break-inside: avoid; }
+            .signature-line { border-bottom: 1px solid black; width: 3in; margin-bottom: 0.25em; height: 0.5in; }
+            .signature-name { font-weight: bold; }
+            .signature-title { font-style: italic; }
+            .letter-footer { margin-top: 1in; padding-top: 0.5em; border-top: 1px solid #ccc; font-size: 9pt; color: #666; text-align: center; }
+            
+            ${includeDraftWatermark ? `
+            /* Draft watermark */
+            .letter-document::before {
+              content: "DRAFT";
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-45deg);
+              font-size: 120pt;
+              color: rgba(200, 200, 200, 0.3);
+              pointer-events: none;
+            }
+            ` : ''}
           </style>
         </head>
         <body>
-          ${letterDocument.html}
+          <div class="letter-document">
+            ${extractBodyContent(letterDocument.html)}
+          </div>
         </body>
         </html>
       `;
@@ -171,6 +244,12 @@ export function LetterExportDialog({
   };
 
   const handlePrint = () => {
+    // Get UNIFIED styles - same as preview and PDF
+    const styles = getUnifiedLetterStyles(letterDocument.pageSettings.size, {
+      draftMode: includeDraftWatermark,
+      forExport: true
+    });
+    
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
@@ -178,15 +257,12 @@ export function LetterExportDialog({
         <html>
         <head>
           <title>${sanitizeFilename(filename)}</title>
-          <style>
-            @page { size: letter; margin: 1in; }
-            @media print {
-              body { margin: 0; padding: 0; }
-            }
-          </style>
+          <style>${styles}</style>
         </head>
         <body>
-          ${letterDocument.html}
+          <div class="letter-document">
+            ${extractBodyContent(letterDocument.html)}
+          </div>
         </body>
         </html>
       `);
@@ -291,18 +367,16 @@ export function LetterExportDialog({
           </div>
 
           {/* Options */}
-          {format !== 'print' && (
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="draft"
-                checked={includeDraftWatermark}
-                onCheckedChange={(checked) => setIncludeDraftWatermark(!!checked)}
-              />
-              <Label htmlFor="draft" className="text-sm cursor-pointer">
-                Include DRAFT watermark
-              </Label>
-            </div>
-          )}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="draft"
+              checked={includeDraftWatermark}
+              onCheckedChange={(checked) => setIncludeDraftWatermark(!!checked)}
+            />
+            <Label htmlFor="draft" className="text-sm cursor-pointer">
+              Include DRAFT watermark
+            </Label>
+          </div>
 
           {/* Page Info - Uses PAGE_SPECS for consistent dimensions */}
           <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
