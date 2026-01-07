@@ -614,7 +614,13 @@ const CaseDetail = () => {
               <SelectContent>
                 {caseStatuses.map(status => (
                   <SelectItem key={status.id} value={status.value}>
-                    {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                    <span className="flex items-center gap-2">
+                      <span 
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: status.color || '#9ca3af' }}
+                      />
+                      {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
