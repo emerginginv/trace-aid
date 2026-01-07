@@ -25,11 +25,14 @@ import { toast } from "sonner";
 import { DocumentInstance, updateDocumentExport, DOCUMENT_TYPE_LABELS } from "@/lib/documentTemplates";
 import { format } from "date-fns";
 import { PaginatedDocumentViewer } from "./PaginatedDocumentViewer";
+import { DocumentExportHistory } from "./DocumentExportHistory";
 import { 
   getUnifiedLetterStyles, 
   getPageViewerStyles,
   PAGE_SPECS 
 } from "@/lib/paginatedLetterStyles";
+import { saveExportedPdf, recordExport } from "@/lib/documentExports";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DocumentInstanceViewerProps {
   document: DocumentInstance;
@@ -62,6 +65,7 @@ export function DocumentInstanceViewer({
   onBack,
 }: DocumentInstanceViewerProps) {
   const [exporting, setExporting] = useState(false);
+  const [exportHistoryRefresh, setExportHistoryRefresh] = useState(0);
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
@@ -178,11 +182,29 @@ export function DocumentInstanceViewer({
         );
       }
       
-      // Save PDF
+      // Get PDF as blob for storage
+      const pdfBlob = pdf.output('blob');
+      
+      // Save PDF to local device
       pdf.save(`${documentData.title}.pdf`);
       
       // Cleanup
       window.document.body.removeChild(container);
+      
+      // Get current user for audit trail
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Store PDF as derived artifact
+      if (user) {
+        await saveExportedPdf(
+          documentData.id,
+          documentData.organizationId,
+          user.id,
+          documentData.title,
+          pdfBlob
+        );
+        setExportHistoryRefresh(prev => prev + 1);
+      }
       
       await updateDocumentExport(documentData.id, 'pdf');
       toast.success("PDF downloaded successfully");
@@ -268,6 +290,14 @@ export function DocumentInstanceViewer({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+      </div>
+
+      {/* Export History */}
+      <div className="border-b px-4 py-2">
+        <DocumentExportHistory 
+          documentInstanceId={documentData.id}
+          refreshTrigger={exportHistoryRefresh}
+        />
       </div>
 
       {/* Paginated Document Preview - Uses SAME HTML as exports */}

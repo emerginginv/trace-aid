@@ -48,12 +48,18 @@ import {
   getPageViewerStyles,
   LETTER_FONT_STACK 
 } from "@/lib/paginatedLetterStyles";
+import { saveExportedPdf, recordExport } from "@/lib/documentExports";
 
 interface LetterExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   letterDocument: LetterDocument;
   defaultFilename?: string;
+  // For storing PDF as derived artifact
+  documentInstanceId?: string;
+  organizationId?: string;
+  userId?: string;
+  onExportComplete?: () => void;
 }
 
 type ExportFormat = 'pdf' | 'docx' | 'print';
@@ -74,7 +80,11 @@ export function LetterExportDialog({
   open,
   onOpenChange,
   letterDocument,
-  defaultFilename = "letter"
+  defaultFilename = "letter",
+  documentInstanceId,
+  organizationId,
+  userId,
+  onExportComplete,
 }: LetterExportDialogProps) {
   const [format, setFormat] = useState<ExportFormat>('pdf');
   const [filename, setFilename] = useState(defaultFilename);
@@ -179,11 +189,25 @@ export function LetterExportDialog({
         );
       }
       
-      // Save PDF
+      // Get PDF as blob for storage
+      const pdfBlob = pdf.output('blob');
+      
+      // Save PDF to local device
       pdf.save(`${sanitizeFilename(filename)}.pdf`);
       
       // Cleanup
       document.body.removeChild(container);
+      
+      // Store PDF as derived artifact if document context is provided
+      if (documentInstanceId && organizationId && userId) {
+        await saveExportedPdf(
+          documentInstanceId,
+          organizationId,
+          userId,
+          sanitizeFilename(filename),
+          pdfBlob
+        );
+      }
       
       setExportComplete(true);
       toast.success("PDF exported successfully!");
@@ -191,6 +215,7 @@ export function LetterExportDialog({
       setTimeout(() => {
         onOpenChange(false);
         setExportComplete(false);
+        onExportComplete?.();
       }, 1500);
     } catch (error) {
       console.error("PDF export error:", error);
