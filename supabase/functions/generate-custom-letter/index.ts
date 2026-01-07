@@ -175,7 +175,25 @@ STRUCTURE REQUIREMENTS:
 
 Each section must be self-contained HTML that can be edited independently.
 Use proper HTML tags: <p> for paragraphs, <br> for line breaks, <strong> for emphasis.
-DO NOT include markdown code blocks or any text outside the JSON.`;
+DO NOT include markdown code blocks or any text outside the JSON.
+
+## CONTENT-ONLY GENERATION RULES (CRITICAL)
+
+YOU MUST NOT include ANY of the following:
+- Inline style attributes (style="...")
+- CSS declarations of any kind
+- Layout properties: position, float, display, margin, padding, width, height
+- Pagination properties: page-break, break-before, break-after
+- Font sizing: font-size, line-height (use semantic tags instead)
+- <style> or <script> blocks
+- Class names (class="...")
+- @page or @media rules
+- Any attempt to control document structure or pagination
+
+YOU MAY ONLY USE these HTML tags:
+<p>, <br>, <strong>, <em>, <b>, <i>, <ul>, <ol>, <li>, <span>, <div>
+
+The template controls ALL layout. You provide CONTENT ONLY.`;
 
       const keyPointsList = keyPoints.length > 0 
         ? `\n\nKey points to cover:\n${keyPoints.map(p => `- ${p}`).join('\n')}`

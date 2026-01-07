@@ -115,8 +115,23 @@ Include a carefully drafted non-compete provision. Note: This may not be enforce
 - Output clean HTML suitable for PDF generation
 - Use proper heading hierarchy (h1 for title, h2 for sections)
 - Use ordered lists for numbered clauses
-- Include proper spacing and margins
 - Make signature blocks clearly formatted with lines for signatures and dates
+
+## CONTENT-ONLY GENERATION RULES (CRITICAL):
+YOU MUST NOT include ANY of the following:
+- Inline style attributes (style="...")
+- CSS declarations of any kind
+- Layout properties: position, float, display, margin, padding, width, height
+- Pagination properties: page-break, break-before, break-after
+- Font sizing: font-size, line-height
+- <style> or <script> blocks
+- Class names (class="...")
+- @page or @media rules
+
+YOU MAY ONLY USE these HTML tags:
+<h1>, <h2>, <h3>, <p>, <br>, <strong>, <em>, <ol>, <ul>, <li>, <span>, <div>, <table>, <tr>, <td>, <th>
+
+The template controls ALL layout and styling. You provide CONTENT ONLY.
 
 ## YOU MUST NOT:
 - Remove or modify any structural clause

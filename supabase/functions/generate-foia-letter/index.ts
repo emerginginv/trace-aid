@@ -112,7 +112,23 @@ Your task is to generate a formal, legally compliant records request letter in H
 - Format lists for clarity when describing multiple records
 - Improve sentence flow while preserving exact legal language
 
-Output only the HTML content for the letter body, starting with the date. Use proper HTML tags like <p>, <br>, <strong>, <ul>, <li> for formatting. Do not include <html>, <head>, or <body> tags.`;
+## CONTENT-ONLY GENERATION RULES (CRITICAL):
+YOU MUST NOT include ANY of the following:
+- Inline style attributes (style="...")
+- CSS declarations of any kind
+- Layout properties: position, float, display, margin, padding, width, height
+- Pagination properties: page-break, break-before, break-after
+- Font sizing: font-size, line-height
+- <style> or <script> blocks
+- Class names (class="...")
+- @page or @media rules
+
+YOU MAY ONLY USE these HTML tags:
+<p>, <br>, <strong>, <em>, <ul>, <ol>, <li>, <span>, <div>
+
+The template controls ALL layout and styling. You provide CONTENT ONLY.
+
+Output only the HTML content for the letter body, starting with the date. Do not include <html>, <head>, or <body> tags.`;
 
     const userPrompt = buildUserPrompt(requestData);
 
