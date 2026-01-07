@@ -5,7 +5,7 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText, CheckCheck } from "lucide-react";
+import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
@@ -20,7 +20,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
@@ -28,6 +27,21 @@ import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { CasesPageSkeleton } from "@/components/ui/list-page-skeleton";
 import { InlineEditCell } from "@/components/ui/inline-edit-cell";
+import { CaseCardManagerDisplay } from "@/components/cases/CaseCardManagerDisplay";
+import { CaseCardFinancialWidget } from "@/components/cases/CaseCardFinancialWidget";
+
+interface CaseManager {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  color: string | null;
+}
+
+interface BudgetSummary {
+  dollars_consumed: number;
+  dollars_remaining: number;
+  dollars_utilization_pct: number;
+}
 
 interface Case {
   id: string;
@@ -37,6 +51,10 @@ interface Case {
   status: string;
   due_date: string;
   created_at: string;
+  case_manager_id: string | null;
+  budget_dollars: number | null;
+  case_manager?: CaseManager | null;
+  budget_summary?: BudgetSummary | null;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -107,14 +125,50 @@ const Cases = () => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch cases with case manager profile
+      const { data: casesData, error: casesError } = await supabase
         .from("cases")
-        .select("*")
+        .select(`
+          id, case_number, title, description, status, due_date, created_at,
+          case_manager_id, budget_dollars,
+          case_manager:profiles!cases_case_manager_id_fkey(
+            id, full_name, avatar_url, color
+          )
+        `)
         .eq("organization_id", organization.id)
         .order("created_at", { ascending: false });
         
-      if (error) throw error;
-      setCases(data || []);
+      if (casesError) throw casesError;
+      
+      let enrichedCases: Case[] = (casesData || []).map(c => ({
+        ...c,
+        case_manager: c.case_manager as CaseManager | null,
+        budget_summary: null,
+      }));
+      
+      // Fetch budget summaries if user has permission
+      if (hasPermission('view_finances') && enrichedCases.length > 0) {
+        const budgetPromises = enrichedCases
+          .filter(c => c.budget_dollars && c.budget_dollars > 0)
+          .map(async (c) => {
+            const { data } = await supabase.rpc('get_case_budget_summary', { p_case_id: c.id });
+            return { caseId: c.id, summary: data?.[0] || null };
+          });
+        
+        const budgetResults = await Promise.all(budgetPromises);
+        const budgetMap = new Map(budgetResults.map(r => [r.caseId, r.summary]));
+        
+        enrichedCases = enrichedCases.map(c => ({
+          ...c,
+          budget_summary: budgetMap.get(c.id) ? {
+            dollars_consumed: budgetMap.get(c.id)!.dollars_consumed || 0,
+            dollars_remaining: budgetMap.get(c.id)!.dollars_remaining || 0,
+            dollars_utilization_pct: budgetMap.get(c.id)!.dollars_utilization_pct || 0,
+          } : null,
+        }));
+      }
+      
+      setCases(enrichedCases);
     } catch (error) {
       toast.error("Error fetching cases");
     } finally {
@@ -389,8 +443,12 @@ const Cases = () => {
             <p className="text-muted-foreground">No cases match your search criteria</p>
           </CardContent>
         </Card> : viewMode === 'grid' ? <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {sortedCases.map(caseItem => <Card key={caseItem.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
+          {sortedCases.map(caseItem => <Card 
+              key={caseItem.id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/cases/${caseItem.id}`)}
+            >
+              <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <CardTitle className="text-xl">{caseItem.title}</CardTitle>
@@ -404,18 +462,32 @@ const Cases = () => {
                     </Badge>
                   </div>
                 </div>
+                <div className="pt-2">
+                  <CaseCardManagerDisplay manager={caseItem.case_manager || null} />
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                   {caseItem.description || "No description provided"}
                 </p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Created: {new Date(caseItem.created_at).toLocaleDateString()}</span>
                   {caseItem.due_date && <span>Due: {new Date(caseItem.due_date).toLocaleDateString()}</span>}
                 </div>
-                <div className="flex justify-end gap-2">
+                
+                {hasPermission('view_finances') && caseItem.budget_summary && (
+                  <CaseCardFinancialWidget
+                    budgetDollars={caseItem.budget_dollars}
+                    dollarsConsumed={caseItem.budget_summary.dollars_consumed}
+                    dollarsRemaining={caseItem.budget_summary.dollars_remaining}
+                    utilizationPct={caseItem.budget_summary.dollars_utilization_pct}
+                  />
+                )}
+                
+                <div className="flex justify-end gap-2 mt-4">
                   {hasPermission('delete_cases') && <Button variant="ghost" size="icon" onClick={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
                       handleDeleteClick(caseItem.id);
                     }}>
                       <Trash2 className="h-4 w-4" />
