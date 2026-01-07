@@ -50,7 +50,7 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
     .report-cover-page {
       width: 100%;
       min-height: 11in;
-      height: 11in;
+      /* height removed - use min-height only for preview compatibility */
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -58,6 +58,13 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
       page-break-after: always;
       background: #ffffff;
       box-sizing: border-box;
+    }
+    
+    /* Print: use fixed height for page breaks */
+    @media print {
+      .report-cover-page {
+        height: 11in;
+      }
     }
 
     .cover-header {

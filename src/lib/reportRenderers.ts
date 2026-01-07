@@ -63,45 +63,46 @@ export function renderCoverPage(
   const hasLogo = !!orgProfile?.logoUrl;
   const showCompanyName = !hasLogo || config.showCompanyNameWithLogo;
 
+  // CRITICAL: Include inline styles as fallback for html2canvas capture
   return `
-    <div class="report-cover-page">
-      <div class="cover-header">
+    <div class="report-cover-page" style="background: #ffffff; min-height: 11in; padding: 72px; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+      <div class="cover-header" style="text-align: center; margin-bottom: 24px;">
         ${logoHtml}
-        ${showCompanyName ? `<p class="cover-company-name">${escapeHtml(companyName)}</p>` : ''}
+        ${showCompanyName ? `<p class="cover-company-name" style="font-size: 14pt; font-weight: 600; color: #1a1a1a; margin-top: 8px; letter-spacing: 0.5px;">${escapeHtml(companyName)}</p>` : ''}
       </div>
       
-      <div class="cover-title-block">
-        <h1 class="cover-title">INVESTIGATION</h1>
-        <h1 class="cover-title">REPORT</h1>
-        <div class="cover-divider"></div>
-        <p class="cover-subtitle">${escapeHtml(reportTitle)}</p>
+      <div class="cover-title-block" style="text-align: center; margin: 48px 0; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+        <h1 class="cover-title" style="font-size: 42pt; font-weight: 700; color: #1a1a1a; letter-spacing: 4px; line-height: 1.1; margin: 0;">INVESTIGATION</h1>
+        <h1 class="cover-title" style="font-size: 42pt; font-weight: 700; color: #1a1a1a; letter-spacing: 4px; line-height: 1.1; margin: 0;">REPORT</h1>
+        <div class="cover-divider" style="width: 80px; height: 4px; background: #1a1a1a; margin: 24px auto;"></div>
+        <p class="cover-subtitle" style="font-size: 14pt; font-weight: 500; color: #2d3748; margin-top: 16px;">${escapeHtml(reportTitle)}</p>
       </div>
       
-      <div class="cover-meta-block">
-        <table class="cover-meta-table">
-          ${caseInfo.case_number ? `<tr><td class="meta-label">Case Reference:</td><td class="meta-value">${escapeHtml(caseInfo.case_number)}</td></tr>` : ''}
-          <tr><td class="meta-label">Date:</td><td class="meta-value">${formatReportDate(generatedAt)}</td></tr>
-          ${investigatorName ? `<tr><td class="meta-label">Investigator:</td><td class="meta-value">${escapeHtml(investigatorName)}</td></tr>` : ''}
+      <div class="cover-meta-block" style="margin: 32px auto; max-width: 400px;">
+        <table class="cover-meta-table" style="width: 100%; border-collapse: collapse; font-size: 11pt;">
+          ${caseInfo.case_number ? `<tr style="border-bottom: 1px solid #e2e8f0;"><td class="meta-label" style="font-weight: 600; color: #4a5568; width: 140px; text-align: left; padding: 10px 0;">Case Reference:</td><td class="meta-value" style="color: #1a1a1a; font-weight: 500; text-align: left; padding: 10px 0;">${escapeHtml(caseInfo.case_number)}</td></tr>` : ''}
+          <tr style="border-bottom: 1px solid #e2e8f0;"><td class="meta-label" style="font-weight: 600; color: #4a5568; width: 140px; text-align: left; padding: 10px 0;">Date:</td><td class="meta-value" style="color: #1a1a1a; font-weight: 500; text-align: left; padding: 10px 0;">${formatReportDate(generatedAt)}</td></tr>
+          ${investigatorName ? `<tr style="border-bottom: 1px solid #e2e8f0;"><td class="meta-label" style="font-weight: 600; color: #4a5568; width: 140px; text-align: left; padding: 10px 0;">Investigator:</td><td class="meta-value" style="color: #1a1a1a; font-weight: 500; text-align: left; padding: 10px 0;">${escapeHtml(investigatorName)}</td></tr>` : ''}
         </table>
       </div>
       
       ${config.showPreparedBy ? `
-      <div class="cover-prepared-section">
-        <p class="cover-prepared-label">Prepared by:</p>
-        ${investigatorName ? `<p class="cover-prepared-name">${escapeHtml(investigatorName)}</p>` : `<p class="cover-prepared-name">${escapeHtml(companyName)}</p>`}
-        ${orgProfile?.email ? `<p class="cover-prepared-contact">${escapeHtml(orgProfile.email)}</p>` : ''}
-        ${contactParts.length > 0 ? `<p class="cover-prepared-contact">${escapeHtml(contactParts.join(' | '))}</p>` : ''}
+      <div class="cover-prepared-section" style="margin: 32px 0; text-align: left;">
+        <p class="cover-prepared-label" style="font-size: 10pt; color: #4a5568; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">Prepared by:</p>
+        ${investigatorName ? `<p class="cover-prepared-name" style="font-size: 14pt; font-weight: 600; color: #1a1a1a; margin-bottom: 4px;">${escapeHtml(investigatorName)}</p>` : `<p class="cover-prepared-name" style="font-size: 14pt; font-weight: 600; color: #1a1a1a; margin-bottom: 4px;">${escapeHtml(companyName)}</p>`}
+        ${orgProfile?.email ? `<p class="cover-prepared-contact" style="font-size: 10pt; color: #2d3748; margin-bottom: 2px;">${escapeHtml(orgProfile.email)}</p>` : ''}
+        ${contactParts.length > 0 ? `<p class="cover-prepared-contact" style="font-size: 10pt; color: #2d3748; margin-bottom: 2px;">${escapeHtml(contactParts.join(' | '))}</p>` : ''}
       </div>
       ` : ''}
       
-      <div class="cover-footer">
-        <div class="cover-confidential-badge">
-          <span class="confidential-text">CONFIDENTIAL</span>
+      <div class="cover-footer" style="text-align: center; padding-top: 24px; border-top: 1px solid #e2e8f0; margin-top: auto;">
+        <div class="cover-confidential-badge" style="display: inline-block; padding: 8px 24px; border: 2px solid #1a1a1a; margin-bottom: 16px;">
+          <span class="confidential-text" style="font-size: 11pt; font-weight: 700; color: #1a1a1a; letter-spacing: 3px;">CONFIDENTIAL</span>
         </div>
-        ${clientName ? `<p class="cover-client-text">Prepared for: ${escapeHtml(clientName)}</p>` : ''}
-        <div class="cover-company-info">
-          <p class="cover-company-footer">${escapeHtml(companyName)}</p>
-          ${addressParts.map(line => `<p>${escapeHtml(line)}</p>`).join('')}
+        ${clientName ? `<p class="cover-client-text" style="font-size: 10pt; color: #4a5568; margin-bottom: 16px;">Prepared for: ${escapeHtml(clientName)}</p>` : ''}
+        <div class="cover-company-info" style="font-size: 9pt; color: #4a5568; line-height: 1.6; margin-top: 12px;">
+          <p class="cover-company-footer" style="font-weight: 600; font-size: 10pt; color: #1a1a1a; margin-bottom: 4px;">${escapeHtml(companyName)}</p>
+          ${addressParts.map(line => `<p style="margin: 0;">${escapeHtml(line)}</p>`).join('')}
         </div>
       </div>
     </div>
