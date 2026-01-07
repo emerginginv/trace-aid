@@ -1047,10 +1047,9 @@ import { ProfessionalAcceptanceBanner } from '@/components/documents';
 
 | File | Purpose |
 |------|---------|
-| `src/lib/letterBodyGenerators.ts` | Body-only content generators (NEW) |
-| `src/lib/letterGenerators.ts` | DEPRECATED full letter generators |
+| `src/lib/letterBodyGenerators.ts` | Body-only content generators with template placeholders |
 | `src/lib/paginatedLetterStyles.ts` | CSS styles for preview & export |
-| `src/lib/letterDocumentEngine.ts` | Document creation engine + validation |
+| `src/lib/letterDocumentEngine.ts` | Document creation engine + validation + `validateTemplateReusability()` |
 | `src/lib/letterBranding.ts` | Branding/letterhead rendering |
 | `src/lib/letterTemplateRenderer.ts` | Template binding & rendering |
 | `src/components/documents/LetterPreview.tsx` | Preview component |
@@ -1060,10 +1059,50 @@ import { ProfessionalAcceptanceBanner } from '@/components/documents';
 
 ---
 
+## Template Content Rules (Non-Negotiable)
+
+Templates are **general-purpose structural documents** that can be reused across unlimited cases.
+
+### Templates MAY Include
+
+| Content Type | Example |
+|--------------|---------|
+| General statutory language | "Pursuant to 5 U.S.C. § 552..." |
+| Neutral introductory language | "I am requesting access to records..." |
+| Placeholders for case data | `{{records_requested}}` |
+| Optional section placeholders | `{{fee_waiver_justification}}` |
+| Response deadline language | "within 20 business days" |
+
+### Templates MUST NOT Include
+
+| Content Type | Why Forbidden |
+|--------------|---------------|
+| Case-specific explanations | Makes template single-use |
+| Reasons for requesting records | Tied to specific case |
+| Fee waiver justifications | Varies per case |
+| Expedited processing reasons | Varies per case |
+| Hardcoded names/dates | Not reusable |
+
+### Standard Placeholders
+
+| Placeholder | Purpose |
+|-------------|---------|
+| `{{records_requested}}` | Description of records sought |
+| `{{date_range_start}}` | Start date for record search |
+| `{{date_range_end}}` | End date for record search |
+| `{{fee_waiver_justification}}` | Why fee waiver applies (case fills this) |
+| `{{expedited_justification}}` | Why expedited processing needed (case fills this) |
+| `{{request_purpose}}` | Purpose of the request (case fills this) |
+| `{{requester_name}}` | Name of person/org making request |
+| `{{agency_name}}` | Name of receiving agency |
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.4 | 2026-01-07 | Added Template Content Rules, removed letterGenerators.ts |
 | 1.3 | 2026-01-07 | Added Professional Acceptance Test section |
 | 1.2 | 2026-01-07 | Added Pre-Generation Validation section |
 | 1.1 | 2026-01-07 | Added Letter Type Content Separation section, body-only generators |

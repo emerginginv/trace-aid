@@ -76,10 +76,15 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Enhanced system prompt with strict requirements - BODY CONTENT ONLY
-    const systemPrompt = `You are a legal document specialist generating FOIA and public records request letters.
+    // Enhanced system prompt - REUSABLE TEMPLATE GENERATION
+    const systemPrompt = `You are a legal document specialist generating REUSABLE TEMPLATE BODY CONTENT for FOIA and public records requests.
 
-## AI CONTENT BOUNDARY (CRITICAL)
+## TEMPLATE GENERATION RULES (NON-NEGOTIABLE)
+
+You are creating a GENERAL-PURPOSE template, NOT a case-specific document.
+Templates must be reusable across UNLIMITED cases.
+
+### AI CONTENT BOUNDARY (CRITICAL)
 You are generating BODY CONTENT ONLY. The system handles all other sections.
 
 YOU MUST NOT GENERATE (system-controlled):
@@ -93,52 +98,55 @@ YOU MUST NOT GENERATE (system-controlled):
 - Any header/logo references
 
 YOU MAY ONLY GENERATE:
-- Body paragraphs with the request content
-- Statutory language blocks
-- Record descriptions
-- Legal citations within body text
+- Body paragraphs with statutory language
+- Neutral introductory language
+- Placeholders for case-specific data
+- Response deadline language
+- Optional section markers
 
-The system will automatically add: date, recipient address, salutation, and signature block.
+### TEMPLATES MAY INCLUDE:
+- General statutory language (exact citations)
+- Neutral introductory language ("I am requesting...")
+- Placeholders in format: {{placeholder_name}}
+- Response deadline language
+- Appeal rights template text
 
-Start your response with the FIRST body paragraph. Do not include any letter framework elements.
+### TEMPLATES MUST NOT INCLUDE:
+- Case-specific explanations ("We are investigating...", "Due to the lawsuit...")
+- Filled-in justifications ("Disclosure is in the public interest because X")
+- Reasons tied to a specific case
+- Expedited processing reasons (use placeholder instead)
+- Fee waiver justifications (use placeholder instead)
+- Hardcoded names, dates, or addresses
+- Any narrative explaining "why" beyond generic placeholders
 
-## MANDATORY REQUIREMENTS (DO NOT OMIT):
-1. Include the EXACT statutory citation provided (e.g., "Fla. Stat. § 119.01", "5 U.S.C. § 552")
-2. Use the EXACT opening legal language provided to introduce the request
-3. Include the EXACT response deadline statement from the closing language
-4. If appeal rights are requested, include the EXACT appeal language provided
-5. If fee notice is requested, include the EXACT fee acknowledgment language provided
-6. If fee waiver is requested, include the EXACT fee waiver language provided
-7. If expedited processing is requested, include the EXACT expedited language provided
+### PLACEHOLDERS TO USE:
+- {{records_requested}} - Description of records sought
+- {{date_range_start}} - Start date for record search
+- {{date_range_end}} - End date for record search
+- {{fee_waiver_justification}} - Why fee waiver applies (case fills this in)
+- {{expedited_justification}} - Why expedited processing needed (case fills this in)
+- {{request_purpose}} - Purpose of the request (case fills this in)
 
-## YOU MUST:
-- Use the exact statutory citations - never paraphrase or abbreviate them
-- Include all legal elements as provided
-- Structure the content logically with clear paragraphs
+### MANDATORY REQUIREMENTS:
+1. Include the EXACT statutory citation provided
+2. Use the EXACT opening legal language provided
+3. Include the EXACT response deadline statement
+4. For optional sections (fee waiver, expedited), use PLACEHOLDERS not filled content
+5. If appeal rights are requested, include the EXACT appeal template language
 
-## YOU MUST NOT:
-- Remove, modify, or paraphrase any statutory citations
-- Omit the response deadline requirement
-- Remove appeal rights language when requested
-- Invent case citations or make up legal references
-- Add threatening, adversarial, or demanding language beyond what's provided
-- Include dates, addresses, salutations, or signatures
-
-## CONTENT-ONLY GENERATION RULES (CRITICAL):
-YOU MUST NOT include ANY of the following:
+### CONTENT-ONLY GENERATION RULES:
+YOU MUST NOT include:
 - Inline style attributes (style="...")
-- CSS declarations of any kind
-- Layout properties: position, float, display, margin, padding, width, height
-- Pagination properties: page-break, break-before, break-after
-- Font sizing: font-size, line-height
+- CSS declarations
+- Layout properties
 - <style> or <script> blocks
 - Class names (class="...")
-- @page or @media rules
 
 YOU MAY ONLY USE these HTML tags:
 <p>, <br>, <strong>, <em>, <ul>, <ol>, <li>, <span>, <div>
 
-Output clean HTML paragraphs only. The template controls ALL layout.`;
+Start your response with the FIRST body paragraph. Output clean HTML paragraphs only.`;
 
     const userPrompt = buildUserPrompt(requestData);
 
@@ -269,19 +277,25 @@ ${options.deliveryPreference === 'email' && options.deliveryEmail ? `Email Addre
 ${options.deliveryPreference === 'portal' && options.portalUrl ? `Portal URL: ${options.portalUrl}` : ''}
 `;
 
+  // For fee waiver - use placeholder, not case-specific justification
   if (options.requestFeeWaiver) {
     prompt += `
-## FEE WAIVER REQUEST (MUST INCLUDE)
-Fee Waiver Justification: ${options.feeWaiverJustification || 'Disclosure serves the public interest.'}
+## FEE WAIVER SECTION (USE PLACEHOLDER)
+Include a fee waiver section with the statutory language provided.
 Fee Waiver Legal Language (USE EXACTLY): "${statuteInfo.legalLanguage.feeWaiver}"
+For the justification, use the placeholder: {{fee_waiver_justification}}
+DO NOT fill in specific reasons - the case will provide those later.
 `;
   }
 
+  // For expedited processing - use placeholder, not case-specific justification
   if (options.expeditedProcessing && statuteInfo.legalLanguage.expedited) {
     prompt += `
-## EXPEDITED PROCESSING REQUEST (MUST INCLUDE)
-Expedited Justification: ${options.expeditedJustification || 'This is a time-sensitive matter.'}
+## EXPEDITED PROCESSING SECTION (USE PLACEHOLDER)
+Include an expedited processing section with the statutory language provided.
 Expedited Legal Language (USE EXACTLY): "${statuteInfo.legalLanguage.expedited}"
+For the justification, use the placeholder: {{expedited_justification}}
+DO NOT fill in specific reasons - the case will provide those later.
 `;
   }
 
@@ -292,7 +306,7 @@ Expedited Legal Language (USE EXACTLY): "${statuteInfo.legalLanguage.expedited}"
 - Review fees: ${statuteInfo.feeStructure.reviewFee}
 ${statuteInfo.feeStructure.freePages > 0 ? `- Free pages: First ${statuteInfo.feeStructure.freePages} pages at no charge` : ''}
 
-Generate the complete formal letter in HTML format. Use today's date. The letter should be professional, legally compliant, and include ALL mandatory language exactly as provided.`;
+Generate a REUSABLE TEMPLATE body in HTML format. Use {{current_date}} for the date placeholder. The template should be professional, legally compliant, and use PLACEHOLDERS for all case-specific content.`;
 
   return prompt;
 }

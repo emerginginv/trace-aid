@@ -102,15 +102,12 @@ export function UnifiedRecordsRequestBuilder({
     recordsDescription: '',
     dateRangeStart: '',
     dateRangeEnd: '',
-    purpose: '',
     caseNumber: '',
     deliveryPreference: 'email' as DeliveryPreference,
     deliveryEmail: '',
     portalUrl: '',
     requestFeeWaiver: false,
-    feeWaiverJustification: '',
     expeditedProcessing: false,
-    expeditedJustification: '',
     includeAppealRights: true,
     includeFeeNotice: true
   });
@@ -172,7 +169,6 @@ export function UnifiedRecordsRequestBuilder({
             recordsDescription: formData.recordsDescription,
             dateRangeStart: formData.dateRangeStart,
             dateRangeEnd: formData.dateRangeEnd,
-            purpose: formData.purpose,
             caseNumber: formData.caseNumber
           },
           options: {
@@ -180,9 +176,7 @@ export function UnifiedRecordsRequestBuilder({
             deliveryEmail: formData.deliveryEmail,
             portalUrl: formData.portalUrl,
             requestFeeWaiver: formData.requestFeeWaiver,
-            feeWaiverJustification: formData.feeWaiverJustification,
             expeditedProcessing: formData.expeditedProcessing,
-            expeditedJustification: formData.expeditedJustification,
             includeAppealRights: formData.includeAppealRights,
             includeFeeNotice: formData.includeFeeNotice
           },
@@ -533,15 +527,6 @@ export function UnifiedRecordsRequestBuilder({
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Purpose (Optional)</Label>
-              <Textarea
-                value={formData.purpose}
-                onChange={(e) => handleChange('purpose', e.target.value)}
-                placeholder="Explain why you need these records (helps with fee waiver requests)"
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
               <Label>Case Reference Number (Optional)</Label>
               <Input
                 value={formData.caseNumber}
@@ -601,10 +586,13 @@ export function UnifiedRecordsRequestBuilder({
           </CardContent>
         </Card>
 
-        {/* Special Requests */}
+        {/* Special Requests - Template Placeholders */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Special Requests</CardTitle>
+            <CardTitle className="text-base">Optional Sections</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              These sections use placeholders. Fill in case-specific justifications when generating the final document.
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
@@ -614,16 +602,17 @@ export function UnifiedRecordsRequestBuilder({
                   checked={formData.requestFeeWaiver}
                   onCheckedChange={(checked) => handleChange('requestFeeWaiver', !!checked)}
                 />
-                <Label htmlFor="feeWaiver">Request Fee Waiver</Label>
+                <Label htmlFor="feeWaiver">Include Fee Waiver Section</Label>
               </div>
               {formData.requestFeeWaiver && (
-                <Textarea
-                  value={formData.feeWaiverJustification}
-                  onChange={(e) => handleChange('feeWaiverJustification', e.target.value)}
-                  placeholder="Explain why fees should be waived (e.g., public interest, non-commercial use)"
-                  rows={3}
-                  className="ml-6"
-                />
+                <div className="ml-6 p-3 bg-muted/50 rounded-md border">
+                  <p className="text-sm text-muted-foreground">
+                    Template will include: <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{fee_waiver_justification}}"}</code>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Fill in the justification when generating the final document for a specific case.
+                  </p>
+                </div>
               )}
             </div>
 
@@ -635,16 +624,17 @@ export function UnifiedRecordsRequestBuilder({
                     checked={formData.expeditedProcessing}
                     onCheckedChange={(checked) => handleChange('expeditedProcessing', !!checked)}
                   />
-                  <Label htmlFor="expedited">Request Expedited Processing</Label>
+                  <Label htmlFor="expedited">Include Expedited Processing Section</Label>
                 </div>
                 {formData.expeditedProcessing && (
-                  <Textarea
-                    value={formData.expeditedJustification}
-                    onChange={(e) => handleChange('expeditedJustification', e.target.value)}
-                    placeholder="Explain the urgency (e.g., imminent threat, time-sensitive matter)"
-                    rows={3}
-                    className="ml-6"
-                  />
+                  <div className="ml-6 p-3 bg-muted/50 rounded-md border">
+                    <p className="text-sm text-muted-foreground">
+                      Template will include: <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{expedited_justification}}"}</code>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Fill in the urgency reason when generating the final document for a specific case.
+                    </p>
+                  </div>
                 )}
               </div>
             )}

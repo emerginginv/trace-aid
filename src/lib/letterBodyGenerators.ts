@@ -13,8 +13,64 @@
  * - Footers
  * 
  * Layout is handled by letterDocumentEngine.ts via createLetterDocument()
+ * 
+ * TEMPLATE RESPONSIBILITY RULES:
+ * Templates are GENERAL-PURPOSE structural documents that can be reused.
+ * Templates MUST NOT contain case-specific content:
+ * - NO case-specific explanations or justifications
+ * - NO filled-in fee waiver reasons  
+ * - NO expedited processing justifications
+ * - NO narrative content tied to a specific case
+ * 
+ * Instead, use PLACEHOLDERS for case-specific content:
+ * - {{fee_waiver_justification}}
+ * - {{expedited_justification}}
+ * - {{request_purpose}}
  * ══════════════════════════════════════════════════════════════════════════════
  */
+
+// ============================================================================
+// TEMPLATE CONTENT RULES
+// ============================================================================
+
+/**
+ * Content types ALLOWED in templates
+ */
+export const ALLOWED_TEMPLATE_CONTENT = [
+  'statutory_citation',      // e.g., "5 U.S.C. § 552"
+  'neutral_opening',         // e.g., "I am requesting..."
+  'placeholder',             // e.g., {{records_requested}}
+  'optional_section_marker', // e.g., {{if_fee_waiver}}...{{/if_fee_waiver}}
+  'response_deadline',       // e.g., "within 20 business days"
+  'appeal_rights_template',  // Template text with placeholders
+] as const;
+
+/**
+ * Content types FORBIDDEN in templates
+ */
+export const FORBIDDEN_TEMPLATE_CONTENT = [
+  'case_explanation',        // "We are investigating..."
+  'filled_justification',    // "Disclosure is in the public interest because X"
+  'specific_narrative',      // "Due to the situation at..."
+  'hardcoded_names',         // Specific person/company names
+  'specific_dates',          // Specific calendar dates
+] as const;
+
+/**
+ * Standard placeholders for templates
+ */
+export const TEMPLATE_PLACEHOLDERS = {
+  RECORDS_REQUESTED: '{{records_requested}}',
+  DATE_RANGE_START: '{{date_range_start}}',
+  DATE_RANGE_END: '{{date_range_end}}',
+  FEE_WAIVER_JUSTIFICATION: '{{fee_waiver_justification}}',
+  EXPEDITED_JUSTIFICATION: '{{expedited_justification}}',
+  REQUEST_PURPOSE: '{{request_purpose}}',
+  REQUESTER_NAME: '{{requester_name}}',
+  REQUESTER_ADDRESS: '{{requester_address}}',
+  AGENCY_NAME: '{{agency_name}}',
+  AGENCY_ADDRESS: '{{agency_address}}',
+} as const;
 
 // ============================================================================
 // TYPES
@@ -29,9 +85,9 @@ export interface FOIABodyContent {
   dateRange?: string;
   /** Fee category declaration */
   feeCategory?: string;
-  /** Fee waiver request (optional) */
+  /** Fee waiver request section - PLACEHOLDER ONLY */
   feeWaiver?: string;
-  /** Expedited processing request (optional) */
+  /** Expedited processing request section - PLACEHOLDER ONLY */
   expeditedProcessing?: string;
   /** Response deadline reminder */
   responseDeadline: string;
@@ -44,9 +100,9 @@ export interface StatePRABodyContent {
   requestDescription: string;
   /** Date range specification (optional) */
   dateRange?: string;
-  /** Expedited processing request (optional) */
+  /** Expedited processing request section - PLACEHOLDER ONLY */
   expeditedProcessing?: string;
-  /** Fee waiver request (optional) */
+  /** Fee waiver request section - PLACEHOLDER ONLY */
   feeWaiver?: string;
   /** Response deadline reminder */
   responseDeadline: string;
@@ -57,11 +113,11 @@ export interface PublicRecordsBodyContent {
   opening: string;
   /** Record request description */
   requestDescription: string;
-  /** Purpose statement (optional) */
+  /** Purpose statement - PLACEHOLDER ONLY */
   purpose?: string;
   /** Format preference */
   formatPreference: string;
-  /** Fee waiver request (optional) */
+  /** Fee waiver request section - PLACEHOLDER ONLY */
   feeWaiver?: string;
   /** Response deadline reminder */
   responseDeadline: string;
@@ -114,34 +170,40 @@ export interface FOIAFormData {
   dateRangeEnd?: string;
   feeCategory: string;
   formatPreference?: string;
+  /** Toggle to include fee waiver section (content via placeholder) */
   requestFeeWaiver: boolean;
-  feeWaiverJustification?: string;
+  /** Toggle to include expedited section (content via placeholder) */
   expeditedProcessing: boolean;
-  expeditedJustification?: string;
 }
 
 /**
  * Generate FOIA letter body content (paragraphs only)
+ * 
+ * TEMPLATE RULES:
+ * - Case-specific justifications use PLACEHOLDERS, not filled values
+ * - Templates are reusable across cases
  */
 export function generateFOIABodyContent(formData: FOIAFormData): FOIABodyContent {
   const content: FOIABodyContent = {
     opening: 'Pursuant to the Freedom of Information Act, 5 U.S.C. § 552, I am requesting access to and copies of the following records:',
-    requestDescription: formData.recordsRequested || '{{records_requested}}',
+    requestDescription: formData.recordsRequested || TEMPLATE_PLACEHOLDERS.RECORDS_REQUESTED,
     responseDeadline: 'Please respond within 20 business days as required by law.',
   };
 
   if (formData.dateRangeStart || formData.dateRangeEnd) {
-    content.dateRange = `${formData.dateRangeStart || 'N/A'} to ${formData.dateRangeEnd || 'Present'}`;
+    content.dateRange = `${formData.dateRangeStart || TEMPLATE_PLACEHOLDERS.DATE_RANGE_START} to ${formData.dateRangeEnd || TEMPLATE_PLACEHOLDERS.DATE_RANGE_END}`;
   }
 
   content.feeCategory = FEE_CATEGORY_LABELS[formData.feeCategory] || 'Other';
 
+  // Use placeholder for fee waiver justification - never case-specific content
   if (formData.requestFeeWaiver) {
-    content.feeWaiver = formData.feeWaiverJustification || 'Disclosure is in the public interest.';
+    content.feeWaiver = TEMPLATE_PLACEHOLDERS.FEE_WAIVER_JUSTIFICATION;
   }
 
+  // Use placeholder for expedited justification - never case-specific content
   if (formData.expeditedProcessing) {
-    content.expeditedProcessing = formData.expeditedJustification || 'Urgent processing requested.';
+    content.expeditedProcessing = TEMPLATE_PLACEHOLDERS.EXPEDITED_JUSTIFICATION;
   }
 
   return content;
@@ -197,10 +259,10 @@ export interface StatePRAFormData {
   dateRangeStart?: string;
   dateRangeEnd?: string;
   formatPreference?: string;
+  /** Toggle to include expedited section (content via placeholder) */
   expeditedProcessing: boolean;
-  expeditedReason?: string;
+  /** Toggle to include fee waiver section (content via placeholder) */
   requestFeeWaiver: boolean;
-  feeWaiverJustification?: string;
 }
 
 export interface StateInfo {
@@ -210,6 +272,10 @@ export interface StateInfo {
 
 /**
  * Generate State PRA letter body content (paragraphs only)
+ * 
+ * TEMPLATE RULES:
+ * - Case-specific justifications use PLACEHOLDERS, not filled values
+ * - Templates are reusable across cases
  */
 export function generateStatePRABodyContent(
   formData: StatePRAFormData,
@@ -219,20 +285,22 @@ export function generateStatePRABodyContent(
   
   const content: StatePRABodyContent = {
     opening: `Pursuant to ${statuteRef}, I hereby request access to and copies of the following records:`,
-    requestDescription: formData.recordsRequested || '{{records_requested}}',
+    requestDescription: formData.recordsRequested || TEMPLATE_PLACEHOLDERS.RECORDS_REQUESTED,
     responseDeadline: 'Please respond within the statutory time period. Contact me with any questions.',
   };
 
   if (formData.dateRangeStart || formData.dateRangeEnd) {
-    content.dateRange = `${formData.dateRangeStart || 'N/A'} to ${formData.dateRangeEnd || 'Present'}`;
+    content.dateRange = `${formData.dateRangeStart || TEMPLATE_PLACEHOLDERS.DATE_RANGE_START} to ${formData.dateRangeEnd || TEMPLATE_PLACEHOLDERS.DATE_RANGE_END}`;
   }
 
+  // Use placeholder for expedited justification - never case-specific content
   if (formData.expeditedProcessing) {
-    content.expeditedProcessing = formData.expeditedReason || 'Urgent matter requiring immediate attention.';
+    content.expeditedProcessing = TEMPLATE_PLACEHOLDERS.EXPEDITED_JUSTIFICATION;
   }
 
+  // Use placeholder for fee waiver justification - never case-specific content
   if (formData.requestFeeWaiver) {
-    content.feeWaiver = formData.feeWaiverJustification || 'Request waiver of applicable fees.';
+    content.feeWaiver = TEMPLATE_PLACEHOLDERS.FEE_WAIVER_JUSTIFICATION;
   }
 
   return content;
@@ -279,16 +347,21 @@ export interface PublicRecordsFormData {
   agencyName?: string;
   agencyAddress?: string;
   recordsRequested: string;
-  purpose?: string;
+  /** Toggle to include purpose section (content via placeholder) */
+  includePurpose?: boolean;
   legalAuthority: string;
   customAuthority?: string;
   formatPreference: string;
+  /** Toggle to include fee waiver section (content via placeholder) */
   requestFeeWaiver: boolean;
-  feeWaiverJustification?: string;
 }
 
 /**
  * Generate Public Records letter body content (paragraphs only)
+ * 
+ * TEMPLATE RULES:
+ * - Case-specific justifications use PLACEHOLDERS, not filled values
+ * - Templates are reusable across cases
  */
 export function generatePublicRecordsBodyContent(formData: PublicRecordsFormData): PublicRecordsBodyContent {
   const authority = formData.legalAuthority === 'custom'
@@ -303,19 +376,19 @@ export function generatePublicRecordsBodyContent(formData: PublicRecordsFormData
 
   const content: PublicRecordsBodyContent = {
     opening: `Pursuant to ${authority}, I am requesting access to and copies of the following records:`,
-    requestDescription: formData.recordsRequested || '{{records_requested}}',
+    requestDescription: formData.recordsRequested || TEMPLATE_PLACEHOLDERS.RECORDS_REQUESTED,
     formatPreference: `I request that records be provided in ${formatText}.`,
     responseDeadline: 'Please respond within the time period required by law. If you have any questions, please contact me at the information provided below.',
   };
 
-  if (formData.purpose) {
-    content.purpose = formData.purpose;
+  // Use placeholder for purpose - never case-specific content
+  if (formData.includePurpose) {
+    content.purpose = TEMPLATE_PLACEHOLDERS.REQUEST_PURPOSE;
   }
 
+  // Use placeholder for fee waiver justification - never case-specific content
   if (formData.requestFeeWaiver) {
-    content.feeWaiver = formData.feeWaiverJustification 
-      ? `I am requesting a waiver of any applicable fees. ${formData.feeWaiverJustification}`
-      : 'I am requesting a waiver of any applicable fees.';
+    content.feeWaiver = TEMPLATE_PLACEHOLDERS.FEE_WAIVER_JUSTIFICATION;
   }
 
   return content;
