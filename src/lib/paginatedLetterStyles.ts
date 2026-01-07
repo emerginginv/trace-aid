@@ -141,10 +141,25 @@ export function getUnifiedLetterStyles(
        Mode: ${forExport ? 'Export' : 'Preview'}${draftMode ? ' [DRAFT]' : ''}
        ══════════════════════════════════════════════════════════════════════════ */
 
+    /* === VERTICAL RHYTHM TOKENS === */
+    :root {
+      --letter-space-xs: 6pt;   /* 0.5 line - within blocks */
+      --letter-space-sm: 12pt;  /* 1 line - between paragraphs */
+      --letter-space-md: 18pt;  /* 1.5 lines - between sections */
+      --letter-space-lg: 24pt;  /* 2 lines - major separations */
+      --letter-space-xl: 36pt;  /* 3 lines - after letterhead, signature space */
+      --letter-line-height: 1.5;
+      --letter-base-size: 12pt;
+    }
+
     /* === PRINT-CSS PAGE SETUP (CONTROLS ALL PAGINATION) === */
     @page {
       size: ${spec.width} ${spec.height};
       margin: ${spec.margins.top / 96}in ${spec.margins.right / 96}in ${spec.margins.bottom / 96}in ${spec.margins.left / 96}in;
+      
+      /* Orphan/widow control for traditional letter feel */
+      orphans: 3;
+      widows: 3;
       
       /* Running footer with page numbers */
       ${showPageNumbers ? `
@@ -244,15 +259,16 @@ export function getUnifiedLetterStyles(
     }
 
     /* === LETTERHEAD === */
+    /* Vertical Rhythm: 3 lines (36pt) after letterhead */
     .letter-letterhead {
-      margin-bottom: 0.75in;
+      margin-bottom: var(--letter-space-xl, 36pt);
       text-align: center;
     }
 
     .letter-letterhead img {
       max-height: 60px;
       max-width: 200px;
-      margin-bottom: 10px;
+      margin-bottom: var(--letter-space-xs, 6pt);
     }
 
     .letter-letterhead .org-name {
@@ -269,29 +285,41 @@ export function getUnifiedLetterStyles(
     }
 
     .letter-letterhead hr {
-      margin-top: 20px;
+      margin-top: var(--letter-space-md, 18pt);
       border: none;
       border-top: 1px solid #333;
     }
 
     /* === DATE BLOCK (Single Authoritative Date) === */
     /* RULE: Exactly one primary date, left-aligned, below letterhead */
+    /* Vertical Rhythm: 2 lines (24pt) after date */
     .letter-date {
       text-align: left;
-      margin-bottom: 0.5in;
+      margin-bottom: var(--letter-space-lg, 24pt);
       color: #000 !important;
     }
 
     /* === RECIPIENT BLOCK === */
+    /* Vertical Rhythm: 1.5 lines (18pt) after recipient */
     .letter-recipient {
-      margin-bottom: 0.25in;
+      margin-bottom: var(--letter-space-md, 18pt);
       line-height: 1.4;
       color: #000 !important;
     }
 
+    /* === REFERENCE LINE === */
+    /* Vertical Rhythm: 1 line (12pt) after reference */
+    .letter-reference,
+    .reference-line {
+      margin-bottom: var(--letter-space-sm, 12pt);
+      font-weight: bold;
+      color: #000 !important;
+    }
+
     /* === SALUTATION === */
+    /* Vertical Rhythm: 1 line (12pt) after salutation */
     .letter-salutation {
-      margin-bottom: 1em;
+      margin-bottom: var(--letter-space-sm, 12pt);
       color: #000 !important;
     }
 
@@ -302,32 +330,40 @@ export function getUnifiedLetterStyles(
       color: #000 !important;
     }
 
+    /* Vertical Rhythm: 1 line (12pt) between paragraphs */
     .letter-body p {
-      margin-bottom: 1em;
+      margin-bottom: var(--letter-space-sm, 12pt);
       text-indent: 0;
       text-align: left;
       color: #000 !important;
       /* Widows and orphans control */
-      widows: 2;
-      orphans: 2;
+      widows: 3;
+      orphans: 3;
     }
 
     .letter-body p + p {
       text-indent: 0;
     }
 
+    /* Last paragraph before signature - prevent orphaning signature */
+    .letter-body p:last-of-type {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+    }
+
     /* === SECTION HEADINGS === */
+    /* Vertical Rhythm: 1.5 lines (18pt) before, 0.5 lines (6pt) after */
     .letter-body .section-heading,
     .letter-body h3,
     .letter-body h4 {
       font-weight: bold;
-      margin-top: 1.5em;
-      margin-bottom: 0.5em;
+      margin-top: var(--letter-space-md, 18pt);
+      margin-bottom: var(--letter-space-xs, 6pt);
       text-align: left;
       color: #000 !important;
       /* Keep headings with following content */
-      break-after: avoid;
-      page-break-after: avoid;
+      break-after: avoid !important;
+      page-break-after: avoid !important;
     }
 
     /* === LEGAL CITATIONS === */
@@ -379,26 +415,31 @@ export function getUnifiedLetterStyles(
     }
 
     /* === SIGNATURE BLOCK === */
+    /* Vertical Rhythm: 2 lines (24pt) before closing, 3 lines (36pt) signature space */
+    /* RULE: Signature block must NEVER orphan to a new page alone */
     .letter-signature {
-      margin-top: 1in;
+      margin-top: var(--letter-space-lg, 24pt);
       break-inside: avoid !important;
       page-break-inside: avoid !important;
+      break-before: avoid !important;
+      page-break-before: avoid !important;
       color: #000 !important;
     }
 
     .letter-signature .closing {
-      margin-bottom: 0.5in;
+      margin-bottom: var(--letter-space-xl, 36pt);
     }
 
     .signature-line {
       border-bottom: 1px solid #000;
       width: 3in;
-      height: 0.5in;
-      margin-bottom: 0.25em;
+      height: var(--letter-space-xl, 36pt);
+      margin-bottom: var(--letter-space-xs, 6pt);
     }
 
     .signature-name {
       font-weight: bold;
+      margin-bottom: 3pt;
       color: #000 !important;
     }
 
@@ -407,10 +448,20 @@ export function getUnifiedLetterStyles(
       color: #000 !important;
     }
 
+    /* Keep signature components together */
+    .letter-signature .closing,
+    .letter-signature .signature-line,
+    .letter-signature .signature-name,
+    .letter-signature .signature-title {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
     /* === FOOTER / CONFIDENTIALITY === */
+    /* Vertical Rhythm: 2 lines (24pt) before footer */
     .letter-footer {
-      margin-top: 1in;
-      padding-top: 0.5em;
+      margin-top: var(--letter-space-lg, 24pt);
+      padding-top: var(--letter-space-xs, 6pt);
       border-top: 1px solid #ccc;
       font-size: 9pt;
       color: #666 !important;

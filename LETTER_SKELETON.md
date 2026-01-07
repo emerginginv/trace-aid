@@ -100,12 +100,79 @@ The system validates:
 1. [Canonical Section Order](#canonical-section-order-immutable)
 2. [Header Rules](#header-rules-mutual-exclusivity)
 3. [Date Rules](#date-rules-single-authoritative-date)
-4. [Complete HTML Skeleton](#complete-html-skeleton)
-5. [Section Reference](#section-reference)
-6. [CSS Classes](#css-classes)
-7. [Placeholder Variables](#placeholder-variables)
-8. [Pagination Behavior](#pagination-behavior)
-9. [Usage Examples](#usage-examples)
+4. [Vertical Rhythm](#vertical-rhythm-fixed-spacing-rules)
+5. [Complete HTML Skeleton](#complete-html-skeleton)
+6. [Section Reference](#section-reference)
+7. [CSS Classes](#css-classes)
+8. [Placeholder Variables](#placeholder-variables)
+9. [Pagination Behavior](#pagination-behavior)
+10. [Usage Examples](#usage-examples)
+
+---
+
+## Vertical Rhythm (Fixed Spacing Rules)
+
+All letters use a consistent vertical rhythm based on the **12pt baseline** to create a traditional business letter feel.
+
+### Spacing Tokens
+
+| Token | Value | CSS Variable | Use Case |
+|-------|-------|--------------|----------|
+| **XS** | 6pt (0.5 line) | `--letter-space-xs` | Within blocks, tight grouping |
+| **SM** | 12pt (1 line) | `--letter-space-sm` | Between paragraphs |
+| **MD** | 18pt (1.5 lines) | `--letter-space-md` | Between sections |
+| **LG** | 24pt (2 lines) | `--letter-space-lg` | Major separations |
+| **XL** | 36pt (3 lines) | `--letter-space-xl` | After letterhead, signature space |
+
+### Section Spacing
+
+| Section | Top Spacing | Bottom Spacing | Notes |
+|---------|-------------|----------------|-------|
+| **Letterhead** | 0 | 36pt (XL) | Clear separation from date |
+| **Date Block** | 0 | 24pt (LG) | Space before recipient |
+| **Recipient Block** | 0 | 18pt (MD) | Compact address block |
+| **Reference/RE Line** | 0 | 12pt (SM) | Tight to salutation |
+| **Salutation** | 0 | 12pt (SM) | Tight to body |
+| **Body Paragraphs** | 0 | 12pt (SM) | Standard paragraph spacing |
+| **Section Headings** | 18pt (MD) | 6pt (XS) | Keep heading with content |
+| **Signature Block** | 24pt (LG) | 0 | Space from body |
+| **Closing ("Sincerely")** | 0 | 36pt (XL) | Space for wet signature |
+| **Footer** | 24pt (LG) | 0 | Separator from content |
+
+### Page Break Rules
+
+| Rule | Description |
+|------|-------------|
+| Signature blocks | MUST stay together (never split across pages) |
+| Signature with content | MUST stay with at least one body paragraph |
+| First element on new page | No top margin (prevents excessive whitespace) |
+| Orphans/widows | Minimum 3 lines per page |
+| Section headings | Keep with following content |
+
+### Visual Comparison
+
+**Correct (Rhythmic):**
+```
+[Letterhead]
+          [36pt - 3 lines]
+January 7, 2026
+          [24pt - 2 lines]
+John Doe
+ABC Corp
+123 Main St
+          [18pt - 1.5 lines]
+Dear Mr. Doe:
+          [12pt - 1 line]
+Body paragraph...
+          [12pt - 1 line]
+Body paragraph...
+          [24pt - 2 lines]
+Sincerely,
+          [36pt - signature space]
+_______________
+John Smith
+Investigator
+```
 
 ---
 
