@@ -31,9 +31,7 @@ export function StatePRABuilder({ organizationId, onSave, onCancel }: StatePRABu
     dateRangeEnd: '',
     formatPreference: 'electronic',
     expeditedProcessing: false,
-    expeditedReason: '',
     requestFeeWaiver: false,
-    feeWaiverJustification: '',
   });
 
   const selectedStateInfo = formData.state ? getStateInfo(formData.state) : null;
@@ -226,20 +224,15 @@ export function StatePRABuilder({ organizationId, onSave, onCancel }: StatePRABu
                 onCheckedChange={(checked) => handleChange('expeditedProcessing', !!checked)}
               />
               <Label htmlFor="expedited" className="cursor-pointer">
-                Request expedited processing
+                Include expedited processing section
               </Label>
             </div>
 
             {formData.expeditedProcessing && (
-              <div className="space-y-2">
-                <Label htmlFor="expeditedReason">Reason for Expedited Processing</Label>
-                <Textarea
-                  id="expeditedReason"
-                  placeholder="Explain urgency..."
-                  value={formData.expeditedReason}
-                  onChange={(e) => handleChange('expeditedReason', e.target.value)}
-                  rows={2}
-                />
+              <div className="ml-6 p-3 bg-muted/50 rounded-md border">
+                <p className="text-sm text-muted-foreground">
+                  Template will include: <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{expedited_justification}}"}</code>
+                </p>
               </div>
             )}
 
@@ -250,20 +243,15 @@ export function StatePRABuilder({ organizationId, onSave, onCancel }: StatePRABu
                 onCheckedChange={(checked) => handleChange('requestFeeWaiver', !!checked)}
               />
               <Label htmlFor="feeWaiver" className="cursor-pointer">
-                Request fee waiver
+                Include fee waiver section
               </Label>
             </div>
 
             {formData.requestFeeWaiver && (
-              <div className="space-y-2">
-                <Label htmlFor="feeWaiverJustification">Fee Waiver Justification</Label>
-                <Textarea
-                  id="feeWaiverJustification"
-                  placeholder="Explain why fees should be waived..."
-                  value={formData.feeWaiverJustification}
-                  onChange={(e) => handleChange('feeWaiverJustification', e.target.value)}
-                  rows={2}
-                />
+              <div className="ml-6 p-3 bg-muted/50 rounded-md border">
+                <p className="text-sm text-muted-foreground">
+                  Template will include: <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{fee_waiver_justification}}"}</code>
+                </p>
               </div>
             )}
           </CardContent>
@@ -320,15 +308,17 @@ export function StatePRABuilder({ organizationId, onSave, onCancel }: StatePRABu
                 )}
 
                 {formData.expeditedProcessing && (
-                  <p>
-                    <strong>Request for Expedited Processing:</strong> {formData.expeditedReason || 'Urgent matter requiring immediate attention.'}
-                  </p>
+                  <div>
+                    <p><strong>Request for Expedited Processing:</strong></p>
+                    <p className="text-muted-foreground italic">{"{{expedited_justification}}"}</p>
+                  </div>
                 )}
 
                 {formData.requestFeeWaiver && (
-                  <p>
-                    <strong>Fee Waiver Request:</strong> {formData.feeWaiverJustification || 'Request waiver of applicable fees.'}
-                  </p>
+                  <div>
+                    <p><strong>Fee Waiver Request:</strong></p>
+                    <p className="text-muted-foreground italic">{"{{fee_waiver_justification}}"}</p>
+                  </div>
                 )}
 
                 <p>

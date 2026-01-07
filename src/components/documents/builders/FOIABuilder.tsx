@@ -30,9 +30,7 @@ export function FOIABuilder({ organizationId, onSave, onCancel }: FOIABuilderPro
     dateRangeEnd: '',
     feeCategory: 'other',
     requestFeeWaiver: false,
-    feeWaiverJustification: '',
     expeditedProcessing: false,
-    expeditedJustification: '',
     formatPreference: 'electronic',
   });
 
@@ -230,20 +228,15 @@ export function FOIABuilder({ organizationId, onSave, onCancel }: FOIABuilderPro
                 onCheckedChange={(checked) => handleChange('requestFeeWaiver', !!checked)}
               />
               <Label htmlFor="feeWaiver" className="cursor-pointer">
-                Request fee waiver (public interest)
+                Include fee waiver section
               </Label>
             </div>
 
             {formData.requestFeeWaiver && (
-              <div className="space-y-2">
-                <Label htmlFor="feeWaiverJustification">Public Interest Justification</Label>
-                <Textarea
-                  id="feeWaiverJustification"
-                  placeholder="Explain how disclosure is in the public interest..."
-                  value={formData.feeWaiverJustification}
-                  onChange={(e) => handleChange('feeWaiverJustification', e.target.value)}
-                  rows={3}
-                />
+              <div className="ml-6 p-3 bg-muted/50 rounded-md border">
+                <p className="text-sm text-muted-foreground">
+                  Template will include: <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{fee_waiver_justification}}"}</code>
+                </p>
               </div>
             )}
 
@@ -254,20 +247,15 @@ export function FOIABuilder({ organizationId, onSave, onCancel }: FOIABuilderPro
                 onCheckedChange={(checked) => handleChange('expeditedProcessing', !!checked)}
               />
               <Label htmlFor="expedited" className="cursor-pointer">
-                Request expedited processing
+                Include expedited processing section
               </Label>
             </div>
 
             {formData.expeditedProcessing && (
-              <div className="space-y-2">
-                <Label htmlFor="expeditedJustification">Expedited Processing Justification</Label>
-                <Textarea
-                  id="expeditedJustification"
-                  placeholder="Demonstrate urgency to inform the public or threat to life/safety..."
-                  value={formData.expeditedJustification}
-                  onChange={(e) => handleChange('expeditedJustification', e.target.value)}
-                  rows={3}
-                />
+              <div className="ml-6 p-3 bg-muted/50 rounded-md border">
+                <p className="text-sm text-muted-foreground">
+                  Template will include: <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{expedited_justification}}"}</code>
+                </p>
               </div>
             )}
           </CardContent>
@@ -336,14 +324,14 @@ export function FOIABuilder({ organizationId, onSave, onCancel }: FOIABuilderPro
                 {formData.requestFeeWaiver && (
                   <div>
                     <p><strong>Fee Waiver Request:</strong></p>
-                    <p>{formData.feeWaiverJustification || 'Disclosure is in the public interest.'}</p>
+                    <p className="text-muted-foreground italic">{"{{fee_waiver_justification}}"}</p>
                   </div>
                 )}
 
                 {formData.expeditedProcessing && (
                   <div>
                     <p><strong>Expedited Processing Request:</strong></p>
-                    <p>{formData.expeditedJustification || 'Urgent processing requested.'}</p>
+                    <p className="text-muted-foreground italic">{"{{expedited_justification}}"}</p>
                   </div>
                 )}
 
