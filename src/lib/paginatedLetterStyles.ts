@@ -527,14 +527,53 @@ export function getPageViewerStyles(pageSize: PageSize = 'letter'): string {
       position: relative;
     }
 
+    /* === PAGE BREAK INDICATOR (Preview Only) === */
+    .pagedjs_page:not(:last-child)::before {
+      content: "Page Break";
+      position: absolute;
+      bottom: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: rgba(99, 102, 241, 0.7);
+      font-family: system-ui, -apple-system, sans-serif;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 5;
+      background: #525659;
+      padding: 0 12px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* Dotted line between pages */
+    .pagedjs_page:not(:last-child) {
+      margin-bottom: 0;
+    }
+    
+    .pagedjs_page:not(:last-child) + .pagedjs_page::before {
+      /* Line extends from previous page */
+    }
+
+    .pagedjs_pages::after {
+      display: none; /* Hide any default pseudo content */
+    }
+
+    /* Visual dotted line indicator */
+    .pagedjs_page:not(:last-child) {
+      border-bottom: 2px dashed rgba(99, 102, 241, 0.35);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
     /* === PAGE NUMBER BADGE === */
     .pagedjs_page::after {
       content: attr(data-page-number);
       position: absolute;
-      bottom: -32px;
+      bottom: -36px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 12px;
+      font-size: 11px;
       color: #9ca3af;
       font-family: system-ui, -apple-system, sans-serif;
       background: rgba(255, 255, 255, 0.1);
