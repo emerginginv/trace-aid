@@ -3,8 +3,9 @@ import html2pdf from "html2pdf.js";
 import * as pdfjsLib from "pdfjs-dist";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+// Configure PDF.js worker using Vite import (matches PdfViewer.tsx pattern)
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface PdfReportPreviewProps {
   html: string;
@@ -56,11 +57,14 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
 
       try {
         // Create a temporary element with the HTML content
+        // Must have explicit width for html2pdf to paginate correctly
         const element = document.createElement("div");
         element.innerHTML = htmlContent;
         element.style.position = "absolute";
         element.style.left = "-9999px";
         element.style.top = "0";
+        element.style.width = "8.5in"; // Letter page width for accurate pagination
+        element.style.background = "white";
         document.body.appendChild(element);
 
         // Generate PDF as array buffer
@@ -144,7 +148,8 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
       } catch (err) {
         console.error("Error generating PDF preview:", err);
         if (genId === generationIdRef.current) {
-          setError("Failed to generate preview");
+          const errorMessage = err instanceof Error ? err.message : "Unknown error";
+          setError(`Failed to generate preview: ${errorMessage}`);
         }
       } finally {
         if (genId === generationIdRef.current) {

@@ -819,6 +819,24 @@ function assemblePreviewHtml(
     /* ========================================
        PAGE BREAK & PLACEHOLDERS
        ======================================== */
+    
+    /* Explicit page break classes for html2pdf */
+    .break-before {
+      page-break-before: always !important;
+      break-before: page !important;
+    }
+    
+    .break-after {
+      page-break-after: always !important;
+      break-after: page !important;
+    }
+    
+    /* Force cover page to be its own page */
+    .report-cover-page {
+      page-break-after: always !important;
+      break-after: page !important;
+    }
+    
     .preview-page-break {
       display: none !important;
     }
