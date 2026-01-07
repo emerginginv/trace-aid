@@ -6,3 +6,4 @@ export { CaseDocuments } from "./CaseDocuments";
 export { LetterCategorySelector } from "./LetterCategorySelector";
 export { GuidedLetterBuilder } from "./GuidedLetterBuilder";
 export { UnifiedRecordsRequestBuilder } from "./builders/UnifiedRecordsRequestBuilder";
+export { ValidationStatusBanner } from "./ValidationStatusBanner";
