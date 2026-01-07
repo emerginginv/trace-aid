@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileText, Eye, Maximize2, ZoomIn, ZoomOut, X } from "lucide-react";
+import { FileText, Eye, Maximize2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -35,7 +34,7 @@ import {
 } from "@/lib/documentEngine";
 import { CaseVariables } from "@/lib/caseVariables";
 import { getOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
-import { getLetterStyles } from "@/lib/letterDocumentEngine";
+import { PaginatedDocumentViewer } from "./PaginatedDocumentViewer";
 
 interface GenerateDocumentDialogProps {
   open: boolean;
@@ -43,38 +42,6 @@ interface GenerateDocumentDialogProps {
   caseId: string;
   caseData: CaseVariables;
   onGenerated: () => void;
-}
-
-const ZOOM_LEVELS = [50, 75, 100, 125, 150];
-
-// Build styled preview HTML with embedded letter styles
-function buildStyledPreviewHtml(content: string): string {
-  const letterStyles = getLetterStyles();
-  // Add additional CSS reset to ensure dark mode doesn't affect colors
-  const resetStyles = `
-    .document-preview-root,
-    .document-preview-root * {
-      color: #000 !important;
-      background-color: transparent;
-    }
-    .document-preview-root {
-      background-color: #fff !important;
-      color-scheme: light;
-    }
-    .document-preview-root .letter-footer {
-      color: #666 !important;
-    }
-    .document-preview-root .org-info {
-      color: #333 !important;
-    }
-  `;
-  
-  return `
-    <style>${letterStyles}${resetStyles}</style>
-    <div class="document-preview-root letter-document" style="padding: 1in; max-width: none; margin: 0;">
-      ${content}
-    </div>
-  `;
 }
 
 export function GenerateDocumentDialog({
@@ -93,7 +60,6 @@ export function GenerateDocumentDialog({
   const [preview, setPreview] = useState<string | null>(null);
   const [orgProfile, setOrgProfile] = useState<OrganizationProfile | null>(null);
   const [showFullscreen, setShowFullscreen] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(100);
 
   useEffect(() => {
     if (open && organization?.id) {
@@ -183,20 +149,6 @@ export function GenerateDocumentDialog({
     }
   };
 
-  const handleZoomIn = () => {
-    const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
-    if (currentIndex < ZOOM_LEVELS.length - 1) {
-      setZoomLevel(ZOOM_LEVELS[currentIndex + 1]);
-    }
-  };
-
-  const handleZoomOut = () => {
-    const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
-    if (currentIndex > 0) {
-      setZoomLevel(ZOOM_LEVELS[currentIndex - 1]);
-    }
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -282,13 +234,14 @@ export function GenerateDocumentDialog({
                     </div>
                     
                     {preview ? (
-                      <ScrollArea className="h-[300px] border rounded-md">
-                        <div
-                          className="bg-white"
-                          style={{ colorScheme: 'light' }}
-                          dangerouslySetInnerHTML={{ __html: buildStyledPreviewHtml(preview) }}
+                      <div className="h-[350px]">
+                        <PaginatedDocumentViewer
+                          content={preview}
+                          title="Document Preview"
+                          compact
+                          showFooter={false}
                         />
-                      </ScrollArea>
+                      </div>
                     ) : (
                       <div className="h-[100px] border rounded-md flex items-center justify-center text-muted-foreground">
                         Click "Show Preview" to see the document with case data
@@ -316,7 +269,7 @@ export function GenerateDocumentDialog({
 
       {/* Fullscreen Preview Dialog */}
       <Dialog open={showFullscreen} onOpenChange={setShowFullscreen}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col p-0">
+        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] h-full flex flex-col p-0 gap-0">
           <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/50">
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -325,70 +278,25 @@ export function GenerateDocumentDialog({
                 <span className="text-sm text-muted-foreground">— {title}</span>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 border rounded-md p-1 bg-background">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={handleZoomOut}
-                  disabled={zoomLevel === ZOOM_LEVELS[0]}
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <Select
-                  value={zoomLevel.toString()}
-                  onValueChange={(v) => setZoomLevel(parseInt(v))}
-                >
-                  <SelectTrigger className="w-20 h-7 border-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ZOOM_LEVELS.map((level) => (
-                      <SelectItem key={level} value={level.toString()}>
-                        {level}%
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={handleZoomIn}
-                  disabled={zoomLevel === ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setShowFullscreen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setShowFullscreen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
           
-          <ScrollArea className="flex-1 bg-muted/30">
-            <div className="flex justify-center p-8">
-              <div
-                className="shadow-xl"
-                style={{
-                  width: `${8.5 * 96}px`, // 8.5 inches at 96 DPI
-                  minHeight: `${11 * 96}px`, // 11 inches at 96 DPI
-                  transform: `scale(${zoomLevel / 100})`,
-                  transformOrigin: 'top center',
-                  colorScheme: 'light',
-                  backgroundColor: '#fff',
-                  border: '1px solid #ccc',
-                }}
-                dangerouslySetInnerHTML={{ __html: buildStyledPreviewHtml(preview || '') }}
+          <div className="flex-1 overflow-hidden">
+            {preview && (
+              <PaginatedDocumentViewer
+                content={preview}
+                title="Document Preview"
+                showHeader={false}
               />
-            </div>
-          </ScrollArea>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>
