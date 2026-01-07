@@ -344,6 +344,252 @@ export interface PreGenerationValidation {
 }
 
 /**
+ * Professional Acceptance Test Result
+ * 
+ * A letter is considered valid ONLY if:
+ * 1. It visually matches a standard business letter
+ * 2. It can be printed and mailed without edits
+ * 3. It could be sent to a government agency or attorney immediately
+ * 4. Preview and PDF match exactly
+ * 
+ * Anything else is a DEFECT.
+ */
+export interface ProfessionalAcceptanceTest {
+  /** Overall pass/fail status */
+  passed: boolean;
+  /** Letter can be exported */
+  canExport: boolean;
+  /** Validation timestamp */
+  testedAt: Date;
+  /** Individual test results */
+  tests: {
+    visualStandards: AcceptanceTestResult;
+    completeness: AcceptanceTestResult;
+    printReadiness: AcceptanceTestResult;
+    professionalStandards: AcceptanceTestResult;
+    fidelity: AcceptanceTestResult;
+    structure: AcceptanceTestResult;
+  };
+  /** All errors (blocking) */
+  errors: string[];
+  /** All warnings (non-blocking) */
+  warnings: string[];
+}
+
+export interface AcceptanceTestResult {
+  passed: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Validate visual standards for professional correspondence
+ */
+export function validateVisualStandards(html: string): AcceptanceTestResult {
+  const result: AcceptanceTestResult = { passed: true, errors: [], warnings: [] };
+  
+  // Check for proper font stack
+  if (!html.includes('Times New Roman') && !html.includes('Georgia') && !html.includes('serif')) {
+    result.warnings.push('Non-standard font family detected. Professional letters should use Times New Roman or Georgia.');
+  }
+  
+  // Check for inline styles that break visual consistency
+  const inlineStyleCount = (html.match(/style="[^"]+"/gi) || []).length;
+  if (inlineStyleCount > 15) {
+    result.warnings.push(`Excessive inline styles (${inlineStyleCount}). May cause visual inconsistency.`);
+  }
+  
+  // Check signature block has proper space
+  const signatureMatch = html.match(/<div[^>]*class="[^"]*letter-signature[^"]*"[^>]*>/i);
+  if (signatureMatch && !html.includes('signature-space') && !html.includes('signature-line')) {
+    result.warnings.push('Signature block may lack adequate space for wet signature.');
+  }
+  
+  return result;
+}
+
+/**
+ * Validate completeness - no placeholders, all fields filled
+ */
+export function validateCompleteness(html: string): AcceptanceTestResult {
+  const result: AcceptanceTestResult = { passed: true, errors: [], warnings: [] };
+  
+  // Check for unresolved mustache placeholders (BLOCKING)
+  const placeholderMatches = html.match(/\{\{[^}]+\}\}/g) || [];
+  if (placeholderMatches.length > 0) {
+    result.passed = false;
+    const uniquePlaceholders = [...new Set(placeholderMatches)].slice(0, 3);
+    result.errors.push(`Unresolved placeholders found: ${uniquePlaceholders.join(', ')}${placeholderMatches.length > 3 ? '...' : ''}`);
+  }
+  
+  // Check for bracket placeholders
+  const bracketPlaceholders = html.match(/\[[^\]]*(?:insert|your name|recipient|date|TBD|TODO)[^\]]*\]/gi) || [];
+  if (bracketPlaceholders.length > 0) {
+    result.passed = false;
+    result.errors.push(`Placeholder text found: ${bracketPlaceholders.slice(0, 2).join(', ')}`);
+  }
+  
+  // Check for empty body (BLOCKING)
+  const bodyMatch = html.match(/<div[^>]*class="[^"]*letter-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+  if (bodyMatch) {
+    const bodyContent = bodyMatch[1].replace(/<[^>]*>/g, '').trim();
+    if (bodyContent.length < 50) {
+      result.passed = false;
+      result.errors.push('Letter body is empty or too short (minimum 50 characters required).');
+    }
+  }
+  
+  // Check for empty signature name
+  const sigNameMatch = html.match(/<[^>]*class="[^"]*signature-name[^"]*"[^>]*>([\s\S]*?)<\/[^>]*>/i);
+  if (sigNameMatch) {
+    const sigName = sigNameMatch[1].replace(/<[^>]*>/g, '').trim();
+    if (!sigName || sigName.length < 2) {
+      result.passed = false;
+      result.errors.push('Signature name is missing or too short.');
+    }
+  }
+  
+  // Check for broken images
+  const imgMatches = html.match(/<img[^>]*>/gi) || [];
+  for (const img of imgMatches) {
+    if (!img.includes('src="') || img.includes('src=""') || img.includes('src="undefined"')) {
+      result.passed = false;
+      result.errors.push('Broken image detected (missing or invalid source).');
+      break;
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Validate print readiness - can be mailed immediately
+ */
+export function validatePrintReadiness(html: string): AcceptanceTestResult {
+  const result: AcceptanceTestResult = { passed: true, errors: [], warnings: [] };
+  
+  // Check for interactive elements (BLOCKING)
+  if (/<button/i.test(html) || /<input/i.test(html) || /<select/i.test(html) || /<textarea/i.test(html)) {
+    result.passed = false;
+    result.errors.push('Interactive elements detected. Letters must not contain buttons or form inputs.');
+  }
+  
+  // Check for hidden content that won't print
+  if (/display:\s*none/i.test(html)) {
+    result.warnings.push('Hidden content detected. May cause preview/print mismatch.');
+  }
+  
+  // Check for background colors (except white/transparent)
+  const bgColorMatches = html.match(/background(-color)?:\s*([^;]+)/gi) || [];
+  for (const bg of bgColorMatches) {
+    const lowerBg = bg.toLowerCase();
+    if (!lowerBg.includes('#fff') && !lowerBg.includes('white') && !lowerBg.includes('transparent') && !lowerBg.includes('#ffffff')) {
+      result.warnings.push('Non-white background color detected. May not print correctly.');
+      break;
+    }
+  }
+  
+  // Check for clickable links in body (should be plain text for mailed letters)
+  const bodyMatch = html.match(/<div[^>]*class="[^"]*letter-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+  if (bodyMatch && /<a\s+href/i.test(bodyMatch[1])) {
+    result.warnings.push('Clickable links in body. Consider using plain text URLs for printed letters.');
+  }
+  
+  return result;
+}
+
+/**
+ * Validate professional standards - attorney/government ready
+ */
+export function validateProfessionalStandards(html: string): AcceptanceTestResult {
+  const result: AcceptanceTestResult = { passed: true, errors: [], warnings: [] };
+  
+  // Check salutation for informal language (BLOCKING)
+  const salutationMatch = html.match(/<[^>]*class="[^"]*letter-salutation[^"]*"[^>]*>([\s\S]*?)<\/[^>]*>/i);
+  if (salutationMatch) {
+    const salutation = salutationMatch[1].replace(/<[^>]*>/g, '').toLowerCase().trim();
+    const informalPatterns = [
+      { pattern: /^hey\b/, label: 'Hey' },
+      { pattern: /^hi\b/, label: 'Hi' },
+      { pattern: /^hello\b/, label: 'Hello' },
+      { pattern: /^yo\b/, label: 'Yo' },
+      { pattern: /^sup\b/, label: 'Sup' },
+      { pattern: /^what'?s up/, label: "What's up" },
+    ];
+    for (const { pattern, label } of informalPatterns) {
+      if (pattern.test(salutation)) {
+        result.passed = false;
+        result.errors.push(`Informal salutation "${label}" detected. Use "Dear [Name]:" for professional correspondence.`);
+        break;
+      }
+    }
+  }
+  
+  // Check closing for informal language (warning)
+  const closingMatch = html.match(/<[^>]*class="[^"]*letter-closing[^"]*"[^>]*>([\s\S]*?)<\/[^>]*>/i);
+  if (closingMatch) {
+    const closing = closingMatch[1].replace(/<[^>]*>/g, '').toLowerCase().trim();
+    const informalClosings = ['thanks!', 'cheers', 'later', 'take care', 'ciao', 'bye', 'xoxo'];
+    for (const pattern of informalClosings) {
+      if (closing.includes(pattern)) {
+        result.warnings.push(`Informal closing detected ("${pattern}"). Consider "Sincerely," or "Respectfully," for government/legal correspondence.`);
+        break;
+      }
+    }
+  }
+  
+  // Check for draft watermark (warning for final export)
+  if (/\bDRAFT\b/i.test(html) || /class="[^"]*draft-watermark/i.test(html)) {
+    result.warnings.push('Draft watermark detected. Ensure this is intentional for final export.');
+  }
+  
+  // Check for profanity or inappropriate language
+  const textContent = html.replace(/<[^>]*>/g, ' ').toLowerCase();
+  const inappropriatePatterns = [/\bf+[*@#]+k/i, /\bs+[*@#]+t/i, /\ba+[*@#]+/i];
+  for (const pattern of inappropriatePatterns) {
+    if (pattern.test(textContent)) {
+      result.passed = false;
+      result.errors.push('Inappropriate language detected. Remove before sending to government or legal recipients.');
+      break;
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Validate fidelity - preview matches PDF exactly
+ */
+export function validateFidelity(html: string, pageSettings: PageSettings): AcceptanceTestResult {
+  const result: AcceptanceTestResult = { passed: true, errors: [], warnings: [] };
+  
+  // Check for page size validity
+  if (!['letter', 'a4'].includes(pageSettings.size)) {
+    result.passed = false;
+    result.errors.push(`Invalid page size: ${pageSettings.size}. Must be "letter" or "a4".`);
+  }
+  
+  // Check for !important overrides that could break fidelity
+  const importantCount = (html.match(/!important/gi) || []).length;
+  if (importantCount > 30) {
+    result.warnings.push(`Excessive CSS !important declarations (${importantCount}). May cause preview/PDF mismatch.`);
+  }
+  
+  // Check for embedded <style> tags (should use unified styles)
+  const embeddedStyleCount = (html.match(/<style>/gi) || []).length;
+  if (embeddedStyleCount > 2) {
+    result.warnings.push('Multiple embedded style blocks detected. Use unified letter styles for consistency.');
+  }
+  
+  // Check for viewport-dependent units that could cause issues
+  if (/\d+vw|\d+vh|\d+vmin|\d+vmax/i.test(html)) {
+    result.warnings.push('Viewport-relative units detected. May cause inconsistency between preview and PDF.');
+  }
+  
+  return result;
+}
+
+/**
  * PRE-GENERATION VALIDATION
  * 
  * Run BEFORE generating or exporting a letter.
@@ -401,6 +647,78 @@ export function validateBeforeGeneration(html: string): PreGenerationValidation 
   result.warnings.push(...sectionsValidation.warnings);
   
   return result;
+}
+
+/**
+ * PROFESSIONAL ACCEPTANCE TEST
+ * 
+ * Comprehensive validation that ensures every letter is:
+ * 1. Visually matches a standard business letter
+ * 2. Can be printed and mailed without edits
+ * 3. Could be sent to a government agency or attorney immediately
+ * 4. Preview and PDF match exactly
+ * 
+ * ANYTHING that fails this test is classified as a DEFECT and blocks export.
+ */
+export function runProfessionalAcceptanceTest(
+  html: string,
+  pageSettings: PageSettings
+): ProfessionalAcceptanceTest {
+  // Run all test categories
+  const visualStandards = validateVisualStandards(html);
+  const completeness = validateCompleteness(html);
+  const printReadiness = validatePrintReadiness(html);
+  const professionalStandards = validateProfessionalStandards(html);
+  const fidelity = validateFidelity(html, pageSettings);
+  
+  // Also run existing structural validation
+  const preGen = validateBeforeGeneration(html);
+  const structure: AcceptanceTestResult = {
+    passed: preGen.isValid,
+    errors: preGen.errors,
+    warnings: preGen.warnings
+  };
+  
+  // Aggregate results
+  const allErrors = [
+    ...structure.errors,
+    ...visualStandards.errors,
+    ...completeness.errors,
+    ...printReadiness.errors,
+    ...professionalStandards.errors,
+    ...fidelity.errors,
+  ];
+  
+  const allWarnings = [
+    ...structure.warnings,
+    ...visualStandards.warnings,
+    ...completeness.warnings,
+    ...printReadiness.warnings,
+    ...professionalStandards.warnings,
+    ...fidelity.warnings,
+  ];
+  
+  // Deduplicate
+  const uniqueErrors = [...new Set(allErrors)];
+  const uniqueWarnings = [...new Set(allWarnings)];
+  
+  const passed = uniqueErrors.length === 0;
+  
+  return {
+    passed,
+    canExport: passed,
+    testedAt: new Date(),
+    tests: {
+      visualStandards,
+      completeness,
+      printReadiness,
+      professionalStandards,
+      fidelity,
+      structure,
+    },
+    errors: uniqueErrors,
+    warnings: uniqueWarnings,
+  };
 }
 
 export function validateLetterStructure(html: string): LetterStructureValidation {

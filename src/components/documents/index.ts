@@ -7,3 +7,4 @@ export { LetterCategorySelector } from "./LetterCategorySelector";
 export { GuidedLetterBuilder } from "./GuidedLetterBuilder";
 export { UnifiedRecordsRequestBuilder } from "./builders/UnifiedRecordsRequestBuilder";
 export { ValidationStatusBanner } from "./ValidationStatusBanner";
+export { ProfessionalAcceptanceBanner } from "./ProfessionalAcceptanceBanner";

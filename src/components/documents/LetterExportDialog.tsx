@@ -41,7 +41,11 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { toast } from "sonner";
-import { type LetterDocument, validateBeforeGeneration, type PreGenerationValidation } from "@/lib/letterDocumentEngine";
+import { 
+  type LetterDocument, 
+  runProfessionalAcceptanceTest, 
+  type ProfessionalAcceptanceTest 
+} from "@/lib/letterDocumentEngine";
 import { 
   PAGE_SPECS, 
   getUnifiedLetterStyles,
@@ -49,7 +53,7 @@ import {
   LETTER_FONT_STACK 
 } from "@/lib/paginatedLetterStyles";
 import { saveExportedPdf, recordExport } from "@/lib/documentExports";
-import { ValidationStatusBanner } from "./ValidationStatusBanner";
+import { ProfessionalAcceptanceBanner } from "./ProfessionalAcceptanceBanner";
 
 interface LetterExportDialogProps {
   open: boolean;
@@ -92,15 +96,22 @@ export function LetterExportDialog({
   const [includeDraftWatermark, setIncludeDraftWatermark] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
-  const [validationResult, setValidationResult] = useState<PreGenerationValidation | null>(null);
+  const [acceptanceTest, setAcceptanceTest] = useState<ProfessionalAcceptanceTest | null>(null);
 
-  // Run validation when dialog opens
+  // Run Professional Acceptance Test when dialog opens
   useEffect(() => {
     if (open && letterDocument?.html) {
-      const result = validateBeforeGeneration(letterDocument.html);
-      setValidationResult(result);
+      const result = runProfessionalAcceptanceTest(
+        letterDocument.html,
+        letterDocument.pageSettings
+      );
+      setAcceptanceTest(result);
+      
+      if (!result.passed) {
+        console.warn('Professional Acceptance Test FAILED:', result.errors);
+      }
     }
-  }, [open, letterDocument?.html]);
+  }, [open, letterDocument?.html, letterDocument?.pageSettings]);
 
   const sanitizeFilename = (name: string): string => {
     return name
@@ -483,9 +494,9 @@ export function LetterExportDialog({
             </Label>
           </div>
 
-          {/* Validation Status */}
-          {validationResult && (
-            <ValidationStatusBanner validation={validationResult} />
+          {/* Professional Acceptance Test Status */}
+          {acceptanceTest && (
+            <ProfessionalAcceptanceBanner test={acceptanceTest} />
           )}
 
           {/* Page Info - Uses PAGE_SPECS for consistent dimensions */}
@@ -507,7 +518,7 @@ export function LetterExportDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleExport} disabled={isExporting || !filename.trim() || !validationResult?.canProceed}>
+          <Button onClick={handleExport} disabled={isExporting || !filename.trim() || !acceptanceTest?.canExport}>
             {isExporting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
