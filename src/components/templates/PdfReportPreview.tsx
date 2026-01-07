@@ -59,14 +59,16 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
 
       try {
         // Create a temporary element with the HTML content
-        // Must have explicit width for html2pdf to paginate correctly
+        // Must have explicit dimensions for html2pdf to paginate correctly
         const element = document.createElement("div");
         element.innerHTML = htmlContent;
         element.style.position = "absolute";
         element.style.left = "-9999px";
         element.style.top = "0";
         element.style.width = "8.5in"; // Letter page width for accurate pagination
+        element.style.minHeight = "11in"; // Letter page height
         element.style.background = "white";
+        element.style.overflow = "visible"; // Ensure content isn't clipped
         document.body.appendChild(element);
 
         // Generate PDF as array buffer
