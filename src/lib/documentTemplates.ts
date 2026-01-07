@@ -24,10 +24,11 @@ export interface DocumentInstance {
   title: string;
   documentType: string;
   renderedHtml: string;
+  stateCode: string | null; // State for records requests (e.g., CA, TX)
   orgProfileSnapshot: Record<string, unknown> | null;
   caseVariablesSnapshot: Record<string, unknown> | null;
-  exportFormat: string | null;
-  exportedAt: string | null;
+  exportFormat: string | null; // Last export format (backwards compat)
+  exportedAt: string | null; // Last export time (backwards compat)
   generatedAt: string;
   createdAt: string;
 }
@@ -73,6 +74,7 @@ function parseInstance(row: Record<string, unknown>): DocumentInstance {
     title: row.title as string,
     documentType: row.document_type as string,
     renderedHtml: row.rendered_html as string,
+    stateCode: row.state_code as string | null,
     orgProfileSnapshot: row.org_profile_snapshot as Record<string, unknown> | null,
     caseVariablesSnapshot: row.case_variables_snapshot as Record<string, unknown> | null,
     exportFormat: row.export_format as string | null,

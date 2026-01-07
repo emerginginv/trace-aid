@@ -987,6 +987,63 @@ export type Database = {
           },
         ]
       }
+      document_exports: {
+        Row: {
+          content_hash: string | null
+          document_instance_id: string
+          export_format: string
+          exported_at: string
+          exported_by_ip: string | null
+          file_size_bytes: number | null
+          filename: string
+          id: string
+          organization_id: string
+          storage_path: string | null
+          user_id: string
+        }
+        Insert: {
+          content_hash?: string | null
+          document_instance_id: string
+          export_format: string
+          exported_at?: string
+          exported_by_ip?: string | null
+          file_size_bytes?: number | null
+          filename: string
+          id?: string
+          organization_id: string
+          storage_path?: string | null
+          user_id: string
+        }
+        Update: {
+          content_hash?: string | null
+          document_instance_id?: string
+          export_format?: string
+          exported_at?: string
+          exported_by_ip?: string | null
+          file_size_bytes?: number | null
+          filename?: string
+          id?: string
+          organization_id?: string
+          storage_path?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_exports_document_instance_id_fkey"
+            columns: ["document_instance_id"]
+            isOneToOne: false
+            referencedRelation: "document_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_exports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_instances: {
         Row: {
           case_id: string
@@ -1000,6 +1057,7 @@ export type Database = {
           org_profile_snapshot: Json | null
           organization_id: string
           rendered_html: string
+          state_code: string | null
           template_id: string | null
           title: string
           user_id: string
@@ -1016,6 +1074,7 @@ export type Database = {
           org_profile_snapshot?: Json | null
           organization_id: string
           rendered_html: string
+          state_code?: string | null
           template_id?: string | null
           title: string
           user_id: string
@@ -1032,6 +1091,7 @@ export type Database = {
           org_profile_snapshot?: Json | null
           organization_id?: string
           rendered_html?: string
+          state_code?: string | null
           template_id?: string | null
           title?: string
           user_id?: string
