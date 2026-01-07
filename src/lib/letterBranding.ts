@@ -285,8 +285,9 @@ export function wrapLetterWithBranding(
   const signature = renderSignatureBlock(config);
   const footer = renderConfidentialityFooter(config);
   
+  // Font-family is controlled by CSS class from paginatedLetterStyles.ts
   return `
-    <div class="letter-document" style="font-family: 'Times New Roman', serif; max-width: 800px; margin: 0 auto; padding: 40px;">
+    <div class="letter-document" style="max-width: 800px; margin: 0 auto; padding: 40px;">
       ${letterhead}
       ${dateBlock}
       <div class="letter-body">

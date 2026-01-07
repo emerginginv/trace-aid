@@ -293,7 +293,7 @@ export function generatePrintCss(config: LetterPrintConfig): string {
     }
     
     .letter-date {
-      text-align: right;
+      text-align: left;
       margin-bottom: 1.5em;
     }
     
@@ -316,12 +316,13 @@ export function generatePrintCss(config: LetterPrintConfig): string {
     
     .letter-body {
       margin-bottom: 1.5em;
-      text-align: left;
+      text-align: left !important;
     }
     
     .letter-body p {
       margin-bottom: 1em;
-      text-align: left;
+      text-align: left !important;
+      text-justify: none !important;
     }
     
     .statutory-language {

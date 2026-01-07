@@ -24,7 +24,7 @@ import { PAGE_SPECS, type PageSize } from './paginatedLetterStyles';
  */
 export const CANONICAL_SECTION_ORDER = [
   'letterhead',       // 1. Organization branding (locked structure)
-  'date_block',       // 2. Date positioning (right-aligned)
+  'date_block',       // 2. Date positioning (left-aligned per typography rules)
   'recipient_block',  // 3. Addressee information
   'reference',        // 4. Subject/RE line (optional)
   'salutation',       // 5. Dear X,
