@@ -11,7 +11,7 @@ This document provides the definitive HTML structure and CSS classes for generat
 | Order | Section ID | CSS Class | Required | Description |
 |-------|-----------|-----------|----------|-------------|
 | 1 | `letterhead` | `.letter-letterhead` | ✓ | Organization branding, logo, contact info |
-| 2 | `date_block` | `.letter-date` | ✓ | Letter date, right-aligned |
+| 2 | `date_block` | `.letter-date` | ✓ | Letter date, **left-aligned** (single authoritative date) |
 | 3 | `recipient_block` | `.letter-recipient` | ✓ | Addressee name, title, organization, address |
 | 4 | `reference` | `.letter-reference` | ○ | Subject/RE line (optional) |
 | 5 | `salutation` | `.letter-salutation` | ✓ | "Dear [Name]:" |
@@ -58,16 +58,54 @@ This document provides the definitive HTML structure and CSS classes for generat
 
 ---
 
+## Date Rules (Single Authoritative Date)
+
+**RULE:** Each letter must contain exactly **one primary date** that appears once, below the letterhead, and is **left-aligned**.
+
+| Requirement | Enforcement |
+|-------------|-------------|
+| Exactly one primary date | Validation error if 0 or >1 date blocks |
+| Position | Below letterhead, before recipient block |
+| Alignment | **Left-aligned** (not right-aligned) |
+| Format | Full (January 15, 2024) or Short (01/15/2024) |
+| Header/Footer dates | **Not allowed** - validation error |
+
+### Valid Structure
+```
+[Letterhead]
+
+January 7, 2026     ← Primary date (left-aligned)
+
+[Recipient Block]
+...
+```
+
+### Content Dates vs Letter Date
+Dates that are part of the letter content (e.g., "records from January 2023 to March 2024") are **allowed** but are **NOT** considered the letter date. They are content dates and do not violate the single-date rule.
+
+### Date CSS Class
+- `.letter-date` - Primary date block (appears once, left-aligned)
+
+### Date Validation
+The system validates:
+1. Exactly one `.letter-date` element exists
+2. No date elements in letterhead header
+3. Warning if date-like content in footer
+4. Multiple date blocks = validation error
+
+---
+
 ## Table of Contents
 
 1. [Canonical Section Order](#canonical-section-order-immutable)
 2. [Header Rules](#header-rules-mutual-exclusivity)
-3. [Complete HTML Skeleton](#complete-html-skeleton)
-4. [Section Reference](#section-reference)
-5. [CSS Classes](#css-classes)
-6. [Placeholder Variables](#placeholder-variables)
-7. [Pagination Behavior](#pagination-behavior)
-8. [Usage Examples](#usage-examples)
+3. [Date Rules](#date-rules-single-authoritative-date)
+4. [Complete HTML Skeleton](#complete-html-skeleton)
+5. [Section Reference](#section-reference)
+6. [CSS Classes](#css-classes)
+7. [Placeholder Variables](#placeholder-variables)
+8. [Pagination Behavior](#pagination-behavior)
+9. [Usage Examples](#usage-examples)
 
 ---
 
