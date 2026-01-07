@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Eye, EyeOff, ChevronDown, ChevronRight } from "lucide-react";
+import { GripVertical, Eye, EyeOff, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -172,6 +172,14 @@ export function SectionCustomizationRow({
     customization.collectionConfigOverride !== undefined
   );
 
+  // Detect potentially empty sections
+  const mayBeEmpty = effectiveVisible && (
+    (section.sectionType === 'case_variable_block' && 
+     (!section.variableConfig?.variables || section.variableConfig.variables.length === 0)) ||
+    (section.sectionType === 'static_text' && 
+     (!section.content || section.content.trim() === ''))
+  );
+
   const getSectionTypeColor = (type: SectionType) => {
     switch (type) {
       case 'static_text': return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
@@ -259,6 +267,22 @@ export function SectionCustomizationRow({
           <Badge variant="secondary" className={cn("text-[10px] shrink-0 font-normal px-1.5 py-0", getSectionTypeColor(section.sectionType))}>
             {SECTION_TYPE_LABELS[section.sectionType]}
           </Badge>
+
+          {/* Empty Section Warning */}
+          {mayBeEmpty && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="shrink-0 text-amber-500">
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">This section may render empty due to missing content or configuration</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
 
           {/* Visibility Toggle */}
           <TooltipProvider>

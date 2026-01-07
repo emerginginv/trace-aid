@@ -44,6 +44,7 @@ export interface RenderedSection {
     updateIds?: string[];
     eventIds?: string[];
     variables?: string[];
+    isEmpty?: boolean;  // Whether section rendered with no actual content
   };
 }
 

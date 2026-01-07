@@ -120,6 +120,26 @@ export function renderStaticTextSection(
 ): RenderedSection {
   let content = section.content || '';
   
+  // Check if section has no content defined
+  if (!content.trim()) {
+    const htmlContent = `
+      <h2 class="section-title">${escapeHtml(section.title)}</h2>
+      <div class="section-content">
+        <div class="section-empty-state">
+          <p class="empty-state-message">No content defined for this section.</p>
+        </div>
+      </div>
+    `;
+    return {
+      id: section.id,
+      title: section.title,
+      sectionType: section.sectionType,
+      displayOrder: section.displayOrder,
+      htmlContent,
+      sourceData: { isEmpty: true },
+    };
+  }
+  
   // Replace organization placeholders
   if (orgProfile) {
     const logoHtml = orgProfile.logoUrl 
@@ -219,9 +239,13 @@ export function renderVariableBlockSection(
 
   let contentHtml = '';
 
-  // If no variables have values, show a message or empty section
+  // If no variables have values, show empty state message
   if (variablesWithValues.length === 0) {
-    contentHtml = '';
+    contentHtml = `
+      <div class="section-empty-state">
+        <p class="empty-state-message">No case variable data available for this section.</p>
+      </div>
+    `;
   } else {
     switch (layout) {
       case 'table':
@@ -278,7 +302,7 @@ export function renderVariableBlockSection(
     sectionType: section.sectionType,
     displayOrder: section.displayOrder,
     htmlContent,
-    sourceData: { variables: variableKeys },
+    sourceData: { variables: variableKeys, isEmpty: variablesWithValues.length === 0 },
   };
 }
 
