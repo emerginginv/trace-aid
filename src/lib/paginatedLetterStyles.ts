@@ -96,6 +96,12 @@ export interface UnifiedStyleOptions {
   draftMode?: boolean;
   /** Styles optimized for export (no screen-only styles) */
   forExport?: boolean;
+  /** Include running headers (organization name) */
+  runningHeader?: string;
+  /** Include running footer (confidentiality notice) */
+  runningFooter?: string;
+  /** Show page numbers in footer */
+  showPageNumbers?: boolean;
 }
 
 // ============================================================================
@@ -108,6 +114,8 @@ export interface UnifiedStyleOptions {
  * This is the SINGLE SOURCE OF TRUTH for all letter styling.
  * Preview, PDF, DOCX, and Print all use these exact styles.
  * 
+ * CRITICAL: HTML controls pagination — never the export engine.
+ * 
  * @param pageSize - Page size ('letter' or 'a4')
  * @param options - Style options
  * @returns CSS string to be injected
@@ -117,7 +125,13 @@ export function getUnifiedLetterStyles(
   options: UnifiedStyleOptions = {}
 ): string {
   const spec = PAGE_SPECS[pageSize];
-  const { draftMode = false, forExport = false } = options;
+  const { 
+    draftMode = false, 
+    forExport = false,
+    runningHeader,
+    runningFooter,
+    showPageNumbers = true,
+  } = options;
   
   return `
     /* ══════════════════════════════════════════════════════════════════════════
@@ -127,14 +141,59 @@ export function getUnifiedLetterStyles(
        Mode: ${forExport ? 'Export' : 'Preview'}${draftMode ? ' [DRAFT]' : ''}
        ══════════════════════════════════════════════════════════════════════════ */
 
-    /* === PAGE SETUP === */
+    /* === PRINT-CSS PAGE SETUP (CONTROLS ALL PAGINATION) === */
     @page {
       size: ${spec.width} ${spec.height};
       margin: ${spec.margins.top / 96}in ${spec.margins.right / 96}in ${spec.margins.bottom / 96}in ${spec.margins.left / 96}in;
+      
+      /* Running footer with page numbers */
+      ${showPageNumbers ? `
+      @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: ${LETTER_FONT_STACK};
+        font-size: 9pt;
+        color: #666;
+      }
+      ` : ''}
+      
+      /* Running header (from second page onward) */
+      ${runningHeader ? `
+      @top-center {
+        content: element(running-header);
+      }
+      ` : ''}
+      
+      /* Running footer content */
+      ${runningFooter ? `
+      @bottom-left {
+        content: element(running-footer);
+      }
+      ` : ''}
     }
 
+    /* First page - no running header */
     @page:first {
-      /* First page can have different margins if needed */
+      @top-center {
+        content: none;
+      }
+    }
+
+    /* === RUNNING ELEMENTS (POSITION OUTSIDE FLOW) === */
+    .running-header {
+      position: running(running-header);
+      font-family: ${LETTER_FONT_STACK};
+      font-size: 10pt;
+      color: #666;
+      text-align: center;
+      padding-bottom: 0.25in;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .running-footer {
+      position: running(running-footer);
+      font-family: ${LETTER_FONT_STACK};
+      font-size: 8pt;
+      color: #888;
     }
 
     /* === ROOT DOCUMENT STYLES === */
@@ -157,6 +216,31 @@ export function getUnifiedLetterStyles(
       line-height: 1.5;
       color: #000 !important;
       background: ${forExport ? '#fff' : 'transparent'};
+    }
+
+    /* === EXPLICIT PAGE CONTAINERS === */
+    .page {
+      width: ${spec.usableWidthPx / 96}in;
+      min-height: ${spec.usableHeightPx / 96}in;
+      box-sizing: border-box;
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .page:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
+    /* Force page break */
+    .force-page-break,
+    .page-break {
+      page-break-after: always;
+      break-after: page;
+      height: 0;
+      margin: 0;
+      padding: 0;
+      visibility: hidden;
     }
 
     /* === LETTERHEAD === */
@@ -220,6 +304,9 @@ export function getUnifiedLetterStyles(
       margin-bottom: 1em;
       text-indent: 0;
       color: #000 !important;
+      /* Widows and orphans control */
+      widows: 2;
+      orphans: 2;
     }
 
     .letter-body p + p {
@@ -235,6 +322,9 @@ export function getUnifiedLetterStyles(
       margin-bottom: 0.5em;
       text-align: left;
       color: #000 !important;
+      /* Keep headings with following content */
+      break-after: avoid;
+      page-break-after: avoid;
     }
 
     /* === LEGAL CITATIONS === */
@@ -273,6 +363,8 @@ export function getUnifiedLetterStyles(
     /* === NDA-SPECIFIC STYLES === */
     .nda-clause {
       margin-bottom: 1em;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
     }
 
     .nda-clause-number {
@@ -286,8 +378,8 @@ export function getUnifiedLetterStyles(
     /* === SIGNATURE BLOCK === */
     .letter-signature {
       margin-top: 1in;
-      break-inside: avoid;
-      page-break-inside: avoid;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
       color: #000 !important;
     }
 
@@ -322,22 +414,36 @@ export function getUnifiedLetterStyles(
       text-align: center;
     }
 
-    /* === AVOID PAGE BREAKS === */
+    /* === MANDATORY PAGE BREAK RULES === */
+    
+    /* Elements that MUST stay together */
     .avoid-break,
+    .keep-together,
     .letter-signature,
-    .nda-clause {
-      break-inside: avoid;
-      page-break-inside: avoid;
+    .signature-block,
+    .nda-clause,
+    .statutory-block,
+    .statutory-language {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
     }
 
-    .page-break-before {
-      break-before: page;
-      page-break-before: always;
+    /* Elements that force new pages */
+    .page-break-before,
+    .new-page {
+      break-before: page !important;
+      page-break-before: always !important;
     }
 
     .page-break-after {
-      break-after: page;
-      page-break-after: always;
+      break-after: page !important;
+      page-break-after: always !important;
+    }
+
+    /* Tables should avoid breaking */
+    table {
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
     /* === DRAFT WATERMARK === */
@@ -357,6 +463,11 @@ export function getUnifiedLetterStyles(
 
     /* === PRINT OPTIMIZATION === */
     @media print {
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+      
       .letter-document {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -462,6 +573,10 @@ export function getPageViewerStyles(pageSize: PageSize = 'letter'): string {
 // PDF EXPORT OPTIONS (uses same PAGE_SPECS for consistency)
 // ============================================================================
 
+/**
+ * @deprecated PDF export now uses Paged.js rendering for consistency.
+ * This function is kept for fallback only.
+ */
 export function getPdfExportOptions(filename: string, pageSize: PageSize = 'letter') {
   const spec = PAGE_SPECS[pageSize];
   
@@ -486,4 +601,48 @@ export function getPdfExportOptions(filename: string, pageSize: PageSize = 'lett
       avoid: ['.avoid-break', '.letter-signature', '.nda-clause'],
     },
   };
+}
+
+// ============================================================================
+// RUNNING ELEMENTS HELPER
+// ============================================================================
+
+/**
+ * Wrap letter body with running header/footer elements for print pagination.
+ * 
+ * Running elements are positioned outside the normal flow and repeat
+ * on each page using CSS Paged Media (@page margin boxes).
+ * 
+ * @param bodyHtml - The letter body HTML content
+ * @param options - Running element options
+ * @returns HTML with running elements injected
+ */
+export function wrapWithRunningElements(
+  bodyHtml: string,
+  options: {
+    headerText?: string;
+    footerText?: string;
+    confidentialityNotice?: string;
+  } = {}
+): string {
+  const { headerText, footerText, confidentialityNotice } = options;
+  
+  const runningHeader = headerText ? `
+    <div class="running-header">${headerText}</div>
+  ` : '';
+  
+  const runningFooter = (footerText || confidentialityNotice) ? `
+    <div class="running-footer">
+      ${footerText || ''}
+      ${confidentialityNotice ? `<span class="confidential">${confidentialityNotice}</span>` : ''}
+    </div>
+  ` : '';
+  
+  return `
+    ${runningHeader}
+    ${runningFooter}
+    <div class="letter-body-content">
+      ${bodyHtml}
+    </div>
+  `;
 }
