@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ZoomIn, ZoomOut, RotateCcw, FileText, Eye, Maximize, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PreviewResult } from "@/lib/reportPreview";
 import { cn } from "@/lib/utils";
+import { PdfReportPreview, PdfReportPreviewRef } from "./PdfReportPreview";
 
 interface ReportPreviewPanelProps {
   preview: PreviewResult | null;
@@ -31,7 +32,6 @@ interface ReportPreviewPanelProps {
 // US Letter page dimensions in pixels at 96 DPI
 const PAGE_WIDTH_PX = 816;  // 8.5 inches * 96 DPI
 const PAGE_HEIGHT_PX = 1056; // 11 inches * 96 DPI
-const PAGE_GAP = 32; // Gap between pages in pixels
 const CONTAINER_PADDING = 40; // Padding around the pages
 
 const ZOOM_LEVELS = [50, 75, 100, 125, 150];
@@ -39,12 +39,6 @@ const MIN_ZOOM = 50;
 const MAX_ZOOM = 150;
 
 type ZoomMode = "manual" | "fit-width" | "fit-page";
-
-interface ParsedPage {
-  pageNumber: number;
-  pageType: 'cover' | 'content';
-  html: string;
-}
 
 export function ReportPreviewPanel({
   preview,
@@ -56,48 +50,9 @@ export function ReportPreviewPanel({
   const [zoomLevel, setZoomLevel] = useState(75);
   const [zoomMode, setZoomMode] = useState<ZoomMode>("fit-width");
   const [activePage, setActivePage] = useState(1);
+  const [pageCount, setPageCount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-
-  // Extract all <style> blocks from the preview HTML
-  const extractedStyles = useMemo(() => {
-    if (!preview?.html) return '';
-    const styleMatches = preview.html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
-    if (!styleMatches) return '';
-    // Extract inner content from each style tag
-    return styleMatches
-      .map(tag => tag.replace(/<\/?style[^>]*>/gi, ''))
-      .join('\n');
-  }, [preview?.html]);
-
-  // Parse HTML into pages
-  const pages = useMemo<ParsedPage[]>(() => {
-    if (!preview?.html) return [];
-    
-    const pages: ParsedPage[] = [];
-    
-    // Extract cover page
-    const coverMatch = preview.html.match(/<div class="report-cover-page"[\s\S]*?<\/div>\s*(?=<div class="preview-page-break"|<div class="report-content")/);
-    if (coverMatch) {
-      pages.push({
-        pageNumber: 1,
-        pageType: 'cover',
-        html: coverMatch[0],
-      });
-    }
-    
-    // Extract content - everything after the page break
-    const contentMatch = preview.html.match(/<div class="report-content"[\s\S]*$/);
-    if (contentMatch) {
-      pages.push({
-        pageNumber: 2,
-        pageType: 'content',
-        html: contentMatch[0],
-      });
-    }
-    
-    return pages;
-  }, [preview?.html]);
+  const pdfPreviewRef = useRef<PdfReportPreviewRef>(null);
 
   // Calculate fit-to-width zoom
   const calculateFitWidth = useCallback(() => {
@@ -138,56 +93,6 @@ export function ReportPreviewPanel({
     }
   }, [zoomMode, calculateFitWidth, calculateFitPage]);
 
-  // Scroll to highlighted section
-  useEffect(() => {
-    if (highlightedSectionId && containerRef.current) {
-      const sectionEl = containerRef.current.querySelector(
-        `[data-section-id="${highlightedSectionId}"]`
-      );
-      if (sectionEl) {
-        sectionEl.scrollIntoView({ behavior: "smooth", block: "center" });
-        sectionEl.setAttribute("data-section-highlighted", "true");
-      }
-    }
-
-    return () => {
-      if (containerRef.current) {
-        const highlighted = containerRef.current.querySelector(
-          "[data-section-highlighted='true']"
-        );
-        if (highlighted) {
-          highlighted.removeAttribute("data-section-highlighted");
-        }
-      }
-    };
-  }, [highlightedSectionId]);
-
-  // Track which page is in view
-  useEffect(() => {
-    if (!containerRef.current || pages.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-            const pageNum = parseInt(entry.target.getAttribute('data-page-number') || '1');
-            setActivePage(pageNum);
-          }
-        });
-      },
-      {
-        root: containerRef.current,
-        threshold: 0.5,
-      }
-    );
-
-    pageRefs.current.forEach((el) => {
-      observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-  }, [pages]);
-
   const handleZoomIn = () => {
     setZoomMode("manual");
     const currentIndex = ZOOM_LEVELS.indexOf(zoomLevel);
@@ -223,31 +128,25 @@ export function ReportPreviewPanel({
   };
 
   const handlePageClick = (pageNumber: number) => {
-    const pageEl = pageRefs.current.get(pageNumber);
-    if (pageEl) {
-      pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
-      setActivePage(pageNumber);
-    }
+    pdfPreviewRef.current?.scrollToPage(pageNumber);
+    setActivePage(pageNumber);
   };
 
-  // Handle section clicks
-  const handlePreviewClick = (e: React.MouseEvent) => {
-    if (!onSectionClick) return;
+  const handlePageCountChange = useCallback((count: number) => {
+    setPageCount(count);
+  }, []);
 
-    const target = e.target as HTMLElement;
-    const sectionEl = target.closest("[data-section-id]");
-    if (sectionEl) {
-      const sectionId = sectionEl.getAttribute("data-section-id");
-      if (sectionId) {
-        onSectionClick(sectionId);
-      }
-    }
-  };
+  const handleActivePageChange = useCallback((page: number) => {
+    setActivePage(page);
+  }, []);
 
   const scale = zoomLevel / 100;
-  const scaledPageWidth = PAGE_WIDTH_PX * scale;
-  const scaledPageHeight = PAGE_HEIGHT_PX * scale;
-  const scaledGap = PAGE_GAP * scale;
+
+  // Generate page pills based on page count
+  const pagePills = Array.from({ length: pageCount }, (_, i) => ({
+    pageNumber: i + 1,
+    label: i === 0 ? 'Cover' : `Page ${i + 1}`,
+  }));
 
   if (isLoading) {
     return (
@@ -306,19 +205,19 @@ export function ReportPreviewPanel({
           </div>
           
           {/* Page indicator pills */}
-          <div className="flex items-center gap-1">
-            {pages.map((page) => (
+          <div className="flex items-center gap-1 overflow-x-auto max-w-[300px]">
+            {pagePills.map((pill) => (
               <button
-                key={page.pageNumber}
-                onClick={() => handlePageClick(page.pageNumber)}
+                key={pill.pageNumber}
+                onClick={() => handlePageClick(pill.pageNumber)}
                 className={cn(
-                  "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
-                  activePage === page.pageNumber
+                  "px-2.5 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap",
+                  activePage === pill.pageNumber
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted hover:bg-muted/80 text-muted-foreground"
                 )}
               >
-                {page.pageType === 'cover' ? 'Cover' : `Page ${page.pageNumber}`}
+                {pill.label}
               </button>
             ))}
           </div>
@@ -414,124 +313,22 @@ export function ReportPreviewPanel({
         </div>
       </div>
 
-      {/* Preview content - clean document-focused layout */}
+      {/* Preview content - PDF-based rendering */}
       <ScrollArea className="flex-1" ref={containerRef}>
-        {/* Inject extracted styles so they apply to page content */}
-        {extractedStyles && (
-          <style dangerouslySetInnerHTML={{ __html: extractedStyles }} />
-        )}
         <div 
           className="min-h-full flex justify-center"
           style={{
             padding: CONTAINER_PADDING,
             background: 'linear-gradient(180deg, hsl(var(--muted) / 0.5) 0%, hsl(var(--muted) / 0.7) 100%)',
           }}
-          onClick={handlePreviewClick}
         >
-          {/* Pages container - centered flex column */}
-          <div 
-            className="flex flex-col items-center"
-            style={{ gap: `${scaledGap}px` }}
-          >
-            {pages.map((page) => {
-              const isCover = page.pageType === 'cover';
-              
-              return (
-                <div 
-                  key={page.pageNumber} 
-                  className="flex flex-col items-center"
-                  data-page-number={page.pageNumber}
-                  ref={(el) => {
-                    if (el) pageRefs.current.set(page.pageNumber, el);
-                  }}
-                >
-                  {/* Page card with professional shadow */}
-                  <div
-                    className="relative bg-white transition-shadow"
-                    style={{
-                      width: `${scaledPageWidth}px`,
-                      // Cover page: fixed height; Content page: auto-size to fit all content
-                      ...(isCover 
-                        ? { height: `${scaledPageHeight}px`, overflow: 'hidden' }
-                        : { minHeight: `${scaledPageHeight}px` }
-                      ),
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 32px rgba(0, 0, 0, 0.04)',
-                      borderRadius: `${Math.max(1, 2 * scale)}px`,
-                      border: '1px solid rgba(0, 0, 0, 0.06)',
-                    }}
-                  >
-                    {isCover ? (
-                      // Cover page: absolute positioning with fixed dimensions
-                      <div
-                        className="absolute top-0 left-0 origin-top-left"
-                        style={{
-                          width: `${PAGE_WIDTH_PX}px`,
-                          height: `${PAGE_HEIGHT_PX}px`,
-                          transform: `scale(${scale})`,
-                        }}
-                      >
-                        <div 
-                          className="overflow-hidden report-document"
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            fontFamily: "Georgia, 'Times New Roman', serif",
-                            fontSize: '11pt',
-                            lineHeight: 1.6,
-                            color: '#1a1a1a',
-                            backgroundColor: '#ffffff',
-                          }}
-                          dangerouslySetInnerHTML={{ __html: page.html }}
-                        />
-                      </div>
-                    ) : (
-                      // Content page: flows naturally, no clipping
-                      <div
-                        className="origin-top-left"
-                        style={{
-                          width: `${PAGE_WIDTH_PX}px`,
-                          minHeight: `${PAGE_HEIGHT_PX}px`,
-                          transform: `scale(${scale})`,
-                          transformOrigin: 'top left',
-                        }}
-                      >
-                        <div 
-                          className="report-document"
-                          style={{
-                            width: '100%',
-                            minHeight: `${PAGE_HEIGHT_PX}px`,
-                            fontFamily: "Georgia, 'Times New Roman', serif",
-                            fontSize: '11pt',
-                            lineHeight: 1.6,
-                            color: '#1a1a1a',
-                            backgroundColor: '#ffffff',
-                          }}
-                          dangerouslySetInnerHTML={{ __html: page.html }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Subtle page indicator */}
-                  <div 
-                    className="mt-3 text-center"
-                    style={{ 
-                      fontSize: `${Math.max(10, 11 * scale)}px`,
-                    }}
-                  >
-                    <span className="text-muted-foreground/70 font-medium">
-                      {isCover ? 'Cover Page' : 'Content'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-            
-            {/* Spacer at bottom */}
-            <div style={{ height: CONTAINER_PADDING }} />
-          </div>
+          <PdfReportPreview
+            ref={pdfPreviewRef}
+            html={preview.html}
+            scale={scale}
+            onPageCountChange={handlePageCountChange}
+            onActivePageChange={handleActivePageChange}
+          />
         </div>
       </ScrollArea>
 
@@ -540,6 +337,7 @@ export function ReportPreviewPanel({
         <span>
           {preview.sectionPreviews.filter((s) => s.isVisible).length} of{" "}
           {preview.sectionPreviews.length} sections visible
+          {pageCount > 0 && ` • ${pageCount} pages`}
         </span>
         <span className="text-muted-foreground/60">
           US Letter • 8.5" × 11"
