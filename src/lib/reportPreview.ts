@@ -318,6 +318,9 @@ function createPreviewCaseVariables(): CaseVariables {
     caseManagerEmail: 'manager@example.com',
     feeWaiver: false,
     expedited: false,
+    feeWaiverJustification: null,
+    expeditedJustification: null,
+    purposeOfRequest: null,
   };
 }
 
