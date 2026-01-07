@@ -106,8 +106,6 @@ export function UnifiedRecordsRequestBuilder({
     deliveryPreference: 'email' as DeliveryPreference,
     deliveryEmail: '',
     portalUrl: '',
-    requestFeeWaiver: false,
-    expeditedProcessing: false,
     includeAppealRights: true,
     includeFeeNotice: true
   });
@@ -175,8 +173,8 @@ export function UnifiedRecordsRequestBuilder({
             deliveryPreference: formData.deliveryPreference,
             deliveryEmail: formData.deliveryEmail,
             portalUrl: formData.portalUrl,
-            requestFeeWaiver: formData.requestFeeWaiver,
-            expeditedProcessing: formData.expeditedProcessing,
+            requestFeeWaiver: true, // Always include - controlled at case level
+            expeditedProcessing: true, // Always include - controlled at case level
             includeAppealRights: formData.includeAppealRights,
             includeFeeNotice: formData.includeFeeNotice
           },
@@ -586,81 +584,35 @@ export function UnifiedRecordsRequestBuilder({
           </CardContent>
         </Card>
 
-        {/* Special Requests - Template Placeholders */}
+        {/* Letter Content Options */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Optional Sections</CardTitle>
+            <CardTitle className="text-base">Letter Content Options</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              These sections use placeholders. Fill in case-specific justifications when generating the final document.
+              Fee waiver and expedited processing sections are automatically included as conditionals. 
+              Enable them per-case in Case Settings → Document Options.
             </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="feeWaiver"
-                  checked={formData.requestFeeWaiver}
-                  onCheckedChange={(checked) => handleChange('requestFeeWaiver', !!checked)}
-                />
-                <Label htmlFor="feeWaiver">Include Fee Waiver Section</Label>
-              </div>
-              {formData.requestFeeWaiver && (
-                <div className="ml-6 p-3 bg-muted/50 rounded-md border">
-                  <p className="text-sm text-muted-foreground">
-                    Template will include: <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{fee_waiver_justification}}"}</code>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Fill in the justification when generating the final document for a specific case.
-                  </p>
-                </div>
-              )}
+          <CardContent className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="includeAppeal"
+                checked={formData.includeAppealRights}
+                onCheckedChange={(checked) => handleChange('includeAppealRights', !!checked)}
+              />
+              <Label htmlFor="includeAppeal" className="text-sm">
+                Include Appeal Rights Language
+              </Label>
             </div>
-
-            {jurisdictionInfo.legalLanguage.expedited && (
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="expedited"
-                    checked={formData.expeditedProcessing}
-                    onCheckedChange={(checked) => handleChange('expeditedProcessing', !!checked)}
-                  />
-                  <Label htmlFor="expedited">Include Expedited Processing Section</Label>
-                </div>
-                {formData.expeditedProcessing && (
-                  <div className="ml-6 p-3 bg-muted/50 rounded-md border">
-                    <p className="text-sm text-muted-foreground">
-                      Template will include: <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{expedited_justification}}"}</code>
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Fill in the urgency reason when generating the final document for a specific case.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="pt-3 border-t space-y-3">
-              <p className="text-sm text-muted-foreground">Letter Content Options</p>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeAppeal"
-                  checked={formData.includeAppealRights}
-                  onCheckedChange={(checked) => handleChange('includeAppealRights', !!checked)}
-                />
-                <Label htmlFor="includeAppeal" className="text-sm">
-                  Include Appeal Rights Language
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeFee"
-                  checked={formData.includeFeeNotice}
-                  onCheckedChange={(checked) => handleChange('includeFeeNotice', !!checked)}
-                />
-                <Label htmlFor="includeFee" className="text-sm">
-                  Include Fee Acknowledgment
-                </Label>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="includeFee"
+                checked={formData.includeFeeNotice}
+                onCheckedChange={(checked) => handleChange('includeFeeNotice', !!checked)}
+              />
+              <Label htmlFor="includeFee" className="text-sm">
+                Include Fee Acknowledgment
+              </Label>
             </div>
           </CardContent>
         </Card>

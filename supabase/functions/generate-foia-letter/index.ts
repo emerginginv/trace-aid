@@ -318,22 +318,20 @@ ${options.deliveryPreference === 'email' && options.deliveryEmail ? `Email Addre
 ${options.deliveryPreference === 'portal' && options.portalUrl ? `Portal URL: ${options.portalUrl}` : ''}
 `;
 
-  // For fee waiver - use placeholder, not case-specific justification
-  if (options.requestFeeWaiver) {
-    prompt += `
-## FEE WAIVER SECTION (USE PLACEHOLDER)
-Include a fee waiver section with the statutory language provided.
+  // Fee waiver - always included as conditional placeholder (case-level setting controls visibility)
+  prompt += `
+## FEE WAIVER SECTION (ALWAYS INCLUDE AS CONDITIONAL)
+Include a fee waiver section wrapped with [IF fee_waiver_enabled]...[/IF] conditional markers.
 Fee Waiver Legal Language (USE EXACTLY): "${statuteInfo.legalLanguage.feeWaiver}"
 For the justification, use the placeholder: {{fee_waiver_justification}}
 DO NOT fill in specific reasons - the case will provide those later.
 `;
-  }
 
-  // For expedited processing - use placeholder, not case-specific justification
-  if (options.expeditedProcessing && statuteInfo.legalLanguage.expedited) {
+  // Expedited processing - always included as conditional placeholder (case-level setting controls visibility)
+  if (statuteInfo.legalLanguage.expedited) {
     prompt += `
-## EXPEDITED PROCESSING SECTION (USE PLACEHOLDER)
-Include an expedited processing section with the statutory language provided.
+## EXPEDITED PROCESSING SECTION (ALWAYS INCLUDE AS CONDITIONAL)
+Include an expedited processing section wrapped with [IF expedited_enabled]...[/IF] conditional markers.
 Expedited Legal Language (USE EXACTLY): "${statuteInfo.legalLanguage.expedited}"
 For the justification, use the placeholder: {{expedited_justification}}
 DO NOT fill in specific reasons - the case will provide those later.
