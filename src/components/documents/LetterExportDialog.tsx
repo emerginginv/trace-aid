@@ -2,10 +2,13 @@
  * LETTER EXPORT DIALOG
  * 
  * ══════════════════════════════════════════════════════════════════════════════
- * NON-NEGOTIABLE: All exports use IDENTICAL styles from getUnifiedLetterStyles()
+ * NON-NEGOTIABLE: All exports use IDENTICAL rendering via Paged.js
  * ══════════════════════════════════════════════════════════════════════════════
  * 
+ * CRITICAL: HTML controls pagination — never the export engine.
+ * 
  * The PDF, DOCX, and Print functions use the SAME:
+ * - Paged.js rendering engine (identical to preview)
  * - HTML content from letterDocument.html
  * - CSS styles from getUnifiedLetterStyles()
  * - Font definitions from LETTER_FONT_STACK
@@ -15,6 +18,7 @@
  */
 
 import { useState } from "react";
+import { Previewer } from "pagedjs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -39,9 +43,9 @@ import {
 import { toast } from "sonner";
 import { type LetterDocument } from "@/lib/letterDocumentEngine";
 import { 
-  getPdfExportOptions, 
   PAGE_SPECS, 
   getUnifiedLetterStyles,
+  getPageViewerStyles,
   LETTER_FONT_STACK 
 } from "@/lib/paginatedLetterStyles";
 
@@ -85,34 +89,100 @@ export function LetterExportDialog({
       .substring(0, 100) || 'letter';
   };
 
+  /**
+   * PDF Export using Paged.js + html2canvas + jsPDF
+   * 
+   * CRITICAL: Uses the SAME Paged.js rendering as preview for identical pagination.
+   */
   const handleExportPdf = async () => {
     setIsExporting(true);
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      
+      const pageSize = letterDocument.pageSettings.size;
+      const spec = PAGE_SPECS[pageSize];
       
       // Get UNIFIED styles - same as preview
-      const styles = getUnifiedLetterStyles(letterDocument.pageSettings.size, {
+      const styles = getUnifiedLetterStyles(pageSize, {
         draftMode: includeDraftWatermark,
-        forExport: true
+        forExport: true,
+        showPageNumbers: true,
       });
       
-      // Create container with SAME HTML and styles as preview
+      // Create off-screen container
       const container = document.createElement('div');
-      container.innerHTML = `
-        <style>${styles}</style>
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = `${spec.widthPx}px`;
+      container.style.background = 'white';
+      document.body.appendChild(container);
+      
+      // Build HTML content with SAME styles as preview
+      const htmlContent = `
+        <style>
+          ${styles}
+          ${getPageViewerStyles(pageSize)}
+        </style>
         <div class="letter-document">
           ${extractBodyContent(letterDocument.html)}
         </div>
       `;
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.top = '0';
-      document.body.appendChild(container);
-
-      const options = getPdfExportOptions(sanitizeFilename(filename), letterDocument.pageSettings.size);
       
-      await html2pdf().set(options).from(container).save();
+      // Use Paged.js to render pages (SAME engine as preview)
+      const previewer = new Previewer();
+      await previewer.preview(htmlContent, [], container);
       
+      // Get all rendered pages
+      const pages = container.querySelectorAll('.pagedjs_page');
+      
+      if (pages.length === 0) {
+        throw new Error('No pages rendered');
+      }
+      
+      // Create PDF with correct dimensions
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'in',
+        format: pageSize === 'a4' ? 'a4' : 'letter',
+      });
+      
+      // Capture each page to PDF
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
+        
+        // Capture page to canvas
+        const canvas = await html2canvas(page, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: spec.widthPx,
+          height: spec.heightPx,
+        });
+        
+        // Add new page for pages after the first
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        // Add image to PDF (full page)
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(
+          imgData, 
+          'JPEG', 
+          0, 
+          0, 
+          parseFloat(spec.width), 
+          parseFloat(spec.height)
+        );
+      }
+      
+      // Save PDF
+      pdf.save(`${sanitizeFilename(filename)}.pdf`);
+      
+      // Cleanup
       document.body.removeChild(container);
       
       setExportComplete(true);

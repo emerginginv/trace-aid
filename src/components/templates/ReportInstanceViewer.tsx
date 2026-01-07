@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import html2pdf from "html2pdf.js";
+import { Previewer } from "pagedjs";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,12 @@ import { toast } from "@/hooks/use-toast";
 import { FileText, Download, Clock, Hash, FileDown, Printer } from "lucide-react";
 import type { ReportInstance } from "@/lib/reportEngine";
 import { updateReportExport } from "@/lib/reportEngine";
+import { 
+  getUnifiedLetterStyles, 
+  getPageViewerStyles,
+  PAGE_SPECS,
+  LETTER_FONT_STACK 
+} from "@/lib/paginatedLetterStyles";
 
 interface ReportInstanceViewerProps {
   open: boolean;
@@ -32,26 +38,17 @@ export function ReportInstanceViewer({
   if (!report) return null;
 
   const handlePrint = () => {
-    // Create a new window with the report content for printing
     const printWindow = window.open('', '_blank');
     if (printWindow) {
+      // Use UNIFIED styles for print
+      const styles = getUnifiedLetterStyles('letter', { forExport: true });
+      
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
             <title>${report.title}</title>
-            <style>
-              @media print {
-                @page {
-                  size: letter;
-                  margin: 0.75in;
-                }
-                body {
-                  -webkit-print-color-adjust: exact;
-                  print-color-adjust: exact;
-                }
-              }
-            </style>
+            <style>${styles}</style>
           </head>
           <body>
             ${report.renderedHtml}
@@ -66,35 +63,94 @@ export function ReportInstanceViewer({
     }
   };
 
+  /**
+   * PDF Export using Paged.js + html2canvas + jsPDF
+   * CRITICAL: Uses the SAME Paged.js rendering as preview for identical pagination.
+   */
   const handleExportPdf = async () => {
     setExporting(true);
     try {
-      const element = document.createElement("div");
-      element.innerHTML = report.renderedHtml;
-
-      const options = {
-        margin: 0,
-        filename: `${report.title.replace(/[^a-z0-9]/gi, '_')}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: { 
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      
+      const pageSize = 'letter';
+      const spec = PAGE_SPECS[pageSize];
+      
+      // Get UNIFIED styles
+      const styles = getUnifiedLetterStyles(pageSize, { forExport: true });
+      
+      // Create off-screen container
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = `${spec.widthPx}px`;
+      container.style.background = 'white';
+      document.body.appendChild(container);
+      
+      // Build HTML content with SAME styles as preview
+      const htmlContent = `
+        <style>
+          ${styles}
+          ${getPageViewerStyles(pageSize)}
+        </style>
+        <div class="letter-document">
+          ${report.renderedHtml}
+        </div>
+      `;
+      
+      // Use Paged.js to render pages
+      const previewer = new Previewer();
+      await previewer.preview(htmlContent, [], container);
+      
+      // Get all rendered pages
+      const pages = container.querySelectorAll('.pagedjs_page');
+      
+      if (pages.length === 0) {
+        throw new Error('No pages rendered');
+      }
+      
+      // Create PDF with correct dimensions
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'in',
+        format: 'letter',
+      });
+      
+      // Capture each page to PDF
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
+        
+        const canvas = await html2canvas(page, {
           scale: 2,
           useCORS: true,
           logging: false,
-        },
-        jsPDF: { 
-          unit: "in", 
-          format: "letter", 
-          orientation: "portrait" as const,
-        },
-        pagebreak: { 
-          mode: ['avoid-all', 'css', 'legacy'],
-          before: '.break-before',
-          after: '.break-after',
-          avoid: '.no-break',
-        },
-      };
-
-      await html2pdf().from(element).set(options).save();
+          backgroundColor: '#ffffff',
+          width: spec.widthPx,
+          height: spec.heightPx,
+        });
+        
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(
+          imgData, 
+          'JPEG', 
+          0, 
+          0, 
+          parseFloat(spec.width), 
+          parseFloat(spec.height)
+        );
+      }
+      
+      // Save PDF
+      pdf.save(`${report.title.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+      
+      // Cleanup
+      document.body.removeChild(container);
+      
       await updateReportExport(report.id, 'pdf');
 
       toast({

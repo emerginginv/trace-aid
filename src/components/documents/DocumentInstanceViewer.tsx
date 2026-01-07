@@ -12,6 +12,7 @@
  */
 
 import { useState } from "react";
+import { Previewer } from "pagedjs";
 import { ArrowLeft, Download, Printer, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,11 @@ import { toast } from "sonner";
 import { DocumentInstance, updateDocumentExport, DOCUMENT_TYPE_LABELS } from "@/lib/documentTemplates";
 import { format } from "date-fns";
 import { PaginatedDocumentViewer } from "./PaginatedDocumentViewer";
-import { getPdfExportOptions } from "@/lib/paginatedLetterStyles";
+import { 
+  getUnifiedLetterStyles, 
+  getPageViewerStyles,
+  PAGE_SPECS 
+} from "@/lib/paginatedLetterStyles";
 
 interface DocumentInstanceViewerProps {
   document: DocumentInstance;
@@ -65,18 +70,15 @@ export function DocumentInstanceViewer({
       return;
     }
 
-    // Use the SAME HTML that's being previewed
+    // Use UNIFIED styles for print
+    const styles = getUnifiedLetterStyles('letter', { forExport: true });
+    
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
         <title>${documentData.title}</title>
-        <style>
-          @page { size: letter; margin: 1in; }
-          @media print {
-            body { margin: 0; padding: 0; }
-          }
-        </style>
+        <style>${styles}</style>
       </head>
       <body>
         ${documentData.renderedHtml}
@@ -91,25 +93,97 @@ export function DocumentInstanceViewer({
     }, 250);
   };
 
+  /**
+   * PDF Export using Paged.js + html2canvas + jsPDF
+   * CRITICAL: Uses the SAME Paged.js rendering as preview for identical pagination.
+   */
   const handleExportPdf = async () => {
     setExporting(true);
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
       
-      // Create container with the SAME HTML that's being previewed
-      const element = window.document.createElement('div');
-      element.innerHTML = documentData.renderedHtml;
-      element.style.position = 'absolute';
-      element.style.left = '-9999px';
-      element.style.top = '0';
-      window.document.body.appendChild(element);
+      const pageSize = 'letter';
+      const spec = PAGE_SPECS[pageSize];
       
-      // Use shared export options for consistency
-      const options = getPdfExportOptions(documentData.title);
+      // Get UNIFIED styles - same as preview
+      const styles = getUnifiedLetterStyles(pageSize, { forExport: true });
       
-      await html2pdf().set(options).from(element).save();
+      // Create off-screen container
+      const container = window.document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = `${spec.widthPx}px`;
+      container.style.background = 'white';
+      window.document.body.appendChild(container);
       
-      window.document.body.removeChild(element);
+      // Build HTML content with SAME styles as preview
+      const htmlContent = `
+        <style>
+          ${styles}
+          ${getPageViewerStyles(pageSize)}
+        </style>
+        <div class="letter-document">
+          ${documentData.renderedHtml}
+        </div>
+      `;
+      
+      // Use Paged.js to render pages (SAME engine as preview)
+      const previewer = new Previewer();
+      await previewer.preview(htmlContent, [], container);
+      
+      // Get all rendered pages
+      const pages = container.querySelectorAll('.pagedjs_page');
+      
+      if (pages.length === 0) {
+        throw new Error('No pages rendered');
+      }
+      
+      // Create PDF with correct dimensions
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'in',
+        format: 'letter',
+      });
+      
+      // Capture each page to PDF
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
+        
+        // Capture page to canvas
+        const canvas = await html2canvas(page, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: spec.widthPx,
+          height: spec.heightPx,
+        });
+        
+        // Add new page for pages after the first
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        // Add image to PDF (full page)
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(
+          imgData, 
+          'JPEG', 
+          0, 
+          0, 
+          parseFloat(spec.width), 
+          parseFloat(spec.height)
+        );
+      }
+      
+      // Save PDF
+      pdf.save(`${documentData.title}.pdf`);
+      
+      // Cleanup
+      window.document.body.removeChild(container);
+      
       await updateDocumentExport(documentData.id, 'pdf');
       toast.success("PDF downloaded successfully");
     } catch (error) {
