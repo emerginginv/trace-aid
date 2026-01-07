@@ -332,13 +332,25 @@ export function ReportPreviewPanel({
         </div>
       </ScrollArea>
 
-      {/* Minimal footer */}
+      {/* Minimal footer with empty section warning */}
       <div className="px-4 py-1.5 border-t bg-background/60 text-xs text-muted-foreground flex items-center justify-between">
-        <span>
-          {preview.sectionPreviews.filter((s) => s.isVisible).length} of{" "}
-          {preview.sectionPreviews.length} sections visible
-          {pageCount > 0 && ` • ${pageCount} pages`}
-        </span>
+        {(() => {
+          const visibleSections = preview.sectionPreviews.filter((s) => s.isVisible);
+          const sectionsWithContent = visibleSections.filter((s) => s.hasContent);
+          const emptySections = visibleSections.length - sectionsWithContent.length;
+          
+          return (
+            <span>
+              {visibleSections.length} of {preview.sectionPreviews.length} sections visible
+              {emptySections > 0 && (
+                <span className="text-amber-500 ml-2">
+                  ({emptySections} empty)
+                </span>
+              )}
+              {pageCount > 0 && ` • ${pageCount} pages`}
+            </span>
+          );
+        })()}
         <span className="text-muted-foreground/60">
           US Letter • 8.5" × 11"
         </span>

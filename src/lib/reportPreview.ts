@@ -43,6 +43,7 @@ export interface SectionPreview {
   title: string;
   sectionType: string;
   isVisible: boolean;
+  hasContent: boolean;  // Whether section rendered actual content (not empty state)
   displayOrder: number;
   previewHtml: string;
 }
@@ -199,11 +200,18 @@ export function generatePreview(input: PreviewInput): PreviewResult {
       }
     }
 
+    // Determine if section has actual content (not empty state)
+    const hasActualContent = rendered 
+      ? !rendered.htmlContent.includes('section-empty-state') && 
+        !rendered.sourceData?.isEmpty
+      : false;
+
     sectionPreviews.push({
       sectionId: section.id,
       title: section.title,
       sectionType: section.sectionType,
       isVisible: section.isVisible,
+      hasContent: section.isVisible && hasActualContent,
       displayOrder: section.displayOrder,
       previewHtml: rendered?.htmlContent || generatePlaceholderHtml(section),
     });

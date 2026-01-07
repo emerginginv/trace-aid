@@ -454,6 +454,24 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
       margin-bottom: 0;
     }
 
+    /* === EMPTY STATE STYLES === */
+    
+    .section-empty-state {
+      padding: 20px;
+      background: #f8f9fa;
+      border: 1px dashed #dee2e6;
+      border-radius: 4px;
+      text-align: center;
+      margin: 12px 0;
+    }
+
+    .section-empty-state .empty-state-message {
+      color: #6c757d;
+      font-style: italic;
+      margin: 0;
+      font-size: 10pt;
+    }
+
     .entry-attribution {
       font-family: ${opts.fontSans};
       font-size: 9pt;
