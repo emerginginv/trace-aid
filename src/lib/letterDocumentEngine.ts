@@ -249,10 +249,9 @@ export function getExportableHtml(
   `;
 }
 
-// Re-export canonical exports from paginatedLetterStyles
-export { 
-  getPdfExportOptions, 
-  getUnifiedLetterStyles, 
-  LETTER_FONT_STACK,
-  PAGE_SPECS 
-} from "./paginatedLetterStyles";
+// NOTE: Import directly from @/lib/paginatedLetterStyles for:
+// - getPdfExportOptions (deprecated)
+// - getUnifiedLetterStyles
+// - LETTER_FONT_STACK  
+// - PAGE_SPECS
+// Re-exports removed to prevent circular reference issues with TypeScript compiler.
