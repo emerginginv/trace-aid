@@ -6,9 +6,43 @@
  * 2. Respects existing section structure
  * 3. Never contains raw layout or styling instructions
  * 4. Never alters page sizing, margins, or pagination rules
+ * 5. BODY-ONLY: AI may only generate body paragraph content
  */
 
 import DOMPurify from 'dompurify';
+
+// ============================================
+// AI CONTENT BOUNDARY RULES
+// ============================================
+
+/**
+ * AI CONTENT BOUNDARY RULES
+ * 
+ * AI-generated content is STRICTLY LIMITED to these sections.
+ * All other sections are SYSTEM-CONTROLLED.
+ * 
+ * AI RESTRICTIONS (Enforced at generation and validation):
+ * 
+ * AI MUST NOT:
+ * - Insert headers
+ * - Insert dates
+ * - Insert logos
+ * - Insert addresses
+ * - Control spacing
+ * - Modify layout
+ * 
+ * AI MAY ONLY:
+ * - Draft paragraph content
+ * - Suggest tone refinements
+ * - Rewrite body text
+ */
+export const AI_EDITABLE_SECTIONS = ['body', 'statutory_block'] as const;
+
+export const SYSTEM_CONTROLLED_SECTIONS = [
+  'letterhead', 'date_block', 'recipient_block', 
+  'reference', 'salutation', 'closing', 
+  'signature_block', 'footer'
+] as const;
 
 // ============================================
 // TYPES
@@ -161,6 +195,80 @@ function stripLayoutClasses(html: string): string {
 }
 
 /**
+ * Detect if AI content contains system-controlled elements
+ * 
+ * AI MUST NOT generate these sections - they are system-controlled:
+ * - Letterhead/headers
+ * - Date blocks
+ * - Recipient addresses
+ * - Signature blocks
+ * - Footers
+ */
+export function detectSystemSectionIntrusion(html: string): {
+  hasIntrusion: boolean;
+  violations: string[];
+} {
+  const violations: string[] = [];
+  
+  // Patterns that indicate AI is trying to generate system sections
+  const intrusionPatterns = [
+    // Date blocks
+    { pattern: /<div[^>]*class="[^"]*letter-date[^"]*"/gi, msg: 'AI generated date block' },
+    { pattern: /class="[^"]*letterhead/gi, msg: 'AI generated letterhead' },
+    { pattern: /class="[^"]*letter-recipient/gi, msg: 'AI generated recipient block' },
+    { pattern: /class="[^"]*letter-signature/gi, msg: 'AI generated signature block' },
+    { pattern: /class="[^"]*letter-footer/gi, msg: 'AI generated footer' },
+    
+    // Standalone date formats at start of content
+    { pattern: /^<p>\s*(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\s*<\/p>/i, msg: 'AI generated standalone date' },
+    
+    // Signature patterns - closing phrase followed by name blocks
+    { pattern: /Sincerely,?\s*<\/p>\s*<p[^>]*>[\s\S]{0,100}<\/p>\s*<p[^>]*>[\s\S]{0,100}<\/p>\s*$/i, msg: 'AI generated signature block' },
+    
+    // Address block patterns (multi-line with state/zip)
+    { pattern: /<p>[^<]+<br\s*\/?>[^<]+<br\s*\/?>[^<]+,\s*[A-Z]{2}\s+\d{5}/gi, msg: 'AI generated address block' },
+    
+    // Logo references
+    { pattern: /<img[^>]*logo/gi, msg: 'AI inserted logo reference' },
+    
+    // Letterhead-style org name at start
+    { pattern: /^<div[^>]*>\s*<(?:h1|h2|div)[^>]*class="[^"]*org-name/gi, msg: 'AI generated letterhead org name' },
+  ];
+  
+  for (const { pattern, msg } of intrusionPatterns) {
+    if (pattern.test(html)) {
+      violations.push(msg);
+    }
+    pattern.lastIndex = 0;
+  }
+  
+  return {
+    hasIntrusion: violations.length > 0,
+    violations
+  };
+}
+
+/**
+ * Strip system section patterns from AI content
+ * This is a safety net - AI should not be generating these
+ */
+function stripSystemSectionPatterns(html: string): string {
+  let cleaned = html;
+  
+  // Remove standalone date at the very beginning
+  cleaned = cleaned.replace(/^<p>\s*(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\s*<\/p>\s*/i, '');
+  
+  // Remove elements with system-controlled classes
+  const systemClasses = ['letter-date', 'letter-letterhead', 'letter-recipient', 'letter-signature', 'letter-footer', 'letterhead'];
+  for (const cls of systemClasses) {
+    const regex = new RegExp(`<div[^>]*class="[^"]*${cls}[^"]*"[^>]*>[\\s\\S]*?<\\/div>`, 'gi');
+    cleaned = cleaned.replace(regex, '');
+  }
+  
+  return cleaned.trim();
+}
+
+/**
  * Main sanitization function for AI-generated content
  * 
  * @param html - Raw HTML from AI
@@ -178,6 +286,13 @@ export function sanitizeAiContent(
     return { clean: '', violations: ['Empty or invalid input'], wasModified: true };
   }
   
+  // Step 0: Detect system section intrusion (AI trying to generate headers, dates, etc.)
+  const intrusionCheck = detectSystemSectionIntrusion(html);
+  if (intrusionCheck.hasIntrusion) {
+    violations.push(...intrusionCheck.violations.map(v => `INTRUSION: ${v}`));
+    wasModified = true;
+  }
+  
   // Step 1: Detect violations (for logging)
   violations.push(...detectForbiddenPatterns(html));
   violations.push(...detectForbiddenCss(html));
@@ -192,17 +307,24 @@ export function sanitizeAiContent(
     pattern.lastIndex = 0;
   }
   
-  // Step 3: Strip all style attributes
+  // Step 3: Strip system section patterns if intrusion detected
+  if (intrusionCheck.hasIntrusion) {
+    const beforeIntrusion = cleaned;
+    cleaned = stripSystemSectionPatterns(cleaned);
+    if (beforeIntrusion !== cleaned) wasModified = true;
+  }
+  
+  // Step 4: Strip all style attributes
   const beforeStyle = cleaned;
   cleaned = stripStyleAttributes(cleaned);
   if (beforeStyle !== cleaned) wasModified = true;
   
-  // Step 4: Strip class attributes
+  // Step 5: Strip class attributes
   const beforeClass = cleaned;
   cleaned = stripLayoutClasses(cleaned);
   if (beforeClass !== cleaned) wasModified = true;
   
-  // Step 5: Use DOMPurify for final sanitization with allowed tags
+  // Step 6: Use DOMPurify for final sanitization with allowed tags
   const allowedTags = constraints?.allowedTags || ALLOWED_CONTENT_TAGS;
   
   cleaned = DOMPurify.sanitize(cleaned, {
@@ -212,14 +334,14 @@ export function sanitizeAiContent(
     FORBID_ATTR: ['style', 'class', 'id', 'onclick', 'onload', 'onerror'],
   });
   
-  // Step 6: Validate length if specified
+  // Step 7: Validate length if specified
   if (constraints?.maxContentLength && cleaned.length > constraints.maxContentLength) {
     violations.push(`Content exceeds maximum length of ${constraints.maxContentLength}`);
     cleaned = cleaned.substring(0, constraints.maxContentLength);
     wasModified = true;
   }
   
-  // Step 7: Verify preserved bindings if specified
+  // Step 8: Verify preserved bindings if specified
   if (constraints?.preserveBindings) {
     for (const binding of constraints.preserveBindings) {
       if (!cleaned.includes(binding)) {

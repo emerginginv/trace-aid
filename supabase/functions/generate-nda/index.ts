@@ -59,8 +59,21 @@ serve(async (req) => {
       confidentialInfoDefinition
     } = requestData;
 
-    // Build the system prompt with strict structural requirements
+    // Build the system prompt with strict structural requirements - BODY CONTENT ONLY
     const systemPrompt = `You are a legal document specialist generating Non-Disclosure Agreements (NDAs).
+
+## AI CONTENT BOUNDARY (CRITICAL)
+You are generating the AGREEMENT BODY CONTENT ONLY. The system handles letterhead and page framing.
+
+YOU MUST NOT GENERATE (system-controlled):
+- Letterhead or organization branding at the top
+- Standalone date blocks before the agreement title
+- Any header/logo references
+
+YOU MAY GENERATE:
+- Agreement title and recitals
+- All NDA clauses and sections
+- Signature blocks (these are part of the NDA structure, not letter structure)
 
 Generate a professional, enforceable NDA in HTML format based on the provided information.
 
@@ -139,7 +152,8 @@ The template controls ALL layout and styling. You provide CONTENT ONLY.
 - Omit the governing law or venue language
 - Add clauses not requested
 - Use aggressive or threatening language
-- Include any placeholder text like "[insert]" or "[TBD]"`;
+- Include any placeholder text like "[insert]" or "[TBD]"
+- Add letterhead or branding at the top`;
 
     // Build the user prompt with specific details
     const userPrompt = `Generate a ${agreementType === 'mutual' ? 'Mutual' : 'Unilateral'} Non-Disclosure Agreement with the following details:

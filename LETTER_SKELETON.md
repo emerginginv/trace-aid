@@ -173,6 +173,57 @@ The unified styles explicitly prohibit justification:
 
 ---
 
+## AI Content Boundaries
+
+### System-Controlled Sections (AI MUST NOT Generate)
+
+| Section | CSS Class | Reason |
+|---------|-----------|--------|
+| `letterhead` | `.letter-letterhead` | Branding from organization profile |
+| `date_block` | `.letter-date` | System date, standardized format |
+| `recipient_block` | `.letter-recipient` | User form input |
+| `reference` | `.letter-reference` | User form input |
+| `salutation` | `.letter-salutation` | User form input + formatting |
+| `closing` | `.letter-closing` | Standard phrases |
+| `signature_block` | `.letter-signature` | User profile data |
+| `footer` | `.letter-footer` | Organization settings |
+
+### AI-Editable Sections (AI MAY Generate)
+
+| Section | CSS Class | What AI Can Do |
+|---------|-----------|----------------|
+| `body` | `.letter-body` | Draft paragraphs, rewrite text, adjust tone |
+| `statutory_block` | `.statutory-language` | Draft legal language with required citations |
+
+### AI Restrictions
+
+**AI MUST NOT:**
+- Insert headers
+- Insert dates
+- Insert logos
+- Insert addresses
+- Control spacing
+- Modify layout
+
+**AI MAY ONLY:**
+- Draft paragraph content
+- Suggest tone refinements
+- Rewrite body text
+- Include statutory language (for legal letters)
+
+### Validation
+
+The system validates AI content with `detectSystemSectionIntrusion()`:
+1. Detects date block patterns
+2. Detects letterhead classes
+3. Detects recipient/signature patterns
+4. Detects address block formats
+5. Strips intrusions and logs violations
+
+**Layout is SYSTEM-CONTROLLED, not AI-controlled.**
+
+---
+
 ## Vertical Rhythm (Fixed Spacing Rules)
 
 All letters use a consistent vertical rhythm based on the **12pt baseline** to create a traditional business letter feel.

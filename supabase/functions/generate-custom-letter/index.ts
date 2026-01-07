@@ -119,8 +119,19 @@ DO NOT include markdown code blocks or any text outside the JSON.`;
 
       userPrompt = `Regenerate the "${regenerateSection.sectionId}" section with a fresh approach while maintaining coherence with the rest of the letter.`;
     } else {
-      // Generating full letter
-      systemPrompt = `You are a professional BUSINESS letter writing assistant. Generate a well-structured business letter based on the user's requirements.
+      // Generating full letter - BODY CONTENT ONLY
+      systemPrompt = `You are a professional BUSINESS letter writing assistant. Generate letter BODY CONTENT ONLY.
+
+## AI CONTENT BOUNDARY (CRITICAL)
+You are generating BODY CONTENT ONLY. The system handles all other sections.
+
+YOU MUST NOT GENERATE (system-controlled):
+- Letterhead or organization branding
+- Date blocks (no dates at the start)
+- Recipient address blocks
+- Any header/logo references
+
+The system will automatically add: letterhead, date, and document framing.
 
 ${LEGAL_PROHIBITIONS}
 
@@ -176,6 +187,7 @@ STRUCTURE REQUIREMENTS:
 Each section must be self-contained HTML that can be edited independently.
 Use proper HTML tags: <p> for paragraphs, <br> for line breaks, <strong> for emphasis.
 DO NOT include markdown code blocks or any text outside the JSON.
+DO NOT include any dates, letterhead, or address blocks.
 
 ## CONTENT-ONLY GENERATION RULES (CRITICAL)
 
@@ -188,7 +200,8 @@ YOU MUST NOT include ANY of the following:
 - <style> or <script> blocks
 - Class names (class="...")
 - @page or @media rules
-- Any attempt to control document structure or pagination
+- Date blocks or standalone dates
+- Letterhead elements
 
 YOU MAY ONLY USE these HTML tags:
 <p>, <br>, <strong>, <em>, <b>, <i>, <ul>, <ol>, <li>, <span>, <div>

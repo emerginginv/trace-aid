@@ -42,23 +42,27 @@ export type LetterSectionType = typeof CANONICAL_SECTION_ORDER[number];
 
 /**
  * Metadata for each section type
+ * 
+ * aiControlled: true = AI may generate/edit this section
+ * aiControlled: false = SYSTEM-CONTROLLED, AI must never generate
  */
 export const SECTION_METADATA: Record<LetterSectionType, {
   required: boolean;
   cssClass: string;
   defaultVisible: boolean;
   description: string;
+  aiControlled: boolean;
 }> = {
-  letterhead:      { required: true,  cssClass: 'letter-letterhead',   defaultVisible: true,  description: 'Organization branding and contact info' },
-  date_block:      { required: true,  cssClass: 'letter-date',         defaultVisible: true,  description: 'Letter date' },
-  recipient_block: { required: true,  cssClass: 'letter-recipient',    defaultVisible: true,  description: 'Addressee information' },
-  reference:       { required: false, cssClass: 'letter-reference',    defaultVisible: false, description: 'Subject/RE line' },
-  salutation:      { required: true,  cssClass: 'letter-salutation',   defaultVisible: true,  description: 'Greeting' },
-  body:            { required: true,  cssClass: 'letter-body',         defaultVisible: true,  description: 'Main content' },
-  statutory_block: { required: false, cssClass: 'statutory-language',  defaultVisible: false, description: 'Legal citations' },
-  closing:         { required: true,  cssClass: 'letter-closing',      defaultVisible: true,  description: 'Sign-off phrase' },
-  signature_block: { required: true,  cssClass: 'letter-signature',    defaultVisible: true,  description: 'Signature block' },
-  footer:          { required: false, cssClass: 'letter-footer',       defaultVisible: false, description: 'Confidentiality notice' }
+  letterhead:      { required: true,  cssClass: 'letter-letterhead',   defaultVisible: true,  description: 'Organization branding and contact info', aiControlled: false },
+  date_block:      { required: true,  cssClass: 'letter-date',         defaultVisible: true,  description: 'Letter date', aiControlled: false },
+  recipient_block: { required: true,  cssClass: 'letter-recipient',    defaultVisible: true,  description: 'Addressee information', aiControlled: false },
+  reference:       { required: false, cssClass: 'letter-reference',    defaultVisible: false, description: 'Subject/RE line', aiControlled: false },
+  salutation:      { required: true,  cssClass: 'letter-salutation',   defaultVisible: true,  description: 'Greeting', aiControlled: false },
+  body:            { required: true,  cssClass: 'letter-body',         defaultVisible: true,  description: 'Main content', aiControlled: true },
+  statutory_block: { required: false, cssClass: 'statutory-language',  defaultVisible: false, description: 'Legal citations', aiControlled: true },
+  closing:         { required: true,  cssClass: 'letter-closing',      defaultVisible: true,  description: 'Sign-off phrase', aiControlled: false },
+  signature_block: { required: true,  cssClass: 'letter-signature',    defaultVisible: true,  description: 'Signature block', aiControlled: false },
+  footer:          { required: false, cssClass: 'letter-footer',       defaultVisible: false, description: 'Confidentiality notice', aiControlled: false }
 };
 
 // ============================================

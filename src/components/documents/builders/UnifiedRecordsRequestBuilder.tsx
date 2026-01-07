@@ -206,6 +206,11 @@ export function UnifiedRecordsRequestBuilder({
         const { clean, violations, wasModified } = sanitizeAiContent(data.html);
         if (violations.length > 0) {
           console.warn('AI content violations in FOIA letter:', violations);
+          // Check for intrusion violations specifically
+          const intrusionViolations = violations.filter(v => v.startsWith('INTRUSION:'));
+          if (intrusionViolations.length > 0) {
+            toast.warning("AI content was adjusted to comply with letter structure rules");
+          }
         }
         setGeneratedHtml(clean);
         toast.success("Letter generated successfully!");
