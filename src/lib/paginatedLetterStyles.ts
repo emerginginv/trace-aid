@@ -295,14 +295,16 @@ export function getUnifiedLetterStyles(
     }
 
     /* === BODY CONTENT === */
+    /* PROFESSIONAL LETTER TYPOGRAPHY: Left-aligned, ragged right - NON-NEGOTIABLE */
     .letter-body {
-      text-align: justify;
+      text-align: left;
       color: #000 !important;
     }
 
     .letter-body p {
       margin-bottom: 1em;
       text-indent: 0;
+      text-align: left;
       color: #000 !important;
       /* Widows and orphans control */
       widows: 2;

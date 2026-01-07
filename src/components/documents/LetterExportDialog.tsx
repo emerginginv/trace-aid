@@ -279,8 +279,8 @@ export function LetterExportDialog({
             .letter-letterhead .org-info { font-size: 10pt; color: #333; line-height: 1.4; }
             .letter-date { text-align: right; margin-bottom: 0.5in; }
             .letter-recipient { margin-bottom: 0.25in; line-height: 1.4; }
-            .letter-body { text-align: justify; }
-            .letter-body p { margin-bottom: 1em; text-indent: 0; }
+            .letter-body { text-align: left; }
+            .letter-body p { margin-bottom: 1em; text-indent: 0; text-align: left; }
             .letter-signature { margin-top: 1in; page-break-inside: avoid; }
             .signature-line { border-bottom: 1px solid black; width: 3in; margin-bottom: 0.25em; height: 0.5in; }
             .signature-name { font-weight: bold; }
