@@ -32,8 +32,9 @@ export interface LetterBrandingConfig {
  */
 export function getDefaultLetterBrandingConfig(): LetterBrandingConfig {
   return {
+    // Default: prefer logo if available (enforced at render time)
     showLogo: true,
-    showOrgName: true,
+    showOrgName: false, // Mutually exclusive with showLogo
     showOrgAddress: true,
     showContactInfo: true,
     logoAlignment: 'center',
@@ -46,6 +47,52 @@ export function getDefaultLetterBrandingConfig(): LetterBrandingConfig {
     showConfidentiality: false,
     confidentialityText: 'This letter and any attachments are confidential and intended solely for the addressee.',
   };
+}
+
+/**
+ * Validates that header configuration follows mutual exclusivity rules
+ * RULE: Logo OR Name, NEVER BOTH
+ */
+export function validateHeaderConfig(
+  config: LetterBrandingConfig,
+  orgProfile: OrganizationProfile | null
+): { isValid: boolean; warning?: string } {
+  const hasLogo = !!orgProfile?.logoUrl;
+  
+  if (config.showLogo && config.showOrgName) {
+    return {
+      isValid: false,
+      warning: 'Header cannot show both logo and organization name. Choose one.'
+    };
+  }
+  
+  if (config.showLogo && !hasLogo) {
+    return {
+      isValid: true,
+      warning: 'Logo display enabled but no logo uploaded. Organization name will be used.'
+    };
+  }
+  
+  return { isValid: true };
+}
+
+/**
+ * Get the effective header display based on mutual exclusivity rules
+ * RULE: Logo OR Name, NEVER BOTH
+ */
+export function getEffectiveHeaderDisplay(
+  config: LetterBrandingConfig,
+  orgProfile: OrganizationProfile | null
+): { showLogo: boolean; showOrgName: boolean } {
+  const hasLogo = !!orgProfile?.logoUrl;
+  
+  if (hasLogo && config.showLogo) {
+    // Logo exists and enabled: LOGO ONLY
+    return { showLogo: true, showOrgName: false };
+  } else {
+    // No logo or logo disabled: NAME ONLY (if enabled)
+    return { showLogo: false, showOrgName: true };
+  }
 }
 
 /**
@@ -66,6 +113,7 @@ export function formatLetterDate(date: Date, format: 'full' | 'short'): string {
 
 /**
  * Render letterhead HTML
+ * RULE: Logo OR Name, NEVER BOTH
  */
 export function renderLetterhead(
   orgProfile: OrganizationProfile | null,
@@ -76,19 +124,20 @@ export function renderLetterhead(
   const parts: string[] = [];
   const alignment = config.logoAlignment;
   
-  // Logo
-  if (config.showLogo && orgProfile.logoUrl) {
+  // ENFORCE MUTUAL EXCLUSIVITY: Logo OR Name, NEVER BOTH
+  const effectiveDisplay = getEffectiveHeaderDisplay(config, orgProfile);
+  
+  if (effectiveDisplay.showLogo && orgProfile.logoUrl) {
+    // Logo ONLY - no organization name in header
     parts.push(`
-      <div style="text-align: ${alignment}; margin-bottom: 10px;">
-        <img src="${orgProfile.logoUrl}" alt="Company Logo" style="max-height: 60px; max-width: 200px;" />
+      <div class="letterhead-logo" style="text-align: ${alignment}; margin-bottom: 10px;">
+        <img src="${orgProfile.logoUrl}" alt="${orgProfile.companyName || 'Company Logo'}" style="max-height: 60px; max-width: 200px;" />
       </div>
     `);
-  }
-  
-  // Organization Name
-  if (config.showOrgName && orgProfile.companyName) {
+  } else if (effectiveDisplay.showOrgName && orgProfile.companyName) {
+    // Name ONLY - no logo
     parts.push(`
-      <div style="text-align: ${alignment}; font-weight: bold; font-size: 16px;">
+      <div class="org-name" style="text-align: ${alignment}; font-weight: bold; font-size: 16px;">
         ${orgProfile.companyName}
       </div>
     `);
