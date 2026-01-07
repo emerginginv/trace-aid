@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { LETTER_CATEGORIES, LetterCategory } from "@/lib/letterCategories";
+import { ContextBanner } from "@/components/ui/context-banner";
 
 interface LetterCategorySelectorProps {
   onSelectCategory: (category: LetterCategory) => void;
@@ -18,12 +19,18 @@ export function LetterCategorySelector({ onSelectCategory, onBack }: LetterCateg
           Back
         </Button>
         <div>
-          <h2 className="text-2xl font-semibold">Create New Document</h2>
+          <h2 className="text-2xl font-semibold">Create New Document Template</h2>
           <p className="text-muted-foreground">
-            Select a letter category to get started with a guided builder
+            Select a category to build a reusable template structure
           </p>
         </div>
       </div>
+
+      <ContextBanner
+        variant="template"
+        title="Creating a template structure"
+        description="You're creating a reusable template. It will contain placeholders that get filled with case-specific data when you generate letters."
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {LETTER_CATEGORIES.map((category) => {

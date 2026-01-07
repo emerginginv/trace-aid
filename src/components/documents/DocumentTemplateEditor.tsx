@@ -30,6 +30,7 @@ import {
   DOCUMENT_TYPE_OPTIONS,
 } from "@/lib/documentTemplates";
 import { getDefaultTemplateBody, getAvailablePlaceholders } from "@/lib/documentEngine";
+import { ContextBanner } from "@/components/ui/context-banner";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
@@ -162,10 +163,10 @@ export function DocumentTemplateEditor({
         </Button>
         <div className="flex-1">
           <h3 className="text-lg font-medium">
-            {template ? "Edit Template" : "New Document Template"}
+            {template ? "Edit Template Structure" : "New Document Template"}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Create a template for generating letters and documents from case data
+            Define the structure for generating letters and documents
           </p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
@@ -173,6 +174,16 @@ export function DocumentTemplateEditor({
           {saving ? "Saving..." : "Save Template"}
         </Button>
       </div>
+
+      <ContextBanner
+        variant="template"
+        title="You are editing a template structure"
+        description="Changes here affect ALL future documents generated from this template. To customize a letter for a specific case, generate it from the case's Documents tab."
+        tips={[
+          "Placeholders like {{CASE_NUMBER}} will be replaced with actual values",
+          "Conditional sections like [IF fee_waiver_enabled] are controlled by case settings"
+        ]}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr,300px]">
         <div className="space-y-6">

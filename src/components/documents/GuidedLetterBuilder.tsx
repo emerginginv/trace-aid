@@ -5,6 +5,7 @@ import { UnifiedRecordsRequestBuilder } from "./builders/UnifiedRecordsRequestBu
 import { NDABuilder } from "./builders/NDABuilder";
 import { CorrespondenceBuilder } from "./builders/CorrespondenceBuilder";
 import { CustomAIBuilder } from "./builders/CustomAIBuilder";
+import { ContextBanner } from "@/components/ui/context-banner";
 
 interface GuidedLetterBuilderProps {
   category: LetterCategory;
@@ -69,10 +70,16 @@ export function GuidedLetterBuilder({
           <Icon className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-xl font-semibold">{config.name}</h2>
+          <h2 className="text-xl font-semibold">{config.name} Template</h2>
           <p className="text-sm text-muted-foreground">{config.description}</p>
         </div>
       </div>
+
+      <ContextBanner
+        variant="template"
+        title="Building a reusable template"
+        description="Configure the structure and options for this template. When used, placeholders will be filled with actual case data."
+      />
 
       {renderBuilder()}
     </div>
