@@ -4,14 +4,45 @@ This document provides the definitive HTML structure and CSS classes for generat
 
 ---
 
+## Canonical Section Order (IMMUTABLE)
+
+**This order is the base contract for all letters. Sections may be shown or hidden, but NEVER rearranged.**
+
+| Order | Section ID | CSS Class | Required | Description |
+|-------|-----------|-----------|----------|-------------|
+| 1 | `letterhead` | `.letter-letterhead` | ✓ | Organization branding, logo, contact info |
+| 2 | `date_block` | `.letter-date` | ✓ | Letter date, right-aligned |
+| 3 | `recipient_block` | `.letter-recipient` | ✓ | Addressee name, title, organization, address |
+| 4 | `reference` | `.letter-reference` | ○ | Subject/RE line (optional) |
+| 5 | `salutation` | `.letter-salutation` | ✓ | "Dear [Name]:" |
+| 6 | `body` | `.letter-body` | ✓ | Main content paragraphs |
+| 7 | `statutory_block` | `.statutory-language` | ○ | Legal citations (FOIA/PRA letters only) |
+| 8 | `closing` | `.letter-closing` | ✓ | "Sincerely," or similar |
+| 9 | `signature_block` | `.letter-signature` | ✓ | Signature line, name, title, contact |
+| 10 | `footer` | `.letter-footer` | ○ | Confidentiality notice (optional) |
+
+**Legend:** ✓ = Always present | ○ = Optional (may be hidden)
+
+### Letter Type Configurations
+
+| Letter Type | Visible Sections |
+|-------------|-----------------|
+| **FOIA Request** | letterhead, date_block, recipient_block, reference, salutation, body, statutory_block, closing, signature_block |
+| **State PRA** | letterhead, date_block, recipient_block, reference, salutation, body, statutory_block, closing, signature_block |
+| **NDA** | letterhead, date_block, recipient_block, salutation, body, closing, signature_block, footer |
+| **Custom** | letterhead, date_block, recipient_block, salutation, body, closing, signature_block |
+
+---
+
 ## Table of Contents
 
-1. [Complete HTML Skeleton](#complete-html-skeleton)
-2. [Section Reference](#section-reference)
-3. [CSS Classes](#css-classes)
-4. [Placeholder Variables](#placeholder-variables)
-5. [Pagination Behavior](#pagination-behavior)
-6. [Usage Examples](#usage-examples)
+1. [Canonical Section Order](#canonical-section-order-immutable)
+2. [Complete HTML Skeleton](#complete-html-skeleton)
+3. [Section Reference](#section-reference)
+4. [CSS Classes](#css-classes)
+5. [Placeholder Variables](#placeholder-variables)
+6. [Pagination Behavior](#pagination-behavior)
+7. [Usage Examples](#usage-examples)
 
 ---
 

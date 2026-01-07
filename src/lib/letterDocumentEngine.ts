@@ -23,6 +23,7 @@ import {
   getUnifiedLetterStyles,
   LETTER_FONT_STACK 
 } from "./paginatedLetterStyles";
+import { CANONICAL_SECTION_ORDER, SECTION_METADATA } from "./letterTemplates";
 
 export interface PageSettings {
   size: PageSize;
