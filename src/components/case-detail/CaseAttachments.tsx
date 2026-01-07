@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical, Loader2, Maximize } from "lucide-react";
+import { Upload, Download, Trash2, File, FileText, Image as ImageIcon, Video, Music, Search, LayoutGrid, List, Pencil, X, ShieldAlert, Share2, Link2, ShieldOff, History, ExternalLink, MoreVertical, Loader2, Maximize, FolderInput } from "lucide-react";
 import { generatePdfThumbnail, isPdfFile } from "@/lib/pdfThumbnail";
 import { useConfirmation } from "@/components/ui/confirmation-dialog";
 import { useBackgroundThumbnailGeneration, canGenerateThumbnail } from "@/hooks/use-background-thumbnail-generation";
@@ -41,6 +41,12 @@ import { useSortPreference } from "@/hooks/use-sort-preference";
 import { PdfViewer } from "./PdfViewer";
 import { usePreviewLogging } from "@/hooks/use-preview-logging";
 
+// Folder components
+import { FolderPanel, AttachmentFolder } from "./FolderPanel";
+import { CreateFolderDialog } from "./CreateFolderDialog";
+import { EditFolderDialog } from "./EditFolderDialog";
+import { MoveToFolderDialog } from "./MoveToFolderDialog";
+
 interface Attachment {
   id: string;
   case_id: string;
@@ -56,6 +62,7 @@ interface Attachment {
   preview_path?: string | null;
   preview_status?: string | null;
   preview_generated_at?: string | null;
+  folder_id?: string | null;
 }
 
 interface UploadingFile {
@@ -117,6 +124,14 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const [accessLogDialogOpen, setAccessLogDialogOpen] = useState(false);
   const [accessLogAttachment, setAccessLogAttachment] = useState<Attachment | null>(null);
   
+  // Folder state
+  const [folders, setFolders] = useState<AttachmentFolder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null); // null = All Files, "unfiled" = Unfiled
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<AttachmentFolder | null>(null);
+  const [moveToFolderOpen, setMoveToFolderOpen] = useState(false);
+  const [folderPanelCollapsed, setFolderPanelCollapsed] = useState(false);
+  
   // File Blob state (to bypass blocked signed URLs for all file types)
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [previewBlobData, setPreviewBlobData] = useState<ArrayBuffer | null>(null);
@@ -152,7 +167,8 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
 
   useEffect(() => {
     fetchAttachments();
-  }, [caseId]);
+    fetchFolders();
+  }, [caseId, organization?.id]);
 
   // Effect to load file as blob when previewing (for all file types to avoid signed URL blocking)
   useEffect(() => {
@@ -246,6 +262,24 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFolders = async () => {
+    try {
+      if (!organization?.id) return;
+
+      const { data, error } = await supabase
+        .from("attachment_folders")
+        .select("*")
+        .eq("case_id", caseId)
+        .eq("organization_id", organization.id)
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setFolders((data as AttachmentFolder[]) || []);
+    } catch (error) {
+      console.error("Error fetching folders:", error);
     }
   };
 
@@ -809,8 +843,20 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     
     const matchesTag = tagFilter === "all" || attachment.tags?.includes(tagFilter);
     
-    return matchesSearch && matchesType && matchesTag;
+    // Folder filter
+    const matchesFolder = selectedFolderId === null || // All files
+      (selectedFolderId === "unfiled" && !attachment.folder_id) || // Unfiled
+      attachment.folder_id === selectedFolderId; // Specific folder
+    
+    return matchesSearch && matchesType && matchesTag && matchesFolder;
   });
+
+  // Calculate folder attachment counts
+  const attachmentCounts = folders.reduce((acc, folder) => {
+    acc[folder.id] = attachments.filter(a => a.folder_id === folder.id).length;
+    return acc;
+  }, {} as Record<string, number>);
+  const unfiledCount = attachments.filter(a => !a.folder_id).length;
 
   // Calculate selection state
   const selectedAttachments = filteredAttachments.filter(a => selectedIds.has(a.id));
@@ -877,7 +923,26 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
 
   return (
     <TooltipProvider>
-      <div className="space-y-4">
+      <div className="flex gap-0 -mx-4 sm:-mx-6">
+        {/* Folder Panel */}
+        {organization?.id && (
+          <FolderPanel
+            caseId={caseId}
+            organizationId={organization.id}
+            selectedFolderId={selectedFolderId}
+            onSelectFolder={setSelectedFolderId}
+            onCreateFolder={() => setCreateFolderOpen(true)}
+            onEditFolder={setEditingFolder}
+            folders={folders}
+            attachmentCounts={attachmentCounts}
+            unfiledCount={unfiledCount}
+            totalCount={attachments.length}
+            isCollapsed={folderPanelCollapsed}
+            onToggleCollapse={() => setFolderPanelCollapsed(!folderPanelCollapsed)}
+          />
+        )}
+        
+        <div className="flex-1 px-4 sm:px-6 space-y-4">
         {/* Thumbnail Generation Progress */}
         <ThumbnailGenerationProgress
           jobs={thumbnailQueue}
@@ -1587,12 +1652,47 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
           attachment={accessLogAttachment}
         />
 
+        {/* Folder Dialogs */}
+        <CreateFolderDialog
+          open={createFolderOpen}
+          onOpenChange={setCreateFolderOpen}
+          caseId={caseId}
+          organizationId={organization?.id || ""}
+          onFolderCreated={fetchFolders}
+        />
+
+        <EditFolderDialog
+          open={!!editingFolder}
+          onOpenChange={(open) => !open && setEditingFolder(null)}
+          folder={editingFolder}
+          onFolderUpdated={fetchFolders}
+          onFolderDeleted={() => {
+            fetchFolders();
+            if (editingFolder && selectedFolderId === editingFolder.id) {
+              setSelectedFolderId(null);
+            }
+          }}
+        />
+
+        <MoveToFolderDialog
+          open={moveToFolderOpen}
+          onOpenChange={setMoveToFolderOpen}
+          attachmentIds={Array.from(selectedIds)}
+          folders={folders}
+          onMoveComplete={() => {
+            fetchAttachments();
+            clearSelection();
+          }}
+          onCreateFolder={() => setCreateFolderOpen(true)}
+        />
+
         {/* Access Audit Panel - collapsible at bottom */}
         <CaseAccessAuditPanel
           caseId={caseId}
           attachments={attachments}
           canExport={canEditAttachments}
         />
+        </div>
       </div>
     </TooltipProvider>
   );

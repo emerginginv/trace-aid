@@ -152,6 +152,68 @@ export type Database = {
           },
         ]
       }
+      attachment_folders: {
+        Row: {
+          case_id: string
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          organization_id: string
+          parent_folder_id: string | null
+        }
+        Insert: {
+          case_id: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          parent_folder_id?: string | null
+        }
+        Update: {
+          case_id?: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          parent_folder_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachment_folders_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachment_folders_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachment_folders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachment_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "attachment_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachment_preview_logs: {
         Row: {
           attachment_id: string
@@ -286,6 +348,7 @@ export type Database = {
           file_path: string
           file_size: number
           file_type: string
+          folder_id: string | null
           id: string
           name: string | null
           organization_id: string | null
@@ -303,6 +366,7 @@ export type Database = {
           file_path: string
           file_size: number
           file_type: string
+          folder_id?: string | null
           id?: string
           name?: string | null
           organization_id?: string | null
@@ -320,6 +384,7 @@ export type Database = {
           file_path?: string
           file_size?: number
           file_type?: string
+          folder_id?: string | null
           id?: string
           name?: string | null
           organization_id?: string | null
@@ -330,6 +395,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "case_attachments_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "attachment_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "case_attachments_organization_id_fkey"
             columns: ["organization_id"]
