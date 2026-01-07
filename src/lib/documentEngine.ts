@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { CaseVariables } from "./caseVariables";
 import { OrganizationProfile, formatFullAddress } from "./organizationProfile";
+import { resolveConditionals, buildConditionalContextFromCase, ConditionalContext } from "./letterTemplateRenderer";
 
 export interface DocumentVariables {
   // Organization data
@@ -113,11 +114,17 @@ export function getAvailablePlaceholders(): { variable: string; description: str
 // Replace placeholders in template body with actual values
 export function renderDocument(
   templateBody: string,
-  variables: DocumentVariables
+  variables: DocumentVariables,
+  conditionalContext?: Partial<ConditionalContext>
 ): string {
   let rendered = templateBody;
   
-  // Replace all placeholders
+  // Step 1: Resolve conditionals first (remove/keep [IF]...[/IF] blocks)
+  if (conditionalContext) {
+    rendered = resolveConditionals(rendered, conditionalContext);
+  }
+  
+  // Step 2: Replace all placeholders
   Object.entries(variables).forEach(([key, value]) => {
     const placeholder = `{{${key}}}`;
     const regex = new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g');

@@ -175,7 +175,37 @@ export function resolveConditionals(
     }
   });
   
+  // Normalize whitespace: remove empty paragraphs and excess line breaks to prevent gaps
+  result = result
+    .replace(/<p>\s*<\/p>/g, '')           // Remove empty paragraphs
+    .replace(/<div[^>]*>\s*<\/div>/g, '')  // Remove empty divs
+    .replace(/\n{3,}/g, '\n\n');           // Collapse multiple line breaks
+  
   return result;
+}
+
+/**
+ * Build ConditionalContext from CaseVariables
+ * 
+ * Case-level boolean fields drive which template sections are included.
+ */
+export function buildConditionalContextFromCase(
+  caseData: CaseVariables,
+  templateOptions?: {
+    includeDateRange?: boolean;
+    includeAppealRights?: boolean;
+    includeFeeNotice?: boolean;
+  }
+): ConditionalContext {
+  return {
+    fee_waiver_enabled: caseData.feeWaiver,
+    expedited_enabled: caseData.expedited,
+    has_date_range: templateOptions?.includeDateRange ?? false,
+    has_reference_number: !!caseData.referenceNumber,
+    appeal_rights_enabled: templateOptions?.includeAppealRights ?? true,
+    fee_notice_enabled: templateOptions?.includeFeeNotice ?? true,
+    has_purpose: false,
+  };
 }
 
 /**

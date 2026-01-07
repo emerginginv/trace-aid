@@ -316,6 +316,8 @@ function createPreviewCaseVariables(): CaseVariables {
     dueDate: 'January 15, 2026',
     caseManager: 'Case Manager Name',
     caseManagerEmail: 'manager@example.com',
+    feeWaiver: false,
+    expedited: false,
   };
 }
 
