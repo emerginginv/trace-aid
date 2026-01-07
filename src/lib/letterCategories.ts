@@ -1,11 +1,8 @@
-import { FileText, Building, Scale, Shield, Users, Sparkles } from 'lucide-react';
+import { FileText, Shield, Sparkles } from 'lucide-react';
 
 export type LetterCategory = 
   | 'public_records'
-  | 'state_pra'
-  | 'foia_federal'
   | 'nda'
-  | 'correspondence'
   | 'custom_ai';
 
 export interface LetterCategoryConfig {
@@ -23,28 +20,10 @@ export const LETTER_CATEGORIES: LetterCategoryConfig[] = [
     id: 'public_records',
     name: 'Public Records & FOIA Requests',
     shortName: 'Public Records',
-    description: 'General template for requesting public records from government agencies',
+    description: 'Request public records from federal, state, or local government agencies',
     icon: FileText,
-    tags: ['General', 'Records'],
+    tags: ['Federal', 'State', 'FOIA'],
     color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  },
-  {
-    id: 'state_pra',
-    name: 'State Public Records Request',
-    shortName: 'State PRA',
-    description: 'State-specific public records act requests with proper statutory citations',
-    icon: Building,
-    tags: ['State-Specific'],
-    color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  },
-  {
-    id: 'foia_federal',
-    name: 'Freedom of Information Act (Federal)',
-    shortName: 'FOIA Federal',
-    description: 'Request federal agency records under 5 U.S.C. § 552',
-    icon: Scale,
-    tags: ['Federal', 'FOIA'],
-    color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
   },
   {
     id: 'nda',
@@ -54,15 +33,6 @@ export const LETTER_CATEGORIES: LetterCategoryConfig[] = [
     icon: Shield,
     tags: ['Legal', 'Agreement'],
     color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  },
-  {
-    id: 'correspondence',
-    name: 'Client / Attorney Correspondence',
-    shortName: 'Correspondence',
-    description: 'Professional letters to clients, attorneys, and other parties',
-    icon: Users,
-    tags: ['Communication'],
-    color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
   },
   {
     id: 'custom_ai',
@@ -159,19 +129,17 @@ export const NDA_TYPES = [
   { value: 'mutual', label: 'Mutual (Two-Way)', description: 'Both parties share confidential information' },
 ];
 
-export const CORRESPONDENCE_TYPES = [
-  { value: 'client', label: 'Client' },
-  { value: 'attorney', label: 'Attorney' },
-  { value: 'insurance', label: 'Insurance Company' },
-  { value: 'government', label: 'Government Agency' },
-  { value: 'other', label: 'Other' },
-];
-
 export const LETTER_TONES = [
   { value: 'professional', label: 'Professional', description: 'Courteous and business-like' },
   { value: 'formal', label: 'Formal', description: 'Traditional and ceremonial' },
   { value: 'firm', label: 'Firm', description: 'Direct and assertive but respectful' },
   { value: 'neutral', label: 'Neutral', description: 'Balanced and objective' },
+];
+
+export const LETTER_LENGTHS = [
+  { value: 'brief', label: 'Brief', description: '2-3 paragraphs, straight to the point' },
+  { value: 'standard', label: 'Standard', description: '4-5 paragraphs, balanced detail' },
+  { value: 'detailed', label: 'Detailed', description: '6-8 paragraphs, comprehensive' },
 ];
 
 export const RECIPIENT_TYPES = [
@@ -183,12 +151,6 @@ export const RECIPIENT_TYPES = [
   { value: 'employer', label: 'Employer / HR Department' },
   { value: 'witness', label: 'Witness / Subject' },
   { value: 'other', label: 'Other' },
-];
-
-export const LETTER_LENGTHS = [
-  { value: 'brief', label: 'Brief', description: '2-3 paragraphs, straight to the point' },
-  { value: 'standard', label: 'Standard', description: '4-5 paragraphs, balanced detail' },
-  { value: 'detailed', label: 'Detailed', description: '6-8 paragraphs, comprehensive' },
 ];
 
 export function getCategoryConfig(category: LetterCategory): LetterCategoryConfig | undefined {
