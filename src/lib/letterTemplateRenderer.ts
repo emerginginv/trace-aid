@@ -316,11 +316,12 @@ export function generatePrintCss(config: LetterPrintConfig): string {
     
     .letter-body {
       margin-bottom: 1.5em;
+      text-align: left;
     }
     
     .letter-body p {
       margin-bottom: 1em;
-      text-align: justify;
+      text-align: left;
     }
     
     .statutory-language {
