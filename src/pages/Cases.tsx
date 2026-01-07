@@ -80,10 +80,11 @@ const Cases = () => {
   
   const navigate = useNavigate();
   const { isVendor } = useUserRole();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
   const { organization } = useOrganization();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const [financialsLoaded, setFinancialsLoaded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -101,13 +102,21 @@ const Cases = () => {
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("cases-columns", COLUMNS);
 
-  // Refetch when organization changes
+  // Stage A: Fetch cases when organization changes
   useEffect(() => {
     if (organization?.id) {
+      setFinancialsLoaded(false);
       fetchCases();
       fetchPicklists();
     }
   }, [organization?.id]);
+
+  // Stage B: Fetch financial data once permissions are loaded and user has view_finances permission
+  useEffect(() => {
+    if (!permissionsLoading && hasPermission('view_finances') && cases.length > 0 && !financialsLoaded) {
+      fetchFinancialData();
+    }
+  }, [permissionsLoading, cases.length, financialsLoaded]);
 
   const fetchPicklists = async () => {
     if (!organization?.id) return;
@@ -134,7 +143,7 @@ const Cases = () => {
     
     setLoading(true);
     try {
-      // Fetch cases with case manager profile
+      // Fetch cases with case manager profile (no financial data yet)
       const { data: casesData, error: casesError } = await supabase
         .from("cases")
         .select(`
@@ -149,78 +158,93 @@ const Cases = () => {
         
       if (casesError) throw casesError;
       
-      let enrichedCases: Case[] = (casesData || []).map(c => ({
+      const enrichedCases: Case[] = (casesData || []).map(c => ({
         ...c,
         case_manager: c.case_manager as CaseManager | null,
         budget_summary: null,
         financial_totals: null,
       }));
       
-      // Fetch budget summaries and financial totals if user has permission
-      if (hasPermission('view_finances') && enrichedCases.length > 0) {
-        const caseIds = enrichedCases.map(c => c.id);
-        
-        // Fetch budget summaries for cases with budgets
-        const budgetPromises = enrichedCases
-          .filter(c => c.budget_dollars && c.budget_dollars > 0)
-          .map(async (c) => {
-            const { data } = await supabase.rpc('get_case_budget_summary', { p_case_id: c.id });
-            return { caseId: c.id, summary: data?.[0] || null };
-          });
-        
-        // Fetch financial totals from case_finances
-        const { data: financialData } = await supabase
-          .from("case_finances")
-          .select("case_id, finance_type, amount, hours")
-          .in("case_id", caseIds);
-        
-        // Aggregate financial totals by case
-        const totalsMap = new Map<string, FinancialTotals>();
-        financialData?.forEach(entry => {
-          const existing = totalsMap.get(entry.case_id) || {
-            total_expenses: 0,
-            total_hours: 0,
-            total_retainer: 0,
-            total_invoiced: 0,
-          };
-          
-          switch (entry.finance_type) {
-            case 'expense':
-              existing.total_expenses += entry.amount || 0;
-              break;
-            case 'time':
-              existing.total_hours += entry.hours || 0;
-              break;
-            case 'retainer':
-              existing.total_retainer += entry.amount || 0;
-              break;
-            case 'invoice':
-              existing.total_invoiced += entry.amount || 0;
-              break;
-          }
-          
-          totalsMap.set(entry.case_id, existing);
-        });
-        
-        const budgetResults = await Promise.all(budgetPromises);
-        const budgetMap = new Map(budgetResults.map(r => [r.caseId, r.summary]));
-        
-        enrichedCases = enrichedCases.map(c => ({
-          ...c,
-          budget_summary: budgetMap.get(c.id) ? {
-            dollars_consumed: budgetMap.get(c.id)!.dollars_consumed || 0,
-            dollars_remaining: budgetMap.get(c.id)!.dollars_remaining || 0,
-            dollars_utilization_pct: budgetMap.get(c.id)!.dollars_utilization_pct || 0,
-          } : null,
-          financial_totals: totalsMap.get(c.id) || null,
-        }));
-      }
-      
       setCases(enrichedCases);
     } catch (error) {
+      console.error("Error fetching cases:", error);
       toast.error("Error fetching cases");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Stage B: Fetch financial data separately after permissions are loaded
+  const fetchFinancialData = async () => {
+    if (cases.length === 0) return;
+    
+    try {
+      const caseIds = cases.map(c => c.id);
+      
+      // Fetch budget summaries for cases with budgets
+      const budgetPromises = cases
+        .filter(c => c.budget_dollars && c.budget_dollars > 0)
+        .map(async (c) => {
+          const { data, error } = await supabase.rpc('get_case_budget_summary', { p_case_id: c.id });
+          if (error) console.error(`Error fetching budget for case ${c.id}:`, error);
+          return { caseId: c.id, summary: data?.[0] || null };
+        });
+      
+      // Fetch financial totals from case_finances
+      const { data: financialData, error: financialError } = await supabase
+        .from("case_finances")
+        .select("case_id, finance_type, amount, hours")
+        .in("case_id", caseIds);
+      
+      if (financialError) {
+        console.error("Error fetching financial data:", financialError);
+      }
+      
+      // Aggregate financial totals by case
+      const totalsMap = new Map<string, FinancialTotals>();
+      financialData?.forEach(entry => {
+        const existing = totalsMap.get(entry.case_id) || {
+          total_expenses: 0,
+          total_hours: 0,
+          total_retainer: 0,
+          total_invoiced: 0,
+        };
+        
+        switch (entry.finance_type) {
+          case 'expense':
+            existing.total_expenses += entry.amount || 0;
+            break;
+          case 'time':
+            existing.total_hours += entry.hours || 0;
+            break;
+          case 'retainer':
+            existing.total_retainer += entry.amount || 0;
+            break;
+          case 'invoice':
+            existing.total_invoiced += entry.amount || 0;
+            break;
+        }
+        
+        totalsMap.set(entry.case_id, existing);
+      });
+      
+      const budgetResults = await Promise.all(budgetPromises);
+      const budgetMap = new Map(budgetResults.map(r => [r.caseId, r.summary]));
+      
+      // Merge financial data into existing cases
+      setCases(prevCases => prevCases.map(c => ({
+        ...c,
+        budget_summary: budgetMap.get(c.id) ? {
+          dollars_consumed: budgetMap.get(c.id)!.dollars_consumed || 0,
+          dollars_remaining: budgetMap.get(c.id)!.dollars_remaining || 0,
+          dollars_utilization_pct: budgetMap.get(c.id)!.dollars_utilization_pct || 0,
+        } : null,
+        financial_totals: totalsMap.get(c.id) || null,
+      })));
+      
+      setFinancialsLoaded(true);
+    } catch (error) {
+      console.error("Error fetching financial data:", error);
     }
   };
 
