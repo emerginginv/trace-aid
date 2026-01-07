@@ -99,22 +99,43 @@ export function LetterBrandingConfigEditor({
               </div>
               
               <div className="grid gap-3 pl-6">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="showLogo" className="cursor-pointer">Organization Logo</Label>
-                  <Switch
-                    id="showLogo"
-                    checked={config.showLogo}
-                    onCheckedChange={(checked) => updateConfig({ showLogo: checked })}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="showOrgName" className="cursor-pointer">Organization Name</Label>
-                  <Switch
-                    id="showOrgName"
-                    checked={config.showOrgName}
-                    onCheckedChange={(checked) => updateConfig({ showOrgName: checked })}
-                  />
+                {/* Header Display - Mutually Exclusive: Logo OR Name, NEVER BOTH */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Header Display</Label>
+                  <RadioGroup
+                    value={orgSettings?.logo_url && config.showLogo ? 'logo' : 'name'}
+                    onValueChange={(value) => {
+                      if (value === 'logo') {
+                        updateConfig({ showLogo: true, showOrgName: false });
+                      } else {
+                        updateConfig({ showLogo: false, showOrgName: true });
+                      }
+                    }}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem 
+                        value="logo" 
+                        id="header-logo" 
+                        disabled={!orgSettings?.logo_url} 
+                      />
+                      <Label 
+                        htmlFor="header-logo" 
+                        className={`cursor-pointer text-sm ${!orgSettings?.logo_url ? 'text-muted-foreground' : ''}`}
+                      >
+                        Logo Only {!orgSettings?.logo_url && '(No logo uploaded)'}
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="name" id="header-name" />
+                      <Label htmlFor="header-name" className="cursor-pointer text-sm">
+                        Organization Name Only
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                  <p className="text-xs text-muted-foreground italic">
+                    Logo and name are mutually exclusive in the header
+                  </p>
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -135,34 +156,38 @@ export function LetterBrandingConfigEditor({
                   />
                 </div>
                 
-                {(config.showLogo || config.showOrgName) && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Alignment</Label>
-                    <RadioGroup
-                      value={config.logoAlignment}
-                      onValueChange={(value: 'left' | 'center' | 'right') => updateConfig({ logoAlignment: value })}
-                      className="flex gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="left" id="align-left" />
-                        <Label htmlFor="align-left" className="cursor-pointer text-sm">Left</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="center" id="align-center" />
-                        <Label htmlFor="align-center" className="cursor-pointer text-sm">Center</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="right" id="align-right" />
-                        <Label htmlFor="align-right" className="cursor-pointer text-sm">Right</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Alignment</Label>
+                  <RadioGroup
+                    value={config.logoAlignment}
+                    onValueChange={(value: 'left' | 'center' | 'right') => updateConfig({ logoAlignment: value })}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="left" id="align-left" />
+                      <Label htmlFor="align-left" className="cursor-pointer text-sm">Left</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="center" id="align-center" />
+                      <Label htmlFor="align-center" className="cursor-pointer text-sm">Center</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="right" id="align-right" />
+                      <Label htmlFor="align-right" className="cursor-pointer text-sm">Right</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
                 
                 {/* Preview of org info */}
-                {orgSettings && (config.showOrgName || config.showOrgAddress) && (
+                {orgSettings && (
                   <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                    <p className="font-medium">{orgSettings.company_name || 'Organization name not set'}</p>
+                    {orgSettings.logo_url && config.showLogo ? (
+                      <p className="font-medium flex items-center gap-2">
+                        <span className="inline-block w-4 h-4 bg-primary/20 rounded" /> Logo will be displayed
+                      </p>
+                    ) : (
+                      <p className="font-medium">{orgSettings.company_name || 'Organization name not set'}</p>
+                    )}
                     {config.showOrgAddress && (
                       <p>{[orgSettings.address, orgSettings.city, orgSettings.state, orgSettings.zip_code].filter(Boolean).join(', ') || 'Address not set'}</p>
                     )}

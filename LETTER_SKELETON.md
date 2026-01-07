@@ -34,15 +34,40 @@ This document provides the definitive HTML structure and CSS classes for generat
 
 ---
 
+## Header Rules (Mutual Exclusivity)
+
+| Condition | Header Content |
+|-----------|---------------|
+| Logo exists + enabled | **Logo ONLY** (no org name) |
+| No logo OR logo disabled | **Organization Name ONLY** |
+| Both disabled | Empty header (not recommended) |
+
+**RULE:** Never show logo and organization name together in the header.
+
+### Header CSS Classes
+- `.letter-letterhead` - Header container (appears once per page)
+- `.letterhead-logo` - Logo image (if logo mode)
+- `.org-name` - Organization name text (if name mode)
+
+### Header Constraints
+- Header content is fixed-position
+- No AI-generated content allowed in headers
+- Header must appear consistently on each page
+- Maximum logo height: 60px
+- Maximum logo width: 200px
+
+---
+
 ## Table of Contents
 
 1. [Canonical Section Order](#canonical-section-order-immutable)
-2. [Complete HTML Skeleton](#complete-html-skeleton)
-3. [Section Reference](#section-reference)
-4. [CSS Classes](#css-classes)
-5. [Placeholder Variables](#placeholder-variables)
-6. [Pagination Behavior](#pagination-behavior)
-7. [Usage Examples](#usage-examples)
+2. [Header Rules](#header-rules-mutual-exclusivity)
+3. [Complete HTML Skeleton](#complete-html-skeleton)
+4. [Section Reference](#section-reference)
+5. [CSS Classes](#css-classes)
+6. [Placeholder Variables](#placeholder-variables)
+7. [Pagination Behavior](#pagination-behavior)
+8. [Usage Examples](#usage-examples)
 
 ---
 
