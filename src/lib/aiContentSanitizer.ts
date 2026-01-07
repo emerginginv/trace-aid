@@ -45,6 +45,86 @@ export const SYSTEM_CONTROLLED_SECTIONS = [
 ] as const;
 
 // ============================================
+// AI CASE SCOPE BOUNDARIES
+// ============================================
+
+/**
+ * AI CASE SCOPE BOUNDARIES
+ * 
+ * Case-scoped AI operates ONLY inside placeholders.
+ * It fills {{PLACEHOLDER}} slots with case-specific content.
+ * It NEVER alters the template structure.
+ */
+export const AI_CASE_SCOPE = {
+  // Allowed output types
+  ALLOWED_CONTENT_TYPES: [
+    'fee_waiver_justification',
+    'expedited_justification',
+    'purpose_of_request',
+    'tone_refinement',
+  ],
+  
+  // Maximum content length per field
+  MAX_JUSTIFICATION_LENGTH: 2000,
+  
+  // Allowed output tags (minimal - content only)
+  ALLOWED_TAGS: ['p', 'br', 'strong', 'em'],
+  
+  // Forbidden patterns (template elements)
+  FORBIDDEN_IN_CASE_CONTENT: [
+    /\{\{[A-Z_]+\}\}/,      // Placeholders (should not generate these)
+    /\[IF\s+\w+\]/,         // Conditionals
+    /\[\/IF\]/,             // End conditionals
+    /<style/i,              // Style blocks
+    /<div\s+class=/i,       // Layout classes
+    /position\s*:/i,        // CSS positioning
+    /margin\s*:/i,          // CSS margins
+    /padding\s*:/i,         // CSS padding
+  ],
+} as const;
+
+/**
+ * Validate and sanitize case-scoped AI output
+ * 
+ * This is for content that fills {{PLACEHOLDER}} slots in templates.
+ * It must be pure text content without any template or layout elements.
+ */
+export function sanitizeCaseScopedContent(
+  content: string,
+  fieldType: string
+): { clean: string; violations: string[] } {
+  const violations: string[] = [];
+  let clean = content;
+
+  // Check for forbidden patterns
+  for (const pattern of AI_CASE_SCOPE.FORBIDDEN_IN_CASE_CONTENT) {
+    if (pattern.test(clean)) {
+      violations.push(`Content contains forbidden pattern: ${pattern.source}`);
+      clean = clean.replace(pattern, '');
+    }
+    pattern.lastIndex = 0;
+  }
+
+  // Strip any HTML tags - case content should be plain text
+  clean = clean.replace(/<[^>]+>/g, '');
+
+  // Strip markdown formatting
+  clean = clean
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // Bold
+    .replace(/\*([^*]+)\*/g, '$1')     // Italic
+    .replace(/##\s*/g, '')             // Headers
+    .replace(/`([^`]+)`/g, '$1');      // Code
+
+  // Enforce length limit
+  if (clean.length > AI_CASE_SCOPE.MAX_JUSTIFICATION_LENGTH) {
+    violations.push(`Content exceeds maximum length of ${AI_CASE_SCOPE.MAX_JUSTIFICATION_LENGTH}`);
+    clean = clean.substring(0, AI_CASE_SCOPE.MAX_JUSTIFICATION_LENGTH);
+  }
+
+  return { clean: clean.trim(), violations };
+}
+
+// ============================================
 // TYPES
 // ============================================
 

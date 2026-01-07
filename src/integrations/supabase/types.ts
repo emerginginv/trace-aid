@@ -760,9 +760,11 @@ export type Database = {
           description: string | null
           due_date: string | null
           expedited: boolean | null
+          expedited_justification: string | null
           external_record_id: string | null
           external_system_name: string | null
           fee_waiver: boolean | null
+          fee_waiver_justification: string | null
           id: string
           import_batch_id: string | null
           import_timestamp: string | null
@@ -770,6 +772,7 @@ export type Database = {
           investigator_ids: string[] | null
           organization_id: string | null
           parent_case_id: string | null
+          purpose_of_request: string | null
           reference_number: string | null
           status: string
           title: string
@@ -791,9 +794,11 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           expedited?: boolean | null
+          expedited_justification?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           fee_waiver?: boolean | null
+          fee_waiver_justification?: string | null
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
@@ -801,6 +806,7 @@ export type Database = {
           investigator_ids?: string[] | null
           organization_id?: string | null
           parent_case_id?: string | null
+          purpose_of_request?: string | null
           reference_number?: string | null
           status?: string
           title: string
@@ -822,9 +828,11 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           expedited?: boolean | null
+          expedited_justification?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           fee_waiver?: boolean | null
+          fee_waiver_justification?: string | null
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
@@ -832,6 +840,7 @@ export type Database = {
           investigator_ids?: string[] | null
           organization_id?: string | null
           parent_case_id?: string | null
+          purpose_of_request?: string | null
           reference_number?: string | null
           status?: string
           title?: string
