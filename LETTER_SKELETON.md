@@ -736,10 +736,81 @@ For letters spanning multiple pages, use CSS `@page` rules:
 
 ---
 
+## Letter Type Content Separation
+
+### Body-Only Generators (letterBodyGenerators.ts)
+
+Letter type generators define **CONTENT ONLY**, not layout:
+
+| Generator | Defines | Does NOT Define |
+|-----------|---------|-----------------|
+| `generateFOIABodyContent()` | Statutory language, request paragraphs, fee waiver text | Headers, dates, addresses, signatures |
+| `generateStatePRABodyContent()` | State-specific statutory text, request details | Layout elements |
+| `generatePublicRecordsBodyContent()` | Legal authority citations, format preferences | Headers, dates, addresses |
+| `generateNDABodyContent()` | Terms, obligations, definitions | Title formatting, external signatures |
+| `generateCorrespondenceBodyContent()` | Body paragraphs, closing line | All layout elements |
+
+### Letter Assembly Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                    LETTER ASSEMBLY FLOW                          │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  letterBodyGenerators.ts           letterDocumentEngine.ts       │
+│  ─────────────────────────         ──────────────────────        │
+│                                                                  │
+│  generateFOIABodyContent()   ──►   createLetterDocument()        │
+│    ├─ Statutory language              ├─ Letterhead (SYSTEM)     │
+│    ├─ Request paragraphs              ├─ Date block (SYSTEM)     │
+│    ├─ Fee waiver language             ├─ Recipient block (SYSTEM)│
+│    └─ Appeal language                 ├─ Salutation (SYSTEM)     │
+│                                       ├─ [BODY CONTENT] ◄────────┤
+│  renderFOIABodyHtml()                 ├─ Closing (SYSTEM)        │
+│    └─ Returns HTML paragraphs         ├─ Signature block (SYSTEM)│
+│                                       └─ Footer (SYSTEM)         │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Example Flow
+
+```typescript
+// 1. Generate body content (paragraphs only)
+const bodyContent = generateFOIABodyContent(formData);
+const bodyHtml = renderFOIABodyHtml(bodyContent);
+
+// 2. System assembles complete letter with layout
+const letter = createLetterDocument(bodyHtml, branding, org, {
+  recipient: { 
+    name: 'FOIA Officer', 
+    organization: 'Department of Justice',
+    address: '950 Pennsylvania Avenue NW\nWashington, DC 20530' 
+  },
+  subject: 'FOIA Request',
+  salutation: 'Dear FOIA Officer',
+  closing: 'Sincerely,'
+});
+```
+
+### Why This Matters
+
+| Benefit | Description |
+|---------|-------------|
+| **Visual Consistency** | All letters use identical layout rules regardless of type |
+| **Maintainability** | Change layout once in `letterDocumentEngine.ts`, applies everywhere |
+| **AI Safety** | AI can only modify body content, never layout elements |
+| **Separation of Concerns** | Content generators focus on text, engine handles presentation |
+| **Testability** | Body content can be tested independently of layout |
+
+---
+
 ## Related Files
 
 | File | Purpose |
 |------|---------|
+| `src/lib/letterBodyGenerators.ts` | Body-only content generators (NEW) |
+| `src/lib/letterGenerators.ts` | DEPRECATED full letter generators |
 | `src/lib/paginatedLetterStyles.ts` | CSS styles for preview & export |
 | `src/lib/letterDocumentEngine.ts` | Document creation engine |
 | `src/lib/letterBranding.ts` | Branding/letterhead rendering |
@@ -753,4 +824,5 @@ For letters spanning multiple pages, use CSS `@page` rules:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2026-01-07 | Added Letter Type Content Separation section, body-only generators |
 | 1.0 | 2026-01-07 | Initial skeleton documentation |

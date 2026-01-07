@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Save, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { generatePublicRecordsLetter } from "@/lib/letterGenerators";
+import { generatePublicRecordsBodyContent, renderPublicRecordsBodyHtml } from "@/lib/letterBodyGenerators";
 
 interface PublicRecordsBuilderProps {
   organizationId: string;
@@ -49,7 +49,9 @@ export function PublicRecordsBuilder({ organizationId, onSave, onCancel }: Publi
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const letterBody = generatePublicRecordsLetter(formData);
+      // Generate body content only (no layout elements)
+      const bodyContent = generatePublicRecordsBodyContent(formData);
+      const letterBody = renderPublicRecordsBodyHtml(bodyContent);
 
       const { error } = await supabase
         .from('document_templates')

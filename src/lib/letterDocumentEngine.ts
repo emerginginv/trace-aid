@@ -16,7 +16,16 @@
  */
 
 import { type OrganizationProfile } from "./organizationProfile";
-import { type LetterBrandingConfig, renderLetterhead, renderDateBlock, renderSignatureBlock, renderConfidentialityFooter } from "./letterBranding";
+import { 
+  type LetterBrandingConfig, 
+  renderLetterhead, 
+  renderDateBlock, 
+  renderSignatureBlock, 
+  renderConfidentialityFooter,
+  renderRecipientBlock,
+  renderSalutation,
+  renderSubjectLine
+} from "./letterBranding";
 import { 
   PAGE_SPECS, 
   type PageSize, 
@@ -50,10 +59,28 @@ export interface LetterDocument {
   estimatedPages: number;
 }
 
+/**
+ * Recipient information for letter assembly
+ */
+export interface LetterRecipient {
+  name: string;
+  title?: string;
+  organization?: string;
+  address: string;
+}
+
 export interface CreateLetterDocumentOptions {
   pageSettings?: Partial<PageSettings>;
   includeWatermark?: boolean;
   draftMode?: boolean;
+  /** Recipient information (system-controlled) */
+  recipient?: LetterRecipient;
+  /** Subject/RE line (system-controlled) */
+  subject?: string;
+  /** Salutation e.g. "Dear Mr. Smith:" (system-controlled) */
+  salutation?: string;
+  /** Closing e.g. "Sincerely," (system-controlled) - overrides branding config */
+  closing?: string;
 }
 
 const DEFAULT_PAGE_SETTINGS: PageSettings = {
@@ -301,25 +328,41 @@ export function createLetterDocument(
   // Build the complete letter HTML
   const parts: string[] = [];
 
-  // Add letterhead
+  // Add letterhead (system-controlled)
   if (brandingConfig.showLogo || brandingConfig.showOrgName || brandingConfig.showOrgAddress || brandingConfig.showContactInfo) {
     parts.push(renderLetterhead(orgProfile, brandingConfig));
   }
 
-  // Add date block
+  // Add date block (system-controlled)
   if (brandingConfig.showDate) {
     parts.push(renderDateBlock(new Date(), brandingConfig));
   }
 
-  // Add letter body (wrapped in letter-body class)
-  parts.push(`<div class="letter-body">${letterBody}</div>`);
-
-  // Add signature block
-  if (brandingConfig.showSignatureBlock) {
-    parts.push(renderSignatureBlock(brandingConfig));
+  // Add recipient block if provided (system-controlled)
+  if (options?.recipient) {
+    parts.push(renderRecipientBlock(options.recipient));
   }
 
-  // Add confidentiality footer
+  // Add subject/reference line if provided (system-controlled)
+  if (options?.subject) {
+    parts.push(renderSubjectLine(options.subject));
+  }
+
+  // Add salutation if provided (system-controlled)
+  if (options?.salutation) {
+    parts.push(renderSalutation(options.salutation));
+  }
+
+  // Add letter body (AI-editable content wrapped in letter-body class)
+  parts.push(`<div class="letter-body">${letterBody}</div>`);
+
+  // Add signature block (system-controlled)
+  if (brandingConfig.showSignatureBlock) {
+    // Use custom closing if provided, otherwise use default from signature block
+    parts.push(renderSignatureBlock(brandingConfig, options?.closing));
+  }
+
+  // Add confidentiality footer (system-controlled)
   if (brandingConfig.showConfidentiality) {
     parts.push(renderConfidentialityFooter(brandingConfig));
   }
