@@ -68,9 +68,26 @@ export function ReportInstanceViewer({
 
   const handleExportPdf = async () => {
     setExporting(true);
+    let element: HTMLDivElement | null = null;
+    
     try {
-      const element = document.createElement("div");
+      // Create element and append to DOM for proper style computation
+      element = document.createElement("div");
       element.innerHTML = report.renderedHtml;
+      element.style.position = "absolute";
+      element.style.left = "-9999px";
+      element.style.top = "0";
+      element.style.width = "8.5in";
+      element.style.background = "white";
+      document.body.appendChild(element);
+
+      // CRITICAL: Wait for browser to compute styles and complete layout
+      // Double requestAnimationFrame ensures the render cycle completes
+      await new Promise<void>(resolve => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve());
+        });
+      });
 
       const options = {
         margin: 0,
@@ -109,6 +126,10 @@ export function ReportInstanceViewer({
         variant: "destructive",
       });
     } finally {
+      // Clean up DOM element
+      if (element && element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
       setExporting(false);
     }
   };
