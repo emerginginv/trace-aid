@@ -908,3 +908,108 @@ export function getExportableHtml(
 // - LETTER_FONT_STACK  
 // - PAGE_SPECS
 // Re-exports removed to prevent circular reference issues with TypeScript compiler.
+
+// ============================================================================
+// TEMPLATE REUSABILITY VALIDATION
+// ============================================================================
+
+/**
+ * Validate that a template contains only allowed content.
+ * Templates must be GENERAL-PURPOSE and reusable across unlimited cases.
+ * 
+ * TEMPLATE RULES:
+ * - MAY include: statutory citations, neutral openings, placeholders, response deadlines
+ * - MUST NOT include: case-specific explanations, filled justifications, hardcoded names/dates
+ */
+export function validateTemplateReusability(templateHtml: string): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
+  const result = { isValid: true, errors: [] as string[], warnings: [] as string[] };
+  
+  // Patterns that indicate case-specific content (FORBIDDEN)
+  const forbiddenPatterns = [
+    { pattern: /\bdue to\b[^.]*\b(case|investigation|lawsuit|litigation|matter)\b/i, message: 'Case-specific language detected ("due to... case/investigation")' },
+    { pattern: /\bbecause\b[^.]*\b(we are|our client|the client|my client)\b/i, message: 'Case-specific justification narrative detected' },
+    { pattern: /\b(we are|our firm is)\s+(currently\s+)?(investigating|representing|handling)/i, message: 'Case-specific investigation/representation language' },
+    { pattern: /\bour client\b/i, message: 'Client-specific reference ("our client")' },
+    { pattern: /\bmy client\b/i, message: 'Client-specific reference ("my client")' },
+    { pattern: /\bthe subject\b[^.]*\b(has|is|was|did)\b/i, message: 'Subject-specific narrative detected' },
+    { pattern: /\b(on behalf of|representing)\s+[A-Z][a-z]+(\s+[A-Z][a-z]+)*/i, message: 'Hardcoded party name detected' },
+  ];
+  
+  for (const { pattern, message } of forbiddenPatterns) {
+    if (pattern.test(templateHtml)) {
+      result.isValid = false;
+      result.errors.push(`Template contains case-specific content: ${message}`);
+    }
+  }
+  
+  // Check for filled-in justifications (should be placeholders instead)
+  const filledJustificationPatterns = [
+    { pattern: /disclosure\s+(is|serves)\s+(in\s+)?the\s+public\s+interest\s+because\b/i, message: 'Filled fee waiver justification - use {{fee_waiver_justification}} placeholder' },
+    { pattern: /this\s+is\s+(an?\s+)?(urgent|time-sensitive|emergent)\s+(matter|situation|case)\b/i, message: 'Filled expedited justification - use {{expedited_justification}} placeholder' },
+    { pattern: /there\s+is\s+(an?\s+)?imminent\s+(threat|danger|harm)\b/i, message: 'Filled expedited justification - use {{expedited_justification}} placeholder' },
+  ];
+  
+  for (const { pattern, message } of filledJustificationPatterns) {
+    if (pattern.test(templateHtml)) {
+      result.isValid = false;
+      result.errors.push(`Template contains filled justification: ${message}`);
+    }
+  }
+  
+  // Check for hardcoded dates (should be placeholders)
+  const hardcodedDatePatterns = [
+    { pattern: /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/i, message: 'Hardcoded date (e.g., "January 15, 2024")' },
+    { pattern: /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/, message: 'Hardcoded date (e.g., "01/15/2024")' },
+    { pattern: /\b\d{4}-\d{2}-\d{2}\b/, message: 'Hardcoded date (e.g., "2024-01-15")' },
+  ];
+  
+  // Only flag dates that appear to be case-specific (not statutory deadlines)
+  for (const { pattern, message } of hardcodedDatePatterns) {
+    const matches = templateHtml.match(pattern);
+    if (matches) {
+      // Skip if it's clearly a placeholder example or statutory language
+      const context = templateHtml.toLowerCase();
+      if (!context.includes('{{') && !context.includes('current_date') && !context.includes('placeholder')) {
+        result.warnings.push(`Possible hardcoded date detected: ${message}. Use {{date_range_start}}/{{date_range_end}} placeholders for case dates.`);
+      }
+    }
+  }
+  
+  // Verify essential placeholders are used for variable content
+  const essentialPlaceholders = [
+    { placeholder: '{{records_requested}}', section: 'records description', required: false },
+  ];
+  
+  for (const { placeholder, section, required } of essentialPlaceholders) {
+    if (!templateHtml.includes(placeholder)) {
+      if (required) {
+        result.errors.push(`Template missing required placeholder ${placeholder} for ${section}`);
+        result.isValid = false;
+      } else {
+        result.warnings.push(`Consider using ${placeholder} placeholder for ${section}`);
+      }
+    }
+  }
+  
+  // Check for proper use of optional section placeholders
+  const optionalSectionIndicators = [
+    { text: 'fee waiver', placeholder: '{{fee_waiver_justification}}' },
+    { text: 'expedited processing', placeholder: '{{expedited_justification}}' },
+  ];
+  
+  for (const { text, placeholder } of optionalSectionIndicators) {
+    if (templateHtml.toLowerCase().includes(text) && !templateHtml.includes(placeholder)) {
+      // Check if it's a toggle reference (allowed) vs filled content (not allowed)
+      const hasFilledContent = new RegExp(`${text}[^.]*\\b(because|since|as|due to)\\b`, 'i').test(templateHtml);
+      if (hasFilledContent) {
+        result.warnings.push(`${text} section contains filled justification. Use ${placeholder} placeholder for case-specific content.`);
+      }
+    }
+  }
+  
+  return result;
+}
