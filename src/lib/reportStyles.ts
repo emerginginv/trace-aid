@@ -271,12 +271,14 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
 
     .section-title {
       font-family: ${opts.fontSans};
-      font-size: 16pt;
-      font-weight: 600;
-      color: ${opts.primaryColor};
+      font-size: 14pt;
+      font-weight: 700;
+      color: #1a1a1a;
       margin-bottom: 16px;
       padding-bottom: 8px;
-      border-bottom: 2px solid #e2e8f0;
+      border-bottom: 1px solid #cbd5e0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       page-break-after: avoid;
     }
 
@@ -335,16 +337,17 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
     }
 
     .section-table th {
-      background: #f7fafc;
+      background: none;
       font-weight: 600;
       color: #4a5568;
       font-size: 9pt;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      border-bottom: 2px solid #1a1a1a;
     }
 
     .section-table-striped tbody tr:nth-child(even) {
-      background: #f7fafc;
+      background: transparent;
     }
 
     .section-table-compact td {
@@ -373,23 +376,21 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
       font-weight: 600;
       color: #2d3748;
       margin-bottom: 12px;
-      padding: 8px 12px;
-      background: #f7fafc;
-      border-left: 3px solid ${opts.primaryColor};
+      padding-bottom: 6px;
+      background: none;
+      border-bottom: 1px solid #e2e8f0;
       page-break-after: avoid;
     }
 
     .entry-item {
-      margin-bottom: 20px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #edf2f7;
+      margin-bottom: 24px;
+      padding-bottom: 0;
+      border-bottom: none;
       page-break-inside: avoid;
     }
 
     .entry-item:last-child {
-      border-bottom: none;
       margin-bottom: 0;
-      padding-bottom: 0;
     }
 
     .entry-header {
@@ -413,14 +414,14 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
     }
 
     .entry-type-badge {
-      display: inline-block;
+      display: inline;
       font-family: ${opts.fontSans};
-      font-size: 8pt;
+      font-size: 9pt;
       font-weight: 600;
       color: #4a5568;
-      background: #edf2f7;
-      padding: 2px 8px;
-      border-radius: 3px;
+      background: none;
+      padding: 0;
+      border-radius: 0;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-right: 8px;
