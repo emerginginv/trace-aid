@@ -388,9 +388,9 @@ export interface AcceptanceTestResult {
 export function validateVisualStandards(html: string): AcceptanceTestResult {
   const result: AcceptanceTestResult = { passed: true, errors: [], warnings: [] };
   
-  // Check for proper font stack
-  if (!html.includes('Times New Roman') && !html.includes('Georgia') && !html.includes('serif')) {
-    result.warnings.push('Non-standard font family detected. Professional letters should use Times New Roman or Georgia.');
+  // Check for proper font stack (sans-serif: Arial, Calibri)
+  if (!html.includes('Arial') && !html.includes('Calibri') && !html.includes('Helvetica') && !html.includes('sans-serif')) {
+    result.warnings.push('Non-standard font family detected. Professional letters should use Arial or Calibri.');
   }
   
   // Check for inline styles that break visual consistency
