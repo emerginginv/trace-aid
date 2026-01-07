@@ -25,6 +25,7 @@ import {
 import { CaseVariables } from "@/lib/caseVariables";
 import { GenerateDocumentDialog } from "./GenerateDocumentDialog";
 import { DocumentInstanceViewer } from "./DocumentInstanceViewer";
+import { ContextBanner } from "@/components/ui/context-banner";
 
 interface CaseDocumentsProps {
   caseId: string;
@@ -96,9 +97,9 @@ export function CaseDocuments({ caseId, caseData }: CaseDocumentsProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-medium">Letters & Documents</h3>
+          <h3 className="font-medium">Case Letters & Documents</h3>
           <p className="text-sm text-muted-foreground">
-            Generate letters, notices, and other documents for this case
+            Generate and manage letters for this specific case
           </p>
         </div>
         <Button onClick={() => setGenerateOpen(true)}>
@@ -106,6 +107,17 @@ export function CaseDocuments({ caseId, caseData }: CaseDocumentsProps) {
           Generate Document
         </Button>
       </div>
+
+      <ContextBanner
+        variant="case-letter"
+        title="Customize letters for this case"
+        description="Documents here are specific to this case. They use templates as a starting point but are filled with this case's data, justifications, and settings."
+        tips={[
+          "Fee waiver and expedited sections appear based on case settings",
+          "AI-drafted justifications from the case form are inserted automatically",
+          "Generated letters are unique to this case—editing templates won't change them"
+        ]}
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-8">
@@ -115,13 +127,13 @@ export function CaseDocuments({ caseId, caseData }: CaseDocumentsProps) {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No documents yet</h3>
+            <h3 className="text-lg font-medium mb-2">No case letters yet</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center">
-              Generate letters and documents from templates using case data.
+              Generate letters and documents customized with this case's data.
             </p>
             <Button onClick={() => setGenerateOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Generate First Document
+              Generate First Letter
             </Button>
           </CardContent>
         </Card>
@@ -149,7 +161,10 @@ export function CaseDocuments({ caseId, caseData }: CaseDocumentsProps) {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-800">
+                      Case Letter
+                    </Badge>
+                    <Badge variant="secondary">
                       {DOCUMENT_TYPE_LABELS[doc.documentType as keyof typeof DOCUMENT_TYPE_LABELS] || doc.documentType}
                     </Badge>
                     <Button

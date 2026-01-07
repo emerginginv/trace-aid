@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, FileText, Pencil, Trash2, FileType } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Layout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import { DocumentTemplateEditor } from "./DocumentTemplateEditor";
 import { LetterCategorySelector } from "./LetterCategorySelector";
 import { GuidedLetterBuilder } from "./GuidedLetterBuilder";
 import { LetterCategory, getCategoryConfig } from "@/lib/letterCategories";
+import { ContextBanner } from "@/components/ui/context-banner";
 
 type ViewMode = 'list' | 'category-select' | 'guided-builder' | 'free-editor';
 
@@ -126,9 +127,9 @@ export function DocumentTemplateList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium">Letters & Documents</h3>
+          <h3 className="text-lg font-medium">Document Templates</h3>
           <p className="text-sm text-muted-foreground">
-            Create templates for letters, notices, requests, and agreements
+            Manage reusable document structures
           </p>
         </div>
         <Button onClick={() => setViewMode('category-select')}>
@@ -137,6 +138,16 @@ export function DocumentTemplateList() {
         </Button>
       </div>
 
+      <ContextBanner
+        variant="template"
+        title="Templates define structure only"
+        description="Templates are reusable document frameworks with placeholders. They do NOT contain case-specific content. When you generate a letter for a case, the template is filled with that case's data."
+        tips={[
+          "Use {{PLACEHOLDER}} syntax for dynamic content",
+          "Templates apply to ALL cases—customize letters per-case when generating"
+        ]}
+      />
+
       {loading ? (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
@@ -144,10 +155,10 @@ export function DocumentTemplateList() {
       ) : templates.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileType className="h-12 w-12 text-muted-foreground mb-4" />
+            <Layout className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No document templates yet</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center">
-              Create your first template to generate letters and documents from case data.
+              Create your first template structure to generate letters and documents from case data.
             </p>
             <Button onClick={() => setViewMode('category-select')}>
               <Plus className="h-4 w-4 mr-2" />
@@ -175,7 +186,10 @@ export function DocumentTemplateList() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
+                        Template
+                      </Badge>
+                      <Badge variant="secondary">
                         {DOCUMENT_TYPE_LABELS[template.documentType]}
                       </Badge>
                       {categoryLabel && (

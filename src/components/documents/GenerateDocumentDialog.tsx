@@ -161,10 +161,10 @@ export function GenerateDocumentDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Generate Document
+              Generate Letter for This Case
             </DialogTitle>
             <DialogDescription>
-              Select a template to generate a letter or document for this case
+              Select a template structure, then generate a letter customized with this case's data and settings
             </DialogDescription>
           </DialogHeader>
 
@@ -216,42 +216,53 @@ export function GenerateDocumentDialog({
                 </div>
 
                 {selectedTemplate && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Preview</Label>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={handlePreview}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Show Preview
-                        </Button>
-                        {preview && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setShowFullscreen(true)}
-                            title="Open fullscreen preview"
-                          >
-                            <Maximize2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+                  <div className="space-y-3">
+                    <div className="bg-green-50 dark:bg-green-950/20 rounded-md p-3 text-sm border border-green-200 dark:border-green-800">
+                      <p className="font-medium text-green-800 dark:text-green-200">
+                        📝 This letter will be customized for: {caseData.caseNumber || caseData.caseTitle}
+                      </p>
+                      <p className="text-green-700 dark:text-green-300 mt-1">
+                        Placeholders will be replaced with this case's data. Fee waiver and expedited sections will appear based on your case settings.
+                      </p>
                     </div>
-                    
-                    {preview ? (
-                      <div className="h-[350px]">
-                        <PaginatedDocumentViewer
-                          content={preview}
-                          title="Document Preview"
-                          compact
-                          showFooter={false}
-                        />
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Preview</Label>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={handlePreview}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Show Preview
+                          </Button>
+                          {preview && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setShowFullscreen(true)}
+                              title="Open fullscreen preview"
+                            >
+                              <Maximize2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <div className="h-[100px] border rounded-md flex items-center justify-center text-muted-foreground">
-                        Click "Show Preview" to see the document with case data
-                      </div>
-                    )}
+                      
+                      {preview ? (
+                        <div className="h-[300px]">
+                          <PaginatedDocumentViewer
+                            content={preview}
+                            title="Document Preview"
+                            compact
+                            showFooter={false}
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-[100px] border rounded-md flex items-center justify-center text-muted-foreground">
+                          Click "Show Preview" to see the document with case data
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
