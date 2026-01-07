@@ -1512,6 +1512,71 @@ export type Database = {
           },
         ]
       }
+      letter_templates: {
+        Row: {
+          available_bindings: Json
+          branding_config_id: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_system_template: boolean | null
+          name: string
+          organization_id: string | null
+          print_config: Json
+          sections: Json
+          statutory_injection: Json | null
+          updated_at: string | null
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          available_bindings?: Json
+          branding_config_id?: string | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_template?: boolean | null
+          name: string
+          organization_id?: string | null
+          print_config?: Json
+          sections?: Json
+          statutory_injection?: Json | null
+          updated_at?: string | null
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          available_bindings?: Json
+          branding_config_id?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_template?: boolean | null
+          name?: string
+          organization_id?: string | null
+          print_config?: Json
+          sections?: Json
+          statutory_injection?: Json | null
+          updated_at?: string | null
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "letter_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
