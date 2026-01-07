@@ -182,10 +182,11 @@ export function renderLetterhead(
   
   if (parts.length === 0) return '';
   
+  // Use CSS class for spacing - vertical rhythm controlled by paginatedLetterStyles.ts
   return `
-    <div class="letter-letterhead" style="margin-bottom: 30px;">
+    <div class="letter-letterhead">
       ${parts.join('')}
-      <hr style="margin-top: 20px; border: none; border-top: 1px solid #333;" />
+      <hr style="border: none; border-top: 1px solid #333;" />
     </div>
   `;
 }
@@ -202,8 +203,9 @@ export function renderDateBlock(
   const formattedDate = formatLetterDate(date, config.dateFormat);
   
   // RULE: Single authoritative date, left-aligned, below letterhead
+  // Spacing controlled by CSS class - vertical rhythm in paginatedLetterStyles.ts
   return `
-    <div class="letter-date" style="text-align: left; margin-bottom: 30px;">
+    <div class="letter-date">
       ${formattedDate}
     </div>
   `;
@@ -211,6 +213,7 @@ export function renderDateBlock(
 
 /**
  * Render signature block HTML
+ * Spacing controlled by CSS classes - vertical rhythm in paginatedLetterStyles.ts
  */
 export function renderSignatureBlock(
   config: LetterBrandingConfig
@@ -219,29 +222,28 @@ export function renderSignatureBlock(
   
   const parts: string[] = [];
   
-  parts.push('<p style="margin-top: 40px;">Sincerely,</p>');
+  // Closing - spacing controlled by .letter-signature .closing CSS
+  parts.push('<p class="closing">Sincerely,</p>');
   
   // Signature line for wet signature
   if (config.includeSignatureLine) {
-    parts.push(`
-      <div style="height: 50px; border-bottom: 1px solid #333; width: 200px; margin-top: 30px;"></div>
-    `);
+    parts.push('<div class="signature-line"></div>');
   } else {
-    parts.push('<div style="height: 50px;"></div>');
+    parts.push('<div class="signature-space" style="height: 36pt;"></div>');
   }
   
   // Name
   if (config.signatureName) {
-    parts.push(`<p style="margin-top: 5px;"><strong>${config.signatureName}</strong></p>`);
+    parts.push(`<p class="signature-name"><strong>${config.signatureName}</strong></p>`);
   } else {
-    parts.push(`<p style="margin-top: 5px;"><strong>{{signature_name}}</strong></p>`);
+    parts.push(`<p class="signature-name"><strong>{{signature_name}}</strong></p>`);
   }
   
   // Title
   if (config.signatureTitle) {
-    parts.push(`<p style="margin-top: 0;">${config.signatureTitle}</p>`);
+    parts.push(`<p class="signature-title">${config.signatureTitle}</p>`);
   } else {
-    parts.push(`<p style="margin-top: 0;">{{signature_title}}</p>`);
+    parts.push(`<p class="signature-title">{{signature_title}}</p>`);
   }
   
   return `
@@ -253,6 +255,7 @@ export function renderSignatureBlock(
 
 /**
  * Render confidentiality footer
+ * Spacing controlled by CSS class - vertical rhythm in paginatedLetterStyles.ts
  */
 export function renderConfidentialityFooter(
   config: LetterBrandingConfig
@@ -260,7 +263,7 @@ export function renderConfidentialityFooter(
   if (!config.showConfidentiality || !config.confidentialityText) return '';
   
   return `
-    <div class="letter-footer" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #ccc;">
+    <div class="letter-footer">
       <p style="font-size: 10px; color: #666; font-style: italic;">
         ${config.confidentialityText}
       </p>
