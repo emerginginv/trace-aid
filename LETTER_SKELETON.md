@@ -895,6 +895,154 @@ if (result.warnings.length > 0) {
 
 ---
 
+## Professional Acceptance Test
+
+Before any letter can be exported, it must pass the **Professional Acceptance Test**.
+
+### Definition of a Valid Letter
+
+A letter is considered valid **ONLY** if:
+1. It visually matches a standard business letter
+2. It can be printed and mailed without edits
+3. It could be sent to a government agency or attorney immediately
+4. Preview and PDF match exactly
+
+**Anything else is a DEFECT.**
+
+### Test Categories
+
+| Category | What It Validates | Icon |
+|----------|------------------|------|
+| **Structure** | Letterhead, date, sections, organization identifiers | 📄 |
+| **Visual Standards** | Font, spacing, margins, layout | 👁️ |
+| **Completeness** | No placeholders, all fields filled, valid images | ✓ |
+| **Print Readiness** | No interactive elements, printable colors | 🖨️ |
+| **Professional Standards** | Formal language, no draft marks, no profanity | ⚖️ |
+| **Fidelity** | Preview = PDF match, valid page size | 🛡️ |
+
+### Blocking Errors (DEFECTS)
+
+These BLOCK export:
+
+| Error | Category |
+|-------|----------|
+| Unresolved placeholders (`{{variable}}` or `[insert...]`) | Completeness |
+| Empty body content (< 50 characters) | Completeness |
+| Missing signature name | Completeness |
+| Broken images (missing source) | Completeness |
+| Interactive elements (buttons, inputs) | Print Readiness |
+| Informal salutation ("Hey", "Hi", "Hello") | Professional Standards |
+| Inappropriate language | Professional Standards |
+| Invalid page size | Fidelity |
+| Multiple letterheads | Structure |
+| Multiple date blocks | Structure |
+| Justified text (`text-align: justify`) | Structure |
+| Duplicate organization name elements | Structure |
+| Missing required sections (date, body, signature) | Structure |
+
+### Warnings (Advisory - Non-blocking)
+
+| Warning | Category |
+|---------|----------|
+| Non-standard font family | Visual Standards |
+| Excessive inline styles | Visual Standards |
+| Missing signature space | Visual Standards |
+| Hidden content (`display: none`) | Print Readiness |
+| Non-white background color | Print Readiness |
+| Clickable links in body | Print Readiness |
+| Informal closing ("Thanks!", "Cheers") | Professional Standards |
+| Draft watermark present | Professional Standards |
+| Excessive CSS `!important` declarations | Fidelity |
+| Multiple embedded style blocks | Fidelity |
+| Viewport-relative units | Fidelity |
+| Missing salutation | Structure |
+| Missing closing | Structure |
+| Multiple font families | Structure |
+
+### API Usage
+
+```typescript
+import { runProfessionalAcceptanceTest } from '@/lib/letterDocumentEngine';
+
+const test = runProfessionalAcceptanceTest(letterHtml, pageSettings);
+
+if (!test.canExport) {
+  // BLOCK export - letter has defects
+  console.error('Defects found:', test.errors);
+  showErrorBanner(test);
+  return;
+}
+
+if (test.warnings.length > 0) {
+  // Show warning but allow proceed
+  showWarningBanner(test);
+}
+
+// Safe to export
+exportLetter();
+```
+
+### Validation Flow Diagram
+
+```
+┌─────────────────────┐
+│  User Opens Export  │
+│  Dialog             │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ runProfessional-    │
+│ AcceptanceTest()    │
+└──────────┬──────────┘
+           │
+           ▼
+    ┌──────┴──────┐
+    │  Errors?    │
+    └──────┬──────┘
+           │
+     ┌─────┴─────┐
+     │           │
+    YES          NO
+     │           │
+     ▼           ▼
+┌──────────┐ ┌──────────┐
+│ Show     │ │ Warnings?│
+│ Error    │ └────┬─────┘
+│ Accordion│      │
+│          │  ┌───┴───┐
+│ BLOCK    │ YES     NO
+│ Export   │  │       │
+└──────────┘  ▼       ▼
+          ┌──────┐ ┌──────┐
+          │Warn  │ │Ready │
+          │Banner│ │Badge │
+          │Allow │ │✓ Pass│
+          │Export│ │Export│
+          └──────┘ └──────┘
+```
+
+### Component Usage
+
+```tsx
+import { ProfessionalAcceptanceBanner } from '@/components/documents';
+
+// In export dialog
+{acceptanceTest && (
+  <ProfessionalAcceptanceBanner test={acceptanceTest} />
+)}
+
+// Disable export button when test fails
+<Button 
+  onClick={handleExport} 
+  disabled={!acceptanceTest?.canExport}
+>
+  Export
+</Button>
+```
+
+---
+
 ## Related Files
 
 | File | Purpose |
@@ -907,7 +1055,8 @@ if (result.warnings.length > 0) {
 | `src/lib/letterTemplateRenderer.ts` | Template binding & rendering |
 | `src/components/documents/LetterPreview.tsx` | Preview component |
 | `src/components/documents/PaginatedDocumentViewer.tsx` | Paginated viewer |
-| `src/components/documents/ValidationStatusBanner.tsx` | Validation status display |
+| `src/components/documents/ValidationStatusBanner.tsx` | Pre-generation validation display |
+| `src/components/documents/ProfessionalAcceptanceBanner.tsx` | Professional acceptance test display |
 
 ---
 
@@ -915,6 +1064,7 @@ if (result.warnings.length > 0) {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3 | 2026-01-07 | Added Professional Acceptance Test section |
 | 1.2 | 2026-01-07 | Added Pre-Generation Validation section |
 | 1.1 | 2026-01-07 | Added Letter Type Content Separation section, body-only generators |
 | 1.0 | 2026-01-07 | Initial skeleton documentation |
