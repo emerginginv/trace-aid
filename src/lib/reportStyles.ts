@@ -49,7 +49,8 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
     
     .report-cover-page {
       width: 100%;
-      min-height: 100vh;
+      min-height: 11in;
+      height: 11in;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -651,7 +652,7 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
       }
 
       .report-cover-page {
-        height: 100vh;
+        height: 11in;
         page-break-after: always;
       }
 
@@ -696,8 +697,8 @@ export function generateReportStyles(options: ReportStyleOptions = {}): string {
       }
 
       .report-cover-page {
-        min-height: 800px;
-        border-bottom: 2px dashed #cbd5e0;
+        min-height: 11in;
+        height: auto;
       }
 
       .page-break-indicator {
