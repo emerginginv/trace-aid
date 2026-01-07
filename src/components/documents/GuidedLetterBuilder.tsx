@@ -3,7 +3,6 @@ import { ArrowLeft } from "lucide-react";
 import { LetterCategory, getCategoryConfig } from "@/lib/letterCategories";
 import { UnifiedRecordsRequestBuilder } from "./builders/UnifiedRecordsRequestBuilder";
 import { NDABuilder } from "./builders/NDABuilder";
-import { CorrespondenceBuilder } from "./builders/CorrespondenceBuilder";
 import { CustomAIBuilder } from "./builders/CustomAIBuilder";
 import { ContextBanner } from "@/components/ui/context-banner";
 
@@ -42,16 +41,11 @@ export function GuidedLetterBuilder({
   };
 
   const renderBuilder = () => {
-    // Route all FOIA/Public Records categories to the unified builder
     switch (category) {
       case 'public_records':
-      case 'state_pra':
-      case 'foia_federal':
         return <UnifiedRecordsRequestBuilder {...builderProps} />;
       case 'nda':
         return <NDABuilder {...builderProps} />;
-      case 'correspondence':
-        return <CorrespondenceBuilder {...builderProps} />;
       case 'custom_ai':
         return <CustomAIBuilder {...builderProps} />;
       default:

@@ -173,12 +173,6 @@ export interface PublicRecordsBodyContent {
   responseDeadline: string;
 }
 
-export interface CorrespondenceBodyContent {
-  /** Body paragraphs */
-  paragraphs: string[];
-  /** Closing line (optional) */
-  closingLine?: string;
-}
 
 export interface NDABodyContent {
   /** Agreement title */
@@ -473,62 +467,6 @@ export function renderPublicRecordsBodyHtml(content: PublicRecordsBodyContent): 
 
   // Response deadline
   paragraphs.push(`<p>${content.responseDeadline}</p>`);
-
-  return paragraphs.join('\n');
-}
-
-// ============================================================================
-// CORRESPONDENCE BODY GENERATORS
-// ============================================================================
-
-export interface CorrespondenceFormData {
-  recipientType?: string;
-  recipientName?: string;
-  recipientTitle?: string;
-  recipientAddress?: string;
-  subject?: string;
-  salutation?: string;
-  tone?: string;
-  closingLine?: string;
-}
-
-export interface BodySection {
-  id: string;
-  content: string;
-}
-
-/**
- * Generate Correspondence letter body content (paragraphs only)
- */
-export function generateCorrespondenceBodyContent(
-  formData: CorrespondenceFormData,
-  bodySections: BodySection[]
-): CorrespondenceBodyContent {
-  const paragraphs = bodySections
-    .map((section, index) => section.content || `{{paragraph_${index + 1}}}`)
-    .filter(Boolean);
-
-  return {
-    paragraphs,
-    closingLine: formData.closingLine || undefined,
-  };
-}
-
-/**
- * Render Correspondence body content as HTML paragraphs
- */
-export function renderCorrespondenceBodyHtml(content: CorrespondenceBodyContent): string {
-  const paragraphs: string[] = [];
-
-  // Body paragraphs
-  content.paragraphs.forEach((paragraph) => {
-    paragraphs.push(`<p>${paragraph}</p>`);
-  });
-
-  // Closing line if specified
-  if (content.closingLine) {
-    paragraphs.push(`<p>${content.closingLine}</p>`);
-  }
 
   return paragraphs.join('\n');
 }
