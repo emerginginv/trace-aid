@@ -112,11 +112,12 @@ const Cases = () => {
   }, [organization?.id]);
 
   // Stage B: Fetch financial data once permissions are loaded and user has view_finances permission
+  const canViewFinances = hasPermission('view_finances');
   useEffect(() => {
-    if (!permissionsLoading && hasPermission('view_finances') && cases.length > 0 && !financialsLoaded) {
+    if (!permissionsLoading && canViewFinances && cases.length > 0 && !financialsLoaded) {
       fetchFinancialData();
     }
-  }, [permissionsLoading, cases.length, financialsLoaded]);
+  }, [permissionsLoading, canViewFinances, cases.length, financialsLoaded]);
 
   const fetchPicklists = async () => {
     if (!organization?.id) return;

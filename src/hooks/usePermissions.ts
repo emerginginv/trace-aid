@@ -20,6 +20,9 @@ export function usePermissions() {
         return;
       }
 
+      // Set loading true when we have a role and are about to fetch
+      setLoading(true);
+      
       try {
         const { data, error } = await supabase
           .from("permissions" as any)
