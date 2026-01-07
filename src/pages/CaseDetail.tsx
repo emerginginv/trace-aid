@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -76,6 +76,7 @@ interface CaseManager {
 const CaseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const { isVendor, isAdmin, isManager } = useUserRole();
   const { hasPermission } = usePermissions();
@@ -97,7 +98,29 @@ const CaseDetail = () => {
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState(isVendor ? "updates" : "info");
+  
+  const validTabs = ['info', 'budget', 'subjects', 'updates', 'activities', 'calendar', 'finances', 'attachments', 'reports'];
+  const getInitialTab = () => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && validTabs.includes(tabFromUrl)) {
+      return tabFromUrl;
+    }
+    return isVendor ? 'updates' : 'info';
+  };
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  // Sync tab state with URL changes
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && validTabs.includes(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    setSearchParams({ tab: newTab }, { replace: true });
+  };
   const [highlightHistory, setHighlightHistory] = useState(false);
   const budgetTabRef = useRef<HTMLDivElement>(null);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -704,7 +727,7 @@ const CaseDetail = () => {
       </div>
 
       {/* Tabs - Now at top */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="overflow-x-auto -mx-1 px-1 scrollbar-hide">
           <TabsList className={`
             inline-flex sm:grid w-auto sm:w-full gap-1
