@@ -278,13 +278,17 @@ export function StatePRABuilder({ organizationId, onSave, onCancel }: StatePRABu
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted/50 rounded-lg p-6 min-h-[400px] font-serif text-sm">
+            <div className="bg-muted/50 rounded-lg p-6 min-h-[400px] font-sans text-sm">
+              <p className="text-xs text-muted-foreground italic mb-4">
+                Template structure - placeholders are filled at document generation
+              </p>
+              
               <div className="space-y-4">
-                <p className="text-right">{"{{current_date}}"}</p>
+                <p className="text-right text-muted-foreground">{"{{current_date}}"}</p>
                 
                 <div>
                   <p>{formData.agencyName || "{{agency_name}}"}</p>
-                  <p className="whitespace-pre-line">{formData.agencyAddress || "{{agency_address}}"}</p>
+                  <p className="whitespace-pre-line text-muted-foreground">{formData.agencyAddress || "{{agency_address}}"}</p>
                 </div>
 
                 <p><strong>RE: Public Records Request Pursuant to {selectedStateInfo?.statute || '[State Statute]'}</strong></p>
@@ -296,28 +300,34 @@ export function StatePRABuilder({ organizationId, onSave, onCancel }: StatePRABu
                 </p>
 
                 <div className="pl-4 border-l-2 border-muted-foreground/30">
-                  <p className="whitespace-pre-line">
-                    {formData.recordsRequested || "{{records_requested}}"}
-                  </p>
+                  <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                    {formData.recordsRequested || "{{RECORDS_REQUESTED}}"}
+                  </code>
                 </div>
 
                 {(formData.dateRangeStart || formData.dateRangeEnd) && (
-                  <p>
-                    <strong>Date Range:</strong> {formData.dateRangeStart || 'N/A'} to {formData.dateRangeEnd || 'Present'}
-                  </p>
+                  <div className="p-2 border border-dashed border-muted-foreground/50 rounded">
+                    <p className="text-xs text-muted-foreground">[IF has_date_range]</p>
+                    <p><strong>Date Range:</strong> {formData.dateRangeStart || "{{DATE_RANGE_START}}"} to {formData.dateRangeEnd || "{{DATE_RANGE_END}}"}</p>
+                    <p className="text-xs text-muted-foreground">[/IF]</p>
+                  </div>
                 )}
 
                 {formData.expeditedProcessing && (
-                  <div>
+                  <div className="p-2 border border-dashed border-muted-foreground/50 rounded">
+                    <p className="text-xs text-muted-foreground">[IF expedited_enabled]</p>
                     <p><strong>Request for Expedited Processing:</strong></p>
-                    <p className="text-muted-foreground italic">{"{{expedited_justification}}"}</p>
+                    <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{EXPEDITED_CONTENT}}"}</code>
+                    <p className="text-xs text-muted-foreground">[/IF]</p>
                   </div>
                 )}
 
                 {formData.requestFeeWaiver && (
-                  <div>
+                  <div className="p-2 border border-dashed border-muted-foreground/50 rounded">
+                    <p className="text-xs text-muted-foreground">[IF fee_waiver_enabled]</p>
                     <p><strong>Fee Waiver Request:</strong></p>
-                    <p className="text-muted-foreground italic">{"{{fee_waiver_justification}}"}</p>
+                    <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{FEE_WAIVER_CONTENT}}"}</code>
+                    <p className="text-xs text-muted-foreground">[/IF]</p>
                   </div>
                 )}
 
@@ -327,8 +337,8 @@ export function StatePRABuilder({ organizationId, onSave, onCancel }: StatePRABu
 
                 <div className="pt-4">
                   <p>Sincerely,</p>
-                  <p className="pt-4">{"{{signature_name}}"}</p>
-                  <p>{"{{company_name}}"}</p>
+                  <p className="pt-4 text-muted-foreground">{"{{signature_name}}"}</p>
+                  <p className="text-muted-foreground">{"{{company_name}}"}</p>
                 </div>
               </div>
             </div>

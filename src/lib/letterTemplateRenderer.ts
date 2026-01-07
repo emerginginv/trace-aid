@@ -133,6 +133,52 @@ function resolveComputedBinding(field: string): string {
 }
 
 /**
+ * CONDITIONAL CONTEXT
+ * 
+ * Provides values for conditional evaluation at document generation time.
+ */
+export interface ConditionalContext {
+  fee_waiver_enabled: boolean;
+  expedited_enabled: boolean;
+  has_date_range: boolean;
+  has_reference_number: boolean;
+  appeal_rights_enabled: boolean;
+  fee_notice_enabled: boolean;
+  has_purpose: boolean;
+}
+
+/**
+ * Resolve conditional blocks in template HTML
+ * 
+ * Evaluates [IF condition]...[/IF] blocks based on context.
+ * - If condition is true: keeps content, removes markers
+ * - If condition is false: removes entire block
+ */
+export function resolveConditionals(
+  html: string,
+  context: Partial<ConditionalContext>
+): string {
+  let result = html;
+  
+  // Pattern: [IF condition_name]content[/IF]
+  const conditionalPattern = /\[IF\s+(\w+)\]([\s\S]*?)\[\/IF\]/g;
+  
+  result = result.replace(conditionalPattern, (match, condition, content) => {
+    const conditionValue = context[condition as keyof ConditionalContext];
+    
+    if (conditionValue) {
+      // Condition is true: return content without markers
+      return content.trim();
+    } else {
+      // Condition is false: remove entire block
+      return '';
+    }
+  });
+  
+  return result;
+}
+
+/**
  * Resolve all bindings in HTML content
  */
 export function resolveBindings(
@@ -153,7 +199,7 @@ export function resolveBindings(
     .replace(/\{\{current_date\}\}/g, format(new Date(), 'MMMM d, yyyy'))
     .replace(/\{\{current_date_short\}\}/g, format(new Date(), 'MM/dd/yyyy'));
   
-  // Clean up unresolved conditional blocks
+  // Clean up unresolved conditional blocks (legacy mustache syntax)
   result = result.replace(/\{\{#if [^}]+\}\}[\s\S]*?\{\{\/if\}\}/g, '');
   
   // Clean up any remaining unresolved placeholders with empty string
