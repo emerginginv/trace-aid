@@ -58,26 +58,38 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
       setError(null);
 
       try {
-        // Create a temporary element with the HTML content
-        // CRITICAL: Use visible-but-hidden approach instead of off-screen positioning
-        // html2canvas fails with off-screen elements in many browsers
+        // Create a container that clips overflow but allows full rendering inside
+        // This approach ensures html2canvas captures fully-visible content
+        const container = document.createElement("div");
+        container.style.position = "fixed";
+        container.style.left = "0";
+        container.style.top = "0";
+        container.style.width = "1px";
+        container.style.height = "1px";
+        container.style.overflow = "hidden";
+        container.style.opacity = "0.01"; // Container is nearly invisible
+        container.style.pointerEvents = "none";
+        container.style.zIndex = "-9999";
+        
+        // The actual content element is FULLY VISIBLE inside the clipped container
         const element = document.createElement("div");
         element.innerHTML = htmlContent;
-        element.style.position = "fixed";
+        element.style.position = "absolute";
         element.style.left = "0";
         element.style.top = "0";
         element.style.width = "8.5in"; // Letter page width for accurate pagination
         element.style.minHeight = "11in"; // Letter page height
         element.style.background = "white";
         element.style.overflow = "visible";
-        element.style.zIndex = "-9999"; // Behind everything
-        element.style.pointerEvents = "none"; // Non-interactive
-        element.style.opacity = "0.01"; // Nearly invisible but still rendered
+        // CRITICAL: Full visibility and opacity for html2canvas capture
         element.style.visibility = "visible";
+        element.style.opacity = "1";
         element.style.display = "block";
         element.style.color = "#000000";
         element.style.fontFamily = "Georgia, 'Times New Roman', serif";
-        document.body.appendChild(element);
+        
+        container.appendChild(element);
+        document.body.appendChild(container);
 
         // Force all cover page elements to have explicit styles
         const coverPage = element.querySelector('.report-cover-page') as HTMLElement;
@@ -89,24 +101,37 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
           coverPage.style.justifyContent = 'space-between';
           coverPage.style.background = '#ffffff';
           coverPage.style.padding = '72px';
+          coverPage.style.color = '#000000';
         }
+        
+        // Ensure all text elements have explicit color
+        element.querySelectorAll('h1, h2, h3, p, span, td, div').forEach((el) => {
+          const htmlEl = el as HTMLElement;
+          if (!htmlEl.style.color) {
+            htmlEl.style.color = '#000000';
+          }
+        });
 
-        // Wait for images and fonts to load before capture
+        // Wait for images to load and DOM to settle
         await new Promise<void>(resolve => {
           const images = element.querySelectorAll('img');
           let loadedCount = 0;
           const totalImages = images.length;
           
-          if (totalImages === 0) {
-            // No images, just wait for layout
+          const finalize = () => {
+            // Double RAF ensures browser has painted
             requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+          };
+          
+          if (totalImages === 0) {
+            finalize();
             return;
           }
           
           const checkComplete = () => {
             loadedCount++;
             if (loadedCount >= totalImages) {
-              requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+              finalize();
             }
           };
           
@@ -115,11 +140,11 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
               checkComplete();
             } else {
               img.onload = checkComplete;
-              img.onerror = checkComplete; // Still resolve even if image fails
+              img.onerror = checkComplete;
             }
           });
           
-          // Timeout fallback after 3 seconds
+          // Timeout fallback
           setTimeout(() => resolve(), 3000);
         });
 
@@ -153,8 +178,8 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
 
         const pdfBlob = await html2pdf().from(element).set(options).outputPdf("blob");
         
-        // Clean up temp element
-        document.body.removeChild(element);
+        // Clean up temp container (which contains the element)
+        document.body.removeChild(container);
 
         // Check if this generation is still current
         if (genId !== generationIdRef.current) return;
