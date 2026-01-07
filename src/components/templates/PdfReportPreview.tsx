@@ -69,7 +69,25 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
         element.style.minHeight = "11in"; // Letter page height
         element.style.background = "white";
         element.style.overflow = "visible"; // Ensure content isn't clipped
+        // CRITICAL: Explicit visibility enforcement for html2canvas
+        element.style.visibility = "visible";
+        element.style.opacity = "1";
+        element.style.display = "block";
+        element.style.color = "#000000";
+        element.style.fontFamily = "Georgia, 'Times New Roman', serif";
         document.body.appendChild(element);
+
+        // CRITICAL: Force the cover page to auto-height for capture
+        const coverPage = element.querySelector('.report-cover-page') as HTMLElement;
+        if (coverPage) {
+          coverPage.style.height = 'auto';
+          coverPage.style.minHeight = '11in';
+          coverPage.style.display = 'flex';
+          coverPage.style.flexDirection = 'column';
+          coverPage.style.justifyContent = 'space-between';
+          coverPage.style.background = '#ffffff';
+          coverPage.style.padding = '72px';
+        }
 
         // CRITICAL: Wait for browser to compute styles and complete layout
         // Double requestAnimationFrame ensures the render cycle completes
@@ -87,6 +105,12 @@ export const PdfReportPreview = forwardRef<PdfReportPreviewRef, PdfReportPreview
             scale: 2,
             useCORS: true,
             logging: false,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            width: 816,  // 8.5in at 96dpi
+            windowWidth: 816,
+            scrollX: 0,
+            scrollY: 0,
           },
           jsPDF: {
             unit: "in",
