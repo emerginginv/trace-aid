@@ -30,6 +30,36 @@
  */
 
 // ============================================================================
+// TEMPLATE CONDITIONAL SYNTAX
+// ============================================================================
+
+/**
+ * TEMPLATE CONDITIONAL SYNTAX
+ * 
+ * Templates use explicit conditionals to mark where optional content goes.
+ * The template defines STRUCTURE, not CONTENT.
+ * 
+ * Syntax: [IF condition_name]{{PLACEHOLDER_CONTENT}}[/IF]
+ */
+export const TEMPLATE_CONDITIONALS = {
+  // Condition markers
+  IF_START: '[IF ',
+  IF_END: ']',
+  ENDIF: '[/IF]',
+  
+  // Condition names
+  CONDITIONS: {
+    FEE_WAIVER: 'fee_waiver_enabled',
+    EXPEDITED: 'expedited_enabled',
+    DATE_RANGE: 'has_date_range',
+    REFERENCE_NUMBER: 'has_reference_number',
+    APPEAL_RIGHTS: 'appeal_rights_enabled',
+    FEE_NOTICE: 'fee_notice_enabled',
+    PURPOSE: 'has_purpose',
+  }
+} as const;
+
+// ============================================================================
 // TEMPLATE CONTENT RULES
 // ============================================================================
 
@@ -39,8 +69,8 @@
 export const ALLOWED_TEMPLATE_CONTENT = [
   'statutory_citation',      // e.g., "5 U.S.C. § 552"
   'neutral_opening',         // e.g., "I am requesting..."
-  'placeholder',             // e.g., {{records_requested}}
-  'optional_section_marker', // e.g., {{if_fee_waiver}}...{{/if_fee_waiver}}
+  'placeholder',             // e.g., {{RECORDS_REQUESTED}}
+  'optional_section_marker', // e.g., [IF fee_waiver_enabled]{{FEE_WAIVER_CONTENT}}[/IF]
   'response_deadline',       // e.g., "within 20 business days"
   'appeal_rights_template',  // Template text with placeholders
 ] as const;
@@ -57,15 +87,35 @@ export const FORBIDDEN_TEMPLATE_CONTENT = [
 ] as const;
 
 /**
- * Standard placeholders for templates
+ * CONTENT PLACEHOLDERS
+ * 
+ * Placeholders for content that will be filled at document generation time.
+ * Templates contain PLACEHOLDERS, documents contain CONTENT.
  */
 export const TEMPLATE_PLACEHOLDERS = {
-  RECORDS_REQUESTED: '{{records_requested}}',
-  DATE_RANGE_START: '{{date_range_start}}',
-  DATE_RANGE_END: '{{date_range_end}}',
-  FEE_WAIVER_JUSTIFICATION: '{{fee_waiver_justification}}',
-  EXPEDITED_JUSTIFICATION: '{{expedited_justification}}',
-  REQUEST_PURPOSE: '{{request_purpose}}',
+  // Required content
+  RECORDS_REQUESTED: '{{RECORDS_REQUESTED}}',
+  STATUTORY_OPENING: '{{STATUTORY_OPENING}}',
+  STATUTORY_CLOSING: '{{STATUTORY_CLOSING}}',
+  RESPONSE_DEADLINE: '{{RESPONSE_DEADLINE}}',
+  
+  // Optional section content (used inside [IF]...[/IF] blocks)
+  FEE_WAIVER_CONTENT: '{{FEE_WAIVER_CONTENT}}',
+  EXPEDITED_CONTENT: '{{EXPEDITED_CONTENT}}',
+  APPEAL_RIGHTS_CONTENT: '{{APPEAL_RIGHTS_CONTENT}}',
+  FEE_NOTICE_CONTENT: '{{FEE_NOTICE_CONTENT}}',
+  PURPOSE_CONTENT: '{{PURPOSE_CONTENT}}',
+  
+  // Data placeholders
+  DATE_RANGE_START: '{{DATE_RANGE_START}}',
+  DATE_RANGE_END: '{{DATE_RANGE_END}}',
+  REFERENCE_NUMBER: '{{REFERENCE_NUMBER}}',
+  
+  // Format options
+  FORMAT_PREFERENCE: '{{FORMAT_PREFERENCE}}',
+  DELIVERY_METHOD: '{{DELIVERY_METHOD}}',
+  
+  // System placeholders
   REQUESTER_NAME: '{{requester_name}}',
   REQUESTER_ADDRESS: '{{requester_address}}',
   AGENCY_NAME: '{{agency_name}}',
@@ -190,20 +240,21 @@ export function generateFOIABodyContent(formData: FOIAFormData): FOIABodyContent
     responseDeadline: 'Please respond within 20 business days as required by law.',
   };
 
+  // Date range uses conditional syntax
   if (formData.dateRangeStart || formData.dateRangeEnd) {
-    content.dateRange = `${formData.dateRangeStart || TEMPLATE_PLACEHOLDERS.DATE_RANGE_START} to ${formData.dateRangeEnd || TEMPLATE_PLACEHOLDERS.DATE_RANGE_END}`;
+    content.dateRange = `[IF ${TEMPLATE_CONDITIONALS.CONDITIONS.DATE_RANGE}]${formData.dateRangeStart || TEMPLATE_PLACEHOLDERS.DATE_RANGE_START} to ${formData.dateRangeEnd || TEMPLATE_PLACEHOLDERS.DATE_RANGE_END}[/IF]`;
   }
 
   content.feeCategory = FEE_CATEGORY_LABELS[formData.feeCategory] || 'Other';
 
-  // Use placeholder for fee waiver justification - never case-specific content
+  // Fee waiver uses conditional placeholder - never case-specific content
   if (formData.requestFeeWaiver) {
-    content.feeWaiver = TEMPLATE_PLACEHOLDERS.FEE_WAIVER_JUSTIFICATION;
+    content.feeWaiver = `[IF ${TEMPLATE_CONDITIONALS.CONDITIONS.FEE_WAIVER}]${TEMPLATE_PLACEHOLDERS.FEE_WAIVER_CONTENT}[/IF]`;
   }
 
-  // Use placeholder for expedited justification - never case-specific content
+  // Expedited uses conditional placeholder - never case-specific content
   if (formData.expeditedProcessing) {
-    content.expeditedProcessing = TEMPLATE_PLACEHOLDERS.EXPEDITED_JUSTIFICATION;
+    content.expeditedProcessing = `[IF ${TEMPLATE_CONDITIONALS.CONDITIONS.EXPEDITED}]${TEMPLATE_PLACEHOLDERS.EXPEDITED_CONTENT}[/IF]`;
   }
 
   return content;
@@ -289,18 +340,19 @@ export function generateStatePRABodyContent(
     responseDeadline: 'Please respond within the statutory time period. Contact me with any questions.',
   };
 
+  // Date range uses conditional syntax
   if (formData.dateRangeStart || formData.dateRangeEnd) {
-    content.dateRange = `${formData.dateRangeStart || TEMPLATE_PLACEHOLDERS.DATE_RANGE_START} to ${formData.dateRangeEnd || TEMPLATE_PLACEHOLDERS.DATE_RANGE_END}`;
+    content.dateRange = `[IF ${TEMPLATE_CONDITIONALS.CONDITIONS.DATE_RANGE}]${formData.dateRangeStart || TEMPLATE_PLACEHOLDERS.DATE_RANGE_START} to ${formData.dateRangeEnd || TEMPLATE_PLACEHOLDERS.DATE_RANGE_END}[/IF]`;
   }
 
-  // Use placeholder for expedited justification - never case-specific content
+  // Expedited uses conditional placeholder - never case-specific content
   if (formData.expeditedProcessing) {
-    content.expeditedProcessing = TEMPLATE_PLACEHOLDERS.EXPEDITED_JUSTIFICATION;
+    content.expeditedProcessing = `[IF ${TEMPLATE_CONDITIONALS.CONDITIONS.EXPEDITED}]${TEMPLATE_PLACEHOLDERS.EXPEDITED_CONTENT}[/IF]`;
   }
 
-  // Use placeholder for fee waiver justification - never case-specific content
+  // Fee waiver uses conditional placeholder - never case-specific content
   if (formData.requestFeeWaiver) {
-    content.feeWaiver = TEMPLATE_PLACEHOLDERS.FEE_WAIVER_JUSTIFICATION;
+    content.feeWaiver = `[IF ${TEMPLATE_CONDITIONALS.CONDITIONS.FEE_WAIVER}]${TEMPLATE_PLACEHOLDERS.FEE_WAIVER_CONTENT}[/IF]`;
   }
 
   return content;
@@ -381,14 +433,14 @@ export function generatePublicRecordsBodyContent(formData: PublicRecordsFormData
     responseDeadline: 'Please respond within the time period required by law. If you have any questions, please contact me at the information provided below.',
   };
 
-  // Use placeholder for purpose - never case-specific content
+  // Purpose uses conditional placeholder - never case-specific content
   if (formData.includePurpose) {
-    content.purpose = TEMPLATE_PLACEHOLDERS.REQUEST_PURPOSE;
+    content.purpose = `[IF ${TEMPLATE_CONDITIONALS.CONDITIONS.PURPOSE}]${TEMPLATE_PLACEHOLDERS.PURPOSE_CONTENT}[/IF]`;
   }
 
-  // Use placeholder for fee waiver justification - never case-specific content
+  // Fee waiver uses conditional placeholder - never case-specific content
   if (formData.requestFeeWaiver) {
-    content.feeWaiver = TEMPLATE_PLACEHOLDERS.FEE_WAIVER_JUSTIFICATION;
+    content.feeWaiver = `[IF ${TEMPLATE_CONDITIONALS.CONDITIONS.FEE_WAIVER}]${TEMPLATE_PLACEHOLDERS.FEE_WAIVER_CONTENT}[/IF]`;
   }
 
   return content;
