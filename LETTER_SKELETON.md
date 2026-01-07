@@ -805,6 +805,96 @@ const letter = createLetterDocument(bodyHtml, branding, org, {
 
 ---
 
+## Pre-Generation Validation
+
+Before generating or exporting any letter, the system validates to ensure quality and consistency.
+
+### Blocking Errors (MUST FIX)
+
+| Check | Error Message |
+|-------|---------------|
+| Multiple letterheads | "Multiple letterheads detected (N). Only one is allowed." |
+| Multiple date blocks | "Multiple date blocks detected (N). Only one primary date is allowed." |
+| No date block | "Letter is missing the primary date block" |
+| Date in header | "Date detected in letterhead. Dates must only appear in the date block." |
+| Justified text | "text-align: justify is not allowed. Use left-aligned text only." |
+| Center-aligned body | "Center-aligned text in body content is not allowed." |
+| Duplicate org name | "Duplicate organization name elements detected" |
+| Multiple logos | "Multiple logos detected. Only one logo is allowed." |
+| Missing body | "Missing required section: Body content" |
+| Missing signature | "Missing required section: Signature" |
+| Missing date | "Missing required section: Date" |
+
+### Warnings (Advisory)
+
+| Check | Warning Message |
+|-------|-----------------|
+| No salutation | "Missing recommended section: Salutation" |
+| No closing | "Missing recommended section: Closing" |
+| Date in footer | "Date-like content detected in footer" |
+| Multiple fonts | "Multiple font families detected" |
+
+### Validation Flow
+
+```
+┌─────────────────────┐
+│  User Generates     │
+│  Letter             │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ validateBefore-     │
+│ Generation(html)    │
+└──────────┬──────────┘
+           │
+           ▼
+    ┌──────┴──────┐
+    │  Errors?    │
+    └──────┬──────┘
+           │
+     ┌─────┴─────┐
+     │           │
+    YES          NO
+     │           │
+     ▼           ▼
+┌──────────┐ ┌──────────┐
+│ Show     │ │ Warnings?│
+│ Error    │ └────┬─────┘
+│ Banner   │      │
+│          │  ┌───┴───┐
+│ BLOCK    │ YES     NO
+│ Export   │  │       │
+└──────────┘  ▼       ▼
+          ┌──────┐ ┌──────┐
+          │Warn  │ │Ready │
+          │Banner│ │Badge │
+          │Allow │ │Allow │
+          │Export│ │Export│
+          └──────┘ └──────┘
+```
+
+### API Usage
+
+```typescript
+import { validateBeforeGeneration } from '@/lib/letterDocumentEngine';
+
+const result = validateBeforeGeneration(letterHtml);
+
+if (!result.canProceed) {
+  // Block generation/export
+  toast.error(result.errors.join(', '));
+  return;
+}
+
+if (result.warnings.length > 0) {
+  // Show warning but allow proceed
+  toast.warning(`${result.warnings.length} warning(s) detected`);
+}
+```
+
+---
+
 ## Related Files
 
 | File | Purpose |
@@ -812,11 +902,12 @@ const letter = createLetterDocument(bodyHtml, branding, org, {
 | `src/lib/letterBodyGenerators.ts` | Body-only content generators (NEW) |
 | `src/lib/letterGenerators.ts` | DEPRECATED full letter generators |
 | `src/lib/paginatedLetterStyles.ts` | CSS styles for preview & export |
-| `src/lib/letterDocumentEngine.ts` | Document creation engine |
+| `src/lib/letterDocumentEngine.ts` | Document creation engine + validation |
 | `src/lib/letterBranding.ts` | Branding/letterhead rendering |
 | `src/lib/letterTemplateRenderer.ts` | Template binding & rendering |
 | `src/components/documents/LetterPreview.tsx` | Preview component |
 | `src/components/documents/PaginatedDocumentViewer.tsx` | Paginated viewer |
+| `src/components/documents/ValidationStatusBanner.tsx` | Validation status display |
 
 ---
 
@@ -824,5 +915,6 @@ const letter = createLetterDocument(bodyHtml, branding, org, {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2 | 2026-01-07 | Added Pre-Generation Validation section |
 | 1.1 | 2026-01-07 | Added Letter Type Content Separation section, body-only generators |
 | 1.0 | 2026-01-07 | Initial skeleton documentation |

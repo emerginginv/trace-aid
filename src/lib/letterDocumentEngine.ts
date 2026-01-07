@@ -237,6 +237,172 @@ export function validateLetterTypography(html: string): {
   return result;
 }
 
+/**
+ * Validate exactly one letterhead exists
+ */
+export function validateLetterhead(html: string): {
+  isValid: boolean;
+  letterheadCount: number;
+  errors: string[];
+} {
+  const result = { isValid: true, letterheadCount: 0, errors: [] as string[] };
+  
+  // Count letterhead blocks
+  const letterheadMatches = html.match(/<div[^>]*class="[^"]*letter-letterhead[^"]*"[^>]*>/gi) || [];
+  result.letterheadCount = letterheadMatches.length;
+  
+  if (result.letterheadCount > 1) {
+    result.isValid = false;
+    result.errors.push(`Multiple letterheads detected (${result.letterheadCount}). Only one letterhead is allowed.`);
+  }
+  
+  return result;
+}
+
+/**
+ * Validate no duplicate organization identifiers
+ */
+export function validateOrgIdentifiers(html: string): {
+  isValid: boolean;
+  errors: string[];
+} {
+  const result = { isValid: true, errors: [] as string[] };
+  
+  // Check for duplicate org-name classes
+  const orgNameMatches = html.match(/<[^>]*class="[^"]*org-name[^"]*"[^>]*>/gi) || [];
+  if (orgNameMatches.length > 1) {
+    result.isValid = false;
+    result.errors.push(`Duplicate organization name elements detected (${orgNameMatches.length}). Only one is allowed.`);
+  }
+  
+  // Check for duplicate logo images
+  const logoMatches = html.match(/<img[^>]*class="[^"]*letterhead-logo[^"]*"/gi) || [];
+  if (logoMatches.length > 1) {
+    result.isValid = false;
+    result.errors.push(`Multiple logos detected (${logoMatches.length}). Only one logo is allowed.`);
+  }
+  
+  return result;
+}
+
+/**
+ * Validate all required sections are present
+ */
+export function validateRequiredSections(html: string): {
+  isValid: boolean;
+  missingSections: string[];
+  errors: string[];
+  warnings: string[];
+} {
+  const result = {
+    isValid: true,
+    missingSections: [] as string[],
+    errors: [] as string[],
+    warnings: [] as string[]
+  };
+  
+  // Required sections
+  const requiredSections: Array<{ type: string; cssClass: string; description: string }> = [
+    { type: 'date_block', cssClass: 'letter-date', description: 'Date' },
+    { type: 'body', cssClass: 'letter-body', description: 'Body content' },
+    { type: 'signature_block', cssClass: 'letter-signature', description: 'Signature' },
+  ];
+  
+  for (const { type, cssClass, description } of requiredSections) {
+    const regex = new RegExp(`class="[^"]*${cssClass}[^"]*"`, 'i');
+    if (!regex.test(html)) {
+      result.missingSections.push(type);
+      result.isValid = false;
+      result.errors.push(`Missing required section: ${description}`);
+    }
+  }
+  
+  // Check for recommended sections (warnings only)
+  const recommendedSections = [
+    { cssClass: 'letter-salutation', description: 'Salutation (e.g., "Dear...")' },
+    { cssClass: 'letter-closing', description: 'Closing (e.g., "Sincerely,")' },
+  ];
+  
+  for (const { cssClass, description } of recommendedSections) {
+    const regex = new RegExp(`class="[^"]*${cssClass}[^"]*"`, 'i');
+    if (!regex.test(html)) {
+      result.warnings.push(`Missing recommended section: ${description}`);
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Pre-generation validation result
+ */
+export interface PreGenerationValidation {
+  isValid: boolean;
+  canProceed: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * PRE-GENERATION VALIDATION
+ * 
+ * Run BEFORE generating or exporting a letter.
+ * If canProceed=false, BLOCK generation and surface errors.
+ */
+export function validateBeforeGeneration(html: string): PreGenerationValidation {
+  const result: PreGenerationValidation = {
+    isValid: true,
+    canProceed: true,
+    errors: [],
+    warnings: []
+  };
+  
+  // 1. Exactly one header (letterhead)
+  const letterheadValidation = validateLetterhead(html);
+  if (!letterheadValidation.isValid) {
+    result.isValid = false;
+    result.canProceed = false;
+    result.errors.push(...letterheadValidation.errors);
+  }
+  
+  // 2. Exactly one date
+  const dateValidation = validateLetterDate(html);
+  if (!dateValidation.isValid) {
+    result.isValid = false;
+    result.canProceed = false;
+    result.errors.push(...dateValidation.errors);
+  }
+  result.warnings.push(...dateValidation.warnings);
+  
+  // 3. No justified text
+  const typographyValidation = validateLetterTypography(html);
+  if (!typographyValidation.isValid) {
+    result.isValid = false;
+    result.canProceed = false;
+    result.errors.push(...typographyValidation.errors);
+  }
+  result.warnings.push(...typographyValidation.warnings);
+  
+  // 4. No duplicate organization identifiers
+  const orgValidation = validateOrgIdentifiers(html);
+  if (!orgValidation.isValid) {
+    result.isValid = false;
+    result.canProceed = false;
+    result.errors.push(...orgValidation.errors);
+  }
+  
+  // 5. All required sections present
+  const sectionsValidation = validateRequiredSections(html);
+  if (!sectionsValidation.isValid) {
+    result.isValid = false;
+    result.canProceed = false;
+    result.errors.push(...sectionsValidation.errors);
+  }
+  result.warnings.push(...sectionsValidation.warnings);
+  
+  return result;
+}
+
 export function validateLetterStructure(html: string): LetterStructureValidation {
   const result: LetterStructureValidation = {
     isValid: true,
