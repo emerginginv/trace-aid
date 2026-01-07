@@ -10,7 +10,7 @@ import { Save, FileText, Users, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CORRESPONDENCE_TYPES, LETTER_TONES } from "@/lib/letterCategories";
-import { generateCorrespondenceLetter } from "@/lib/letterGenerators";
+import { generateCorrespondenceBodyContent, renderCorrespondenceBodyHtml } from "@/lib/letterBodyGenerators";
 
 interface CorrespondenceBuilderProps {
   organizationId: string;
@@ -76,7 +76,9 @@ export function CorrespondenceBuilder({ organizationId, onSave, onCancel }: Corr
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const letterBody = generateCorrespondenceLetter(formData, bodySections);
+      // Generate body content only (no layout elements)
+      const bodyContent = generateCorrespondenceBodyContent(formData, bodySections);
+      const letterBody = renderCorrespondenceBodyHtml(bodyContent);
 
       const { error } = await supabase
         .from('document_templates')

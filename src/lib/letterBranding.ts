@@ -212,18 +212,90 @@ export function renderDateBlock(
 }
 
 /**
+ * Recipient information for letter assembly
+ */
+export interface LetterRecipient {
+  name: string;
+  title?: string;
+  organization?: string;
+  address: string;
+}
+
+/**
+ * Render recipient block HTML (system-controlled)
+ */
+export function renderRecipientBlock(recipient: LetterRecipient): string {
+  const lines: string[] = [];
+  
+  if (recipient.name) {
+    const nameWithTitle = recipient.title 
+      ? `${recipient.title} ${recipient.name}`
+      : recipient.name;
+    lines.push(nameWithTitle);
+  }
+  if (recipient.organization) lines.push(recipient.organization);
+  if (recipient.address) {
+    // Split address on newlines for multi-line addresses
+    lines.push(...recipient.address.split('\n').filter(Boolean));
+  }
+  
+  if (lines.length === 0) return '';
+  
+  return `
+    <div class="letter-recipient">
+      ${lines.map(line => `<p>${line}</p>`).join('\n')}
+    </div>
+  `;
+}
+
+/**
+ * Render subject/reference line HTML (system-controlled)
+ */
+export function renderSubjectLine(subject: string): string {
+  if (!subject) return '';
+  
+  return `
+    <div class="letter-reference">
+      <p><strong>RE: ${subject}</strong></p>
+    </div>
+  `;
+}
+
+/**
+ * Render salutation HTML (system-controlled)
+ */
+export function renderSalutation(salutation: string): string {
+  if (!salutation) return '';
+  
+  // Ensure salutation ends with proper punctuation
+  const formattedSalutation = salutation.endsWith(',') || salutation.endsWith(':')
+    ? salutation
+    : `${salutation},`;
+  
+  return `
+    <div class="letter-salutation">
+      <p>${formattedSalutation}</p>
+    </div>
+  `;
+}
+
+/**
  * Render signature block HTML
  * Spacing controlled by CSS classes - vertical rhythm in paginatedLetterStyles.ts
+ * @param config - Branding configuration
+ * @param customClosing - Optional custom closing phrase (overrides default "Sincerely,")
  */
 export function renderSignatureBlock(
-  config: LetterBrandingConfig
+  config: LetterBrandingConfig,
+  customClosing?: string
 ): string {
   if (!config.showSignatureBlock) return '';
   
   const parts: string[] = [];
   
-  // Closing - spacing controlled by .letter-signature .closing CSS
-  parts.push('<p class="closing">Sincerely,</p>');
+  // Closing - use custom if provided, otherwise default
+  const closing = customClosing || 'Sincerely,';
+  parts.push(`<p class="closing">${closing}</p>`);
   
   // Signature line for wet signature
   if (config.includeSignatureLine) {

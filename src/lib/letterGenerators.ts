@@ -1,5 +1,25 @@
-// Letter generation functions for each category
+/**
+ * DEPRECATED LETTER GENERATORS
+ * 
+ * ══════════════════════════════════════════════════════════════════════════════
+ * These functions are DEPRECATED and generate full letters including layout.
+ * 
+ * Use the new body-only generators from letterBodyGenerators.ts instead:
+ * - generateFOIABodyContent() + renderFOIABodyHtml()
+ * - generateStatePRABodyContent() + renderStatePRABodyHtml()
+ * - generatePublicRecordsBodyContent() + renderPublicRecordsBodyHtml()
+ * - generateCorrespondenceBodyContent() + renderCorrespondenceBodyHtml()
+ * - generateNDABodyContent() + renderNDABodyHtml()
+ * 
+ * Then use createLetterDocument() from letterDocumentEngine.ts to assemble
+ * the complete letter with proper layout.
+ * ══════════════════════════════════════════════════════════════════════════════
+ */
 
+/**
+ * @deprecated Use generatePublicRecordsBodyContent() + createLetterDocument() instead.
+ * This function generates layout elements which violates separation of concerns.
+ */
 export function generatePublicRecordsLetter(formData: {
   agencyName: string;
   agencyAddress: string;
@@ -47,6 +67,10 @@ export function generatePublicRecordsLetter(formData: {
   return body;
 }
 
+/**
+ * @deprecated Use generateStatePRABodyContent() + createLetterDocument() instead.
+ * This function generates layout elements which violates separation of concerns.
+ */
 export function generateStatePRALetter(formData: {
   state: string;
   agencyName: string;
@@ -88,6 +112,10 @@ export function generateStatePRALetter(formData: {
   return body;
 }
 
+/**
+ * @deprecated Use generateFOIABodyContent() + createLetterDocument() instead.
+ * This function generates layout elements which violates separation of concerns.
+ */
 export function generateFOIALetter(formData: {
   federalAgency: string;
   subAgency: string;
@@ -142,6 +170,10 @@ export function generateFOIALetter(formData: {
   return body;
 }
 
+/**
+ * @deprecated Use generateNDABodyContent() + createLetterDocument() instead.
+ * This function generates layout elements which violates separation of concerns.
+ */
 export function generateNDALetter(formData: {
   agreementType: string;
   disclosingParty: string;
@@ -200,6 +232,10 @@ export function generateNDALetter(formData: {
   return body;
 }
 
+/**
+ * @deprecated Use generateCorrespondenceBodyContent() + createLetterDocument() instead.
+ * This function generates layout elements which violates separation of concerns.
+ */
 export function generateCorrespondenceLetter(formData: {
   recipientType: string;
   recipientName: string;

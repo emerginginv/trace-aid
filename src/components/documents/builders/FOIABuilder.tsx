@@ -11,7 +11,7 @@ import { Save, FileText, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { FEDERAL_AGENCIES } from "@/lib/letterCategories";
-import { generateFOIALetter } from "@/lib/letterGenerators";
+import { generateFOIABodyContent, renderFOIABodyHtml } from "@/lib/letterBodyGenerators";
 
 interface FOIABuilderProps {
   organizationId: string;
@@ -51,7 +51,9 @@ export function FOIABuilder({ organizationId, onSave, onCancel }: FOIABuilderPro
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const letterBody = generateFOIALetter(formData);
+      // Generate body content only (no layout elements)
+      const bodyContent = generateFOIABodyContent(formData);
+      const letterBody = renderFOIABodyHtml(bodyContent);
 
       const { error } = await supabase
         .from('document_templates')

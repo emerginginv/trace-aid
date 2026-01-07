@@ -11,7 +11,7 @@ import { Save, FileText, Building } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { US_STATES, getStateInfo } from "@/lib/letterCategories";
-import { generateStatePRALetter } from "@/lib/letterGenerators";
+import { generateStatePRABodyContent, renderStatePRABodyHtml } from "@/lib/letterBodyGenerators";
 
 interface StatePRABuilderProps {
   organizationId: string;
@@ -57,7 +57,9 @@ export function StatePRABuilder({ organizationId, onSave, onCancel }: StatePRABu
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const letterBody = generateStatePRALetter(formData, selectedStateInfo);
+      // Generate body content only (no layout elements)
+      const bodyContent = generateStatePRABodyContent(formData, selectedStateInfo);
+      const letterBody = renderStatePRABodyHtml(bodyContent);
 
       const { error } = await supabase
         .from('document_templates')
