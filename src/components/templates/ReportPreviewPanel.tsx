@@ -433,66 +433,101 @@ export function ReportPreviewPanel({
             className="flex flex-col items-center"
             style={{ gap: `${scaledGap}px` }}
           >
-            {pages.map((page) => (
-              <div 
-                key={page.pageNumber} 
-                className="flex flex-col items-center"
-                data-page-number={page.pageNumber}
-                ref={(el) => {
-                  if (el) pageRefs.current.set(page.pageNumber, el);
-                }}
-              >
-                {/* Page card with professional shadow */}
-                <div
-                  className="relative bg-white overflow-hidden transition-shadow"
-                  style={{
-                    width: `${scaledPageWidth}px`,
-                    height: `${scaledPageHeight}px`,
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 32px rgba(0, 0, 0, 0.04)',
-                    borderRadius: `${Math.max(1, 2 * scale)}px`,
-                    border: '1px solid rgba(0, 0, 0, 0.06)',
+            {pages.map((page) => {
+              const isCover = page.pageType === 'cover';
+              
+              return (
+                <div 
+                  key={page.pageNumber} 
+                  className="flex flex-col items-center"
+                  data-page-number={page.pageNumber}
+                  ref={(el) => {
+                    if (el) pageRefs.current.set(page.pageNumber, el);
                   }}
                 >
-                  {/* Inner content with transform scaling */}
+                  {/* Page card with professional shadow */}
                   <div
-                    className="absolute top-0 left-0 origin-top-left"
+                    className="relative bg-white transition-shadow"
                     style={{
-                      width: `${PAGE_WIDTH_PX}px`,
-                      height: `${PAGE_HEIGHT_PX}px`,
-                      transform: `scale(${scale})`,
+                      width: `${scaledPageWidth}px`,
+                      // Cover page: fixed height; Content page: auto-size to fit all content
+                      ...(isCover 
+                        ? { height: `${scaledPageHeight}px`, overflow: 'hidden' }
+                        : { minHeight: `${scaledPageHeight}px` }
+                      ),
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 32px rgba(0, 0, 0, 0.04)',
+                      borderRadius: `${Math.max(1, 2 * scale)}px`,
+                      border: '1px solid rgba(0, 0, 0, 0.06)',
                     }}
                   >
-                    <div 
-                      className="overflow-hidden report-document"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        fontFamily: "Georgia, 'Times New Roman', serif",
-                        fontSize: '11pt',
-                        lineHeight: 1.6,
-                        color: '#1a1a1a',
-                        backgroundColor: '#ffffff',
-                      }}
-                      dangerouslySetInnerHTML={{ __html: page.html }}
-                    />
+                    {isCover ? (
+                      // Cover page: absolute positioning with fixed dimensions
+                      <div
+                        className="absolute top-0 left-0 origin-top-left"
+                        style={{
+                          width: `${PAGE_WIDTH_PX}px`,
+                          height: `${PAGE_HEIGHT_PX}px`,
+                          transform: `scale(${scale})`,
+                        }}
+                      >
+                        <div 
+                          className="overflow-hidden report-document"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            fontFamily: "Georgia, 'Times New Roman', serif",
+                            fontSize: '11pt',
+                            lineHeight: 1.6,
+                            color: '#1a1a1a',
+                            backgroundColor: '#ffffff',
+                          }}
+                          dangerouslySetInnerHTML={{ __html: page.html }}
+                        />
+                      </div>
+                    ) : (
+                      // Content page: flows naturally, no clipping
+                      <div
+                        className="origin-top-left"
+                        style={{
+                          width: `${PAGE_WIDTH_PX}px`,
+                          minHeight: `${PAGE_HEIGHT_PX}px`,
+                          transform: `scale(${scale})`,
+                          transformOrigin: 'top left',
+                        }}
+                      >
+                        <div 
+                          className="report-document"
+                          style={{
+                            width: '100%',
+                            minHeight: `${PAGE_HEIGHT_PX}px`,
+                            fontFamily: "Georgia, 'Times New Roman', serif",
+                            fontSize: '11pt',
+                            lineHeight: 1.6,
+                            color: '#1a1a1a',
+                            backgroundColor: '#ffffff',
+                          }}
+                          dangerouslySetInnerHTML={{ __html: page.html }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Subtle page indicator */}
+                  <div 
+                    className="mt-3 text-center"
+                    style={{ 
+                      fontSize: `${Math.max(10, 11 * scale)}px`,
+                    }}
+                  >
+                    <span className="text-muted-foreground/70 font-medium">
+                      {isCover ? 'Cover Page' : 'Content'}
+                    </span>
                   </div>
                 </div>
-                
-                {/* Subtle page indicator */}
-                <div 
-                  className="mt-3 text-center"
-                  style={{ 
-                    fontSize: `${Math.max(10, 11 * scale)}px`,
-                  }}
-                >
-                  <span className="text-muted-foreground/70 font-medium">
-                    {page.pageType === 'cover' ? 'Cover Page' : `Page ${page.pageNumber}`}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             
             {/* Spacer at bottom */}
             <div style={{ height: CONTAINER_PADDING }} />
