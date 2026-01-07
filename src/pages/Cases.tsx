@@ -29,6 +29,7 @@ import { CasesPageSkeleton } from "@/components/ui/list-page-skeleton";
 import { InlineEditCell } from "@/components/ui/inline-edit-cell";
 import { CaseCardManagerDisplay } from "@/components/cases/CaseCardManagerDisplay";
 import { CaseCardFinancialWidget } from "@/components/cases/CaseCardFinancialWidget";
+import { CaseCardFinancialSummary } from "@/components/cases/CaseCardFinancialSummary";
 
 interface CaseManager {
   id: string;
@@ -43,6 +44,13 @@ interface BudgetSummary {
   dollars_utilization_pct: number;
 }
 
+interface FinancialTotals {
+  total_expenses: number;
+  total_hours: number;
+  total_retainer: number;
+  total_invoiced: number;
+}
+
 interface Case {
   id: string;
   case_number: string;
@@ -55,6 +63,7 @@ interface Case {
   budget_dollars: number | null;
   case_manager?: CaseManager | null;
   budget_summary?: BudgetSummary | null;
+  financial_totals?: FinancialTotals | null;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -144,16 +153,54 @@ const Cases = () => {
         ...c,
         case_manager: c.case_manager as CaseManager | null,
         budget_summary: null,
+        financial_totals: null,
       }));
       
-      // Fetch budget summaries if user has permission
+      // Fetch budget summaries and financial totals if user has permission
       if (hasPermission('view_finances') && enrichedCases.length > 0) {
+        const caseIds = enrichedCases.map(c => c.id);
+        
+        // Fetch budget summaries for cases with budgets
         const budgetPromises = enrichedCases
           .filter(c => c.budget_dollars && c.budget_dollars > 0)
           .map(async (c) => {
             const { data } = await supabase.rpc('get_case_budget_summary', { p_case_id: c.id });
             return { caseId: c.id, summary: data?.[0] || null };
           });
+        
+        // Fetch financial totals from case_finances
+        const { data: financialData } = await supabase
+          .from("case_finances")
+          .select("case_id, finance_type, amount, hours")
+          .in("case_id", caseIds);
+        
+        // Aggregate financial totals by case
+        const totalsMap = new Map<string, FinancialTotals>();
+        financialData?.forEach(entry => {
+          const existing = totalsMap.get(entry.case_id) || {
+            total_expenses: 0,
+            total_hours: 0,
+            total_retainer: 0,
+            total_invoiced: 0,
+          };
+          
+          switch (entry.finance_type) {
+            case 'expense':
+              existing.total_expenses += entry.amount || 0;
+              break;
+            case 'time':
+              existing.total_hours += entry.hours || 0;
+              break;
+            case 'retainer':
+              existing.total_retainer += entry.amount || 0;
+              break;
+            case 'invoice':
+              existing.total_invoiced += entry.amount || 0;
+              break;
+          }
+          
+          totalsMap.set(entry.case_id, existing);
+        });
         
         const budgetResults = await Promise.all(budgetPromises);
         const budgetMap = new Map(budgetResults.map(r => [r.caseId, r.summary]));
@@ -165,6 +212,7 @@ const Cases = () => {
             dollars_remaining: budgetMap.get(c.id)!.dollars_remaining || 0,
             dollars_utilization_pct: budgetMap.get(c.id)!.dollars_utilization_pct || 0,
           } : null,
+          financial_totals: totalsMap.get(c.id) || null,
         }));
       }
       
@@ -475,13 +523,25 @@ const Cases = () => {
                   {caseItem.due_date && <span>Due: {new Date(caseItem.due_date).toLocaleDateString()}</span>}
                 </div>
                 
-                {hasPermission('view_finances') && caseItem.budget_summary && (
-                  <CaseCardFinancialWidget
-                    budgetDollars={caseItem.budget_dollars}
-                    dollarsConsumed={caseItem.budget_summary.dollars_consumed}
-                    dollarsRemaining={caseItem.budget_summary.dollars_remaining}
-                    utilizationPct={caseItem.budget_summary.dollars_utilization_pct}
-                  />
+                {hasPermission('view_finances') && (
+                  <>
+                    {caseItem.budget_summary && (
+                      <CaseCardFinancialWidget
+                        budgetDollars={caseItem.budget_dollars}
+                        dollarsConsumed={caseItem.budget_summary.dollars_consumed}
+                        dollarsRemaining={caseItem.budget_summary.dollars_remaining}
+                        utilizationPct={caseItem.budget_summary.dollars_utilization_pct}
+                      />
+                    )}
+                    {caseItem.financial_totals && (
+                      <CaseCardFinancialSummary
+                        totalExpenses={caseItem.financial_totals.total_expenses}
+                        totalHours={caseItem.financial_totals.total_hours}
+                        totalRetainer={caseItem.financial_totals.total_retainer}
+                        totalInvoiced={caseItem.financial_totals.total_invoiced}
+                      />
+                    )}
+                  </>
                 )}
                 
                 <div className="flex justify-end gap-2 mt-4">
