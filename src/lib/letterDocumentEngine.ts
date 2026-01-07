@@ -266,6 +266,75 @@ function estimatePageCount(html: string): number {
   return Math.max(1, Math.ceil(charCount / 3000));
 }
 
+/**
+ * Validation result for letter structure
+ */
+export interface LetterStructureValidation {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Validate letter structure to prevent free-form layouts
+ * Ensures letters follow proper professional structure
+ */
+export function validateLetterStructure(html: string): LetterStructureValidation {
+  const result: LetterStructureValidation = {
+    isValid: true,
+    errors: [],
+    warnings: []
+  };
+  
+  const textContent = html.replace(/<[^>]*>/g, ' ').trim();
+  
+  // Must have content (not empty)
+  if (textContent.length < 50) {
+    result.isValid = false;
+    result.errors.push("Letter content is too short");
+  }
+  
+  // Check for placeholder text that must be replaced
+  const placeholderPatterns = [
+    { pattern: /\[insert/i, message: "Contains '[insert...]' placeholder" },
+    { pattern: /\[your name/i, message: "Contains '[your name]' placeholder" },
+    { pattern: /\[recipient/i, message: "Contains '[recipient...]' placeholder" },
+    { pattern: /\[date\]/i, message: "Contains '[date]' placeholder" },
+    { pattern: /\bTBD\b/, message: "Contains 'TBD' placeholder" },
+    { pattern: /\bTODO\b/i, message: "Contains 'TODO' placeholder" },
+    { pattern: /\bPLACEHOLDER\b/i, message: "Contains 'PLACEHOLDER' text" },
+    { pattern: /\bXXX\b/, message: "Contains 'XXX' placeholder" },
+    { pattern: /\b___+\b/, message: "Contains blank line placeholder" },
+  ];
+  
+  for (const { pattern, message } of placeholderPatterns) {
+    if (pattern.test(textContent)) {
+      result.isValid = false;
+      result.errors.push(message);
+    }
+  }
+  
+  // Check for proper structure indicators
+  const hasDate = /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/.test(textContent) || 
+                  /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/i.test(textContent) ||
+                  /\{\{.*date.*\}\}/i.test(html);
+  
+  const hasSalutation = /\b(?:Dear|To Whom|Attention|Re:)\b/i.test(textContent);
+  const hasClosing = /\b(?:Sincerely|Regards|Best|Respectfully|Thank you)\b/i.test(textContent);
+  
+  if (!hasDate) {
+    result.warnings.push("Letter may be missing a date");
+  }
+  if (!hasSalutation) {
+    result.warnings.push("Letter may be missing a proper salutation");
+  }
+  if (!hasClosing) {
+    result.warnings.push("Letter may be missing a closing");
+  }
+  
+  return result;
+}
+
 // Create a complete letter document with all branding and styles
 export function createLetterDocument(
   letterBody: string,

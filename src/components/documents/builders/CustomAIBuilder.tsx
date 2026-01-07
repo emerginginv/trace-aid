@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, RefreshCw, Pencil, Check, X, Lock, Save, Plus, Trash2, FileText } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw, Pencil, Check, X, Lock, Save, Plus, Trash2, FileText, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LETTER_TONES, RECIPIENT_TYPES, LETTER_LENGTHS } from "@/lib/letterCategories";
@@ -22,6 +22,7 @@ import {
 } from "@/lib/letterBranding";
 import { getOrganizationProfile, type OrganizationProfile } from "@/lib/organizationProfile";
 import { useQuery } from "@tanstack/react-query";
+import { extractCitations, detectLegalLanguageInCustomLetter } from "@/lib/statuteValidator";
 
 interface CustomAIBuilderProps {
   organizationId: string;
@@ -66,6 +67,7 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
   const [sections, setSections] = useState<LetterSection[]>([]);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [legalWarnings, setLegalWarnings] = useState<string[]>([]);
 
   const addKeyPoint = () => {
     setKeyPoints([...keyPoints, '']);
@@ -116,12 +118,29 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
         throw new Error(response.data.error);
       }
 
+      // Check if AI redirected due to legal content request
+      if (response.data?.redirect) {
+        toast.error(response.data.message || 'This request requires a specialized legal document builder.');
+        return;
+      }
+
       if (response.data?.sections) {
-        setSections(response.data.sections.map((s: LetterSection) => ({
+        const newSections = response.data.sections.map((s: LetterSection) => ({
           ...s,
           userEdited: false,
-        })));
-        toast.success('Letter generated successfully');
+        }));
+        setSections(newSections);
+        
+        // Post-generation validation for legal content
+        const fullHtml = newSections.map((s: LetterSection) => s.content).join(' ');
+        const detectedWarnings = detectLegalLanguageInCustomLetter(fullHtml);
+        setLegalWarnings(detectedWarnings);
+        
+        if (detectedWarnings.length > 0) {
+          toast.warning('Letter contains legal-sounding language. Review before saving.');
+        } else {
+          toast.success('Letter generated successfully');
+        }
       }
     } catch (error) {
       console.error('Generation error:', error);
@@ -218,6 +237,30 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
       return;
     }
 
+    // CRITICAL: Block save if legal citations are detected
+    const fullHtml = sections.map(s => s.content).join(' ');
+    const citations = extractCitations(fullHtml);
+    
+    if (citations.length > 0) {
+      toast.error(
+        'Cannot save: This letter contains legal citations. Custom letters must not include statutory references. Use the FOIA or NDA builder for legal documents.',
+        { duration: 6000 }
+      );
+      return;
+    }
+
+    // Check for legal language patterns (warning only, allow save)
+    const warnings = detectLegalLanguageInCustomLetter(fullHtml);
+    if (warnings.length > 0 && legalWarnings.length === 0) {
+      // First time detecting - show warning but don't block
+      setLegalWarnings(warnings);
+      toast.warning(
+        'This letter contains legal-sounding language. If this is a legal document, please use the appropriate builder. Click save again to proceed anyway.',
+        { duration: 6000 }
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -230,7 +273,7 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
         .join('\n');
 
       // Wrap with branding (letterhead, date, signature block)
-      const fullHtml = wrapLetterWithBranding(
+      const wrappedHtml = wrapLetterWithBranding(
         bodyContent,
         orgProfile || null,
         brandingConfig,
@@ -242,7 +285,7 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
         description: `AI-generated letter: ${purpose.substring(0, 100)}`,
         document_type: 'letter',
         letter_category: 'custom_ai',
-        body: fullHtml,
+        body: wrappedHtml,
         organization_id: organizationId,
         user_id: user.id,
         is_active: true,

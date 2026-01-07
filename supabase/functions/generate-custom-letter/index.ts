@@ -40,6 +40,41 @@ const LENGTH_GUIDELINES: Record<string, string> = {
   detailed: '6-8 paragraphs, comprehensive coverage of all points',
 };
 
+// CRITICAL: Legal content prohibitions for custom letters
+const LEGAL_PROHIBITIONS = `
+## CRITICAL LEGAL RESTRICTIONS - BUSINESS LETTERS ONLY
+
+This is a BUSINESS CORRESPONDENCE tool, NOT a legal document generator.
+
+YOU MUST NOT under any circumstances:
+- Include ANY statutory citations (e.g., "5 U.S.C. § 552", "pursuant to Section...", "under Article...")
+- Reference specific laws, codes, regulations, statutes, or ordinances
+- Cite legal deadlines, statutory response requirements, or regulatory timeframes
+- Use legal phrases like "pursuant to", "in accordance with statute", "as required by law", "under penalty of"
+- Claim legal authority, rights, remedies, or entitlements
+- Reference FOIA, Freedom of Information Act, public records acts, or any open records laws
+- Reference trade secret laws, confidentiality statutes, or NDA enforcement provisions
+- Include legal threats, mention litigation, or reference court proceedings
+- Generate NDA, contract, agreement, or legally-binding document language
+- Cite any federal, state, or local agency regulations
+
+IF the user's purpose suggests they need a legal document (FOIA request, records request, NDA, legal demand, contract):
+- DO NOT generate the letter
+- Instead, return this exact JSON response:
+{
+  "redirect": true,
+  "message": "This request appears to require a legal document. Please use the appropriate specialized builder: FOIA/Public Records Builder for records requests, or NDA Builder for confidentiality agreements. Custom letters are for general business correspondence only."
+}
+
+This tool generates ONLY general business correspondence such as:
+- Meeting requests and confirmations
+- Follow-up communications
+- Thank you letters
+- Inquiry letters
+- Appointment confirmations
+- General notifications
+`;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -85,7 +120,9 @@ DO NOT include markdown code blocks or any text outside the JSON.`;
       userPrompt = `Regenerate the "${regenerateSection.sectionId}" section with a fresh approach while maintaining coherence with the rest of the letter.`;
     } else {
       // Generating full letter
-      systemPrompt = `You are a professional letter writing assistant. Generate a well-structured business letter based on the user's requirements.
+      systemPrompt = `You are a professional BUSINESS letter writing assistant. Generate a well-structured business letter based on the user's requirements.
+
+${LEGAL_PROHIBITIONS}
 
 OUTPUT FORMAT:
 Return ONLY a JSON object with this exact structure:
@@ -223,6 +260,17 @@ Length: ${length}${keyPointsList}${contextInfo}`;
       cleanedText = cleanedText.trim();
 
       parsedResponse = JSON.parse(cleanedText);
+      
+      // Check if AI detected a legal document request and redirected
+      if (parsedResponse.redirect) {
+        console.log('AI detected legal document request, redirecting user');
+        return new Response(JSON.stringify({ 
+          redirect: true,
+          message: parsedResponse.message || 'This request requires a specialized legal document builder.'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
       console.error('Raw text:', generatedText);
