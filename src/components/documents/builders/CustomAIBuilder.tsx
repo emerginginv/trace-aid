@@ -127,10 +127,15 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
 
       if (response.data?.sections) {
         // Sanitize all AI-generated sections before using them
+        let hasIntrusions = false;
         const newSections = response.data.sections.map((s: LetterSection) => {
           const { clean, violations, wasModified } = sanitizeAiContent(s.content);
           if (violations.length > 0) {
             console.warn(`AI content violations in section ${s.id}:`, violations);
+            // Check for intrusion violations
+            if (violations.some(v => v.startsWith('INTRUSION:'))) {
+              hasIntrusions = true;
+            }
           }
           return {
             ...s,
@@ -138,6 +143,11 @@ export function CustomAIBuilder({ organizationId, onSave, onCancel }: CustomAIBu
             userEdited: false,
           };
         });
+        
+        if (hasIntrusions) {
+          toast.warning("AI content was adjusted to comply with letter structure rules");
+        }
+        
         setSections(newSections);
         
         // Post-generation validation for legal content
