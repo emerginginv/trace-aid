@@ -32,6 +32,7 @@ import {
   renderDocument,
   wrapInDocumentHtml,
 } from "@/lib/documentEngine";
+import { buildConditionalContextFromCase } from "@/lib/letterTemplateRenderer";
 import { CaseVariables } from "@/lib/caseVariables";
 import { getOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
 import { PaginatedDocumentViewer } from "./PaginatedDocumentViewer";
@@ -97,8 +98,10 @@ export function GenerateDocumentDialog({
   const handlePreview = () => {
     if (!selectedTemplate) return;
     
+    // Build conditional context from case data
+    const conditionalContext = buildConditionalContextFromCase(caseData);
     const variables = buildDocumentVariables(caseData, orgProfile);
-    const rendered = renderDocument(selectedTemplate.body, variables);
+    const rendered = renderDocument(selectedTemplate.body, variables, conditionalContext);
     setPreview(rendered);
   };
 
@@ -114,8 +117,10 @@ export function GenerateDocumentDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Build conditional context from case data
+      const conditionalContext = buildConditionalContextFromCase(caseData);
       const variables = buildDocumentVariables(caseData, orgProfile);
-      const rendered = renderDocument(selectedTemplate.body, variables);
+      const rendered = renderDocument(selectedTemplate.body, variables, conditionalContext);
       const fullHtml = wrapInDocumentHtml(rendered, title, true, orgProfile);
 
       const instance = await createDocumentInstance(

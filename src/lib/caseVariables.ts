@@ -61,6 +61,10 @@ export interface CaseVariables {
   // Case Manager
   caseManager: string;
   caseManagerEmail: string | null;
+
+  // Document generation conditionals
+  feeWaiver: boolean;
+  expedited: boolean;
 }
 
 function formatDate(dateStr: string | null): string | null {
@@ -240,6 +244,10 @@ export async function getCaseVariables(caseId: string): Promise<CaseVariables | 
 
       caseManager,
       caseManagerEmail,
+
+      // Document generation conditionals
+      feeWaiver: (caseData as any).fee_waiver || false,
+      expedited: (caseData as any).expedited || false,
     };
   } catch (error) {
     console.error("Error fetching case variables:", error);

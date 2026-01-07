@@ -759,8 +759,10 @@ export type Database = {
           created_at: string | null
           description: string | null
           due_date: string | null
+          expedited: boolean | null
           external_record_id: string | null
           external_system_name: string | null
+          fee_waiver: boolean | null
           id: string
           import_batch_id: string | null
           import_timestamp: string | null
@@ -788,8 +790,10 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          expedited?: boolean | null
           external_record_id?: string | null
           external_system_name?: string | null
+          fee_waiver?: boolean | null
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
@@ -817,8 +821,10 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          expedited?: boolean | null
           external_record_id?: string | null
           external_system_name?: string | null
+          fee_waiver?: boolean | null
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
