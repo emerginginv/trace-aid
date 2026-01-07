@@ -1,5 +1,18 @@
-// Paginated Document Viewer - True print-accurate preview with real page breaks
-// Uses Paged.js for CSS Paged Media polyfill
+/**
+ * PAGINATED DOCUMENT VIEWER
+ * 
+ * CRITICAL: This viewer renders the EXACT same HTML that will be exported.
+ * 
+ * The content prop must be the same HTML that goes to:
+ * - PDF export (html2pdf.js)
+ * - DOCX export
+ * - Print
+ * 
+ * If it appears in this preview, it WILL appear in the export.
+ * There is ONE source of truth: the HTML.
+ * 
+ * Uses Paged.js for CSS Paged Media polyfill to achieve true print-accurate pagination.
+ */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Previewer } from "pagedjs";
@@ -13,13 +26,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getPagedMediaStyles, getPageViewerStyles } from "@/lib/paginatedLetterStyles";
+import { 
+  getPagedMediaStyles, 
+  getPageViewerStyles, 
+  PAGE_SPECS, 
+  type PageSize 
+} from "@/lib/paginatedLetterStyles";
 
 interface PaginatedDocumentViewerProps {
   content: string;
   title?: string;
+  pageSize?: PageSize;
   zoom?: number;
   onZoomChange?: (zoom: number) => void;
+  onPageCountChange?: (count: number) => void;
   className?: string;
   showHeader?: boolean;
   showFooter?: boolean;
@@ -31,8 +51,10 @@ const ZOOM_LEVELS = [50, 75, 100, 125, 150, 200];
 export function PaginatedDocumentViewer({
   content,
   title = "Document Preview",
+  pageSize = "letter",
   zoom: externalZoom,
   onZoomChange,
+  onPageCountChange,
   className = "",
   showHeader = true,
   showFooter = true,
@@ -48,6 +70,7 @@ export function PaginatedDocumentViewer({
 
   const zoom = externalZoom ?? internalZoom;
   const setZoom = onZoomChange ?? setInternalZoom;
+  const spec = PAGE_SPECS[pageSize];
 
   // Render content with Paged.js
   const renderPages = useCallback(async () => {
@@ -58,7 +81,6 @@ export function PaginatedDocumentViewer({
     
     // Wait for container to be mounted
     if (!containerRef.current) {
-      // Retry on next frame when container is mounted
       requestAnimationFrame(() => renderPages());
       return;
     }
@@ -74,10 +96,10 @@ export function PaginatedDocumentViewer({
       const previewer = new Previewer();
       previewerRef.current = previewer;
 
-      // Build the HTML content with styles
+      // Build the HTML content with styles for the specific page size
       const htmlContent = `
         <style>
-          ${getPagedMediaStyles()}
+          ${getPagedMediaStyles(pageSize)}
         </style>
         <div class="letter-document">
           ${content}
@@ -85,24 +107,28 @@ export function PaginatedDocumentViewer({
       `;
 
       // Render pages
-      const flow = await previewer.preview(
+      await previewer.preview(
         htmlContent,
         [], // stylesheet URLs (we embed styles inline)
         containerRef.current
       );
 
-      // Get page count from rendered flow
+      // Get actual page count from rendered flow
       const pages = containerRef.current.querySelectorAll(".pagedjs_page");
-      setPageCount(pages.length);
+      const actualPageCount = pages.length;
+      setPageCount(actualPageCount);
+      
+      // Notify parent of actual page count
+      onPageCountChange?.(actualPageCount);
 
       // Add page numbers to each page
       pages.forEach((page, index) => {
-        page.setAttribute("data-page-number", `Page ${index + 1} of ${pages.length}`);
+        page.setAttribute("data-page-number", `Page ${index + 1} of ${actualPageCount}`);
       });
 
-      // Inject viewer styles
+      // Inject viewer styles for the specific page size
       const styleEl = document.createElement("style");
-      styleEl.textContent = getPageViewerStyles();
+      styleEl.textContent = getPageViewerStyles(pageSize);
       containerRef.current.prepend(styleEl);
 
       setCurrentPage(1);
@@ -112,14 +138,13 @@ export function PaginatedDocumentViewer({
     } finally {
       setIsRendering(false);
     }
-  }, [content]);
+  }, [content, pageSize, onPageCountChange]);
 
-  // Render when content changes
+  // Render when content or page size changes
   useEffect(() => {
     renderPages();
 
     return () => {
-      // Cleanup
       if (previewerRef.current) {
         previewerRef.current = null;
       }
@@ -171,7 +196,6 @@ export function PaginatedDocumentViewer({
 
     for (let i = 0; i < pages.length; i++) {
       const pageRect = pages[i].getBoundingClientRect();
-      // Page is considered "current" when its top is near the top of the container
       if (pageRect.top <= containerRect.top + 100) {
         setCurrentPage(i + 1);
       }
@@ -269,8 +293,8 @@ export function PaginatedDocumentViewer({
         <div
           className="min-h-full flex justify-center relative"
           style={{
-            padding: compact ? "16px" : "32px",
-            backgroundColor: compact ? undefined : "hsl(var(--muted) / 0.3)",
+            padding: compact ? "16px" : "40px",
+            backgroundColor: compact ? undefined : "#525659",
           }}
         >
           {/* Loading overlay */}
@@ -288,19 +312,25 @@ export function PaginatedDocumentViewer({
             </div>
           )}
           
-          {/* Container is ALWAYS mounted - hidden while loading */}
+          {/* Zoom wrapper - scales entire pages container */}
           <div
-            ref={containerRef}
-            className="paginated-document-container"
+            className="paginated-zoom-wrapper"
             style={{
               transform: `scale(${zoom / 100})`,
               transformOrigin: "top center",
-              width: `${100 / (zoom / 100)}%`,
-              maxWidth: `${816 / (zoom / 100)}px`,
-              opacity: isRendering || error ? 0 : 1,
-              visibility: isRendering || error ? "hidden" : "visible",
+              width: "fit-content",
             }}
-          />
+          >
+            {/* Container is ALWAYS mounted - hidden while loading */}
+            <div
+              ref={containerRef}
+              className="paginated-document-container"
+              style={{
+                opacity: isRendering || error ? 0 : 1,
+                visibility: isRendering || error ? "hidden" : "visible",
+              }}
+            />
+          </div>
         </div>
       </ScrollArea>
 
@@ -309,7 +339,7 @@ export function PaginatedDocumentViewer({
         <div className="flex items-center justify-between p-3 border-t bg-muted/30 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <FileText className="h-3.5 w-3.5" />
-            <span>Print-accurate preview • US Letter (8.5" × 11")</span>
+            <span>Print-accurate preview • {spec.name} ({spec.width} × {spec.height})</span>
           </div>
           {pageCount > 0 && (
             <span>

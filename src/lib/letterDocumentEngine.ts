@@ -1,11 +1,19 @@
-// Unified letter document engine for print-ready rendering
-// Ensures preview matches PDF/DOCX export exactly
+/**
+ * UNIFIED LETTER DOCUMENT ENGINE
+ * 
+ * Ensures preview matches PDF/DOCX export exactly.
+ * HTML is the SINGLE SOURCE OF TRUTH.
+ * 
+ * All exports (PDF, DOCX, Print) derive from the same HTML.
+ * Page dimensions are defined in paginatedLetterStyles.ts
+ */
 
 import { type OrganizationProfile } from "./organizationProfile";
 import { type LetterBrandingConfig, renderLetterhead, renderDateBlock, renderSignatureBlock, renderConfidentialityFooter } from "./letterBranding";
+import { PAGE_SPECS, type PageSize } from "./paginatedLetterStyles";
 
 export interface PageSettings {
-  size: 'letter' | 'a4';
+  size: PageSize;
   margins: { top: number; right: number; bottom: number; left: number };
   orientation: 'portrait' | 'landscape';
 }
@@ -14,6 +22,10 @@ export interface LetterDocument {
   html: string;
   styles: string;
   pageSettings: PageSettings;
+  /** 
+   * @deprecated Use actual page count from PaginatedDocumentViewer's onPageCountChange callback.
+   * This is only an estimate based on character count.
+   */
   estimatedPages: number;
 }
 
@@ -407,26 +419,11 @@ export function getExportableHtml(letterDocument: LetterDocument): string {
   `;
 }
 
-// Get PDF export options optimized for letter documents
-export function getPdfExportOptions(filename: string) {
-  return {
-    margin: 0, // Margins are in the document itself
-    filename: `${filename}.pdf`,
-    image: { type: 'jpeg' as const, quality: 0.98 },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      letterRendering: true,
-      logging: false,
-    },
-    jsPDF: {
-      unit: 'in' as const,
-      format: 'letter' as const,
-      orientation: 'portrait' as const,
-    },
-    pagebreak: {
-      mode: ['avoid-all', 'css', 'legacy'] as const,
-      avoid: ['.avoid-break', '.letter-signature', '.nda-clause'],
-    },
-  };
-}
+/**
+ * Get PDF export options optimized for letter documents
+ * 
+ * NOTE: This is a re-export for backwards compatibility.
+ * The canonical export options are defined in paginatedLetterStyles.ts
+ * to ensure preview and export use identical settings.
+ */
+export { getPdfExportOptions } from "./paginatedLetterStyles";
