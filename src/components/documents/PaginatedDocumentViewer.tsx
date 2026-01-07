@@ -51,7 +51,17 @@ export function PaginatedDocumentViewer({
 
   // Render content with Paged.js
   const renderPages = useCallback(async () => {
-    if (!containerRef.current || !content) return;
+    if (!content) {
+      setIsRendering(false);
+      return;
+    }
+    
+    // Wait for container to be mounted
+    if (!containerRef.current) {
+      // Retry on next frame when container is mounted
+      requestAnimationFrame(() => renderPages());
+      return;
+    }
 
     setIsRendering(true);
     setError(null);
@@ -257,34 +267,40 @@ export function PaginatedDocumentViewer({
         onScroll={handleScroll}
       >
         <div
-          className="min-h-full flex justify-center"
+          className="min-h-full flex justify-center relative"
           style={{
             padding: compact ? "16px" : "32px",
             backgroundColor: compact ? undefined : "hsl(var(--muted) / 0.3)",
           }}
         >
-          {isRendering ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
+          {/* Loading overlay */}
+          {isRendering && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-10 gap-3">
               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
               <span className="text-sm text-muted-foreground">Rendering pages...</span>
             </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
+          )}
+          
+          {/* Error state */}
+          {error && !isRendering && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 gap-3">
               <span className="text-sm text-destructive">{error}</span>
             </div>
-          ) : (
-            <div
-              ref={containerRef}
-              className="paginated-document-container"
-              style={{
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: "top center",
-                // Compensate for scale to prevent layout jumps
-                width: `${100 / (zoom / 100)}%`,
-                maxWidth: `${816 / (zoom / 100)}px`,
-              }}
-            />
           )}
+          
+          {/* Container is ALWAYS mounted - hidden while loading */}
+          <div
+            ref={containerRef}
+            className="paginated-document-container"
+            style={{
+              transform: `scale(${zoom / 100})`,
+              transformOrigin: "top center",
+              width: `${100 / (zoom / 100)}%`,
+              maxWidth: `${816 / (zoom / 100)}px`,
+              opacity: isRendering || error ? 0 : 1,
+              visibility: isRendering || error ? "hidden" : "visible",
+            }}
+          />
         </div>
       </ScrollArea>
 
