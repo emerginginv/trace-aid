@@ -25,12 +25,10 @@ export function PublicRecordsBuilder({ organizationId, onSave, onCancel }: Publi
     agencyName: '',
     agencyAddress: '',
     recordsRequested: '',
-    purpose: '',
     legalAuthority: 'general',
     customAuthority: '',
     responseDeadline: '',
     requestFeeWaiver: false,
-    feeWaiverJustification: '',
     formatPreference: 'electronic',
   });
 
@@ -149,17 +147,6 @@ export function PublicRecordsBuilder({ organizationId, onSave, onCancel }: Publi
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="purpose">Purpose/Justification</Label>
-              <Textarea
-                id="purpose"
-                placeholder="Explain the purpose of this records request..."
-                value={formData.purpose}
-                onChange={(e) => handleChange('purpose', e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label>Legal Authority</Label>
               <Select 
                 value={formData.legalAuthority} 
@@ -215,20 +202,15 @@ export function PublicRecordsBuilder({ organizationId, onSave, onCancel }: Publi
                 onCheckedChange={(checked) => handleChange('requestFeeWaiver', !!checked)}
               />
               <Label htmlFor="feeWaiver" className="cursor-pointer">
-                Request fee waiver
+                Include fee waiver section
               </Label>
             </div>
 
             {formData.requestFeeWaiver && (
-              <div className="space-y-2">
-                <Label htmlFor="feeWaiverJustification">Fee Waiver Justification</Label>
-                <Textarea
-                  id="feeWaiverJustification"
-                  placeholder="Explain why fees should be waived..."
-                  value={formData.feeWaiverJustification}
-                  onChange={(e) => handleChange('feeWaiverJustification', e.target.value)}
-                  rows={2}
-                />
+              <div className="ml-6 p-3 bg-muted/50 rounded-md border">
+                <p className="text-sm text-muted-foreground">
+                  Template will include: <code className="text-xs bg-muted px-1 py-0.5 rounded">{"{{fee_waiver_justification}}"}</code>
+                </p>
               </div>
             )}
           </CardContent>
@@ -278,12 +260,6 @@ export function PublicRecordsBuilder({ organizationId, onSave, onCancel }: Publi
                   </p>
                 </div>
 
-                {formData.purpose && (
-                  <p>
-                    <strong>Purpose:</strong> {formData.purpose}
-                  </p>
-                )}
-
                 <p>
                   I request that records be provided in {
                     formData.formatPreference === 'electronic' ? 'electronic format (PDF preferred)' :
@@ -292,9 +268,10 @@ export function PublicRecordsBuilder({ organizationId, onSave, onCancel }: Publi
                 </p>
 
                 {formData.requestFeeWaiver && (
-                  <p>
-                    I am requesting a waiver of any applicable fees. {formData.feeWaiverJustification}
-                  </p>
+                  <div>
+                    <p><strong>Fee Waiver Request:</strong></p>
+                    <p className="text-muted-foreground italic">{"{{fee_waiver_justification}}"}</p>
+                  </div>
                 )}
 
                 <p>
