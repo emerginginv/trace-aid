@@ -100,13 +100,76 @@ The system validates:
 1. [Canonical Section Order](#canonical-section-order-immutable)
 2. [Header Rules](#header-rules-mutual-exclusivity)
 3. [Date Rules](#date-rules-single-authoritative-date)
-4. [Vertical Rhythm](#vertical-rhythm-fixed-spacing-rules)
-5. [Complete HTML Skeleton](#complete-html-skeleton)
-6. [Section Reference](#section-reference)
-7. [CSS Classes](#css-classes)
-8. [Placeholder Variables](#placeholder-variables)
-9. [Pagination Behavior](#pagination-behavior)
-10. [Usage Examples](#usage-examples)
+4. [Typography Rules](#typography-rules-professional-correspondence)
+5. [Vertical Rhythm](#vertical-rhythm-fixed-spacing-rules)
+6. [Complete HTML Skeleton](#complete-html-skeleton)
+7. [Section Reference](#section-reference)
+8. [CSS Classes](#css-classes)
+9. [Placeholder Variables](#placeholder-variables)
+10. [Pagination Behavior](#pagination-behavior)
+11. [Usage Examples](#usage-examples)
+
+---
+
+## Typography Rules (Professional Correspondence)
+
+Professional business letters must follow strict typography standards to match traditional correspondence.
+
+### Alignment Rules
+
+| Element | Alignment | Notes |
+|---------|-----------|-------|
+| **Body text** | Left-aligned | Ragged right edge |
+| **Paragraphs** | Left-aligned | No indentation |
+| **Subject line** | Left-aligned | Bold |
+| **Letterhead** | Center (exception) | Logo/org name only |
+| **Footer** | Center (optional) | Confidentiality notice |
+
+### Prohibited Styles
+
+| Style | Reason |
+|-------|--------|
+| `text-align: justify` | Creates uneven spacing, looks unprofessional |
+| `text-align: center` (in body) | Not appropriate for correspondence |
+| Decorative fonts | Reduces readability and professionalism |
+| Multiple font families | Creates visual inconsistency |
+
+### Font Rules
+
+| Rule | Value |
+|------|-------|
+| Font family | Times New Roman, Times, Georgia, serif |
+| Font size | 12pt |
+| Line height | 1.5 |
+| Color | Black (#000) |
+
+### Subject Line (Reference Line)
+
+The subject line (RE: line) must be:
+- **Bold** (`font-weight: bold`)
+- **Left-aligned** (`text-align: left`)
+- Positioned after recipient block, before salutation
+
+```css
+.letter-reference,
+.reference-line {
+  font-weight: bold;
+  text-align: left;
+  margin-bottom: 12pt;
+}
+```
+
+### CSS Enforcement
+
+The unified styles explicitly prohibit justification:
+
+```css
+.letter-body,
+.letter-body * {
+  text-align: left !important;
+  text-justify: none !important;
+}
+```
 
 ---
 

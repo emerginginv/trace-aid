@@ -152,6 +152,40 @@ export function getUnifiedLetterStyles(
       --letter-base-size: 12pt;
     }
 
+    /* ═══════════════════════════════════════════════════════════════════════════
+       PROFESSIONAL LETTER TYPOGRAPHY - NON-NEGOTIABLE RULES
+       ═══════════════════════════════════════════════════════════════════════════
+       - Body text: Left-aligned ONLY (ragged right)
+       - NO text-align: justify (creates uneven spacing)
+       - NO center-aligned body content  
+       - Single font family per letter
+       - Subject line: Bold, left-aligned
+       - No decorative fonts
+       ═══════════════════════════════════════════════════════════════════════════ */
+
+    /* Global typography enforcement - body content is ALWAYS left-aligned */
+    .letter-document,
+    .letter-document *:not(.letter-letterhead):not(.letter-letterhead *):not(.letter-footer):not(.running-header):not(.running-footer) {
+      text-align: left;
+    }
+
+    /* Explicit justification prohibition */
+    .letter-body,
+    .letter-body *,
+    .letter-content,
+    .letter-content * {
+      text-align: left !important;
+      text-justify: none !important;
+    }
+
+    /* Subject line / Reference line: Bold, left-aligned */
+    .letter-reference,
+    .reference-line,
+    .letter-subject {
+      font-weight: bold;
+      text-align: left !important;
+    }
+
     /* === PRINT-CSS PAGE SETUP (CONTROLS ALL PAGINATION) === */
     @page {
       size: ${spec.width} ${spec.height};

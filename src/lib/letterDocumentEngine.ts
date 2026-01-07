@@ -164,6 +164,52 @@ export function validateLetterDate(html: string): LetterDateValidation {
  * Validate letter structure to prevent free-form layouts
  * Ensures letters follow proper professional structure
  */
+/**
+ * Validate letter typography follows professional correspondence standards
+ * 
+ * RULES:
+ * - Body text: Left-aligned only
+ * - No text-align: justify
+ * - No center-aligned body content
+ * - Single font family
+ */
+export function validateLetterTypography(html: string): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
+  const result = {
+    isValid: true,
+    errors: [] as string[],
+    warnings: [] as string[]
+  };
+  
+  // Check for justification (forbidden)
+  if (/text-align:\s*justify/i.test(html)) {
+    result.isValid = false;
+    result.errors.push('text-align: justify is not allowed. Use left-aligned text only.');
+  }
+  
+  // Check for center-aligned body content (forbidden in body)
+  const bodyMatch = html.match(/<div[^>]*class="[^"]*letter-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+  if (bodyMatch) {
+    const bodyContent = bodyMatch[1];
+    if (/text-align:\s*center/i.test(bodyContent)) {
+      result.isValid = false;
+      result.errors.push('Center-aligned text in body content is not allowed.');
+    }
+  }
+  
+  // Check for multiple font-family declarations (warning)
+  const fontMatches = html.match(/font-family:\s*[^;]+/gi) || [];
+  const uniqueFonts = new Set(fontMatches.map(f => f.toLowerCase().replace(/\s+/g, '')));
+  if (uniqueFonts.size > 2) { // Allow 2 (one for body, one for UI elements)
+    result.warnings.push(`Multiple font families detected (${uniqueFonts.size}). Professional letters should use one font family.`);
+  }
+  
+  return result;
+}
+
 export function validateLetterStructure(html: string): LetterStructureValidation {
   const result: LetterStructureValidation = {
     isValid: true,
@@ -206,6 +252,14 @@ export function validateLetterStructure(html: string): LetterStructureValidation
     result.errors.push(...dateValidation.errors);
   }
   result.warnings.push(...dateValidation.warnings);
+  
+  // Validate typography rules
+  const typographyValidation = validateLetterTypography(html);
+  if (!typographyValidation.isValid) {
+    result.isValid = false;
+    result.errors.push(...typographyValidation.errors);
+  }
+  result.warnings.push(...typographyValidation.warnings);
   
   // Check for proper structure indicators (salutation and closing)
   const hasSalutation = /\b(?:Dear|To Whom|Attention|Re:)\b/i.test(textContent);
