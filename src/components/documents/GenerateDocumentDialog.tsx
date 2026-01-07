@@ -36,6 +36,11 @@ import { buildConditionalContextFromCase } from "@/lib/letterTemplateRenderer";
 import { CaseVariables } from "@/lib/caseVariables";
 import { getOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
 import { PaginatedDocumentViewer } from "./PaginatedDocumentViewer";
+import { 
+  validateBeforeCaseGeneration,
+  type PreGenerationCaseValidation 
+} from "@/lib/letterDocumentEngine";
+import { ValidationStatusBanner } from "./ValidationStatusBanner";
 
 interface GenerateDocumentDialogProps {
   open: boolean;
@@ -61,6 +66,7 @@ export function GenerateDocumentDialog({
   const [preview, setPreview] = useState<string | null>(null);
   const [orgProfile, setOrgProfile] = useState<OrganizationProfile | null>(null);
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [validation, setValidation] = useState<PreGenerationCaseValidation | null>(null);
 
   useEffect(() => {
     if (open && organization?.id) {
@@ -93,6 +99,7 @@ export function GenerateDocumentDialog({
       setTitle(baseTitle);
     }
     setPreview(null);
+    setValidation(null);
   };
 
   const handlePreview = () => {
@@ -102,12 +109,31 @@ export function GenerateDocumentDialog({
     const conditionalContext = buildConditionalContextFromCase(caseData);
     const variables = buildDocumentVariables(caseData, orgProfile);
     const rendered = renderDocument(selectedTemplate.body, variables, conditionalContext);
+    
+    // Run validation
+    const validationResult = validateBeforeCaseGeneration(
+      selectedTemplate.body,
+      rendered,
+      caseData
+    );
+    setValidation(validationResult);
     setPreview(rendered);
   };
 
   const handleGenerate = async () => {
     if (!selectedTemplate || !organization?.id || !title.trim()) {
       toast.error("Please select a template and enter a title");
+      return;
+    }
+    
+    // Run validation if not already done
+    if (!validation) {
+      handlePreview();
+      return;
+    }
+    
+    if (!validation.canProceed) {
+      toast.error("Please fix validation errors before generating");
       return;
     }
 
@@ -226,6 +252,11 @@ export function GenerateDocumentDialog({
                       </p>
                     </div>
 
+                    {/* Validation Status */}
+                    {validation && (
+                      <ValidationStatusBanner validation={validation} />
+                    )}
+
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>Preview</Label>
@@ -275,7 +306,7 @@ export function GenerateDocumentDialog({
             </Button>
             <Button
               onClick={handleGenerate}
-              disabled={!selectedTemplateId || !title.trim() || generating}
+              disabled={!selectedTemplateId || !title.trim() || generating || (validation && !validation.canProceed)}
             >
               {generating ? "Generating..." : "Generate Document"}
             </Button>

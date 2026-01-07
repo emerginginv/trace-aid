@@ -33,6 +33,7 @@ import {
   LETTER_FONT_STACK 
 } from "./paginatedLetterStyles";
 import { CANONICAL_SECTION_ORDER, SECTION_METADATA } from "./letterTemplates";
+import type { CaseVariables } from "./caseVariables";
 
 export interface PageSettings {
   size: PageSize;
@@ -341,6 +342,230 @@ export interface PreGenerationValidation {
   canProceed: boolean;
   errors: string[];
   warnings: string[];
+}
+
+/**
+ * Extended pre-generation validation for case letters
+ */
+export interface PreGenerationCaseValidation extends PreGenerationValidation {
+  caseFieldsValid: boolean;
+  templatePure: boolean;
+  conditionalsResolved: boolean;
+  missingCaseFields: string[];
+}
+
+/**
+ * Validation result for case-level required fields
+ */
+export interface CaseFieldsValidation {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  missingFields: string[];
+}
+
+/**
+ * Validate case-level fields are filled based on case settings
+ * 
+ * RULES:
+ * - If fee_waiver enabled, fee_waiver_justification should be filled
+ * - If expedited enabled, expedited_justification should be filled
+ * - purpose_of_request is optional but recommended
+ */
+export function validateCaseFields(caseData: CaseVariables): CaseFieldsValidation {
+  const result: CaseFieldsValidation = {
+    isValid: true,
+    errors: [],
+    warnings: [],
+    missingFields: []
+  };
+  
+  // Fee waiver enabled but no justification
+  if (caseData.feeWaiver && !caseData.feeWaiverJustification?.trim()) {
+    result.isValid = false;
+    result.errors.push('Fee waiver is enabled but justification is missing. Add justification in Case Settings.');
+    result.missingFields.push('fee_waiver_justification');
+  }
+  
+  // Expedited enabled but no justification
+  if (caseData.expedited && !caseData.expeditedJustification?.trim()) {
+    result.isValid = false;
+    result.errors.push('Expedited processing is enabled but justification is missing. Add justification in Case Settings.');
+    result.missingFields.push('expedited_justification');
+  }
+  
+  // Purpose of request (warning only)
+  if (!caseData.purposeOfRequest?.trim()) {
+    result.warnings.push('Purpose of request is empty. Consider adding a purpose statement for clarity.');
+  }
+  
+  return result;
+}
+
+/**
+ * Validate template doesn't contain case-specific data
+ * 
+ * Templates should only contain:
+ * - Placeholders like {{case_number}}
+ * - Conditionals like [IF fee_waiver_enabled]
+ * - Static text that applies to ALL cases
+ * 
+ * Templates MUST NOT contain:
+ * - Actual case numbers (e.g., "CASE-2024-001")
+ * - Actual dates in the body (e.g., "January 7, 2026")
+ * - Actual names in place of placeholders
+ */
+export interface TemplatePurityValidation {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  suspiciousPatterns: string[];
+}
+
+export function validateTemplatePurity(templateHtml: string): TemplatePurityValidation {
+  const result: TemplatePurityValidation = {
+    isValid: true,
+    errors: [],
+    warnings: [],
+    suspiciousPatterns: []
+  };
+  
+  // Check for case number patterns (likely hardcoded)
+  const caseNumberPattern = /\b(?:CASE|Case)-\d{4}-\d{3,6}\b/g;
+  const caseMatches = templateHtml.match(caseNumberPattern) || [];
+  if (caseMatches.length > 0) {
+    result.isValid = false;
+    result.errors.push(`Template contains hardcoded case number(s): ${caseMatches.join(', ')}. Use {{case_number}} placeholder instead.`);
+    result.suspiciousPatterns.push(...caseMatches);
+  }
+  
+  // Check for specific date patterns in body (not in date block)
+  // Exclude the letter-date block from this check
+  const bodyContent = templateHtml.replace(/<div[^>]*class="[^"]*letter-date[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
+  const datePattern = /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+(?:20\d{2}|19\d{2})\b/gi;
+  const dateMatches = bodyContent.match(datePattern) || [];
+  if (dateMatches.length > 0) {
+    result.warnings.push(`Template body contains specific date(s): ${dateMatches.slice(0, 2).join(', ')}. Ensure these are intentional (e.g., historical dates) and not intended as dynamic dates.`);
+    result.suspiciousPatterns.push(...dateMatches);
+  }
+  
+  // Check for email patterns that aren't placeholders
+  const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+  const emailMatches = bodyContent.match(emailPattern) || [];
+  // Filter out common example emails
+  const realEmails = emailMatches.filter(e => 
+    !e.includes('example.com') && 
+    !e.includes('placeholder') && 
+    !e.includes('{{')
+  );
+  if (realEmails.length > 0) {
+    result.warnings.push(`Template contains email address(es): ${realEmails.slice(0, 2).join(', ')}. Use {{company_email}} or similar placeholders if these should be dynamic.`);
+  }
+  
+  return result;
+}
+
+/**
+ * Validate all conditional blocks are resolved
+ * 
+ * After resolveConditionals() runs, there should be:
+ * - No remaining [IF ...] markers
+ * - No remaining [/IF] markers
+ * - No nested conditionals left unresolved
+ */
+export interface ConditionalResolutionValidation {
+  isValid: boolean;
+  errors: string[];
+  unresolvedConditions: string[];
+}
+
+export function validateConditionalResolution(html: string): ConditionalResolutionValidation {
+  const result: ConditionalResolutionValidation = {
+    isValid: true,
+    errors: [],
+    unresolvedConditions: []
+  };
+  
+  // Check for remaining [IF ...] markers
+  const ifPattern = /\[IF\s+(\w+)\]/g;
+  let match;
+  while ((match = ifPattern.exec(html)) !== null) {
+    result.isValid = false;
+    result.unresolvedConditions.push(match[1]);
+  }
+  
+  // Check for orphaned [/IF] markers
+  const endIfPattern = /\[\/IF\]/g;
+  const endIfMatches = html.match(endIfPattern) || [];
+  
+  if (result.unresolvedConditions.length > 0) {
+    result.errors.push(`Unresolved conditional blocks: [IF ${result.unresolvedConditions.join('], [IF ')}]. These conditions were not evaluated.`);
+  }
+  
+  if (endIfMatches.length > 0 && result.unresolvedConditions.length === 0) {
+    result.isValid = false;
+    result.errors.push('Orphaned [/IF] marker(s) found without matching [IF]. Check template structure.');
+  }
+  
+  return result;
+}
+
+/**
+ * COMPREHENSIVE PRE-GENERATION VALIDATION FOR CASE LETTERS
+ * 
+ * Run BEFORE generating a case letter.
+ * Validates:
+ * 1. Required case-level fields are filled
+ * 2. Template is "pure" (no hardcoded case data)
+ * 3. Conditionals resolve correctly
+ */
+export function validateBeforeCaseGeneration(
+  templateHtml: string,
+  renderedHtml: string,
+  caseData: CaseVariables
+): PreGenerationCaseValidation {
+  const result: PreGenerationCaseValidation = {
+    isValid: true,
+    canProceed: true,
+    errors: [],
+    warnings: [],
+    caseFieldsValid: true,
+    templatePure: true,
+    conditionalsResolved: true,
+    missingCaseFields: []
+  };
+  
+  // 1. Validate case fields
+  const caseFieldsValidation = validateCaseFields(caseData);
+  if (!caseFieldsValidation.isValid) {
+    result.caseFieldsValid = false;
+    result.isValid = false;
+    result.canProceed = false; // BLOCKING
+    result.errors.push(...caseFieldsValidation.errors);
+    result.missingCaseFields.push(...caseFieldsValidation.missingFields);
+  }
+  result.warnings.push(...caseFieldsValidation.warnings);
+  
+  // 2. Validate template purity (on original template)
+  const purityValidation = validateTemplatePurity(templateHtml);
+  if (!purityValidation.isValid) {
+    result.templatePure = false;
+    result.isValid = false;
+    result.canProceed = false; // BLOCKING
+    result.errors.push(...purityValidation.errors);
+  }
+  result.warnings.push(...purityValidation.warnings);
+  
+  // 3. Validate conditionals resolved (on rendered HTML)
+  const conditionalValidation = validateConditionalResolution(renderedHtml);
+  if (!conditionalValidation.isValid) {
+    result.conditionalsResolved = false;
+    result.isValid = false;
+    result.canProceed = false; // BLOCKING
+    result.errors.push(...conditionalValidation.errors);
+  }
+  
+  return result;
 }
 
 /**
