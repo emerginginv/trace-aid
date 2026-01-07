@@ -37,7 +37,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
@@ -91,6 +91,7 @@ interface Contact {
   id: string;
   first_name: string;
   last_name: string;
+  account_id: string | null;
 }
 
 export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFormProps) {
@@ -122,6 +123,26 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   });
 
   const usePrimarySubjectAsTitle = form.watch("use_primary_subject_as_title");
+  const selectedAccountId = form.watch("account_id");
+
+  // Filter contacts based on selected account
+  const filteredContacts = useMemo(() => {
+    if (!selectedAccountId) {
+      return [];
+    }
+    return contacts.filter(contact => contact.account_id === selectedAccountId);
+  }, [contacts, selectedAccountId]);
+
+  // Clear contact selection when account changes and contact is no longer valid
+  useEffect(() => {
+    const currentContactId = form.getValues("contact_id");
+    if (currentContactId) {
+      const contactStillValid = filteredContacts.some(c => c.id === currentContactId);
+      if (!contactStillValid) {
+        form.setValue("contact_id", "");
+      }
+    }
+  }, [selectedAccountId, filteredContacts, form]);
 
   useEffect(() => {
     if (open && organization?.id) {
@@ -298,7 +319,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           .order("name"),
         supabase
           .from("contacts")
-          .select("id, first_name, last_name")
+          .select("id, first_name, last_name, account_id")
           .eq("organization_id", organization.id)
           .order("first_name"),
       ]);
@@ -647,20 +668,35 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Related Contact</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      disabled={!selectedAccountId}
+                    >
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select contact (optional)" />
+                        <SelectTrigger className={!selectedAccountId ? "opacity-50" : ""}>
+                          <SelectValue placeholder={
+                            !selectedAccountId 
+                              ? "Select an account first" 
+                              : filteredContacts.length === 0 
+                                ? "No contacts for this account" 
+                                : "Select contact (optional)"
+                          } />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {contacts.map((contact) => (
+                        {filteredContacts.map((contact) => (
                           <SelectItem key={contact.id} value={contact.id}>
                             {contact.first_name} {contact.last_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {!selectedAccountId && (
+                      <p className="text-xs text-muted-foreground">
+                        Select an account to see available contacts
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
