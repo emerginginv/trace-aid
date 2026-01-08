@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail, FileText, Briefcase, Calendar, Users, FileArchive, ClipboardList, DollarSign, Clock, BarChart3, FilePenLine } from "lucide-react";
+import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail, FileText, Briefcase, Calendar, Users, FileArchive, ClipboardList, DollarSign, Clock, FilePenLine } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CaseDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -664,12 +664,6 @@ const CaseDetail = () => {
                 <Mail className="h-4 w-4 mr-2" />
                 Send Email
               </Button>
-              {hasPermission('view_reports') && (
-                <Button variant="outline" className="h-9 px-3" onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Report
-                </Button>
-              )}
               {hasPermission('edit_cases') && (
                 <Button variant="outline" className="h-9 px-3" onClick={() => setEditFormOpen(true)} disabled={isClosed}>
                   <Edit className="h-4 w-4 mr-2" />
@@ -698,12 +692,6 @@ const CaseDetail = () => {
                 <Mail className="h-4 w-4 mr-2" />
                 Send Email
               </DropdownMenuItem>
-              {hasPermission('view_reports') && (
-                <DropdownMenuItem onClick={() => setReportDialogOpen(true)} disabled={isClosed}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate Report
-                </DropdownMenuItem>
-              )}
               {hasPermission('edit_cases') && (
                 <DropdownMenuItem onClick={() => setEditFormOpen(true)} disabled={isClosed}>
                   <Edit className="h-4 w-4 mr-2" />
@@ -766,7 +754,7 @@ const CaseDetail = () => {
               Attachments
             </TabsTrigger>
             {!isVendor && <TabsTrigger value="reports" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <BarChart3 className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              <FilePenLine className="h-4 w-4 mr-1.5 hidden sm:inline" />
               Reports
             </TabsTrigger>}
           </TabsList>
@@ -882,7 +870,11 @@ const CaseDetail = () => {
 
         {!isVendor && hasPermission('view_reports') && (
           <TabsContent value="reports" className="mt-4 sm:mt-6">
-            <CaseReports caseId={id!} />
+            <CaseReports 
+              caseId={id!} 
+              isClosedCase={isClosed}
+              onGenerateReport={() => setReportDialogOpen(true)}
+            />
           </TabsContent>
         )}
       </Tabs>
