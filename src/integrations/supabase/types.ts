@@ -1226,6 +1226,72 @@ export type Database = {
           },
         ]
       }
+      docx_templates: {
+        Row: {
+          case_types: string[] | null
+          created_at: string
+          description: string | null
+          detected_variables: string[] | null
+          file_path: string
+          filename_template: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          role_restriction: string | null
+          updated_at: string
+          user_id: string
+          uses_merge_fields: boolean | null
+        }
+        Insert: {
+          case_types?: string[] | null
+          created_at?: string
+          description?: string | null
+          detected_variables?: string[] | null
+          file_path: string
+          filename_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          role_restriction?: string | null
+          updated_at?: string
+          user_id: string
+          uses_merge_fields?: boolean | null
+        }
+        Update: {
+          case_types?: string[] | null
+          created_at?: string
+          description?: string | null
+          detected_variables?: string[] | null
+          file_path?: string
+          filename_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          role_restriction?: string | null
+          updated_at?: string
+          user_id?: string
+          uses_merge_fields?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "docx_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "docx_templates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_change_requests: {
         Row: {
           completed_at: string | null
@@ -1258,6 +1324,78 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      generated_reports: {
+        Row: {
+          case_id: string
+          generated_at: string
+          id: string
+          organization_id: string
+          output_file_path: string
+          template_id: string | null
+          title: string
+          user_id: string
+          variables_used: Json | null
+        }
+        Insert: {
+          case_id: string
+          generated_at?: string
+          id?: string
+          organization_id: string
+          output_file_path: string
+          template_id?: string | null
+          title: string
+          user_id: string
+          variables_used?: Json | null
+        }
+        Update: {
+          case_id?: string
+          generated_at?: string
+          id?: string
+          organization_id?: string
+          output_file_path?: string
+          template_id?: string | null
+          title?: string
+          user_id?: string
+          variables_used?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "docx_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       import_batches: {
         Row: {
@@ -2125,136 +2263,6 @@ export type Database = {
         }
         Relationships: []
       }
-      report_instances: {
-        Row: {
-          case_id: string
-          case_variables_snapshot: Json
-          created_at: string | null
-          export_format: string | null
-          exported_at: string | null
-          generated_at: string
-          id: string
-          input_hash: string
-          org_profile_snapshot: Json
-          organization_id: string
-          rendered_html: string
-          rendered_sections: Json
-          template_id: string
-          template_snapshot: Json
-          title: string
-          user_id: string
-        }
-        Insert: {
-          case_id: string
-          case_variables_snapshot: Json
-          created_at?: string | null
-          export_format?: string | null
-          exported_at?: string | null
-          generated_at?: string
-          id?: string
-          input_hash: string
-          org_profile_snapshot: Json
-          organization_id: string
-          rendered_html: string
-          rendered_sections: Json
-          template_id: string
-          template_snapshot: Json
-          title: string
-          user_id: string
-        }
-        Update: {
-          case_id?: string
-          case_variables_snapshot?: Json
-          created_at?: string | null
-          export_format?: string | null
-          exported_at?: string | null
-          generated_at?: string
-          id?: string
-          input_hash?: string
-          org_profile_snapshot?: Json
-          organization_id?: string
-          rendered_html?: string
-          rendered_sections?: Json
-          template_id?: string
-          template_snapshot?: Json
-          title?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "report_instances_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "cases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "report_instances_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "cases_with_budget_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "report_instances_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "report_instances_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "report_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      report_templates: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          is_system_template: boolean | null
-          name: string
-          organization_id: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_system_template?: boolean | null
-          name: string
-          organization_id?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_system_template?: boolean | null
-          name?: string
-          organization_id?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "report_templates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       retainer_funds: {
         Row: {
           amount: number
@@ -2480,63 +2488,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "template_header_footer_config_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: true
-            referencedRelation: "report_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      template_sections: {
-        Row: {
-          collection_config: Json | null
-          content: string | null
-          created_at: string | null
-          display_order: number
-          id: string
-          is_visible: boolean | null
-          section_type: string
-          template_id: string
-          title: string
-          updated_at: string | null
-          variable_config: Json | null
-        }
-        Insert: {
-          collection_config?: Json | null
-          content?: string | null
-          created_at?: string | null
-          display_order?: number
-          id?: string
-          is_visible?: boolean | null
-          section_type: string
-          template_id: string
-          title: string
-          updated_at?: string | null
-          variable_config?: Json | null
-        }
-        Update: {
-          collection_config?: Json | null
-          content?: string | null
-          created_at?: string | null
-          display_order?: number
-          id?: string
-          is_visible?: boolean | null
-          section_type?: string
-          template_id?: string
-          title?: string
-          updated_at?: string | null
-          variable_config?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "template_sections_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "report_templates"
             referencedColumns: ["id"]
           },
         ]

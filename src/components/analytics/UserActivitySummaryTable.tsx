@@ -4,14 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNow } from "date-fns";
 import { Users } from "lucide-react";
 
@@ -40,18 +33,14 @@ export function UserActivitySummaryTable({ timeRange }: UserActivitySummaryTable
     queryFn: async () => {
       if (!organization?.id) return [];
 
-      // Get all org members
-      const { data: members, error: membersError } = await supabase
+      const { data: members } = await supabase
         .from("organization_members")
         .select("user_id")
         .eq("organization_id", organization.id);
 
-      if (membersError) throw membersError;
-
       const userIds = members?.map((m) => m.user_id) || [];
       if (!userIds.length) return [];
 
-      // Fetch profiles
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name, email, avatar_url")
@@ -59,7 +48,6 @@ export function UserActivitySummaryTable({ timeRange }: UserActivitySummaryTable
 
       const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
-      // Fetch activity counts in parallel
       const [updates, activities, finances, reports, shares] = await Promise.all([
         supabase
           .from("case_updates")
@@ -82,7 +70,7 @@ export function UserActivitySummaryTable({ timeRange }: UserActivitySummaryTable
           .gte("created_at", timeRange.startDate.toISOString())
           .lte("created_at", timeRange.endDate.toISOString()),
         supabase
-          .from("report_instances")
+          .from("generated_reports")
           .select("user_id, generated_at")
           .eq("organization_id", organization.id)
           .gte("generated_at", timeRange.startDate.toISOString())
@@ -95,10 +83,8 @@ export function UserActivitySummaryTable({ timeRange }: UserActivitySummaryTable
           .lte("created_at", timeRange.endDate.toISOString()),
       ]);
 
-      // Aggregate by user
       const userActivity = new Map<string, UserActivityData>();
 
-      // Initialize all users
       userIds.forEach((userId) => {
         const profile = profileMap.get(userId);
         userActivity.set(userId, {
@@ -115,67 +101,51 @@ export function UserActivitySummaryTable({ timeRange }: UserActivitySummaryTable
         });
       });
 
-      // Count updates
       updates.data?.forEach((item) => {
         const user = userActivity.get(item.user_id);
         if (user) {
           user.updates++;
           const date = new Date(item.created_at!);
-          if (!user.lastActive || date > user.lastActive) {
-            user.lastActive = date;
-          }
+          if (!user.lastActive || date > user.lastActive) user.lastActive = date;
         }
       });
 
-      // Count events
       activities.data?.forEach((item) => {
         const user = userActivity.get(item.user_id);
         if (user) {
           user.events++;
           const date = new Date(item.created_at);
-          if (!user.lastActive || date > user.lastActive) {
-            user.lastActive = date;
-          }
+          if (!user.lastActive || date > user.lastActive) user.lastActive = date;
         }
       });
 
-      // Count time entries
       finances.data?.forEach((item) => {
         const user = userActivity.get(item.user_id);
         if (user) {
           user.timeEntries++;
           const date = new Date(item.created_at);
-          if (!user.lastActive || date > user.lastActive) {
-            user.lastActive = date;
-          }
+          if (!user.lastActive || date > user.lastActive) user.lastActive = date;
         }
       });
 
-      // Count reports
       reports.data?.forEach((item) => {
         const user = userActivity.get(item.user_id);
         if (user) {
           user.reports++;
           const date = new Date(item.generated_at);
-          if (!user.lastActive || date > user.lastActive) {
-            user.lastActive = date;
-          }
+          if (!user.lastActive || date > user.lastActive) user.lastActive = date;
         }
       });
 
-      // Count shares
       shares.data?.forEach((item) => {
         const user = userActivity.get(item.created_by_user_id);
         if (user) {
           user.shares++;
           const date = new Date(item.created_at);
-          if (!user.lastActive || date > user.lastActive) {
-            user.lastActive = date;
-          }
+          if (!user.lastActive || date > user.lastActive) user.lastActive = date;
         }
       });
 
-      // Convert to array and sort by last active
       return Array.from(userActivity.values())
         .filter((u) => u.updates > 0 || u.events > 0 || u.timeEntries > 0 || u.reports > 0 || u.shares > 0)
         .sort((a, b) => {

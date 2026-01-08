@@ -7,10 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { FileText, ExternalLink, Check, Clock } from "lucide-react";
+import { FileText, ExternalLink, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
 
 interface TimeRangeProps {
   startDate: Date;
@@ -24,26 +22,21 @@ interface ReportDetailsTableProps {
 export function ReportDetailsTable({ timeRange }: ReportDetailsTableProps) {
   const { organization } = useOrganization();
   const navigate = useNavigate();
-  const [templateFilter, setTemplateFilter] = useState<string>("all");
-  const [exportFilter, setExportFilter] = useState<string>("all");
 
   const { data: reports, isLoading } = useQuery({
     queryKey: ["report-details", organization?.id, timeRange.startDate, timeRange.endDate],
     queryFn: async () => {
       if (!organization?.id) return [];
 
-      // Fetch reports with cases
       const { data, error } = await supabase
-        .from("report_instances")
+        .from("generated_reports")
         .select(`
           id,
           title,
           generated_at,
-          exported_at,
-          export_format,
-          template_snapshot,
           case_id,
           user_id,
+          template_id,
           cases!inner(case_number, title)
         `)
         .eq("organization_id", organization.id)
@@ -54,7 +47,6 @@ export function ReportDetailsTable({ timeRange }: ReportDetailsTableProps) {
 
       if (error) throw error;
 
-      // Get unique user IDs and fetch profiles separately
       const userIds = [...new Set(data?.map(r => r.user_id) || [])];
       const { data: profiles } = await supabase
         .from("profiles")
@@ -64,36 +56,21 @@ export function ReportDetailsTable({ timeRange }: ReportDetailsTableProps) {
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       return data?.map(report => {
-        const snapshot = report.template_snapshot as { name?: string } | null;
         const caseData = report.cases as { case_number: string; title: string } | null;
         const profile = profileMap.get(report.user_id);
         
         return {
           id: report.id,
           title: report.title,
-          templateName: snapshot?.name || "Unknown",
           caseId: report.case_id,
           caseNumber: caseData?.case_number || "Unknown",
           caseTitle: caseData?.title || "Unknown",
           generatedBy: profile?.full_name || profile?.email || "Unknown",
           generatedAt: report.generated_at,
-          exported: !!report.exported_at,
-          exportFormat: report.export_format,
         };
       }) || [];
     },
     enabled: !!organization?.id,
-  });
-
-  // Get unique template names for filter
-  const templateNames = [...new Set(reports?.map(r => r.templateName) || [])];
-
-  // Apply filters
-  const filteredReports = reports?.filter(report => {
-    if (templateFilter !== "all" && report.templateName !== templateFilter) return false;
-    if (exportFilter === "exported" && !report.exported) return false;
-    if (exportFilter === "not_exported" && report.exported) return false;
-    return true;
   });
 
   if (isLoading) {
@@ -116,43 +93,16 @@ export function ReportDetailsTable({ timeRange }: ReportDetailsTableProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Report Generation Details
-            </CardTitle>
-            <CardDescription>All reports generated in the selected time period</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Select value={templateFilter} onValueChange={setTemplateFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Templates" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Templates</SelectItem>
-                {templateNames.map(name => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={exportFilter} onValueChange={setExportFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Export Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="exported">Exported</SelectItem>
-                <SelectItem value="not_exported">Not Exported</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Report Generation Details
+        </CardTitle>
+        <CardDescription>All reports generated in the selected time period</CardDescription>
       </CardHeader>
       <CardContent>
-        {!filteredReports || filteredReports.length === 0 ? (
+        {!reports || reports.length === 0 ? (
           <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-            No reports match the current filters
+            No reports generated in this time period
           </div>
         ) : (
           <div className="rounded-md border">
@@ -160,24 +110,17 @@ export function ReportDetailsTable({ timeRange }: ReportDetailsTableProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Report Title</TableHead>
-                  <TableHead>Template</TableHead>
                   <TableHead>Case</TableHead>
                   <TableHead>Generated By</TableHead>
                   <TableHead>Generated At</TableHead>
-                  <TableHead>Export Status</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredReports.map(report => (
+                {reports.map(report => (
                   <TableRow key={report.id}>
                     <TableCell className="font-medium max-w-[200px] truncate" title={report.title}>
                       {report.title}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-normal">
-                        {report.templateName}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       <button
@@ -192,19 +135,6 @@ export function ReportDetailsTable({ timeRange }: ReportDetailsTableProps) {
                       {format(parseISO(report.generatedAt), "MMM d, yyyy h:mm a")}
                     </TableCell>
                     <TableCell>
-                      {report.exported ? (
-                        <Badge variant="default" className="gap-1">
-                          <Check className="h-3 w-3" />
-                          {report.exportFormat?.toUpperCase() || "Exported"}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="gap-1">
-                          <Clock className="h-3 w-3" />
-                          Pending
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -217,11 +147,6 @@ export function ReportDetailsTable({ timeRange }: ReportDetailsTableProps) {
                 ))}
               </TableBody>
             </Table>
-          </div>
-        )}
-        {filteredReports && filteredReports.length > 0 && (
-          <div className="mt-4 text-sm text-muted-foreground">
-            Showing {filteredReports.length} of {reports?.length || 0} reports
           </div>
         )}
       </CardContent>
