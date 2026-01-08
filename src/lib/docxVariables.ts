@@ -54,6 +54,8 @@ export const TEMPLATE_VARIABLES: VariableDefinition[] = [
   { variable: "{{Subject.email}}", label: "Email", category: "Subject" },
   { variable: "{{Subject.cell_phone}}", label: "Cell Phone", category: "Subject" },
   { variable: "{{Subject.description}}", label: "Description", category: "Subject" },
+  { variable: "{{Subject.photo}}", label: "Profile Photo", category: "Subject", description: "Embeds the subject's profile image" },
+  { variable: "{{Subject.photo_url}}", label: "Profile Photo URL", category: "Subject", description: "URL to the subject's profile image" },
 
   // Manager Variables
   { variable: "{{Manager.name}}", label: "Full Name", category: "Primary Manager" },
@@ -87,6 +89,14 @@ export const TEMPLATE_VARIABLES: VariableDefinition[] = [
   { variable: "{{Updates.list}}", label: "Case Updates (plain text)", category: "Updates" },
   { variable: "{{Updates.list_with_author}}", label: "Case Updates (with author)", category: "Updates" },
   { variable: "{{Updates.formatted_list}}", label: "Case Updates (formatted)", category: "Updates" },
+
+  // File Attachments
+  { variable: "{{Files.list}}", label: "File List (plain text)", category: "Files", description: "List of all attached file names" },
+  { variable: "{{Files.formatted_list}}", label: "File List (formatted)", category: "Files", description: "File names with sizes and dates" },
+  { variable: "{{Files.count}}", label: "File Count", category: "Files", description: "Total number of attached files" },
+  { variable: "{{Files.total_size}}", label: "Total File Size", category: "Files", description: "Combined size of all attachments" },
+  { variable: "{{Files.images_list}}", label: "Image Files List", category: "Files", description: "List of image file names only" },
+  { variable: "{{Files.documents_list}}", label: "Document Files List", category: "Files", description: "List of document file names (PDF, DOC, etc.)" },
 ];
 
 // Get all variable categories
@@ -127,6 +137,15 @@ function formatDateStandard(dateStr: string | null): string {
   } catch {
     return dateStr;
   }
+}
+
+// Helper function for file size formatting
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }
 
 // Resolve all variables for a case
@@ -251,6 +270,15 @@ export async function resolveVariables(caseId: string, organizationId: string): 
       variables["Subject.email"] = (details.email as string) || "";
       variables["Subject.cell_phone"] = (details.phone as string) || "";
       variables["Subject.description"] = primarySubject.notes || "";
+      
+      // Subject photo - store URL for image embedding
+      if (primarySubject.profile_image_url) {
+        variables["Subject.photo"] = primarySubject.profile_image_url;
+        variables["Subject.photo_url"] = primarySubject.profile_image_url;
+      } else {
+        variables["Subject.photo"] = "";
+        variables["Subject.photo_url"] = "";
+      }
 
       variables["Case.primary_subject"] = primarySubject.name || "";
     }
@@ -330,6 +358,55 @@ export async function resolveVariables(caseId: string, organizationId: string): 
       variables["Updates.list"] = plainList;
       variables["Updates.list_with_author"] = listWithAuthor;
       variables["Updates.formatted_list"] = formattedList;
+    }
+
+    // Fetch file attachments
+    const { data: attachments } = await supabase
+      .from("case_attachments")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("created_at", { ascending: false });
+
+    if (attachments && attachments.length > 0) {
+      // Plain list of file names
+      const plainList = attachments.map(a => a.file_name).join("\n");
+      
+      // Formatted list with size and date
+      const formattedList = attachments.map(a => {
+        const date = formatDateStandard(a.created_at);
+        const size = formatFileSize(a.file_size);
+        return `${a.file_name} (${size}) - ${date}`;
+      }).join("\n");
+      
+      // Count
+      const count = attachments.length;
+      
+      // Total size
+      const totalSize = attachments.reduce((sum, a) => sum + (a.file_size || 0), 0);
+      
+      // Image files only
+      const imageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"];
+      const imageFiles = attachments.filter(a => imageTypes.includes(a.file_type?.toLowerCase() || ""));
+      const imagesList = imageFiles.map(a => a.file_name).join("\n");
+      
+      // Document files only
+      const documentTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"];
+      const documentFiles = attachments.filter(a => documentTypes.includes(a.file_type?.toLowerCase() || ""));
+      const documentsList = documentFiles.map(a => a.file_name).join("\n");
+      
+      variables["Files.list"] = plainList;
+      variables["Files.formatted_list"] = formattedList;
+      variables["Files.count"] = count.toString();
+      variables["Files.total_size"] = formatFileSize(totalSize);
+      variables["Files.images_list"] = imagesList;
+      variables["Files.documents_list"] = documentsList;
+    } else {
+      variables["Files.list"] = "";
+      variables["Files.formatted_list"] = "";
+      variables["Files.count"] = "0";
+      variables["Files.total_size"] = "0 B";
+      variables["Files.images_list"] = "";
+      variables["Files.documents_list"] = "";
     }
 
   } catch (error) {
