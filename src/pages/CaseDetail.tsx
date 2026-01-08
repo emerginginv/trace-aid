@@ -751,7 +751,7 @@ const CaseDetail = () => {
               Finances
             </TabsTrigger>}
             <TabsTrigger value="attachments" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <Paperclip className="h-4 w-4 mr-1.5 hidden sm:inline" />
+              <Paperclip className="h-4 w-4 mr-1.5" />
               Attachments
             </TabsTrigger>
             {!isVendor && <TabsTrigger value="reports" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
