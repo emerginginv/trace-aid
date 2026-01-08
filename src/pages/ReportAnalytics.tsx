@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { resolveTimeRange, type ResolvedTimeRange } from "@/lib/analytics/time-ranges";
+import { resolveTimeRange } from "@/lib/analytics/time-ranges";
 import type { TimeRangePreset } from "@/lib/analytics/types";
 import { ReportGenerationChart } from "@/components/analytics/ReportGenerationChart";
 import { ReportTypeUsageChart } from "@/components/analytics/ReportTypeUsageChart";
@@ -99,22 +99,22 @@ export default function ReportAnalytics() {
     };
   }, [timeRange]);
 
-  // Fetch current period metrics
+  // Fetch current period metrics from generated_reports table
   const { data: currentMetrics, isLoading: loadingCurrent } = useQuery({
     queryKey: ["report-metrics-current", organization?.id, timeRange.startDate, timeRange.endDate],
     queryFn: async () => {
       if (!organization?.id) return null;
 
-      // Fetch reports
+      // Fetch reports from generated_reports table
       const { data: reports, error } = await supabase
-        .from("report_instances")
+        .from("generated_reports")
         .select(`
           id,
-          template_snapshot,
+          title,
           case_id,
           user_id,
-          exported_at,
-          export_format
+          template_id,
+          generated_at
         `)
         .eq("organization_id", organization.id)
         .gte("generated_at", timeRange.startDate.toISOString())
@@ -131,16 +131,19 @@ export default function ReportAnalytics() {
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
+      // Get unique template IDs and fetch template names
+      const templateIds = [...new Set(reports?.map(r => r.template_id).filter(Boolean) || [])];
+      const { data: templates } = await supabase
+        .from("docx_templates")
+        .select("id, name")
+        .in("id", templateIds);
+
+      const templateMap = new Map(templates?.map(t => [t.id, t.name]) || []);
+
       // Calculate metrics
       const totalReports = reports?.length || 0;
-      const uniqueTemplates = new Set(
-        reports?.map(r => {
-          const snapshot = r.template_snapshot as { name?: string } | null;
-          return snapshot?.name;
-        }).filter(Boolean)
-      ).size;
+      const uniqueTemplates = new Set(reports?.map(r => r.template_id).filter(Boolean)).size;
       const uniqueCases = new Set(reports?.map(r => r.case_id)).size;
-      const exportedCount = reports?.filter(r => r.exported_at).length || 0;
 
       // Find most active generator
       const userCounts = new Map<string, { name: string; count: number }>();
@@ -162,23 +165,11 @@ export default function ReportAnalytics() {
         }
       });
 
-      // Export format breakdown
-      const formatCounts: Record<string, number> = {};
-      reports?.filter(r => r.exported_at).forEach(r => {
-        const format = r.export_format?.toUpperCase() || "PDF";
-        formatCounts[format] = (formatCounts[format] || 0) + 1;
-      });
-      const formatBreakdown = Object.entries(formatCounts)
-        .map(([format, count]) => `${format}: ${count}`)
-        .join(", ");
-
       return {
         totalReports,
         uniqueTemplates,
         uniqueCases,
-        exportedCount,
         topGenerator,
-        formatBreakdown: formatBreakdown || "None",
       };
     },
     enabled: !!organization?.id,
@@ -191,7 +182,7 @@ export default function ReportAnalytics() {
       if (!organization?.id) return null;
 
       const { count, error } = await supabase
-        .from("report_instances")
+        .from("generated_reports")
         .select("*", { count: "exact", head: true })
         .eq("organization_id", organization.id)
         .gte("generated_at", previousTimeRange.startDate.toISOString())
@@ -233,7 +224,7 @@ export default function ReportAnalytics() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SimpleKpiCard
           title="Reports Generated"
           value={currentMetrics?.totalReports || 0}
@@ -250,13 +241,6 @@ export default function ReportAnalytics() {
           loading={isLoading}
         />
         <SimpleKpiCard
-          title="Reports Exported"
-          value={currentMetrics?.exportedCount || 0}
-          icon={<Download className="h-4 w-4" />}
-          subtitle={currentMetrics?.formatBreakdown || "None"}
-          loading={isLoading}
-        />
-        <SimpleKpiCard
           title="Cases with Reports"
           value={currentMetrics?.uniqueCases || 0}
           icon={<Briefcase className="h-4 w-4" />}
@@ -268,15 +252,6 @@ export default function ReportAnalytics() {
           value={currentMetrics?.topGenerator?.name || "N/A"}
           icon={<User className="h-4 w-4" />}
           subtitle={currentMetrics?.topGenerator?.count ? `${currentMetrics.topGenerator.count} reports` : undefined}
-          loading={isLoading}
-        />
-        <SimpleKpiCard
-          title="Export Rate"
-          value={currentMetrics?.totalReports 
-            ? `${Math.round((currentMetrics.exportedCount / currentMetrics.totalReports) * 100)}%` 
-            : "0%"}
-          icon={<Download className="h-4 w-4" />}
-          subtitle="Of generated reports"
           loading={isLoading}
         />
       </div>
