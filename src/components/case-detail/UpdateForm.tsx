@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useNavigate } from "react-router-dom";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Paperclip } from "lucide-react";
+import { AttachmentPicker } from "./AttachmentPicker";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -33,6 +35,8 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updateTypes, setUpdateTypes] = useState<string[]>([]);
   const [caseTitle, setCaseTitle] = useState<string>("");
+  const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
+  const [existingLinkIds, setExistingLinkIds] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -49,7 +53,29 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     if (caseId && open) {
       fetchCaseTitle();
     }
-  }, [caseId, open]);
+    if (editingUpdate && open) {
+      fetchExistingLinks();
+    }
+    if (!open) {
+      setSelectedAttachmentIds([]);
+      setExistingLinkIds([]);
+    }
+  }, [caseId, open, editingUpdate]);
+
+  const fetchExistingLinks = async () => {
+    if (!editingUpdate) return;
+    try {
+      const { data, error } = await supabase
+        .from("update_attachment_links")
+        .select("attachment_id")
+        .eq("update_id", editingUpdate.id);
+
+      if (error) throw error;
+      setExistingLinkIds(data?.map((l) => l.attachment_id) || []);
+    } catch (error) {
+      console.error("Error fetching existing links:", error);
+    }
+  };
 
   const fetchCaseTitle = async () => {
     try {
@@ -164,6 +190,24 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
 
       if (error) throw error;
 
+      // Link selected attachments for new updates
+      if (!editingUpdate && newUpdate && selectedAttachmentIds.length > 0) {
+        const links = selectedAttachmentIds.map((attachmentId) => ({
+          update_id: newUpdate.id,
+          attachment_id: attachmentId,
+          organization_id: organizationId,
+          linked_by_user_id: user.id,
+        }));
+
+        const { error: linkError } = await supabase
+          .from("update_attachment_links")
+          .insert(links);
+
+        if (linkError) {
+          console.error("Error linking attachments:", linkError);
+        }
+      }
+
       // Send notification for new updates
       if (!editingUpdate && newUpdate) {
         await NotificationHelpers.caseUpdateAdded(
@@ -183,6 +227,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       });
 
       form.reset();
+      setSelectedAttachmentIds([]);
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -276,6 +321,25 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                 </FormItem>
               )}
             />
+
+            {/* Attachment linking section - only for new updates */}
+            {!editingUpdate && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  Link Case Attachments
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Link existing case attachments to this update (files are stored at case level only)
+                </p>
+                <AttachmentPicker
+                  caseId={caseId}
+                  selectedIds={selectedAttachmentIds}
+                  onSelectionChange={setSelectedAttachmentIds}
+                  excludeIds={[]}
+                />
+              </div>
+            )}
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

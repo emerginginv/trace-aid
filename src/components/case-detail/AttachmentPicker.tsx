@@ -1,0 +1,267 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Search, FileText, Image, FileVideo, File, X } from "lucide-react";
+
+interface CaseAttachment {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  created_at: string;
+}
+
+interface AttachmentPickerProps {
+  caseId: string;
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
+  excludeIds?: string[];
+}
+
+const getFileIcon = (fileType: string) => {
+  if (fileType.startsWith("image/")) return <Image className="h-4 w-4 text-blue-500" />;
+  if (fileType.startsWith("video/")) return <FileVideo className="h-4 w-4 text-purple-500" />;
+  if (fileType === "application/pdf") return <FileText className="h-4 w-4 text-red-500" />;
+  return <File className="h-4 w-4 text-muted-foreground" />;
+};
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+export const AttachmentPicker = ({
+  caseId,
+  selectedIds,
+  onSelectionChange,
+  excludeIds = [],
+}: AttachmentPickerProps) => {
+  const [attachments, setAttachments] = useState<CaseAttachment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    fetchAttachments();
+  }, [caseId]);
+
+  const fetchAttachments = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("case_attachments")
+        .select("id, file_name, file_type, file_size, created_at")
+        .eq("case_id", caseId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setAttachments(data || []);
+    } catch (error) {
+      console.error("Error fetching attachments:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const availableAttachments = attachments.filter(
+    (a) => !excludeIds.includes(a.id)
+  );
+
+  const filteredAttachments = availableAttachments.filter((a) =>
+    a.file_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const toggleSelection = (id: string) => {
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter((i) => i !== id));
+    } else {
+      onSelectionChange([...selectedIds, id]);
+    }
+  };
+
+  const removeSelection = (id: string) => {
+    onSelectionChange(selectedIds.filter((i) => i !== id));
+  };
+
+  const selectedAttachments = attachments.filter((a) =>
+    selectedIds.includes(a.id)
+  );
+
+  if (loading) {
+    return (
+      <div className="text-sm text-muted-foreground py-4 text-center">
+        Loading attachments...
+      </div>
+    );
+  }
+
+  if (availableAttachments.length === 0) {
+    return (
+      <div className="text-sm text-muted-foreground py-4 text-center border rounded-md bg-muted/30">
+        No case attachments available to link.
+        <br />
+        <span className="text-xs">Upload files in the Attachments tab first.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Selected attachments as chips */}
+      {selectedAttachments.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedAttachments.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 text-primary rounded-md text-sm"
+            >
+              {getFileIcon(a.file_type)}
+              <span className="truncate max-w-[150px]">{a.file_name}</span>
+              <button
+                type="button"
+                onClick={() => removeSelection(a.id)}
+                className="ml-1 hover:bg-primary/20 rounded p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Search and list */}
+      <div className="border rounded-md">
+        <div className="p-2 border-b">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search attachments..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8"
+            />
+          </div>
+        </div>
+        <ScrollArea className="h-[180px]">
+          {filteredAttachments.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              No attachments match your search
+            </div>
+          ) : (
+            <div className="p-1">
+              {filteredAttachments.map((attachment) => (
+                <label
+                  key={attachment.id}
+                  className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                >
+                  <Checkbox
+                    checked={selectedIds.includes(attachment.id)}
+                    onCheckedChange={() => toggleSelection(attachment.id)}
+                  />
+                  {getFileIcon(attachment.file_type)}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">{attachment.file_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(attachment.file_size)}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+    </div>
+  );
+};
+
+// Dialog version for use in expanded rows
+interface AttachmentPickerDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  caseId: string;
+  updateId: string;
+  organizationId: string;
+  existingLinkIds: string[];
+  onSuccess: () => void;
+}
+
+export const AttachmentPickerDialog = ({
+  open,
+  onOpenChange,
+  caseId,
+  updateId,
+  organizationId,
+  existingLinkIds,
+  onSuccess,
+}: AttachmentPickerDialogProps) => {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setSelectedIds([]);
+    }
+  }, [open]);
+
+  const handleSave = async () => {
+    if (selectedIds.length === 0) {
+      onOpenChange(false);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const links = selectedIds.map((attachmentId) => ({
+        update_id: updateId,
+        attachment_id: attachmentId,
+        organization_id: organizationId,
+        linked_by_user_id: user.id,
+      }));
+
+      const { error } = await supabase
+        .from("update_attachment_links")
+        .insert(links);
+
+      if (error) throw error;
+
+      onSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error linking attachments:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Link Case Attachments</DialogTitle>
+        </DialogHeader>
+        <AttachmentPicker
+          caseId={caseId}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          excludeIds={existingLinkIds}
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving || selectedIds.length === 0}>
+            {saving ? "Linking..." : `Link ${selectedIds.length} Attachment${selectedIds.length !== 1 ? "s" : ""}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

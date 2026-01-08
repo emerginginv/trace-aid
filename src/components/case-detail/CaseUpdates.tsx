@@ -4,7 +4,7 @@ import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, ShieldAlert, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, ShieldAlert, Download, Paperclip, Link2, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { toast } from "@/hooks/use-toast";
@@ -18,7 +18,7 @@ import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
-
+import { AttachmentPickerDialog } from "./AttachmentPicker";
 interface Update {
   id: string;
   title: string;
@@ -32,6 +32,13 @@ interface UserProfile {
   id: string;
   full_name: string;
   email: string;
+}
+
+interface LinkedAttachment {
+  id: string;
+  attachment_id: string;
+  file_name: string;
+  file_type: string;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -52,6 +59,9 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const [searchQuery, setSearchQuery] = useState('');
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [linkedAttachments, setLinkedAttachments] = useState<Record<string, LinkedAttachment[]>>({});
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkingUpdateId, setLinkingUpdateId] = useState<string | null>(null);
 
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("case-updates", "created_at", "desc");
@@ -148,6 +158,71 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
       return newSet;
     });
   };
+
+  const fetchLinkedAttachments = async (updateId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("update_attachment_links")
+        .select(`
+          id,
+          attachment_id,
+          case_attachments!inner(file_name, file_type)
+        `)
+        .eq("update_id", updateId);
+
+      if (error) throw error;
+
+      const attachments: LinkedAttachment[] = (data || []).map((link: any) => ({
+        id: link.id,
+        attachment_id: link.attachment_id,
+        file_name: link.case_attachments.file_name,
+        file_type: link.case_attachments.file_type,
+      }));
+
+      setLinkedAttachments((prev) => ({
+        ...prev,
+        [updateId]: attachments,
+      }));
+    } catch (error) {
+      console.error("Error fetching linked attachments:", error);
+    }
+  };
+
+  const handleUnlinkAttachment = async (linkId: string, updateId: string) => {
+    try {
+      const { error } = await supabase
+        .from("update_attachment_links")
+        .delete()
+        .eq("id", linkId);
+
+      if (error) throw error;
+
+      // Refresh linked attachments for this update
+      fetchLinkedAttachments(updateId);
+      toast({ title: "Success", description: "Attachment unlinked" });
+    } catch (error) {
+      console.error("Error unlinking attachment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to unlink attachment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openLinkDialog = (updateId: string) => {
+    setLinkingUpdateId(updateId);
+    setLinkDialogOpen(true);
+  };
+
+  // Fetch linked attachments when row is expanded
+  useEffect(() => {
+    expandedRows.forEach((updateId) => {
+      if (!linkedAttachments[updateId]) {
+        fetchLinkedAttachments(updateId);
+      }
+    });
+  }, [expandedRows]);
 
 
   const filteredUpdates = updates.filter(update => {
@@ -399,10 +474,62 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                         </div>
                       </TableCell>
                     </TableRow>
-                    {isExpanded && update.description && (
-                      <TableRow key={`${update.id}-desc`}>
+                    {isExpanded && (
+                      <TableRow key={`${update.id}-expanded`}>
                         <TableCell colSpan={6} className="py-3 bg-muted/30 border-0">
-                          <RichTextDisplay html={update.description} className="pl-10" />
+                          <div className="pl-10 space-y-4">
+                            {update.description && (
+                              <RichTextDisplay html={update.description} />
+                            )}
+                            
+                            {/* Linked Attachments Section */}
+                            <div className="pt-2 border-t border-border/50">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium flex items-center gap-1.5">
+                                  <Paperclip className="h-4 w-4" />
+                                  Linked Attachments
+                                </span>
+                                {canEditUpdates && !isClosedCase && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openLinkDialog(update.id)}
+                                  >
+                                    <Link2 className="h-4 w-4 mr-1" />
+                                    Link Attachment
+                                  </Button>
+                                )}
+                              </div>
+                              
+                              {linkedAttachments[update.id]?.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {linkedAttachments[update.id].map((attachment) => (
+                                    <div
+                                      key={attachment.id}
+                                      className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md text-sm"
+                                    >
+                                      <Paperclip className="h-3 w-3 text-muted-foreground" />
+                                      <span className="truncate max-w-[200px]">
+                                        {attachment.file_name}
+                                      </span>
+                                      {canEditUpdates && !isClosedCase && (
+                                        <button
+                                          onClick={() => handleUnlinkAttachment(attachment.id, update.id)}
+                                          className="ml-1 hover:bg-destructive/20 rounded p-0.5 text-muted-foreground hover:text-destructive"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  No attachments linked to this update
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )}
@@ -422,6 +549,21 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         editingUpdate={editingUpdate}
         organizationId={organization?.id || ""}
       />
+
+      {linkingUpdateId && (
+        <AttachmentPickerDialog
+          open={linkDialogOpen}
+          onOpenChange={setLinkDialogOpen}
+          caseId={caseId}
+          updateId={linkingUpdateId}
+          organizationId={organization?.id || ""}
+          existingLinkIds={linkedAttachments[linkingUpdateId]?.map((a) => a.attachment_id) || []}
+          onSuccess={() => {
+            fetchLinkedAttachments(linkingUpdateId);
+            toast({ title: "Success", description: "Attachments linked" });
+          }}
+        />
+      )}
     </>
   );
 };
