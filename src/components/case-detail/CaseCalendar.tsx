@@ -94,9 +94,8 @@ function DraggableEvent({ event, canDrag, onClick, userColor, userName }: Dragga
     <div
       ref={setNodeRef}
       style={{
-        backgroundColor: `${userColor}20`,
+        backgroundColor: userColor,
         borderLeftColor: userColor,
-        color: userColor,
         ...style,
       }}
       {...(canDrag ? { ...listeners, ...attributes } : {})}
@@ -107,14 +106,14 @@ function DraggableEvent({ event, canDrag, onClick, userColor, userName }: Dragga
         }
       }}
       className={cn(
-        "text-xs rounded px-2 py-1 truncate border-l-2 transition-all",
+        "text-xs rounded px-2 py-1 truncate border-l-2 transition-all text-white",
         isDragging && "opacity-50 shadow-lg",
         canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
         "hover:opacity-80"
       )}
       title={`${event.title} - ${userName}${canDrag ? " (drag to reschedule)" : ""}`}
     >
-      📅 {event.title}
+      {event.title}
     </div>
   );
 }
@@ -800,14 +799,13 @@ export const CaseCalendar = forwardRef<
           <DragOverlay>
             {activeEvent && (
               <div
-                className="text-xs rounded px-2 py-1 truncate border-l-2 shadow-lg bg-card"
+                className="text-xs rounded px-2 py-1 truncate border-l-2 shadow-lg text-white"
                 style={{
-                  backgroundColor: `${getUserColor(activeEvent.assigned_user_id)}20`,
+                  backgroundColor: getUserColor(activeEvent.assigned_user_id),
                   borderLeftColor: getUserColor(activeEvent.assigned_user_id),
-                  color: getUserColor(activeEvent.assigned_user_id),
                 }}
               >
-                📅 {activeEvent.title}
+                {activeEvent.title}
               </div>
             )}
           </DragOverlay>
