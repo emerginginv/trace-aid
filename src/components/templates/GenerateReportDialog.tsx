@@ -6,20 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { getOrganizationTemplates, getReportTemplate, ReportTemplate, TemplateCustomization } from "@/lib/reportTemplates";
-import { generateReport, ReportInstance } from "@/lib/reportEngine";
-import { ReportInstanceViewer } from "@/components/templates/ReportInstanceViewer";
-import { TemplateCustomizer } from "@/components/templates/TemplateCustomizer";
-import { FileText, Settings2 } from "lucide-react";
-import { useOrganization } from "@/contexts/OrganizationContext";
+import { getDocxTemplates, generateDocxReport, saveGeneratedReport, type DocxTemplate } from "@/lib/docxTemplateEngine";
 
-interface Update {
-  created_at: string;
-  title: string;
-  update_type: string;
-  description: string | null;
-  user_id: string;
-}
+import { FileText, Download, Loader2 } from "lucide-react";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface GenerateReportDialogProps {
   open: boolean;
@@ -30,8 +20,6 @@ interface GenerateReportDialogProps {
     case_number: string;
     case_manager_id: string | null;
   };
-  updates: Update[];
-  userProfiles: Record<string, { full_name: string }>;
 }
 
 export const GenerateReportDialog = ({
@@ -42,54 +30,38 @@ export const GenerateReportDialog = ({
 }: GenerateReportDialogProps) => {
   const { organization } = useOrganization();
   
-  // Template state
-  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
+  const [templates, setTemplates] = useState<DocxTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
-  
-  // Common state
   const [generating, setGenerating] = useState(false);
-  const [userId, setUserId] = useState<string>("");
-  
-  // Preview state
-  const [generatedReport, setGeneratedReport] = useState<ReportInstance | null>(null);
-  const [viewerOpen, setViewerOpen] = useState(false);
-  
-  // Customization state
-  const [customizerOpen, setCustomizerOpen] = useState(false);
-  const [selectedTemplateForCustomization, setSelectedTemplateForCustomization] = useState<ReportTemplate | null>(null);
-  const [templateCustomization, setTemplateCustomization] = useState<TemplateCustomization | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (open) {
-      fetchUser();
-    }
-  }, [open, caseId]);
-
-  useEffect(() => {
-    if (organization?.id) {
+    if (open && organization?.id) {
       fetchTemplates();
     }
-  }, [organization?.id]);
-
-  const fetchUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    setUserId(user.id);
-  };
+  }, [open, organization?.id]);
 
   const fetchTemplates = async () => {
     if (!organization?.id) return;
     
+    setLoading(true);
     try {
-      const fetchedTemplates = await getOrganizationTemplates(organization.id);
-      setTemplates(fetchedTemplates);
+      const fetchedTemplates = await getDocxTemplates(organization.id);
+      setTemplates(fetchedTemplates.filter(t => t.isActive));
     } catch (error) {
       console.error("Error fetching templates:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load templates",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGenerate = async () => {
-    if (!selectedTemplateId) {
+    if (!selectedTemplateId || !organization?.id) {
       toast({
         title: "Error",
         description: "Please select a template",
@@ -98,27 +70,46 @@ export const GenerateReportDialog = ({
       return;
     }
 
+    const template = templates.find(t => t.id === selectedTemplateId);
+    if (!template) return;
+
     setGenerating(true);
     try {
-      const result = await generateReport({
-        caseId,
-        templateId: selectedTemplateId,
-        organizationId: organization?.id || "",
-        userId,
-        customization: templateCustomization || undefined,
-      });
-
-      if (!result.success || !result.reportInstance) {
-        throw new Error(result.error || "Failed to generate report");
+      const result = await generateDocxReport(template.filePath, caseId, organization.id);
+      
+      if (result) {
+        // Get user ID and save the generated report
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await saveGeneratedReport(
+            result.blob,
+            caseId,
+            template.id,
+            template.name,
+            organization.id,
+            user.id,
+            result.variables,
+            template.filenameTemplate
+          );
+        }
+        
+        // Download the generated file
+        const url = URL.createObjectURL(result.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${template.name} - ${caseData.case_number}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
-
-      setGeneratedReport(result.reportInstance);
-      setViewerOpen(true);
-
+      
       toast({
         title: "Success",
-        description: "Report generated successfully",
+        description: "Report generated and downloaded successfully",
       });
+      
+      onOpenChange(false);
     } catch (error) {
       console.error("Error generating report:", error);
       toast({
@@ -131,153 +122,107 @@ export const GenerateReportDialog = ({
     }
   };
 
-  const handleOpenCustomizer = async () => {
-    if (!selectedTemplateId) {
-      toast({
-        title: "Select a template",
-        description: "Please select a template before customizing",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Fetch full template with sections
-    const fullTemplate = await getReportTemplate(selectedTemplateId);
-    if (!fullTemplate) {
-      toast({
-        title: "Error",
-        description: "Failed to load template details",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedTemplateForCustomization(fullTemplate);
-    setCustomizerOpen(true);
-  };
-
-  const handleApplyCustomization = (customization: TemplateCustomization) => {
-    setTemplateCustomization(customization);
-    toast({
-      title: "Customization applied",
-      description: "Your changes will be used when generating the report",
-    });
-  };
-
-  // Clear customization when template changes
-  useEffect(() => {
-    setTemplateCustomization(null);
-    setSelectedTemplateForCustomization(null);
-  }, [selectedTemplateId]);
-
+  const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
   const hasTemplates = templates.length > 0;
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Generate Report</DialogTitle>
-            <DialogDescription>
-              Select a template to generate a report from case data
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Generate Report</DialogTitle>
+          <DialogDescription>
+            Select a DOCX template to generate a report for case {caseData.case_number}
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="space-y-4">
-            {!hasTemplates ? (
-              <div className="text-center py-6">
-                <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  No templates available. Create one in Settings → Report Templates.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="template">Template</Label>
-                  <Select 
-                    value={selectedTemplateId} 
-                    onValueChange={setSelectedTemplateId}
-                  >
-                    <SelectTrigger id="template">
-                      <SelectValue placeholder="Select a template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          <div className="flex items-center gap-2">
-                            {template.name}
-                            {template.isSystemTemplate && (
-                              <Badge variant="outline" className="text-xs">System</Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedTemplateId && (
-                    <div className="space-y-2">
+        <div className="space-y-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !hasTemplates ? (
+            <div className="text-center py-6">
+              <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">
+                No templates available. Upload a DOCX template in Settings → Report Templates.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="template">Template</Label>
+                <Select 
+                  value={selectedTemplateId} 
+                  onValueChange={setSelectedTemplateId}
+                >
+                  <SelectTrigger id="template">
+                    <SelectValue placeholder="Select a template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          {template.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {selectedTemplate && (
+                  <div className="space-y-2 pt-2">
+                    {selectedTemplate.description && (
                       <p className="text-xs text-muted-foreground">
-                        {templates.find(t => t.id === selectedTemplateId)?.description || 
-                          "Generates a report using structured sections."}
+                        {selectedTemplate.description}
                       </p>
-                      
-                      {/* Customize Button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={handleOpenCustomizer}
-                      >
-                        <Settings2 className="h-4 w-4 mr-2" />
-                        Customize Template
-                        {templateCustomization && (
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            Modified
+                    )}
+                    
+                    {selectedTemplate.detectedVariables && selectedTemplate.detectedVariables.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        <span className="text-xs text-muted-foreground">Variables:</span>
+                        {selectedTemplate.detectedVariables.slice(0, 5).map((v, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {v}
+                          </Badge>
+                        ))}
+                        {selectedTemplate.detectedVariables.length > 5 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{selectedTemplate.detectedVariables.length - 5} more
                           </Badge>
                         )}
-                      </Button>
-                    </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleGenerate} 
+                  disabled={generating || !selectedTemplateId} 
+                  className="w-full sm:w-auto"
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Generate & Download
+                    </>
                   )}
-                </div>
-
-                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
-                  <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleGenerate} 
-                    disabled={generating || !selectedTemplateId} 
-                    className="w-full sm:w-auto"
-                  >
-                    {generating ? "Generating..." : "Generate Report"}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Report Viewer */}
-      {generatedReport && (
-        <ReportInstanceViewer
-          open={viewerOpen}
-          onOpenChange={setViewerOpen}
-          report={generatedReport}
-        />
-      )}
-
-      {/* Template Customizer */}
-      {selectedTemplateForCustomization && (
-        <TemplateCustomizer
-          open={customizerOpen}
-          onOpenChange={setCustomizerOpen}
-          template={selectedTemplateForCustomization}
-          onApply={handleApplyCustomization}
-          initialCustomization={templateCustomization || undefined}
-        />
-      )}
-    </>
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
