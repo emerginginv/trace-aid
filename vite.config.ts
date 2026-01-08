@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Prevent "Invalid hook call" errors caused by multiple React copies.
+    dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
     include: ['react', 'react-dom', '@tanstack/react-query'],
