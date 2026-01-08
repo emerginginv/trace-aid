@@ -12,16 +12,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Eye, Download, Clock, Hash } from "lucide-react";
+import { FileText, Eye, Clock, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { getCaseReportInstances, ReportInstance } from "@/lib/reportEngine";
 import { ReportInstanceViewer } from "@/components/templates/ReportInstanceViewer";
 
 interface CaseReportsProps {
   caseId: string;
+  isClosedCase?: boolean;
+  onGenerateReport?: () => void;
 }
 
-export function CaseReports({ caseId }: CaseReportsProps) {
+export function CaseReports({ caseId, isClosedCase, onGenerateReport }: CaseReportsProps) {
   const [reports, setReports] = useState<ReportInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState<ReportInstance | null>(null);
@@ -85,9 +87,15 @@ export function CaseReports({ caseId }: CaseReportsProps) {
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <FileText className="h-12 w-12 text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Reports Generated</h3>
-        <p className="text-sm text-muted-foreground max-w-md">
-          Generate a report from the Updates tab using a structured report template.
+        <p className="text-sm text-muted-foreground max-w-md mb-4">
+          Generate your first report using a structured template to create professional case documentation.
         </p>
+        {onGenerateReport && (
+          <Button onClick={onGenerateReport} disabled={isClosedCase}>
+            <Plus className="h-4 w-4 mr-2" />
+            Generate Report
+          </Button>
+        )}
       </div>
     );
   }
@@ -96,7 +104,15 @@ export function CaseReports({ caseId }: CaseReportsProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Generated Reports</h3>
-        <Badge variant="secondary">{reports.length} reports</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{reports.length} reports</Badge>
+          {onGenerateReport && (
+            <Button onClick={onGenerateReport} disabled={isClosedCase} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Generate Report
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="border rounded-md">
