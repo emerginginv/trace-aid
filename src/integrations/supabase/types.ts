@@ -698,44 +698,6 @@ export type Database = {
           },
         ]
       }
-      case_update_templates: {
-        Row: {
-          body: string
-          created_at: string
-          id: string
-          name: string
-          organization_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          body: string
-          created_at?: string
-          id?: string
-          name: string
-          organization_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          body?: string
-          created_at?: string
-          id?: string
-          name?: string
-          organization_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "case_update_templates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       case_updates: {
         Row: {
           case_id: string
