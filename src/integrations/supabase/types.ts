@@ -2612,6 +2612,36 @@ export type Database = {
           },
         ]
       }
+      email_change_requests_safe: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string | null
+          new_email: string | null
+          old_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          new_email?: string | null
+          old_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          new_email?: string | null
+          old_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_organization_invite: {
