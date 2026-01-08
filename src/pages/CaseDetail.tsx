@@ -893,8 +893,6 @@ const CaseDetail = () => {
             case_number: caseData.case_number,
             case_manager_id: caseData.case_manager_id,
           }}
-          updates={updates}
-          userProfiles={userProfiles}
         />
       )}
       
