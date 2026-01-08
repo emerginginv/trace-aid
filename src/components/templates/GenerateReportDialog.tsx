@@ -20,6 +20,7 @@ interface GenerateReportDialogProps {
     case_number: string;
     case_manager_id: string | null;
   };
+  onSuccess?: () => void;
 }
 
 export const GenerateReportDialog = ({
@@ -27,6 +28,7 @@ export const GenerateReportDialog = ({
   onOpenChange,
   caseId,
   caseData,
+  onSuccess,
 }: GenerateReportDialogProps) => {
   const { organization } = useOrganization();
   
@@ -109,6 +111,7 @@ export const GenerateReportDialog = ({
         description: "Report generated and downloaded successfully",
       });
       
+      onSuccess?.();
       onOpenChange(false);
     } catch (error) {
       console.error("Error generating report:", error);
