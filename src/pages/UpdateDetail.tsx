@@ -6,10 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, User, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, User, FileText, Paperclip, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+
+interface LinkedAttachment {
+  id: string;
+  attachment_id: string;
+  file_name: string;
+  file_type: string;
+  file_path: string;
+}
 
 interface Update {
   id: string;
@@ -33,6 +41,7 @@ const UpdateDetail = () => {
   const { toast } = useToast();
   const [update, setUpdate] = useState<Update | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [linkedAttachments, setLinkedAttachments] = useState<LinkedAttachment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useSetBreadcrumbs(
@@ -80,6 +89,28 @@ const UpdateDetail = () => {
 
       if (profileData) {
         setUserProfile(profileData);
+      }
+
+      // Fetch linked attachments
+      const { data: linksData } = await supabase
+        .from("update_attachment_links")
+        .select(`
+          id,
+          attachment_id,
+          case_attachments!inner(file_name, file_type, file_path)
+        `)
+        .eq("update_id", updateData.id);
+
+      if (linksData) {
+        setLinkedAttachments(
+          linksData.map((link: any) => ({
+            id: link.id,
+            attachment_id: link.attachment_id,
+            file_name: link.case_attachments.file_name,
+            file_type: link.case_attachments.file_type,
+            file_path: link.case_attachments.file_path,
+          }))
+        );
       }
     } catch (error) {
       console.error("Error fetching update:", error);
@@ -163,6 +194,38 @@ const UpdateDetail = () => {
               fallback="No description provided."
               className="[&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1"
             />
+          </div>
+
+          {/* Linked Attachments Section */}
+          <div className="space-y-2 pt-4 border-t">
+            <div className="flex items-center gap-2 font-semibold">
+              <Paperclip className="h-4 w-4" />
+              Linked Attachments
+            </div>
+            {linkedAttachments.length > 0 ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {linkedAttachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30"
+                  >
+                    <Paperclip className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {attachment.file_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {attachment.file_type}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No attachments linked to this update.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

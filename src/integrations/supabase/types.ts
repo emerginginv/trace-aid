@@ -2492,6 +2492,62 @@ export type Database = {
           },
         ]
       }
+      update_attachment_links: {
+        Row: {
+          attachment_id: string
+          id: string
+          linked_at: string
+          linked_by_user_id: string | null
+          organization_id: string
+          update_id: string
+        }
+        Insert: {
+          attachment_id: string
+          id?: string
+          linked_at?: string
+          linked_by_user_id?: string | null
+          organization_id: string
+          update_id: string
+        }
+        Update: {
+          attachment_id?: string
+          id?: string
+          linked_at?: string
+          linked_by_user_id?: string | null
+          organization_id?: string
+          update_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "update_attachment_links_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: false
+            referencedRelation: "case_attachments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "update_attachment_links_linked_by_user_id_fkey"
+            columns: ["linked_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "update_attachment_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "update_attachment_links_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "case_updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
