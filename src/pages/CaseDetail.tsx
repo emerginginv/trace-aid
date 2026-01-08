@@ -98,6 +98,7 @@ const CaseDetail = () => {
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
+  const [reportsRefreshKey, setReportsRefreshKey] = useState(0);
   
   const validTabs = ['info', 'budget', 'subjects', 'updates', 'activities', 'calendar', 'finances', 'attachments', 'reports'];
   const getInitialTab = () => {
@@ -871,6 +872,7 @@ const CaseDetail = () => {
         {!isVendor && hasPermission('view_reports') && (
           <TabsContent value="reports" className="mt-4 sm:mt-6">
             <CaseReports 
+              key={reportsRefreshKey}
               caseId={id!} 
               isClosedCase={isClosed}
               onGenerateReport={() => setReportDialogOpen(true)}
@@ -893,6 +895,7 @@ const CaseDetail = () => {
             case_number: caseData.case_number,
             case_manager_id: caseData.case_manager_id,
           }}
+          onSuccess={() => setReportsRefreshKey(prev => prev + 1)}
         />
       )}
       
