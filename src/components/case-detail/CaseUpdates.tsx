@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, ShieldAlert, Download, Paperclip, Link2, X } from "lucide-react";
+import { AttachmentPreviewThumbnail } from "./AttachmentPreviewThumbnail";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { toast } from "@/hooks/use-toast";
@@ -39,6 +41,9 @@ interface LinkedAttachment {
   attachment_id: string;
   file_name: string;
   file_type: string;
+  file_path: string;
+  preview_path: string | null;
+  preview_status: string | null;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -51,6 +56,7 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
+  const navigate = useNavigate();
   const { organization } = useOrganization();
   const [updates, setUpdates] = useState<Update[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,7 +172,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         .select(`
           id,
           attachment_id,
-          case_attachments!inner(file_name, file_type)
+          case_attachments!inner(file_name, file_type, file_path, preview_path, preview_status)
         `)
         .eq("update_id", updateId);
 
@@ -177,6 +183,9 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         attachment_id: link.attachment_id,
         file_name: link.case_attachments.file_name,
         file_type: link.case_attachments.file_type,
+        file_path: link.case_attachments.file_path,
+        preview_path: link.case_attachments.preview_path,
+        preview_status: link.case_attachments.preview_status,
       }));
 
       setLinkedAttachments((prev) => ({
@@ -186,6 +195,10 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
     } catch (error) {
       console.error("Error fetching linked attachments:", error);
     }
+  };
+
+  const handleOpenAttachment = (attachmentId: string) => {
+    navigate(`/attachments/${attachmentId}/view?caseId=${caseId}`);
   };
 
   const handleUnlinkAttachment = async (linkId: string, updateId: string) => {
@@ -502,20 +515,32 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                               </div>
                               
                               {linkedAttachments[update.id]?.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-3">
                                   {linkedAttachments[update.id].map((attachment) => (
                                     <div
                                       key={attachment.id}
-                                      className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md text-sm"
+                                      className="group relative flex flex-col items-center gap-1.5 p-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
+                                      onClick={() => handleOpenAttachment(attachment.attachment_id)}
                                     >
-                                      <Paperclip className="h-3 w-3 text-muted-foreground" />
-                                      <span className="truncate max-w-[200px]">
+                                      <AttachmentPreviewThumbnail
+                                        filePath={attachment.file_path}
+                                        fileName={attachment.file_name}
+                                        fileType={attachment.file_type}
+                                        previewPath={attachment.preview_path ?? undefined}
+                                        previewStatus={attachment.preview_status ?? undefined}
+                                        size="md"
+                                        className="rounded"
+                                      />
+                                      <span className="text-xs truncate max-w-[80px] text-center text-muted-foreground">
                                         {attachment.file_name}
                                       </span>
                                       {canEditUpdates && !isClosedCase && (
                                         <button
-                                          onClick={() => handleUnlinkAttachment(attachment.id, update.id)}
-                                          className="ml-1 hover:bg-destructive/20 rounded p-0.5 text-muted-foreground hover:text-destructive"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleUnlinkAttachment(attachment.id, update.id);
+                                          }}
+                                          className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                           <X className="h-3 w-3" />
                                         </button>
