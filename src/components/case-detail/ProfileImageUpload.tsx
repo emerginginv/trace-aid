@@ -55,24 +55,21 @@ export const ProfileImageUpload = ({ currentImageUrl, onImageChange, subjectId }
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       // Upload to storage
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("subject-profile-images")
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("subject-profile-images")
-        .getPublicUrl(fileName);
+      // Store the file path (not a public URL since bucket is now private)
+      // The path can be used to generate signed URLs when displaying
+      onImageChange(fileName);
 
-      onImageChange(publicUrl);
-
-      // If editing existing subject, update the database
+      // If editing existing subject, update the database with the file path
       if (subjectId) {
         const { error: updateError } = await supabase
           .from("case_subjects")
-          .update({ profile_image_url: publicUrl })
+          .update({ profile_image_url: fileName })
           .eq("id", subjectId);
 
         if (updateError) throw updateError;

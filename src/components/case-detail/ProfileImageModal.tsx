@@ -48,13 +48,10 @@ export const ProfileImageModal = ({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("subject-profile-images")
-        .getPublicUrl(fileName);
-
+      // Store the file path (not a public URL since bucket is now private)
       const { error: updateError } = await supabase
         .from("case_subjects")
-        .update({ profile_image_url: publicUrl })
+        .update({ profile_image_url: fileName })
         .eq("id", subjectId);
 
       if (updateError) throw updateError;
