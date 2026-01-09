@@ -2755,6 +2755,16 @@ export type Database = {
           old_email: string
         }[]
       }
+      get_my_password_reset_requests: {
+        Args: never
+        Returns: {
+          completed_at: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+        }[]
+      }
       get_organization_users: {
         Args: { org_id: string }
         Returns: {
