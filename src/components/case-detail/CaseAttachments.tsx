@@ -914,9 +914,10 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
 
   const handleGenerateMissingPreviews = () => {
     // Find ALL files needing previews (PDFs, images, videos, DOCX)
+    // Include 'pending' status files that may be stuck
     const attachmentsNeedingPreviews = attachments.filter(
       (a) => canGenerateThumbnail(a.file_type, a.file_name) && 
-             (!a.preview_status || a.preview_status === 'failed')
+             (!a.preview_status || a.preview_status === 'failed' || a.preview_status === 'pending')
     );
 
     if (attachmentsNeedingPreviews.length === 0) {
@@ -937,9 +938,10 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   };
 
   // Count files needing previews for button display
+  // Include 'pending' status files that may be stuck
   const filesNeedingPreviews = attachments.filter(
     (a) => canGenerateThumbnail(a.file_type, a.file_name) && 
-           (!a.preview_status || a.preview_status === 'failed')
+           (!a.preview_status || a.preview_status === 'failed' || a.preview_status === 'pending')
   ).length;
 
   if (permissionsLoading || loading) {

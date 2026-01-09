@@ -73,45 +73,39 @@ export function AttachmentPreviewThumbnail({
   useEffect(() => {
     if (!isVisible) return;
 
-    // If thumbnail is being generated in background, show spinner
-    if (previewStatus === 'pending' || previewStatus === 'generating') {
-      setLoading(true);
-      return;
-    }
-
-    // If generation failed, show error state
-    if (previewStatus === 'failed') {
-      setLoading(false);
-      setError(true);
-      return;
-    }
-
     const loadThumbnail = async () => {
-      // If we have a completed preview, load it
+      // If we have a completed preview, load it first
       if (previewPath && previewStatus === 'complete') {
         await loadPreviewImage(previewPath);
         return;
       }
 
-      // For images, download and display directly
+      // For images, ALWAYS download and display directly (no background generation needed)
       if (fileType.startsWith('image/')) {
         await loadImageThumbnail();
         return;
       }
 
-      // For PDFs without pre-generated preview, generate on-demand
+      // If generation explicitly failed, show error state
+      if (previewStatus === 'failed') {
+        setLoading(false);
+        setError(true);
+        return;
+      }
+
+      // For PDFs, generate on-demand (regardless of pending/generating status)
       if (isPdfFile(fileType, fileName)) {
         await generateAndLoadPdfThumbnail();
         return;
       }
 
-      // For videos, extract poster frame
+      // For videos, generate on-demand
       if (isVideoFile(fileType, fileName)) {
         await generateAndLoadVideoThumbnail();
         return;
       }
 
-      // For DOCX files, generate text preview
+      // For DOCX files, generate on-demand
       if (isDocxFile(fileType, fileName)) {
         await generateAndLoadDocxThumbnail();
         return;
