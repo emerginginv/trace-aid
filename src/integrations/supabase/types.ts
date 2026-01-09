@@ -261,6 +261,7 @@ export type Database = {
       case_activities: {
         Row: {
           activity_type: string
+          address: string | null
           assigned_user_id: string | null
           case_id: string
           completed: boolean | null
@@ -282,6 +283,7 @@ export type Database = {
         }
         Insert: {
           activity_type: string
+          address?: string | null
           assigned_user_id?: string | null
           case_id: string
           completed?: boolean | null
@@ -303,6 +305,7 @@ export type Database = {
         }
         Update: {
           activity_type?: string
+          address?: string | null
           assigned_user_id?: string | null
           case_id?: string
           completed?: boolean | null

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ExternalLink, Copy } from "lucide-react";
+import { CalendarIcon, ExternalLink, Copy, User, MapPin } from "lucide-react";
 import { format, formatISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -37,7 +37,15 @@ const eventSchema = z.object({
   end_time: z.string().min(1, "End time is required"),
   status: z.enum(["scheduled", "cancelled", "completed"]),
   assigned_user_id: z.string().optional(),
+  address: z.string().optional(),
 });
+
+interface SubjectAddress {
+  id: string;
+  name: string;
+  address: string;
+  type: 'person' | 'location';
+}
 
 const DEFAULT_EVENT_TYPES = [
   'Surveillance Session',
@@ -88,6 +96,7 @@ export function ActivityForm({
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [eventTypes, setEventTypes] = useState<string[]>(DEFAULT_EVENT_TYPES);
+  const [subjectAddresses, setSubjectAddresses] = useState<SubjectAddress[]>([]);
   const navigate = useNavigate();
   const schema = activityType === "task" ? taskSchema : eventSchema;
   const form = useForm<z.infer<typeof schema>>({
@@ -112,9 +121,48 @@ export function ActivityForm({
       fetchCaseTitle();
       if (activityType === "event") {
         fetchEventTypes();
+        fetchSubjectAddresses();
       }
     }
   }, [caseId, open, activityType]);
+
+  const fetchSubjectAddresses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("case_subjects")
+        .select("id, name, subject_type, details")
+        .eq("case_id", caseId)
+        .in("subject_type", ["person", "location"]);
+
+      if (error) throw error;
+
+      if (data) {
+        const addresses: SubjectAddress[] = data
+          .filter(s => {
+            const details = s.details as Record<string, any> | null;
+            if (!details) return false;
+            const addr = s.subject_type === 'person' 
+              ? details.address 
+              : details.location_address;
+            return !!addr;
+          })
+          .map(s => {
+            const details = s.details as Record<string, any>;
+            return {
+              id: s.id,
+              name: s.name,
+              address: s.subject_type === 'person' 
+                ? details.address 
+                : details.location_address,
+              type: s.subject_type as 'person' | 'location',
+            };
+          });
+        setSubjectAddresses(addresses);
+      }
+    } catch (error) {
+      console.error("Error fetching subject addresses:", error);
+    }
+  };
 
   const fetchEventTypes = async () => {
     try {
@@ -183,6 +231,7 @@ export function ActivityForm({
         event_subtype: editingActivity.event_subtype || "",
         status: editingActivity.status,
         assigned_user_id: editingActivity.assigned_user_id || undefined,
+        address: editingActivity.address || "",
       } as any);
     } else {
       form.reset({
@@ -197,6 +246,7 @@ export function ActivityForm({
         event_subtype: activityType === "event" ? "" : undefined,
         status: activityType === "task" ? "to_do" : "scheduled",
         assigned_user_id: undefined,
+        address: "",
       } as any);
     }
   }, [open, editingActivity, activityType, prefilledDate, form]);
@@ -241,9 +291,10 @@ export function ActivityForm({
         completed: values.status === "done" || values.status === "completed",
       };
 
-      // Add event_subtype for events
+      // Add event-specific fields
       if (values.activity_type === "event") {
         activityData.event_subtype = values.event_subtype || null;
+        activityData.address = values.address || null;
       }
 
       let error;
@@ -629,6 +680,59 @@ export function ActivityForm({
                     )}
                   />
                 </div>
+
+                {/* Address field for events */}
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address (Optional)</FormLabel>
+                      <div className="space-y-2">
+                        {subjectAddresses.length > 0 && (
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                            }}
+                            value={subjectAddresses.some(s => s.address === field.value) ? field.value : undefined}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select from case subjects" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {subjectAddresses.map((subject) => (
+                                <SelectItem key={subject.id} value={subject.address}>
+                                  <div className="flex items-center gap-2">
+                                    {subject.type === 'person' ? (
+                                      <User className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                    <span className="font-medium">{subject.name}</span>
+                                    <span className="text-muted-foreground truncate max-w-[200px]">— {subject.address}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter address or select from above"
+                            {...field}
+                            className="min-h-[60px]"
+                          />
+                        </FormControl>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        If connected to a case, any existing location or subject address will be available above.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             )}
 
