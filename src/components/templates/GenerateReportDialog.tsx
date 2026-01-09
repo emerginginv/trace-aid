@@ -134,7 +134,7 @@ export const GenerateReportDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Generate Report</DialogTitle>
           <DialogDescription>
@@ -142,100 +142,105 @@ export const GenerateReportDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : !hasTemplates ? (
-            <div className="text-center py-6">
-              <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                No templates available. Upload a DOCX template in Settings → Report Templates.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="template">Template</Label>
-                <Select 
-                  value={selectedTemplateId} 
-                  onValueChange={setSelectedTemplateId}
-                >
-                  <SelectTrigger id="template">
-                    <SelectValue placeholder="Select a template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          {template.name}
+        <div className="flex-1 overflow-y-auto pr-1 -mr-1">
+          <div className="space-y-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !hasTemplates ? (
+              <div className="text-center py-6">
+                <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No templates available. Upload a DOCX template in Settings → Report Templates.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="template">Template</Label>
+                  <Select 
+                    value={selectedTemplateId} 
+                    onValueChange={setSelectedTemplateId}
+                  >
+                    <SelectTrigger id="template">
+                      <SelectValue placeholder="Select a template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            {template.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {selectedTemplate && (
+                    <div className="space-y-2 pt-2">
+                      {selectedTemplate.description && (
+                        <p className="text-xs text-muted-foreground">
+                          {selectedTemplate.description}
+                        </p>
+                      )}
+                      
+                      {selectedTemplate.detectedVariables && selectedTemplate.detectedVariables.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          <span className="text-xs text-muted-foreground">Variables:</span>
+                          {selectedTemplate.detectedVariables.slice(0, 5).map((v, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              {v}
+                            </Badge>
+                          ))}
+                          {selectedTemplate.detectedVariables.length > 5 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{selectedTemplate.detectedVariables.length - 5} more
+                            </Badge>
+                          )}
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                {selectedTemplate && (
-                  <div className="space-y-2 pt-2">
-                    {selectedTemplate.description && (
-                      <p className="text-xs text-muted-foreground">
-                        {selectedTemplate.description}
-                      </p>
-                    )}
-                    
-                    {selectedTemplate.detectedVariables && selectedTemplate.detectedVariables.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        <span className="text-xs text-muted-foreground">Variables:</span>
-                        {selectedTemplate.detectedVariables.slice(0, 5).map((v, i) => (
-                          <Badge key={i} variant="outline" className="text-xs">
-                            {v}
-                          </Badge>
-                        ))}
-                        {selectedTemplate.detectedVariables.length > 5 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{selectedTemplate.detectedVariables.length - 5} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Attachment Evidence Selector */}
-              <AttachmentEvidenceSelector
-                caseId={caseId}
-                selectedIds={selectedAttachmentIds}
-                onSelectionChange={setSelectedAttachmentIds}
-              />
-
-              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleGenerate} 
-                  disabled={generating || !selectedTemplateId} 
-                  className="w-full sm:w-auto"
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Generate & Download
-                    </>
+                      )}
+                    </div>
                   )}
-                </Button>
-              </div>
-            </>
-          )}
+                </div>
+
+                {/* Attachment Evidence Selector */}
+                <AttachmentEvidenceSelector
+                  caseId={caseId}
+                  selectedIds={selectedAttachmentIds}
+                  onSelectionChange={setSelectedAttachmentIds}
+                />
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Footer buttons - always visible outside scroll area */}
+        {!loading && hasTemplates && (
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-4 border-t mt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGenerate} 
+              disabled={generating || !selectedTemplateId} 
+              className="w-full sm:w-auto"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Generate & Download
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
