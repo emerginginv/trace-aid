@@ -21,6 +21,12 @@ import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { AttachmentPickerDialog } from "./AttachmentPicker";
+import { ActivityTimelineDisplay } from "./ActivityTimelineDisplay";
+interface TimelineEntry {
+  time: string;
+  description: string;
+}
+
 interface Update {
   id: string;
   title: string;
@@ -28,6 +34,7 @@ interface Update {
   created_at: string;
   update_type: string;
   user_id: string;
+  activity_timeline: TimelineEntry[] | null;
 }
 
 interface UserProfile {
@@ -95,7 +102,18 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
 
       if (error) throw error;
 
-      setUpdates(data || []);
+      // Map data with proper type casting for activity_timeline
+      const mappedUpdates: Update[] = (data || []).map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        created_at: item.created_at,
+        update_type: item.update_type,
+        user_id: item.user_id,
+        activity_timeline: item.activity_timeline as unknown as TimelineEntry[] | null,
+      }));
+
+      setUpdates(mappedUpdates);
 
       // Fetch user profiles for all unique user IDs
       if (data && data.length > 0) {
@@ -493,6 +511,13 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                           <div className="pl-10 space-y-4">
                             {update.description && (
                               <RichTextDisplay html={update.description} />
+                            )}
+
+                            {/* Activity Timeline Section */}
+                            {update.activity_timeline && update.activity_timeline.length > 0 && (
+                              <div className="pt-2 border-t border-border/50">
+                                <ActivityTimelineDisplay timeline={update.activity_timeline} />
+                              </div>
                             )}
                             
                             {/* Linked Attachments Section */}

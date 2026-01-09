@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { AttachmentPreviewThumbnail } from "@/components/case-detail/AttachmentPreviewThumbnail";
+import { ActivityTimelineDisplay } from "@/components/case-detail/ActivityTimelineDisplay";
 
 interface LinkedAttachment {
   id: string;
@@ -23,6 +24,11 @@ interface LinkedAttachment {
   preview_status?: string | null;
 }
 
+interface TimelineEntry {
+  time: string;
+  description: string;
+}
+
 interface Update {
   id: string;
   title: string;
@@ -31,6 +37,7 @@ interface Update {
   update_type: string;
   user_id: string;
   case_id: string;
+  activity_timeline: TimelineEntry[] | null;
 }
 
 interface UserProfile {
@@ -83,7 +90,19 @@ const UpdateDetail = () => {
         return;
       }
 
-      setUpdate(updateData);
+      // Map with proper type casting
+      const mappedUpdate: Update = {
+        id: updateData.id,
+        title: updateData.title,
+        description: updateData.description,
+        created_at: updateData.created_at,
+        update_type: updateData.update_type,
+        user_id: updateData.user_id,
+        case_id: updateData.case_id,
+        activity_timeline: updateData.activity_timeline as unknown as TimelineEntry[] | null,
+      };
+
+      setUpdate(mappedUpdate);
 
       const { data: profileData } = await supabase
         .from("profiles")
@@ -240,6 +259,13 @@ const UpdateDetail = () => {
               className="[&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1"
             />
           </div>
+
+          {/* Activity Timeline Section */}
+          {update.activity_timeline && update.activity_timeline.length > 0 && (
+            <div className="space-y-3 pt-4 border-t">
+              <ActivityTimelineDisplay timeline={update.activity_timeline} />
+            </div>
+          )}
 
           {/* Linked Attachments Section */}
           <div className="space-y-3 pt-4 border-t">
