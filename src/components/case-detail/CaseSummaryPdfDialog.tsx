@@ -272,24 +272,14 @@ export function CaseSummaryPdfDialog({
           {/* Preview */}
           <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
             <h3 className="font-medium text-sm mb-2">Preview</h3>
-            <ScrollArea className="h-[500px] border rounded-lg bg-muted/30">
+            <ScrollArea className="h-[500px] border rounded-lg bg-white">
               {loading || !data ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <div className="p-6 flex items-start justify-center min-h-full">
-                  <div 
-                    className="bg-white shadow-md rounded-sm border border-border/50 overflow-hidden"
-                    style={{ 
-                      width: '100%',
-                      maxWidth: '400px',
-                      transform: 'scale(0.48)',
-                      transformOrigin: 'top center'
-                    }}
-                  >
-                    <CaseSummaryContent ref={contentRef} data={data} sections={sections} />
-                  </div>
+                <div className="p-2">
+                  <CaseSummaryContent ref={contentRef} data={data} sections={sections} />
                 </div>
               )}
             </ScrollArea>
