@@ -371,6 +371,38 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
       for (const uploadingFile of newUploadingFiles) {
         try {
           const file = uploadingFile.file;
+          
+          // Step 1: Compute SHA-256 hash for deduplication
+          const { computeFileHash } = await import("@/lib/fileHash");
+          const fileHash = await computeFileHash(file);
+          
+          // Step 2: Check for existing attachment with same hash in this case
+          const { data: existingAttachment } = await supabase
+            .from("case_attachments")
+            .select("id, file_name")
+            .eq("case_id", caseId)
+            .eq("file_hash", fileHash)
+            .limit(1)
+            .maybeSingle();
+          
+          if (existingAttachment) {
+            // Duplicate found - notify user and skip upload
+            toast({
+              title: "Duplicate file detected",
+              description: `"${file.name}" matches existing file "${existingAttachment.file_name}"`,
+            });
+            
+            // Mark as complete without uploading
+            setUploadingFiles((prev) =>
+              prev.map((f) =>
+                f.id === uploadingFile.id ? { ...f, status: 'complete' as const } : f
+              )
+            );
+            URL.revokeObjectURL(uploadingFile.preview);
+            continue; // Skip to next file
+          }
+          
+          // Step 3: No duplicate - proceed with upload
           const fileExt = file.name.split(".").pop();
           const filePath = `${user.id}/${caseId}/${crypto.randomUUID()}.${fileExt}`;
 
@@ -404,6 +436,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
               file_size: file.size,
               organization_id: organizationId,
               preview_status: canGenerate ? 'pending' : null,
+              file_hash: fileHash,
             })
             .select()
             .single();
