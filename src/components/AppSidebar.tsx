@@ -44,7 +44,7 @@ const menuGroups = [{
     url: "/my-expenses",
     roles: ['vendor', 'investigator']
   }, {
-    title: "Expenses",
+    title: "Time & Expenses",
     icon: Receipt,
     url: "/expenses",
     roles: ['admin', 'manager', 'investigator']
