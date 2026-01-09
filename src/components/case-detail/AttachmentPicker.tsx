@@ -64,15 +64,7 @@ export const AttachmentPicker = ({
       setLoading(true);
       const { data, error } = await supabase
         .from("case_attachments")
-        .select(`
-          id, 
-          file_name, 
-          file_type, 
-          file_size, 
-          created_at, 
-          user_id,
-          profiles!case_attachments_user_id_fkey(full_name, email)
-        `)
+        .select("id, file_name, file_type, file_size, created_at, user_id")
         .eq("case_id", caseId)
         .order("created_at", { ascending: false });
 
@@ -85,7 +77,6 @@ export const AttachmentPicker = ({
         file_size: a.file_size,
         created_at: a.created_at,
         user_id: a.user_id,
-        uploader_name: a.profiles?.full_name || a.profiles?.email || "Unknown",
       }));
       
       setAttachments(attachmentsWithUploader);
@@ -319,7 +310,7 @@ export const AttachmentPicker = ({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{attachment.file_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatFileSize(attachment.file_size)} • {format(new Date(attachment.created_at), "MMM d, yyyy")} • {attachment.uploader_name}
+                      {formatFileSize(attachment.file_size)} • {format(new Date(attachment.created_at), "MMM d, yyyy")}
                     </p>
                   </div>
                 </label>
