@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ export const UsersManagementTab = ({
   currentUserRole,
   refreshOrganization,
 }: UsersManagementTabProps) => {
+  const navigate = useNavigate();
   const { startImpersonation } = useImpersonation();
   
   const [users, setUsers] = useState<User[]>([]);
@@ -584,7 +586,13 @@ export const UsersManagementTab = ({
                       </TableCell>
                       <TableCell className="font-medium">
                         <div>
-                          {user.full_name || "—"}
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/users/${user.id}`)}
+                            className="text-left hover:text-primary hover:underline transition-colors"
+                          >
+                            {user.full_name || "—"}
+                          </button>
                           <span className="block sm:hidden text-xs text-muted-foreground">{user.email}</span>
                         </div>
                       </TableCell>
