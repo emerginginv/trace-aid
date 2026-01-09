@@ -157,15 +157,18 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
             </DropdownMenu>
           </div>
         )}
-        <ReactQuill
-          ref={quillRef}
-          theme="snow"
-          value={value}
-          onChange={onChange}
-          modules={modules}
-          formats={formats}
-          placeholder={placeholder}
-        />
+        <div className="resize-y overflow-auto min-h-[150px] border border-input rounded-md">
+          <ReactQuill
+            ref={quillRef}
+            theme="snow"
+            value={value}
+            onChange={onChange}
+            modules={modules}
+            formats={formats}
+            placeholder={placeholder}
+            className="h-full [&_.ql-container]:border-0 [&_.ql-toolbar]:border-0 [&_.ql-toolbar]:border-b [&_.ql-editor]:min-h-[100px]"
+          />
+        </div>
       </div>
     );
   }
