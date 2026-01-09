@@ -278,8 +278,10 @@ export function CaseSummaryPdfDialog({
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <div className="transform scale-[0.6] origin-top-left w-[166%]">
-                  <CaseSummaryContent ref={contentRef} data={data} sections={sections} />
+                <div className="flex justify-center p-4">
+                  <div className="transform scale-[0.65] origin-top w-[154%]">
+                    <CaseSummaryContent ref={contentRef} data={data} sections={sections} />
+                  </div>
                 </div>
               )}
             </ScrollArea>
