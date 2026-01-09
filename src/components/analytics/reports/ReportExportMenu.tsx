@@ -119,12 +119,23 @@ export function ReportExportMenu({
 
   /**
    * Format activity timeline for PDF display - clean professional surveillance log format
+   * 
+   * CRITICAL: Timeline rendering is READ-ONLY
+   * -----------------------------------------
+   * This function ONLY formats timeline data for display.
+   * It must NEVER:
+   * - Mutate the row data
+   * - Trigger billing/budget calculations
+   * - Create activities or calendar events
+   * - Affect the underlying update record
+   * 
    * Pagination rules:
    * - Timeline container uses page-break-inside: avoid
    * - Header uses page-break-after: avoid (prevents isolated header at page bottom)
    * - Individual entries use page-break-inside: avoid
    */
   const formatTimelineForPdf = (row: Record<string, unknown>): string => {
+    // READ-ONLY access - we only format for display, never modify data
     const timeline = row.activity_timeline as { time: string; description: string }[] | null;
     if (!timeline || timeline.length === 0) return "";
     
