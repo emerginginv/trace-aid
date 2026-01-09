@@ -2714,6 +2714,10 @@ export type Database = {
         Args: { file_path: string }
         Returns: boolean
       }
+      can_access_subject_profile_image: {
+        Args: { file_path: string }
+        Returns: boolean
+      }
       get_case_budget_summary: {
         Args: { p_case_id: string }
         Returns: {

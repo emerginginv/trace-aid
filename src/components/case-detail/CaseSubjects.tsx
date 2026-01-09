@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { format } from "date-fns";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useSubjectProfileImages } from "@/hooks/use-subject-profile-images";
 
 interface Subject {
   id: string;
@@ -43,6 +44,9 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
   const canAddSubjects = hasPermission("add_subjects");
   const canEditSubjects = hasPermission("edit_subjects");
   const canDeleteSubjects = hasPermission("delete_subjects");
+  
+  // Use signed URLs for private subject profile images
+  const { getSignedUrl } = useSubjectProfileImages(subjects);
 
   useEffect(() => {
     fetchSubjects();
@@ -517,12 +521,14 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
                   <div className="flex items-center gap-3">
                     <Avatar
                       className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() =>
-                        subject.profile_image_url &&
-                        handleImageClick(subject.profile_image_url, subject.id)
-                      }
+                      onClick={() => {
+                        const signedUrl = getSignedUrl(subject.id);
+                        if (signedUrl) {
+                          handleImageClick(signedUrl, subject.id);
+                        }
+                      }}
                     >
-                      <AvatarImage src={subject.profile_image_url || undefined} />
+                      <AvatarImage src={getSignedUrl(subject.id) || undefined} />
                       <AvatarFallback>{getInitials(subject.name)}</AvatarFallback>
                     </Avatar>
                     {getIcon(subject.subject_type)}
