@@ -106,6 +106,40 @@ export const AttachmentPicker = ({
       if (!user) throw new Error("Not authenticated");
 
       const file = files[0];
+      
+      // Step 1: Compute SHA-256 hash for deduplication
+      const { computeFileHash } = await import("@/lib/fileHash");
+      const fileHash = await computeFileHash(file);
+      
+      // Step 2: Check for existing attachment with same hash in this case
+      const { data: existingAttachment } = await supabase
+        .from("case_attachments")
+        .select("id, file_name")
+        .eq("case_id", caseId)
+        .eq("file_hash", fileHash)
+        .limit(1)
+        .maybeSingle();
+      
+      if (existingAttachment) {
+        // Duplicate found - notify user and auto-select the existing attachment
+        toast({
+          title: "Duplicate file detected",
+          description: `"${file.name}" matches existing file "${existingAttachment.file_name}". Linking existing file instead.`,
+        });
+        
+        // Auto-select the existing attachment for linking
+        if (!selectedIds.includes(existingAttachment.id)) {
+          onSelectionChange([...selectedIds, existingAttachment.id]);
+        }
+        
+        setUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        return;
+      }
+      
+      // Step 3: No duplicate - proceed with upload
       const fileExt = file.name.split(".").pop();
       const filePath = `${caseId}/${crypto.randomUUID()}.${fileExt}`;
 
@@ -116,7 +150,7 @@ export const AttachmentPicker = ({
 
       if (uploadError) throw uploadError;
 
-      // Create case_attachments record
+      // Create case_attachments record with file_hash
       const { data: newAttachment, error: insertError } = await supabase
         .from("case_attachments")
         .insert({
@@ -127,6 +161,7 @@ export const AttachmentPicker = ({
           file_path: filePath,
           file_type: file.type || "application/octet-stream",
           file_size: file.size,
+          file_hash: fileHash,
         })
         .select()
         .single();

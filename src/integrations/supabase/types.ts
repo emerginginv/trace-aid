@@ -344,6 +344,7 @@ export type Database = {
           case_id: string
           created_at: string
           description: string | null
+          file_hash: string | null
           file_name: string
           file_path: string
           file_size: number
@@ -362,6 +363,7 @@ export type Database = {
           case_id: string
           created_at?: string
           description?: string | null
+          file_hash?: string | null
           file_name: string
           file_path: string
           file_size: number
@@ -380,6 +382,7 @@ export type Database = {
           case_id?: string
           created_at?: string
           description?: string | null
+          file_hash?: string | null
           file_name?: string
           file_path?: string
           file_size?: number
