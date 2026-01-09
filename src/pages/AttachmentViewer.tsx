@@ -29,6 +29,7 @@ export default function AttachmentViewer() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const caseId = searchParams.get("caseId");
+  const returnTab = searchParams.get("returnTab") || "attachments";
   const { logPreview } = usePreviewLogging();
   const hasLoggedPreview = useRef(false);
 
@@ -176,9 +177,9 @@ export default function AttachmentViewer() {
 
   const handleClose = () => {
     if (caseId) {
-      navigate(`/cases/${caseId}?tab=attachments`);
+      navigate(`/cases/${caseId}?tab=${returnTab}`);
     } else if (attachment?.case_id) {
-      navigate(`/cases/${attachment.case_id}?tab=attachments`);
+      navigate(`/cases/${attachment.case_id}?tab=${returnTab}`);
     } else {
       navigate(-1);
     }
