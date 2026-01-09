@@ -10,11 +10,13 @@ import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useNavigate } from "react-router-dom";
 import { ExternalLink, Paperclip } from "lucide-react";
 import { AttachmentPicker } from "./AttachmentPicker";
+import { ActivityTimelineEditor, TimelineEntry } from "./ActivityTimelineEditor";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -37,6 +39,8 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   const [caseTitle, setCaseTitle] = useState<string>("");
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
   const [existingLinkIds, setExistingLinkIds] = useState<string[]>([]);
+  const [includeTimeline, setIncludeTimeline] = useState(false);
+  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -103,12 +107,22 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         description: editingUpdate.description || "",
         update_type: editingUpdate.update_type || "Other",
       });
+      // Load existing timeline data
+      if (editingUpdate.activity_timeline && Array.isArray(editingUpdate.activity_timeline)) {
+        setIncludeTimeline(true);
+        setTimelineEntries(editingUpdate.activity_timeline);
+      } else {
+        setIncludeTimeline(false);
+        setTimelineEntries([]);
+      }
     } else {
       form.reset({
         title: "",
         description: "",
         update_type: "Other",
       });
+      setIncludeTimeline(false);
+      setTimelineEntries([]);
     }
   }, [editingUpdate, form]);
 
@@ -163,13 +177,19 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
 
       if (!organizationId) throw new Error("Organization not found");
 
-      const updateData = {
+      // Prepare timeline data - only include if checkbox is checked and has entries
+      const timelineData = includeTimeline && timelineEntries.length > 0 
+        ? timelineEntries.filter(e => e.time && e.description) 
+        : null;
+
+      const updateData: Record<string, unknown> = {
         case_id: caseId,
         user_id: user.id,
         organization_id: organizationId,
         title: values.title,
         description: values.description || null,
         update_type: values.update_type,
+        activity_timeline: timelineData,
       };
 
       let error;
@@ -177,7 +197,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       if (editingUpdate) {
         const result = await supabase
           .from("case_updates")
-          .update(updateData)
+          .update(updateData as any)
           .eq("id", editingUpdate.id);
         error = result.error;
 
@@ -212,7 +232,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       } else {
         const result = await supabase
           .from("case_updates")
-          .insert(updateData)
+          .insert(updateData as any)
           .select()
           .single();
         error = result.error;
@@ -259,6 +279,8 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
 
       form.reset();
       setSelectedAttachmentIds([]);
+      setIncludeTimeline(false);
+      setTimelineEntries([]);
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -352,6 +374,38 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                 </FormItem>
               )}
             />
+
+            {/* Include Activity Timeline Toggle */}
+            <div className="flex items-start space-x-3 rounded-lg border border-border p-4 bg-muted/30">
+              <Checkbox 
+                id="include-timeline"
+                checked={includeTimeline}
+                onCheckedChange={(checked) => {
+                  setIncludeTimeline(!!checked);
+                  if (!checked) setTimelineEntries([]);
+                }}
+              />
+              <div className="space-y-1 leading-none">
+                <Label 
+                  htmlFor="include-timeline" 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Include activity timeline
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Add chronological activity entries to this update (e.g., surveillance log)
+                </p>
+              </div>
+            </div>
+
+            {/* Timeline Editor (conditional) */}
+            {includeTimeline && (
+              <ActivityTimelineEditor
+                value={timelineEntries}
+                onChange={setTimelineEntries}
+                disabled={isSubmitting}
+              />
+            )}
 
             {/* Attachment linking section - available for both new and edit */}
             <div className="space-y-2">

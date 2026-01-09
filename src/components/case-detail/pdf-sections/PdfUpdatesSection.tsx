@@ -2,6 +2,11 @@ import { format } from "date-fns";
 import { MessageSquare, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+interface TimelineEntry {
+  time: string;
+  description: string;
+}
+
 interface Update {
   id: string;
   title: string;
@@ -9,6 +14,7 @@ interface Update {
   update_type: string;
   created_at: string | null;
   user?: { id: string; full_name: string | null } | null;
+  activity_timeline?: TimelineEntry[] | null;
 }
 
 interface PdfUpdatesSectionProps {
@@ -75,6 +81,30 @@ export function PdfUpdatesSection({ updates, caseDescription }: PdfUpdatesSectio
                 />
               )}
               
+              {/* Activity Timeline in PDF */}
+              {update.activity_timeline && update.activity_timeline.length > 0 && (
+                <div className="mt-2 pl-3 border-l-2 border-primary/30">
+                  <p className="text-xs font-medium text-primary mb-1">Activity Timeline</p>
+                  {[...update.activity_timeline]
+                    .sort((a, b) => a.time.localeCompare(b.time))
+                    .map((entry, idx) => {
+                      // Format time for display
+                      const [hours, minutes] = entry.time.split(":").map(Number);
+                      const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+                      const ampm = hours < 12 ? "AM" : "PM";
+                      const formattedTime = `${displayHour}:${minutes.toString().padStart(2, "0")} ${ampm}`;
+                      
+                      return (
+                        <p key={idx} className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">{formattedTime}</span>
+                          <span className="mx-1">—</span>
+                          {entry.description}
+                        </p>
+                      );
+                    })}
+                </div>
+              )}
+
               {update.user?.full_name && (
                 <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                   <User className="h-3 w-3" />

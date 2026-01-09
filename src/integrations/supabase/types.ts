@@ -706,6 +706,7 @@ export type Database = {
       }
       case_updates: {
         Row: {
+          activity_timeline: Json | null
           case_id: string
           created_at: string | null
           description: string | null
@@ -720,6 +721,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activity_timeline?: Json | null
           case_id: string
           created_at?: string | null
           description?: string | null
@@ -734,6 +736,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activity_timeline?: Json | null
           case_id?: string
           created_at?: string | null
           description?: string | null
