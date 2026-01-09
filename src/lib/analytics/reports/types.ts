@@ -46,6 +46,7 @@ export interface ReportDefinition {
   totals: ReportTotalConfig[];
   relatedMetrics: string[]; // Links to analytics engine metrics
   baseFilters?: BaseFilter[]; // Pre-applied filters (e.g., finance_type)
+  optionalExportColumns?: ReportColumn[]; // Columns that can be toggled for export only
 }
 
 export interface ReportQueryParams {

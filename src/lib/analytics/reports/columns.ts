@@ -212,6 +212,15 @@ export const activityColumns: Record<string, ReportColumn> = {
   },
 };
 
+// Helper to format time from "HH:MM" to "H:MM AM/PM"
+function formatTimelineTime(time: string): string {
+  if (!time) return "";
+  const [hours, minutes] = time.split(":").map(Number);
+  const period = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
+}
+
 // Update-related columns
 export const updateColumns: Record<string, ReportColumn> = {
   update_title: {
@@ -251,6 +260,21 @@ export const updateColumns: Record<string, ReportColumn> = {
     accessor: (row) => (row.cases as Record<string, unknown>)?.case_number || "—",
     sortable: false,
     width: "120px",
+  },
+  // Optional export-only column for activity timeline
+  update_activity_timeline: {
+    key: "activity_timeline",
+    header: "Activity Timeline",
+    accessor: (row) => {
+      const timeline = row.activity_timeline as { time: string; description: string }[] | null;
+      if (!timeline || timeline.length === 0) return "";
+      // Sort by time and format as readable text
+      return [...timeline]
+        .sort((a, b) => a.time.localeCompare(b.time))
+        .map(entry => `${formatTimelineTime(entry.time)} — ${entry.description}`)
+        .join("; ");
+    },
+    sortable: false,
   },
 };
 

@@ -82,6 +82,7 @@ export async function parseDocxTemplate(file: File): Promise<ParseResult> {
 // Options for generating DOCX reports
 export interface GenerateDocxOptions {
   selectedAttachmentIds?: string[];
+  includeActivityTimelines?: boolean;
 }
 
 // Generate a DOCX report from a template
@@ -105,6 +106,7 @@ export async function generateDocxReport(
     // Get variable values for this case
     const variables = await resolveVariables(caseId, organizationId, {
       selectedAttachmentIds: options?.selectedAttachmentIds,
+      includeActivityTimelines: options?.includeActivityTimelines,
     });
 
     // Convert variables to the format docxtemplater expects (without {{ }})
