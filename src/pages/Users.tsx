@@ -700,8 +700,17 @@ const Users = () => {
                         </TableCell>
                       )}
                       {isVisible("full_name") && (
-                        <TableCell className="font-medium">
-                          {user.full_name || "—"}
+                        <TableCell>
+                          {user.status === 'active' ? (
+                            <button
+                              onClick={() => navigate(`/users/${user.id}`)}
+                              className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                            >
+                              {user.full_name || "—"}
+                            </button>
+                          ) : (
+                            <span className="font-medium text-muted-foreground">{user.full_name || "—"}</span>
+                          )}
                         </TableCell>
                       )}
                       {isVisible("email") && (
