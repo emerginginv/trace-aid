@@ -282,6 +282,10 @@ export const caseUpdatesReport: ReportDefinition = {
     { key: "totalUpdates", label: "Total Updates", aggregation: "count", field: "id", format: "count" },
   ],
   relatedMetrics: ["activity.updates_count"],
+  // Optional export columns for activity timelines (not shown in table, only available for export)
+  optionalExportColumns: [
+    updateColumns.update_activity_timeline,
+  ],
 };
 
 export const tasksReport: ReportDefinition = {

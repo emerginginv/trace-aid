@@ -89,6 +89,7 @@ export const TEMPLATE_VARIABLES: VariableDefinition[] = [
   { variable: "{{Updates.list}}", label: "Case Updates (plain text)", category: "Updates" },
   { variable: "{{Updates.list_with_author}}", label: "Case Updates (with author)", category: "Updates" },
   { variable: "{{Updates.formatted_list}}", label: "Case Updates (formatted)", category: "Updates" },
+  { variable: "{{Updates.with_timelines}}", label: "Updates with Activity Timelines", category: "Updates", description: "Updates that include activity timelines (must be enabled)" },
 
   // File Attachments
   { variable: "{{Files.list}}", label: "File List (plain text)", category: "Files", description: "List of all attached file names" },
@@ -153,9 +154,19 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }
 
+// Helper function to format timeline time from "HH:MM" to "H:MM AM/PM"
+function formatTimelineTime(time: string): string {
+  if (!time) return "";
+  const [hours, minutes] = time.split(":").map(Number);
+  const period = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
+}
+
 // Options for resolving variables
 export interface ResolveVariablesOptions {
   selectedAttachmentIds?: string[];
+  includeActivityTimelines?: boolean;
 }
 
 // Resolve all variables for a case
@@ -165,7 +176,7 @@ export async function resolveVariables(
   options?: ResolveVariablesOptions
 ): Promise<Record<string, string>> {
   const variables: Record<string, string> = {};
-  const { selectedAttachmentIds } = options || {};
+  const { selectedAttachmentIds, includeActivityTimelines } = options || {};
   
   // General variables (always available)
   const now = new Date();
@@ -351,7 +362,7 @@ export async function resolveVariables(
       variables["Case.invoice_total"] = `$${invoiceTotal.toFixed(2)}`;
     }
 
-    // Fetch case updates
+    // Fetch case updates (including activity_timeline if option enabled)
     const { data: updates } = await supabase
       .from("case_updates")
       .select("*, profiles:user_id(full_name)")
@@ -373,6 +384,32 @@ export async function resolveVariables(
       variables["Updates.list"] = plainList;
       variables["Updates.list_with_author"] = listWithAuthor;
       variables["Updates.formatted_list"] = formattedList;
+      
+      // Activity timelines - only include if explicitly enabled
+      if (includeActivityTimelines) {
+        const updatesWithTimelines = updates.filter(u => {
+          const timeline = u.activity_timeline as { time: string; description: string }[] | null;
+          return timeline && timeline.length > 0;
+        });
+        
+        if (updatesWithTimelines.length > 0) {
+          const timelinesFormatted = updatesWithTimelines.map(u => {
+            const date = formatDateStandard(u.created_at);
+            const timeline = u.activity_timeline as { time: string; description: string }[];
+            const timelineText = [...timeline]
+              .sort((a, b) => a.time.localeCompare(b.time))
+              .map(entry => `  ${formatTimelineTime(entry.time)} — ${entry.description}`)
+              .join("\n");
+            return `[${date}] ${u.title}\n${u.description || ""}\n\nActivity Timeline:\n${timelineText}`;
+          }).join("\n\n---\n\n");
+          
+          variables["Updates.with_timelines"] = timelinesFormatted;
+        } else {
+          variables["Updates.with_timelines"] = "";
+        }
+      } else {
+        variables["Updates.with_timelines"] = "";
+      }
     }
 
     // Fetch file attachments

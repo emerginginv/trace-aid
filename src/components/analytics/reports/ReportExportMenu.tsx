@@ -10,8 +10,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 interface ReportExportMenuProps {
@@ -34,6 +38,32 @@ export function ReportExportMenu({
   sort 
 }: ReportExportMenuProps) {
   const [exporting, setExporting] = useState(false);
+  const [includeActivityTimelines, setIncludeActivityTimelines] = useState(false);
+
+  // Check if this report has optional export columns (e.g., activity timelines)
+  const hasOptionalColumns = report.optionalExportColumns && report.optionalExportColumns.length > 0;
+  const hasActivityTimelineColumn = report.optionalExportColumns?.some(
+    col => col.key === "activity_timeline"
+  );
+
+  /**
+   * Get the effective columns for export based on user selections
+   */
+  const getExportColumns = (): ReportColumn[] => {
+    const columns = [...report.columns];
+    
+    // Add activity timeline column if selected
+    if (includeActivityTimelines && hasActivityTimelineColumn) {
+      const timelineCol = report.optionalExportColumns?.find(
+        col => col.key === "activity_timeline"
+      );
+      if (timelineCol) {
+        columns.push(timelineCol);
+      }
+    }
+    
+    return columns;
+  };
 
   /**
    * Fetch all data for export (bypasses pagination)
@@ -87,21 +117,44 @@ export function ReportExportMenu({
     return String(value);
   };
 
+  /**
+   * Format activity timeline for PDF display (multi-line)
+   */
+  const formatTimelineForPdf = (row: Record<string, unknown>): string => {
+    const timeline = row.activity_timeline as { time: string; description: string }[] | null;
+    if (!timeline || timeline.length === 0) return "";
+    
+    // Helper to format time from "HH:MM" to "H:MM AM/PM"
+    const formatTime = (time: string): string => {
+      if (!time) return "";
+      const [hours, minutes] = time.split(":").map(Number);
+      const period = hours >= 12 ? "PM" : "AM";
+      const displayHours = hours % 12 || 12;
+      return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
+    };
+    
+    return [...timeline]
+      .sort((a, b) => a.time.localeCompare(b.time))
+      .map(entry => `${formatTime(entry.time)} — ${entry.description}`)
+      .join("<br>");
+  };
+
   const handleExportCSV = async () => {
     setExporting(true);
     try {
       // Fetch ALL data for export
       const allData = await fetchAllData();
+      const exportColumns = getExportColumns();
 
       // Build CSV header
-      const headers = report.columns.map((col) => col.header);
+      const headers = exportColumns.map((col) => col.header);
       
       // Build CSV rows
       const rows = allData.map((row) =>
-        report.columns.map((col) => {
+        exportColumns.map((col) => {
           const strValue = formatExportValue(col, row);
           // Escape quotes and wrap in quotes if contains comma
-          if (strValue.includes(",") || strValue.includes('"') || strValue.includes("\n")) {
+          if (strValue.includes(",") || strValue.includes('"') || strValue.includes("\n") || strValue.includes(";")) {
             return `"${strValue.replace(/"/g, '""')}"`;
           }
           return strValue;
@@ -109,7 +162,7 @@ export function ReportExportMenu({
       );
       
       // Build totals row
-      const totalsRow = report.columns.map((col) => {
+      const totalsRow = exportColumns.map((col) => {
         const totalConfig = report.totals.find((t) => t.key === col.key);
         if (totalConfig && totals[totalConfig.key] !== undefined) {
           return formatTotalValue(totals[totalConfig.key], totalConfig.format);
@@ -123,20 +176,34 @@ export function ReportExportMenu({
         .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
         .join("; ") || "None";
       
+      // Build export options info
+      const exportOptions = [];
+      if (includeActivityTimelines) {
+        exportOptions.push("Activity Timelines: Included");
+      }
+      const optionsInfo = exportOptions.length > 0 ? exportOptions.join("; ") : "";
+      
       // Combine all
-      const csvContent = [
+      const csvRows = [
         [report.name],
         [`Generated: ${format(new Date(), "yyyy-MM-dd HH:mm:ss")}`],
         [`Records: ${allData.length}`],
         [`Filters: ${filterInfo}`],
+      ];
+      
+      if (optionsInfo) {
+        csvRows.push([`Export Options: ${optionsInfo}`]);
+      }
+      
+      csvRows.push(
         [],
         headers,
         ...rows,
         [],
-        ["TOTALS", ...totalsRow.slice(1)],
-      ]
-        .map((row) => row.join(","))
-        .join("\n");
+        ["TOTALS", ...totalsRow.slice(1)]
+      );
+      
+      const csvContent = csvRows.map((row) => row.join(",")).join("\n");
       
       // Download
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -160,6 +227,8 @@ export function ReportExportMenu({
     try {
       // Fetch ALL data for export
       const allData = await fetchAllData();
+      const exportColumns = getExportColumns();
+      const hasTimelineCol = exportColumns.some(col => col.key === "activity_timeline");
 
       // Build HTML content for PDF
       const htmlContent = `
@@ -169,12 +238,13 @@ export function ReportExportMenu({
           <p style="color: #666; font-size: 12px; margin-bottom: 20px;">
             Generated: ${format(new Date(), "MMMM d, yyyy 'at' h:mm a")} | 
             Records: ${allData.length}
+            ${includeActivityTimelines ? " | Activity Timelines: Included" : ""}
           </p>
           
           <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
             <thead>
               <tr style="background-color: #f3f4f6;">
-                ${report.columns.map(col => 
+                ${exportColumns.map(col => 
                   `<th style="border: 1px solid #e5e7eb; padding: 8px; text-align: ${col.align || 'left'};">
                     ${col.header}
                   </th>`
@@ -184,17 +254,24 @@ export function ReportExportMenu({
             <tbody>
               ${allData.map((row, i) => `
                 <tr style="background-color: ${i % 2 === 0 ? '#ffffff' : '#f9fafb'};">
-                  ${report.columns.map(col => 
-                    `<td style="border: 1px solid #e5e7eb; padding: 6px; text-align: ${col.align || 'left'};">
+                  ${exportColumns.map(col => {
+                    // Special handling for activity timeline in PDF
+                    if (col.key === "activity_timeline") {
+                      const timelineHtml = formatTimelineForPdf(row);
+                      return `<td style="border: 1px solid #e5e7eb; padding: 6px; text-align: left; font-size: 10px;">
+                        ${timelineHtml || '—'}
+                      </td>`;
+                    }
+                    return `<td style="border: 1px solid #e5e7eb; padding: 6px; text-align: ${col.align || 'left'};">
                       ${formatExportValue(col, row) || '—'}
-                    </td>`
-                  ).join('')}
+                    </td>`;
+                  }).join('')}
                 </tr>
               `).join('')}
             </tbody>
             <tfoot>
               <tr style="background-color: #e5e7eb; font-weight: bold;">
-                ${report.columns.map((col, i) => {
+                ${exportColumns.map((col, i) => {
                   const totalConfig = report.totals.find((t) => t.key === col.key);
                   const value = totalConfig && totals[totalConfig.key] !== undefined
                     ? formatTotalValue(totals[totalConfig.key], totalConfig.format)
@@ -248,7 +325,34 @@ export function ReportExportMenu({
           Export
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="w-56">
+        {/* Export Options section - only show if there are optional columns */}
+        {hasOptionalColumns && (
+          <>
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Export Options
+            </DropdownMenuLabel>
+            {hasActivityTimelineColumn && (
+              <div className="px-2 py-1.5">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="include-timelines"
+                    checked={includeActivityTimelines}
+                    onCheckedChange={(checked) => setIncludeActivityTimelines(!!checked)}
+                  />
+                  <Label 
+                    htmlFor="include-timelines" 
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    Include Activity Timelines
+                  </Label>
+                </div>
+              </div>
+            )}
+            <DropdownMenuSeparator />
+          </>
+        )}
+        
         <DropdownMenuItem onClick={handleExportCSV} disabled={exporting}>
           <FileSpreadsheet className="h-4 w-4 mr-2" />
           Export as CSV

@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { getDocxTemplates, generateDocxReport, saveGeneratedReport, type DocxTemplate } from "@/lib/docxTemplateEngine";
 import { AttachmentEvidenceSelector } from "./AttachmentEvidenceSelector";
 
-import { FileText, Download, Loader2 } from "lucide-react";
+import { FileText, Download, Loader2, Clock } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface GenerateReportDialogProps {
@@ -36,6 +37,7 @@ export const GenerateReportDialog = ({
   const [templates, setTemplates] = useState<DocxTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
+  const [includeActivityTimelines, setIncludeActivityTimelines] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -81,6 +83,7 @@ export const GenerateReportDialog = ({
     try {
       const result = await generateDocxReport(template.filePath, caseId, organization.id, {
         selectedAttachmentIds: selectedAttachmentIds.length > 0 ? selectedAttachmentIds : undefined,
+        includeActivityTimelines,
       });
       
       if (result) {
@@ -203,6 +206,27 @@ export const GenerateReportDialog = ({
                       )}
                     </div>
                   )}
+                </div>
+
+                {/* Activity Timeline Option */}
+                <div className="flex items-start space-x-2 p-3 rounded-lg border border-border/50 bg-muted/20">
+                  <Checkbox
+                    id="include-timelines"
+                    checked={includeActivityTimelines}
+                    onCheckedChange={(checked) => setIncludeActivityTimelines(!!checked)}
+                  />
+                  <div className="space-y-1">
+                    <Label 
+                      htmlFor="include-timelines" 
+                      className="text-sm font-medium cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      Include Activity Timelines
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Include chronological activity logs from updates that have timelines
+                    </p>
+                  </div>
                 </div>
 
                 {/* Attachment Evidence Selector */}
