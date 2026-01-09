@@ -2717,36 +2717,6 @@ export type Database = {
           },
         ]
       }
-      email_change_requests_safe: {
-        Row: {
-          completed_at: string | null
-          created_at: string | null
-          expires_at: string | null
-          id: string | null
-          new_email: string | null
-          old_email: string | null
-          user_id: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string | null
-          new_email?: string | null
-          old_email?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string | null
-          new_email?: string | null
-          old_email?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
     }
     Functions: {
       accept_organization_invite: {
@@ -2772,6 +2742,17 @@ export type Database = {
           hours_consumed: number
           hours_remaining: number
           hours_utilization_pct: number
+        }[]
+      }
+      get_my_email_change_requests: {
+        Args: never
+        Returns: {
+          completed_at: string
+          created_at: string
+          expires_at: string
+          id: string
+          new_email: string
+          old_email: string
         }[]
       }
       get_organization_users: {
