@@ -16,6 +16,7 @@ interface CaseSummaryContentProps {
   data: CaseSummaryData;
   sections: {
     generalInfo: boolean;
+    clientContact: boolean;
     subjects: boolean;
     budget: boolean;
     financials: boolean;
@@ -50,6 +51,7 @@ export const CaseSummaryContent = forwardRef<HTMLDivElement, CaseSummaryContentP
         {/* General Info */}
         {sections.generalInfo && (
           <PdfGeneralInfo
+            showClientContact={sections.clientContact}
             account={data.account}
             contact={data.contact}
             caseManager={data.caseManager}

@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { Building2, User, Calendar, Users, AlertTriangle, FileText } from "lucide-react";
 
 interface PdfGeneralInfoProps {
+  showClientContact?: boolean;
   account: { name: string } | null;
   contact: { first_name: string; last_name: string; email: string | null; phone: string | null } | null;
   caseManager: { full_name: string | null; email: string } | null;
@@ -16,6 +17,7 @@ interface PdfGeneralInfoProps {
 }
 
 export function PdfGeneralInfo({
+  showClientContact = true,
   account,
   contact,
   caseManager,
@@ -36,26 +38,32 @@ export function PdfGeneralInfo({
       </h2>
       
       <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
-        <div className="flex items-start gap-2">
-          <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-          <div>
-            <span className="text-muted-foreground">Client:</span>
-            <span className="ml-2 font-medium">{account?.name || "Not assigned"}</span>
+        {/* Client - conditionally rendered */}
+        {showClientContact && (
+          <div className="flex items-start gap-2">
+            <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div>
+              <span className="text-muted-foreground">Client:</span>
+              <span className="ml-2 font-medium">{account?.name || "Not assigned"}</span>
+            </div>
           </div>
-        </div>
+        )}
         
-        <div className="flex items-start gap-2">
-          <User className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-          <div>
-            <span className="text-muted-foreground">Contact:</span>
-            <span className="ml-2 font-medium">
-              {contact ? `${contact.first_name} ${contact.last_name}` : "Not assigned"}
-            </span>
-            {contact?.email && (
-              <span className="text-muted-foreground ml-1">({contact.email})</span>
-            )}
+        {/* Contact - conditionally rendered */}
+        {showClientContact && (
+          <div className="flex items-start gap-2">
+            <User className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div>
+              <span className="text-muted-foreground">Contact:</span>
+              <span className="ml-2 font-medium">
+                {contact ? `${contact.first_name} ${contact.last_name}` : "Not assigned"}
+              </span>
+              {contact?.email && (
+                <span className="text-muted-foreground ml-1">({contact.email})</span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
         
         <div className="flex items-start gap-2">
           <User className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
