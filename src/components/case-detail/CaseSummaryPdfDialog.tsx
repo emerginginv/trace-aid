@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import html2pdf from "html2pdf.js";
 import { Loader2, FileDown, Printer, FileText, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,11 @@ import { Separator } from "@/components/ui/separator";
 import { fetchCaseSummaryData, type CaseSummaryData } from "@/lib/caseSummaryData";
 import { CaseSummaryContent } from "./CaseSummaryContent";
 
+// Base document width in pixels (8.5in at 96dpi)
+const BASE_DOC_WIDTH = 816;
+// Uniform viewport padding in pixels
+const VIEWPORT_PADDING = 12;
+
 interface CaseSummaryPdfDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -31,9 +36,11 @@ export function CaseSummaryPdfDialog({
   caseNumber,
 }: CaseSummaryPdfDialogProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [data, setData] = useState<CaseSummaryData | null>(null);
+  const [previewScale, setPreviewScale] = useState(1);
   const [sections, setSections] = useState({
     generalInfo: true,
     subjects: true,
@@ -66,6 +73,35 @@ export function CaseSummaryPdfDialog({
       loadData();
     }
   }, [open]);
+
+  // Fit-to-Width scaling: compute scale based on viewport width
+  const computeScale = useCallback(() => {
+    if (!viewportRef.current) return;
+    const viewportWidth = viewportRef.current.clientWidth;
+    const availableWidth = viewportWidth - (2 * VIEWPORT_PADDING);
+    const newScale = Math.max(0.25, availableWidth / BASE_DOC_WIDTH);
+    setPreviewScale(newScale);
+  }, []);
+
+  // ResizeObserver to recompute scale on viewport resize
+  useEffect(() => {
+    if (!open) return;
+    
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    // Initial computation
+    computeScale();
+
+    const resizeObserver = new ResizeObserver(() => {
+      computeScale();
+    });
+    resizeObserver.observe(viewport);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [open, computeScale]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -270,19 +306,49 @@ export function CaseSummaryPdfDialog({
           <Separator orientation="vertical" />
 
           {/* Preview */}
-          <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col">
             <h3 className="font-medium text-sm mb-2">Preview</h3>
-            <ScrollArea className="h-[500px] border rounded-lg bg-white">
+            
+            {/* Offscreen export DOM - unscaled, used by generatePdf and handlePrint */}
+            {data && (
+              <div 
+                style={{ 
+                  position: 'fixed', 
+                  left: '-99999px', 
+                  top: 0, 
+                  width: `${BASE_DOC_WIDTH}px`,
+                  visibility: 'hidden',
+                  pointerEvents: 'none'
+                }}
+                aria-hidden="true"
+              >
+                <CaseSummaryContent ref={contentRef} data={data} sections={sections} />
+              </div>
+            )}
+            
+            {/* Viewport - scrollable container with uniform padding */}
+            <div 
+              ref={viewportRef}
+              className="flex-1 min-h-0 border rounded-lg bg-white overflow-auto"
+              style={{ padding: `${VIEWPORT_PADDING}px` }}
+            >
               {loading || !data ? (
-                <div className="flex items-center justify-center h-full">
+                <div className="flex items-center justify-center h-full min-h-[400px]">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <div className="p-2">
-                  <CaseSummaryContent ref={contentRef} data={data} sections={sections} />
+                /* Scaled preview content - uses CSS zoom for Fit-to-Width */
+                <div 
+                  style={{ 
+                    zoom: previewScale,
+                    width: `${BASE_DOC_WIDTH}px`,
+                    transformOrigin: 'top left'
+                  }}
+                >
+                  <CaseSummaryContent data={data} sections={sections} />
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </div>
         </div>
       </DialogContent>
