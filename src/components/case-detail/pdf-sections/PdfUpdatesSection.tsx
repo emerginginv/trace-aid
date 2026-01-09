@@ -81,27 +81,41 @@ export function PdfUpdatesSection({ updates, caseDescription }: PdfUpdatesSectio
                 />
               )}
               
-              {/* Activity Timeline in PDF */}
+              {/* Activity Timeline in PDF - clean print format */}
               {update.activity_timeline && update.activity_timeline.length > 0 && (
-                <div className="mt-2 pl-3 border-l-2 border-primary/30">
-                  <p className="text-xs font-medium text-primary mb-1">Activity Timeline</p>
-                  {[...update.activity_timeline]
-                    .sort((a, b) => a.time.localeCompare(b.time))
-                    .map((entry, idx) => {
-                      // Format time for display
-                      const [hours, minutes] = entry.time.split(":").map(Number);
-                      const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                      const ampm = hours < 12 ? "AM" : "PM";
-                      const formattedTime = `${displayHour}:${minutes.toString().padStart(2, "0")} ${ampm}`;
-                      
-                      return (
-                        <p key={idx} className="text-xs text-muted-foreground">
-                          <span className="font-medium text-foreground">{formattedTime}</span>
-                          <span className="mx-1">—</span>
-                          {entry.description}
-                        </p>
-                      );
-                    })}
+                <div 
+                  className="mt-3 pt-2"
+                  style={{ pageBreakInside: "avoid" }}
+                >
+                  <p 
+                    className="text-xs font-semibold text-foreground mb-1.5"
+                    style={{ pageBreakAfter: "avoid" }}
+                  >
+                    Activity Timeline:
+                  </p>
+                  <div className="space-y-0.5">
+                    {[...update.activity_timeline]
+                      .sort((a, b) => a.time.localeCompare(b.time))
+                      .map((entry, idx) => {
+                        // Format time for display
+                        const [hours, minutes] = entry.time.split(":").map(Number);
+                        const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+                        const ampm = hours < 12 ? "AM" : "PM";
+                        const formattedTime = `${displayHour}:${minutes.toString().padStart(2, "0")} ${ampm}`;
+                        
+                        return (
+                          <p 
+                            key={idx} 
+                            className="text-xs text-foreground"
+                            style={{ pageBreakInside: "avoid" }}
+                          >
+                            <span className="font-semibold">{formattedTime}</span>
+                            {" – "}
+                            {entry.description}
+                          </p>
+                        );
+                      })}
+                  </div>
                 </div>
               )}
 
