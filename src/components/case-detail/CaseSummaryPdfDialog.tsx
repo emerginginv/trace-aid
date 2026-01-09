@@ -43,6 +43,7 @@ export function CaseSummaryPdfDialog({
   const [previewScale, setPreviewScale] = useState(1);
   const [sections, setSections] = useState({
     generalInfo: true,
+    clientContact: true,
     subjects: true,
     budget: true,
     financials: true,
@@ -117,6 +118,7 @@ export function CaseSummaryPdfDialog({
   const selectAll = () => {
     setSections({
       generalInfo: true,
+      clientContact: true,
       subjects: true,
       budget: true,
       financials: true,
@@ -130,6 +132,7 @@ export function CaseSummaryPdfDialog({
   const selectNone = () => {
     setSections({
       generalInfo: false,
+      clientContact: false,
       subjects: false,
       budget: false,
       financials: false,
@@ -210,6 +213,7 @@ export function CaseSummaryPdfDialog({
 
   const sectionLabels: Record<keyof typeof sections, string> = {
     generalInfo: "General Information",
+    clientContact: "Client & Contact Details",
     subjects: "Subjects",
     budget: "Budget Summary",
     financials: "Financial Details",
