@@ -118,7 +118,11 @@ export function ReportExportMenu({
   };
 
   /**
-   * Format activity timeline for PDF display (multi-line)
+   * Format activity timeline for PDF display - clean professional surveillance log format
+   * Pagination rules:
+   * - Timeline container uses page-break-inside: avoid
+   * - Header uses page-break-after: avoid (prevents isolated header at page bottom)
+   * - Individual entries use page-break-inside: avoid
    */
   const formatTimelineForPdf = (row: Record<string, unknown>): string => {
     const timeline = row.activity_timeline as { time: string; description: string }[] | null;
@@ -133,10 +137,16 @@ export function ReportExportMenu({
       return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
     };
     
-    return [...timeline]
+    // Build clean print-friendly HTML with pagination rules
+    const entriesHtml = [...timeline]
       .sort((a, b) => a.time.localeCompare(b.time))
-      .map(entry => `${formatTime(entry.time)} — ${entry.description}`)
-      .join("<br>");
+      .map(entry => 
+        `<div style="margin-bottom: 2px; page-break-inside: avoid;"><strong>${formatTime(entry.time)}</strong> – ${entry.description}</div>`
+      )
+      .join("");
+    
+    // Wrap with container that avoids page breaks inside and keeps header with content
+    return `<div style="font-size: 10px; page-break-inside: avoid;"><div style="font-weight: 600; margin-bottom: 4px; page-break-after: avoid;">Activity Timeline:</div>${entriesHtml}</div>`;
   };
 
   const handleExportCSV = async () => {

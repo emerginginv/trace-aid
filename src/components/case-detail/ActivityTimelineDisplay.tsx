@@ -8,6 +8,8 @@ interface TimelineEntry {
 interface ActivityTimelineDisplayProps {
   timeline: TimelineEntry[];
   className?: string;
+  /** Use clean print formatting without icons/colors */
+  printMode?: boolean;
 }
 
 // Format 24-hour time to 12-hour display
@@ -30,6 +32,7 @@ const sortByTime = (entries: TimelineEntry[]): TimelineEntry[] => {
 export function ActivityTimelineDisplay({
   timeline,
   className = "",
+  printMode = false,
 }: ActivityTimelineDisplayProps) {
   if (!timeline || timeline.length === 0) {
     return null;
@@ -37,6 +40,31 @@ export function ActivityTimelineDisplay({
 
   const sortedTimeline = sortByTime(timeline);
 
+  // Print mode: clean, professional surveillance log format
+  if (printMode) {
+    return (
+      <div className={`print-timeline ${className}`} style={{ pageBreakInside: "avoid" }}>
+        <p className="text-xs font-semibold text-foreground mb-1.5" style={{ pageBreakAfter: "avoid" }}>
+          Activity Timeline:
+        </p>
+        <div className="space-y-0.5">
+          {sortedTimeline.map((entry, index) => (
+            <p 
+              key={index} 
+              className="text-xs text-foreground"
+              style={{ pageBreakInside: "avoid" }}
+            >
+              <span className="font-semibold">{formatTime(entry.time)}</span>
+              {" – "}
+              {entry.description}
+            </p>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Default interactive mode with icons and colors
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
