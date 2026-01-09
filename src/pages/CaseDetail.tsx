@@ -29,6 +29,7 @@ import { BudgetAdjustmentsHistory } from "@/components/case-detail/BudgetAdjustm
 import { BudgetConsumptionSnapshot } from "@/components/case-detail/BudgetConsumptionSnapshot";
 import { CaseBudgetWidget } from "@/components/case-detail/CaseBudgetWidget";
 import { GenerateReportDialog } from "@/components/templates/GenerateReportDialog";
+import { CaseSummaryPdfDialog } from "@/components/case-detail/CaseSummaryPdfDialog";
 import { CaseReports } from "@/components/case-detail/CaseReports";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -125,6 +126,7 @@ const CaseDetail = () => {
   const [highlightHistory, setHighlightHistory] = useState(false);
   const budgetTabRef = useRef<HTMLDivElement>(null);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [summaryPdfDialogOpen, setSummaryPdfDialogOpen] = useState(false);
   const [updates, setUpdates] = useState<Array<{ id: string; title: string; description: string | null; created_at: string; update_type: string; user_id: string }>>([]);
   const [userProfiles, setUserProfiles] = useState<Record<string, { id: string; full_name: string; email: string }>>({});
 
@@ -661,6 +663,10 @@ const CaseDetail = () => {
           {/* Desktop Action Buttons */}
           {!isVendor && !isMobile && (
             <div className="flex items-center gap-2">
+              <Button variant="outline" className="h-9 px-3" onClick={() => setSummaryPdfDialogOpen(true)}>
+                <FileText className="h-4 w-4 mr-2" />
+                Summary PDF
+              </Button>
               <Button variant="outline" className="h-9 px-3" onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
                 <Mail className="h-4 w-4 mr-2" />
                 Send Email
@@ -689,6 +695,10 @@ const CaseDetail = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setSummaryPdfDialogOpen(true)}>
+                <FileText className="h-4 w-4 mr-2" />
+                Summary PDF
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
                 <Mail className="h-4 w-4 mr-2" />
                 Send Email
@@ -908,6 +918,13 @@ const CaseDetail = () => {
         cancelLabel="Cancel"
         onConfirm={handleReopenCase}
         variant="default"
+      />
+
+      <CaseSummaryPdfDialog
+        open={summaryPdfDialogOpen}
+        onOpenChange={setSummaryPdfDialogOpen}
+        caseId={id!}
+        caseNumber={caseData?.case_number || ""}
       />
     </div>
   );
