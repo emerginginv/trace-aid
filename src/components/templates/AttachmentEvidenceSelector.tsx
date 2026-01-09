@@ -158,14 +158,14 @@ export const AttachmentEvidenceSelector = ({
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="border rounded-lg">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="border rounded-lg overflow-hidden">
       <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-        <div className="flex items-center gap-2">
-          {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <Paperclip className="h-4 w-4" />
-          <span className="font-medium text-sm">Evidence Attachments</span>
-          <Badge variant="secondary" className="text-xs">
-            {selectedIds.length}/{attachments.length} selected
+        <div className="flex items-center gap-2 min-w-0">
+          {isOpen ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+          <Paperclip className="h-4 w-4 flex-shrink-0" />
+          <span className="font-medium text-sm truncate">Evidence Attachments</span>
+          <Badge variant="secondary" className="text-xs flex-shrink-0">
+            {selectedIds.length}/{attachments.length}
           </Badge>
         </div>
       </CollapsibleTrigger>
@@ -236,14 +236,14 @@ export const AttachmentEvidenceSelector = ({
                         />
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <p className="text-sm font-medium truncate max-w-full">
                           {attachment.file_name}
                         </p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{formatFileSize(attachment.file_size)}</span>
-                          <span>•</span>
-                          <span>{format(new Date(attachment.created_at), "MMM d, yyyy")}</span>
+                          <span className="flex-shrink-0">{formatFileSize(attachment.file_size)}</span>
+                          <span className="flex-shrink-0">•</span>
+                          <span className="flex-shrink-0">{format(new Date(attachment.created_at), "MMM d, yyyy")}</span>
                         </div>
                       </div>
 
