@@ -12,6 +12,118 @@ export interface ValidationResult<T> {
   error?: string;
 }
 
+/**
+ * Escape HTML entities to prevent XSS/injection attacks
+ * Converts <, >, &, ", ' to their HTML entity equivalents
+ */
+export function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
+}
+
+/**
+ * Sanitize HTML content for safe email rendering
+ * Allows only a whitelist of safe HTML tags and attributes
+ * Strips all script tags, event handlers, and dangerous content
+ */
+export function sanitizeHtmlForEmail(html: string): string {
+  // Define allowed tags for email content
+  const allowedTags = new Set([
+    'p', 'br', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'b', 'i', 'u', 'strong', 'em', 'a', 'ul', 'ol', 'li',
+    'table', 'thead', 'tbody', 'tr', 'td', 'th',
+    'img', 'hr', 'blockquote', 'pre', 'code'
+  ]);
+  
+  // Define allowed attributes per tag
+  const allowedAttributes: Record<string, Set<string>> = {
+    '*': new Set(['style', 'class']),
+    'a': new Set(['href', 'title', 'target']),
+    'img': new Set(['src', 'alt', 'width', 'height']),
+    'td': new Set(['colspan', 'rowspan', 'align', 'valign']),
+    'th': new Set(['colspan', 'rowspan', 'align', 'valign']),
+    'table': new Set(['border', 'cellpadding', 'cellspacing', 'width']),
+  };
+  
+  // Remove script tags and their content entirely
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  
+  // Remove style tags and their content
+  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+  
+  // Remove all event handlers (onclick, onerror, onload, etc.)
+  sanitized = sanitized.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
+  sanitized = sanitized.replace(/\s+on\w+\s*=\s*[^\s>]+/gi, '');
+  
+  // Remove javascript: and data: URLs in href/src attributes
+  sanitized = sanitized.replace(/href\s*=\s*["']?\s*javascript:[^"'\s>]*/gi, 'href="#"');
+  sanitized = sanitized.replace(/src\s*=\s*["']?\s*javascript:[^"'\s>]*/gi, 'src=""');
+  sanitized = sanitized.replace(/href\s*=\s*["']?\s*data:[^"'\s>]*/gi, 'href="#"');
+  
+  // Remove vbscript: URLs
+  sanitized = sanitized.replace(/href\s*=\s*["']?\s*vbscript:[^"'\s>]*/gi, 'href="#"');
+  
+  // Remove expression() in style attributes (IE CSS expression attacks)
+  sanitized = sanitized.replace(/expression\s*\([^)]*\)/gi, '');
+  
+  // Remove behavior: in styles (IE behavior attacks)
+  sanitized = sanitized.replace(/behavior\s*:\s*[^;"}]*/gi, '');
+  
+  // Remove -moz-binding (Firefox XBL attacks)
+  sanitized = sanitized.replace(/-moz-binding\s*:\s*[^;"}]*/gi, '');
+  
+  // Process tags - remove disallowed ones but keep their text content
+  sanitized = sanitized.replace(/<\/?(\w+)([^>]*)>/gi, (match, tagName, attributes) => {
+    const tag = tagName.toLowerCase();
+    
+    // If tag is not allowed, remove the tag but return empty string
+    // The text content inside will naturally be preserved
+    if (!allowedTags.has(tag)) {
+      return '';
+    }
+    
+    // Clean attributes for allowed tags
+    if (attributes && attributes.trim()) {
+      const cleanedAttrs: string[] = [];
+      const attrRegex = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g;
+      let attrMatch;
+      
+      while ((attrMatch = attrRegex.exec(attributes)) !== null) {
+        const attrName = attrMatch[1].toLowerCase();
+        const attrValue = attrMatch[2] || attrMatch[3] || attrMatch[4] || '';
+        
+        // Check if attribute is allowed for this tag or globally
+        const tagAllowed = allowedAttributes[tag]?.has(attrName) || false;
+        const globalAllowed = allowedAttributes['*']?.has(attrName) || false;
+        
+        if (tagAllowed || globalAllowed) {
+          // Additional validation for specific attributes
+          if (attrName === 'href' || attrName === 'src') {
+            // Only allow http, https, and mailto protocols
+            if (!/^(https?:|mailto:|\/|#)/i.test(attrValue)) {
+              continue;
+            }
+          }
+          cleanedAttrs.push(`${attrName}="${escapeHtml(attrValue)}"`);
+        }
+      }
+      
+      const attrString = cleanedAttrs.length > 0 ? ' ' + cleanedAttrs.join(' ') : '';
+      return match.startsWith('</') ? `</${tag}>` : `<${tag}${attrString}>`;
+    }
+    
+    return match.startsWith('</') ? `</${tag}>` : `<${tag}>`;
+  });
+  
+  return sanitized;
+}
+
 export function validateEmail(email: unknown): ValidationResult<string> {
   if (typeof email !== 'string') {
     return { success: false, error: 'Email must be a string' };

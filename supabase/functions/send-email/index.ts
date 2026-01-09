@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.1';
-import { validateSendEmailInput } from "../_shared/validation.ts";
+import { validateSendEmailInput, sanitizeHtmlForEmail, escapeHtml } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -113,10 +113,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Append signature to body if HTML mode
-    const finalBody = isHtml ? body + emailSignature : body;
+    // Sanitize the email body to prevent HTML injection attacks
+    // For HTML emails, sanitize the content; for plain text, escape HTML entities
+    const sanitizedBody = isHtml ? sanitizeHtmlForEmail(body) : escapeHtml(body);
+    
+    // Append signature to sanitized body if HTML mode
+    const finalBody = isHtml ? sanitizedBody + emailSignature : sanitizedBody;
 
-    console.log("Email parameters:", { to, subject, isHtml, bodyLength: body?.length, finalBodyLength: finalBody?.length });
+    console.log("Email parameters:", { to, subject, isHtml, bodyLength: body?.length, sanitizedLength: sanitizedBody?.length, finalBodyLength: finalBody?.length });
 
     const mailjetPayload = {
       Messages: [
