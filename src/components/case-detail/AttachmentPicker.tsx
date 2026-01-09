@@ -141,7 +141,7 @@ export const AttachmentPicker = ({
       
       // Step 3: No duplicate - proceed with upload
       const fileExt = file.name.split(".").pop();
-      const filePath = `${caseId}/${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${user.id}/${caseId}/${crypto.randomUUID()}.${fileExt}`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
