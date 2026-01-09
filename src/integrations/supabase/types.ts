@@ -2226,46 +2226,76 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           avatar_url: string | null
+          city: string | null
           color: string | null
           company_name: string | null
           created_at: string | null
+          deactivated_at: string | null
+          deactivated_by: string | null
+          department: string | null
           email: string
           full_name: string | null
           id: string
+          is_active: boolean | null
+          mobile_phone: string | null
           notification_email: boolean | null
           notification_push: boolean | null
           notification_sms: boolean | null
+          office_phone: string | null
+          state: string | null
           updated_at: string | null
           username: string
+          zip_code: string | null
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
+          city?: string | null
           color?: string | null
           company_name?: string | null
           created_at?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          department?: string | null
           email: string
           full_name?: string | null
           id: string
+          is_active?: boolean | null
+          mobile_phone?: string | null
           notification_email?: boolean | null
           notification_push?: boolean | null
           notification_sms?: boolean | null
+          office_phone?: string | null
+          state?: string | null
           updated_at?: string | null
           username: string
+          zip_code?: string | null
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
+          city?: string | null
           color?: string | null
           company_name?: string | null
           created_at?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          department?: string | null
           email?: string
           full_name?: string | null
           id?: string
+          is_active?: boolean | null
+          mobile_phone?: string | null
           notification_email?: boolean | null
           notification_push?: boolean | null
           notification_sms?: boolean | null
+          office_phone?: string | null
+          state?: string | null
           updated_at?: string | null
           username?: string
+          zip_code?: string | null
         }
         Relationships: []
       }
