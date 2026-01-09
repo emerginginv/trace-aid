@@ -198,7 +198,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   };
 
   const handleOpenAttachment = (attachmentId: string) => {
-    navigate(`/attachments/${attachmentId}/view?caseId=${caseId}`);
+    navigate(`/attachments/${attachmentId}/view?caseId=${caseId}&returnTab=updates`);
   };
 
   const handleUnlinkAttachment = async (linkId: string, updateId: string) => {
