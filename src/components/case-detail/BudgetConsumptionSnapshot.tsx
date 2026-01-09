@@ -5,79 +5,72 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Receipt, Clock, DollarSign, FileText, AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
-
 interface BudgetConsumptionSnapshotProps {
   caseId: string;
   refreshKey?: number;
 }
-
 interface BudgetData {
   hours_consumed: number;
   dollars_consumed: number;
 }
-
 interface InvoiceTotals {
   totalInvoiced: number;
   totalPaid: number;
   outstanding: number;
 }
-
-export function BudgetConsumptionSnapshot({ caseId, refreshKey }: BudgetConsumptionSnapshotProps) {
+export function BudgetConsumptionSnapshot({
+  caseId,
+  refreshKey
+}: BudgetConsumptionSnapshotProps) {
   const [budgetData, setBudgetData] = useState<BudgetData | null>(null);
   const [invoiceTotals, setInvoiceTotals] = useState<InvoiceTotals | null>(null);
   const [uninvoicedAmount, setUninvoicedAmount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     fetchData();
   }, [caseId, refreshKey]);
-
   const fetchData = async () => {
     try {
       // Fetch budget consumption from existing RPC
-      const { data: budgetRpcData, error: budgetError } = await supabase
-        .rpc("get_case_budget_summary", { p_case_id: caseId });
-
+      const {
+        data: budgetRpcData,
+        error: budgetError
+      } = await supabase.rpc("get_case_budget_summary", {
+        p_case_id: caseId
+      });
       if (budgetError) throw budgetError;
-
       if (budgetRpcData && budgetRpcData.length > 0) {
         setBudgetData({
           hours_consumed: budgetRpcData[0].hours_consumed,
-          dollars_consumed: budgetRpcData[0].dollars_consumed,
+          dollars_consumed: budgetRpcData[0].dollars_consumed
         });
       }
 
       // Fetch invoice totals
-      const { data: invoices, error: invoiceError } = await supabase
-        .from("invoices")
-        .select("total, total_paid, balance_due")
-        .eq("case_id", caseId);
-
+      const {
+        data: invoices,
+        error: invoiceError
+      } = await supabase.from("invoices").select("total, total_paid, balance_due").eq("case_id", caseId);
       if (invoiceError) throw invoiceError;
-
       if (invoices) {
-        const totals = invoices.reduce(
-          (acc, inv) => ({
-            totalInvoiced: acc.totalInvoiced + (inv.total || 0),
-            totalPaid: acc.totalPaid + (inv.total_paid || 0),
-            outstanding: acc.outstanding + (inv.balance_due || 0),
-          }),
-          { totalInvoiced: 0, totalPaid: 0, outstanding: 0 }
-        );
+        const totals = invoices.reduce((acc, inv) => ({
+          totalInvoiced: acc.totalInvoiced + (inv.total || 0),
+          totalPaid: acc.totalPaid + (inv.total_paid || 0),
+          outstanding: acc.outstanding + (inv.balance_due || 0)
+        }), {
+          totalInvoiced: 0,
+          totalPaid: 0,
+          outstanding: 0
+        });
         setInvoiceTotals(totals);
       }
 
       // Fetch uninvoiced expenses
-      const { data: uninvoiced, error: uninvoicedError } = await supabase
-        .from("case_finances")
-        .select("amount")
-        .eq("case_id", caseId)
-        .in("finance_type", ["expense", "time"])
-        .or("status.is.null,status.neq.rejected")
-        .eq("invoiced", false);
-
+      const {
+        data: uninvoiced,
+        error: uninvoicedError
+      } = await supabase.from("case_finances").select("amount").eq("case_id", caseId).in("finance_type", ["expense", "time"]).or("status.is.null,status.neq.rejected").eq("invoiced", false);
       if (uninvoicedError) throw uninvoicedError;
-
       if (uninvoiced) {
         const total = uninvoiced.reduce((sum, item) => sum + (item.amount || 0), 0);
         setUninvoicedAmount(total);
@@ -88,14 +81,12 @@ export function BudgetConsumptionSnapshot({ caseId, refreshKey }: BudgetConsumpt
       setLoading(false);
     }
   };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: "USD"
     }).format(amount);
   };
-
   const formatHours = (hours: number) => {
     return `${hours.toFixed(1)} hrs`;
   };
@@ -104,23 +95,20 @@ export function BudgetConsumptionSnapshot({ caseId, refreshKey }: BudgetConsumpt
   const getUninvoicedWarningLevel = () => {
     if (uninvoicedAmount <= 0) return null;
     const invoicedTotal = invoiceTotals?.totalInvoiced || 0;
-    
+
     // High uninvoiced: over $1000 or over 50% of what's been invoiced
-    if (uninvoicedAmount > 1000 || (invoicedTotal > 0 && uninvoicedAmount > invoicedTotal * 0.5)) {
+    if (uninvoicedAmount > 1000 || invoicedTotal > 0 && uninvoicedAmount > invoicedTotal * 0.5) {
       return "high";
     }
     // Medium: over $500 or over 25% of invoiced
-    if (uninvoicedAmount > 500 || (invoicedTotal > 0 && uninvoicedAmount > invoicedTotal * 0.25)) {
+    if (uninvoicedAmount > 500 || invoicedTotal > 0 && uninvoicedAmount > invoicedTotal * 0.25) {
       return "medium";
     }
     return null;
   };
-
   const uninvoicedWarning = getUninvoicedWarningLevel();
-
   if (loading) {
-    return (
-      <Card>
+    return <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Receipt className="h-4 w-4" />
@@ -133,17 +121,13 @@ export function BudgetConsumptionSnapshot({ caseId, refreshKey }: BudgetConsumpt
           <Skeleton className="h-4 w-3/4" />
           <Skeleton className="h-4 w-full" />
         </CardContent>
-      </Card>
-    );
+      </Card>;
   }
-
   const hasExpenses = budgetData && (budgetData.dollars_consumed > 0 || budgetData.hours_consumed > 0);
   const hasInvoices = invoiceTotals && invoiceTotals.totalInvoiced > 0;
   const hasData = hasExpenses || hasInvoices || uninvoicedAmount > 0;
-
   if (!hasData) {
-    return (
-      <Card>
+    return <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Receipt className="h-4 w-4" />
@@ -163,12 +147,9 @@ export function BudgetConsumptionSnapshot({ caseId, refreshKey }: BudgetConsumpt
             </div>
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>;
   }
-
-  return (
-    <Card>
+  return <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Receipt className="h-4 w-4" />
@@ -241,38 +222,20 @@ export function BudgetConsumptionSnapshot({ caseId, refreshKey }: BudgetConsumpt
               <FileText className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Uninvoiced Expenses</span>
             </div>
-            <span className={`text-sm font-medium ${
-              uninvoicedWarning === "high" 
-                ? "text-destructive" 
-                : uninvoicedWarning === "medium"
-                  ? "text-amber-600 dark:text-amber-400"
-                  : uninvoicedAmount > 0 
-                    ? "text-amber-600 dark:text-amber-400" 
-                    : ""
-            }`}>
+            <span className={`text-sm font-medium ${uninvoicedWarning === "high" ? "text-destructive" : uninvoicedWarning === "medium" ? "text-amber-600 dark:text-amber-400" : uninvoicedAmount > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
               {formatCurrency(uninvoicedAmount)}
             </span>
           </div>
 
           {/* Warning for high uninvoiced */}
-          {uninvoicedWarning === "high" && (
-            <Alert variant="destructive" className="py-2">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                High uninvoiced balance. Consider creating an invoice to bill these expenses.
-              </AlertDescription>
-            </Alert>
-          )}
-          {uninvoicedWarning === "medium" && (
-            <Alert className="py-2 border-amber-500/50 bg-amber-500/10">
+          {uninvoicedWarning === "high"}
+          {uninvoicedWarning === "medium" && <Alert className="py-2 border-amber-500/50 bg-amber-500/10">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-xs text-amber-600 dark:text-amber-400">
                 Uninvoiced expenses accumulating. Review and invoice when ready.
               </AlertDescription>
-            </Alert>
-          )}
+            </Alert>}
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 }
