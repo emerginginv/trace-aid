@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, FileText, Image, FileVideo, File, X } from "lucide-react";
+import { Search, FileText, Image, FileVideo, File, X, Upload, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 interface CaseAttachment {
   id: string;
@@ -13,6 +15,8 @@ interface CaseAttachment {
   file_type: string;
   file_size: number;
   created_at: string;
+  user_id: string;
+  uploader_name?: string;
 }
 
 interface AttachmentPickerProps {
@@ -20,6 +24,8 @@ interface AttachmentPickerProps {
   selectedIds: string[];
   onSelectionChange: (ids: string[]) => void;
   excludeIds?: string[];
+  organizationId?: string;
+  showUploadOption?: boolean;
 }
 
 const getFileIcon = (fileType: string) => {
@@ -40,10 +46,14 @@ export const AttachmentPicker = ({
   selectedIds,
   onSelectionChange,
   excludeIds = [],
+  organizationId,
+  showUploadOption = false,
 }: AttachmentPickerProps) => {
   const [attachments, setAttachments] = useState<CaseAttachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchAttachments();
@@ -54,16 +64,98 @@ export const AttachmentPicker = ({
       setLoading(true);
       const { data, error } = await supabase
         .from("case_attachments")
-        .select("id, file_name, file_type, file_size, created_at")
+        .select(`
+          id, 
+          file_name, 
+          file_type, 
+          file_size, 
+          created_at, 
+          user_id,
+          profiles!case_attachments_user_id_fkey(full_name, email)
+        `)
         .eq("case_id", caseId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setAttachments(data || []);
+      
+      const attachmentsWithUploader = (data || []).map((a: any) => ({
+        id: a.id,
+        file_name: a.file_name,
+        file_type: a.file_type,
+        file_size: a.file_size,
+        created_at: a.created_at,
+        user_id: a.user_id,
+        uploader_name: a.profiles?.full_name || a.profiles?.email || "Unknown",
+      }));
+      
+      setAttachments(attachmentsWithUploader);
     } catch (error) {
       console.error("Error fetching attachments:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const file = files[0];
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${caseId}/${crypto.randomUUID()}.${fileExt}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("case-attachments")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Create case_attachments record
+      const { data: newAttachment, error: insertError } = await supabase
+        .from("case_attachments")
+        .insert({
+          case_id: caseId,
+          user_id: user.id,
+          organization_id: organizationId,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type || "application/octet-stream",
+          file_size: file.size,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "File uploaded",
+        description: `${file.name} has been uploaded and linked.`,
+      });
+
+      // Refresh attachments list and auto-select the new one
+      await fetchAttachments();
+      if (newAttachment) {
+        onSelectionChange([...selectedIds, newAttachment.id]);
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload the file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -99,16 +191,6 @@ export const AttachmentPicker = ({
     );
   }
 
-  if (availableAttachments.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground py-4 text-center border rounded-md bg-muted/30">
-        No case attachments available to link.
-        <br />
-        <span className="text-xs">Upload files in the Attachments tab first.</span>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
       {/* Selected attachments as chips */}
@@ -135,8 +217,8 @@ export const AttachmentPicker = ({
 
       {/* Search and list */}
       <div className="border rounded-md">
-        <div className="p-2 border-b">
-          <div className="relative">
+        <div className="p-2 border-b flex gap-2">
+          <div className="relative flex-1">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search attachments..."
@@ -145,9 +227,45 @@ export const AttachmentPicker = ({
               className="pl-8 h-8"
             />
           </div>
+          {showUploadOption && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="h-8 shrink-0"
+              >
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-1" />
+                    Upload
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
-        <ScrollArea className="h-[180px]">
-          {filteredAttachments.length === 0 ? (
+        <ScrollArea className="h-[200px]">
+          {filteredAttachments.length === 0 && availableAttachments.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              No case attachments available.
+              {showUploadOption && (
+                <span className="block text-xs mt-1">
+                  Use the Upload button to add files.
+                </span>
+              )}
+            </div>
+          ) : filteredAttachments.length === 0 ? (
             <div className="text-sm text-muted-foreground py-4 text-center">
               No attachments match your search
             </div>
@@ -166,7 +284,7 @@ export const AttachmentPicker = ({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{attachment.file_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatFileSize(attachment.file_size)}
+                      {formatFileSize(attachment.file_size)} • {format(new Date(attachment.created_at), "MMM d, yyyy")} • {attachment.uploader_name}
                     </p>
                   </div>
                 </label>
@@ -252,6 +370,8 @@ export const AttachmentPickerDialog = ({
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           excludeIds={existingLinkIds}
+          organizationId={organizationId}
+          showUploadOption={true}
         />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

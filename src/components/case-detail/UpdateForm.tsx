@@ -71,7 +71,9 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         .eq("update_id", editingUpdate.id);
 
       if (error) throw error;
-      setExistingLinkIds(data?.map((l) => l.attachment_id) || []);
+      const ids = data?.map((l) => l.attachment_id) || [];
+      setExistingLinkIds(ids);
+      setSelectedAttachmentIds(ids); // Pre-populate selected
     } catch (error) {
       console.error("Error fetching existing links:", error);
     }
@@ -178,6 +180,35 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
           .update(updateData)
           .eq("id", editingUpdate.id);
         error = result.error;
+
+        // Handle attachment link changes for edits
+        if (!error) {
+          const toAdd = selectedAttachmentIds.filter(id => !existingLinkIds.includes(id));
+          const toRemove = existingLinkIds.filter(id => !selectedAttachmentIds.includes(id));
+
+          // Delete removed links
+          if (toRemove.length > 0) {
+            await supabase
+              .from("update_attachment_links")
+              .delete()
+              .eq("update_id", editingUpdate.id)
+              .in("attachment_id", toRemove);
+          }
+
+          // Insert new links
+          if (toAdd.length > 0) {
+            const newLinks = toAdd.map((attachmentId) => ({
+              update_id: editingUpdate.id,
+              attachment_id: attachmentId,
+              organization_id: organizationId,
+              linked_by_user_id: user.id,
+            }));
+
+            await supabase
+              .from("update_attachment_links")
+              .insert(newLinks);
+          }
+        }
       } else {
         const result = await supabase
           .from("case_updates")
@@ -244,7 +275,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingUpdate ? "Edit" : "Add"} Update</DialogTitle>
           <DialogDescription>Add a new progress note or activity log</DialogDescription>
@@ -322,24 +353,24 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
               )}
             />
 
-            {/* Attachment linking section - only for new updates */}
-            {!editingUpdate && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Paperclip className="h-4 w-4" />
-                  Link Case Attachments
-                </Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Link existing case attachments to this update (files are stored at case level only)
-                </p>
-                <AttachmentPicker
-                  caseId={caseId}
-                  selectedIds={selectedAttachmentIds}
-                  onSelectionChange={setSelectedAttachmentIds}
-                  excludeIds={[]}
-                />
-              </div>
-            )}
+            {/* Attachment linking section - available for both new and edit */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
+                Link Case Attachments
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Link existing case attachments or upload new files (stored at case level)
+              </p>
+              <AttachmentPicker
+                caseId={caseId}
+                selectedIds={selectedAttachmentIds}
+                onSelectionChange={setSelectedAttachmentIds}
+                excludeIds={[]}
+                organizationId={organizationId}
+                showUploadOption={true}
+              />
+            </div>
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
