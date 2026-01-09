@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 import { Loader2, FileDown, Printer, FileText, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -61,14 +61,17 @@ export function CaseSummaryPdfDialog({
   };
 
   // Load data when dialog opens
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
+  useEffect(() => {
+    if (open && !data && !loading) {
       loadData();
-    } else {
-      // Reset state when closing
+    }
+  }, [open]);
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
       setData(null);
     }
-    onOpenChange(open);
+    onOpenChange(isOpen);
   };
 
   const toggleSection = (key: keyof typeof sections) => {
@@ -270,17 +273,13 @@ export function CaseSummaryPdfDialog({
           <div className="flex-1 min-h-0">
             <h3 className="font-medium text-sm mb-2">Preview</h3>
             <ScrollArea className="h-[500px] border rounded-lg bg-white">
-              {loading ? (
+              {loading || !data ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : data ? (
+              ) : (
                 <div className="transform scale-[0.6] origin-top-left w-[166%]">
                   <CaseSummaryContent ref={contentRef} data={data} sections={sections} />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  Loading case data...
                 </div>
               )}
             </ScrollArea>
