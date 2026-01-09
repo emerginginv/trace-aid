@@ -97,6 +97,11 @@ export const TEMPLATE_VARIABLES: VariableDefinition[] = [
   { variable: "{{Files.total_size}}", label: "Total File Size", category: "Files", description: "Combined size of all attachments" },
   { variable: "{{Files.images_list}}", label: "Image Files List", category: "Files", description: "List of image file names only" },
   { variable: "{{Files.documents_list}}", label: "Document Files List", category: "Files", description: "List of document file names (PDF, DOC, etc.)" },
+
+  // Update-Linked Attachments
+  { variable: "{{Updates.attachments_list}}", label: "Update-Linked Files", category: "Updates", description: "Files linked to case updates" },
+  { variable: "{{Updates.attachments_formatted}}", label: "Update-Linked Files (formatted)", category: "Updates", description: "Files linked to updates with details" },
+  { variable: "{{Updates.attachments_count}}", label: "Update-Linked File Count", category: "Updates", description: "Number of files linked to updates" },
 ];
 
 // Get all variable categories
@@ -148,9 +153,19 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }
 
+// Options for resolving variables
+export interface ResolveVariablesOptions {
+  selectedAttachmentIds?: string[];
+}
+
 // Resolve all variables for a case
-export async function resolveVariables(caseId: string, organizationId: string): Promise<Record<string, string>> {
+export async function resolveVariables(
+  caseId: string, 
+  organizationId: string,
+  options?: ResolveVariablesOptions
+): Promise<Record<string, string>> {
   const variables: Record<string, string> = {};
+  const { selectedAttachmentIds } = options || {};
   
   // General variables (always available)
   const now = new Date();
@@ -368,30 +383,35 @@ export async function resolveVariables(caseId: string, organizationId: string): 
       .order("created_at", { ascending: false });
 
     if (attachments && attachments.length > 0) {
+      // Filter by selected attachment IDs if provided
+      const filteredAttachments = selectedAttachmentIds 
+        ? attachments.filter(a => selectedAttachmentIds.includes(a.id))
+        : attachments;
+
       // Plain list of file names
-      const plainList = attachments.map(a => a.file_name).join("\n");
+      const plainList = filteredAttachments.map(a => a.file_name).join("\n");
       
       // Formatted list with size and date
-      const formattedList = attachments.map(a => {
+      const formattedList = filteredAttachments.map(a => {
         const date = formatDateStandard(a.created_at);
         const size = formatFileSize(a.file_size);
         return `${a.file_name} (${size}) - ${date}`;
       }).join("\n");
       
       // Count
-      const count = attachments.length;
+      const count = filteredAttachments.length;
       
       // Total size
-      const totalSize = attachments.reduce((sum, a) => sum + (a.file_size || 0), 0);
+      const totalSize = filteredAttachments.reduce((sum, a) => sum + (a.file_size || 0), 0);
       
       // Image files only
       const imageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"];
-      const imageFiles = attachments.filter(a => imageTypes.includes(a.file_type?.toLowerCase() || ""));
+      const imageFiles = filteredAttachments.filter(a => imageTypes.includes(a.file_type?.toLowerCase() || ""));
       const imagesList = imageFiles.map(a => a.file_name).join("\n");
       
       // Document files only
       const documentTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"];
-      const documentFiles = attachments.filter(a => documentTypes.includes(a.file_type?.toLowerCase() || ""));
+      const documentFiles = filteredAttachments.filter(a => documentTypes.includes(a.file_type?.toLowerCase() || ""));
       const documentsList = documentFiles.map(a => a.file_name).join("\n");
       
       variables["Files.list"] = plainList;
@@ -407,6 +427,37 @@ export async function resolveVariables(caseId: string, organizationId: string): 
       variables["Files.total_size"] = "0 B";
       variables["Files.images_list"] = "";
       variables["Files.documents_list"] = "";
+    }
+
+    // Fetch update-linked attachments
+    const { data: updateLinks } = await supabase
+      .from("update_attachment_links")
+      .select(`
+        attachment_id,
+        case_updates!inner(title, case_id)
+      `)
+      .eq("case_updates.case_id", caseId);
+
+    if (updateLinks && updateLinks.length > 0 && attachments) {
+      const linkedAttachmentIds = new Set(updateLinks.map((l: any) => l.attachment_id));
+      const linkedAttachments = attachments.filter(a => linkedAttachmentIds.has(a.id));
+      
+      const linkedList = linkedAttachments.map(a => a.file_name).join("\n");
+      const linkedFormatted = linkedAttachments.map(a => {
+        const date = formatDateStandard(a.created_at);
+        const size = formatFileSize(a.file_size);
+        const linksForAttachment = updateLinks.filter((l: any) => l.attachment_id === a.id);
+        const updateTitles = linksForAttachment.map((l: any) => l.case_updates?.title || "Untitled").join(", ");
+        return `${a.file_name} (${size}) - ${date} [Linked to: ${updateTitles}]`;
+      }).join("\n");
+      
+      variables["Updates.attachments_list"] = linkedList;
+      variables["Updates.attachments_formatted"] = linkedFormatted;
+      variables["Updates.attachments_count"] = linkedAttachments.length.toString();
+    } else {
+      variables["Updates.attachments_list"] = "";
+      variables["Updates.attachments_formatted"] = "";
+      variables["Updates.attachments_count"] = "0";
     }
 
   } catch (error) {
