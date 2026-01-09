@@ -171,22 +171,22 @@ export const AttachmentEvidenceSelector = ({
       </CollapsibleTrigger>
 
       <CollapsibleContent>
-        <div className="px-4 pb-4 space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-auto">
-              <TabsList className="h-8">
-                <TabsTrigger value="all" className="text-xs px-2 h-6">
+        <div className="px-4 pb-4 space-y-3 overflow-hidden">
+          <div className="flex flex-col gap-2">
+            <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full">
+              <TabsList className="h-auto flex-wrap gap-1 w-full justify-start">
+                <TabsTrigger value="all" className="text-xs px-2 h-7">
                   All ({attachments.length})
                 </TabsTrigger>
-                <TabsTrigger value="update-linked" className="text-xs px-2 h-6">
+                <TabsTrigger value="update-linked" className="text-xs px-2 h-7">
                   <Link2 className="h-3 w-3 mr-1" />
-                  Update-Linked ({[...linkedAttachmentIds].length})
+                  Linked ({[...linkedAttachmentIds].length})
                 </TabsTrigger>
-                <TabsTrigger value="documents" className="text-xs px-2 h-6">
+                <TabsTrigger value="documents" className="text-xs px-2 h-7">
                   <FileText className="h-3 w-3 mr-1" />
                   Docs
                 </TabsTrigger>
-                <TabsTrigger value="images" className="text-xs px-2 h-6">
+                <TabsTrigger value="images" className="text-xs px-2 h-7">
                   <Image className="h-3 w-3 mr-1" />
                   Images
                 </TabsTrigger>
