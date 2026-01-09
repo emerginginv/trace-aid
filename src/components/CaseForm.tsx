@@ -101,6 +101,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const [caseStatuses, setCaseStatuses] = useState<Array<{id: string, value: string}>>([]);
   const [profiles, setProfiles] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
   const [caseManagerId, setCaseManagerId] = useState<string>("");
+  const [caseManager2Id, setCaseManager2Id] = useState<string>("");
   const [investigators, setInvestigators] = useState<string[]>([]);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [primarySubjectName, setPrimarySubjectName] = useState<string | null>(null);
@@ -165,8 +166,10 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_notes: editingCase.budget_notes ?? null,
           reference_number: editingCase.reference_number ?? null,
         });
-        // @ts-ignore - case_manager_id and investigator_ids exist on editingCase
+        // @ts-ignore - case_manager_id, case_manager_2_id and investigator_ids exist on editingCase
         setCaseManagerId(editingCase.case_manager_id || "");
+        // @ts-ignore
+        setCaseManager2Id(editingCase.case_manager_2_id || "");
         // @ts-ignore
         setInvestigators(editingCase.investigator_ids || []);
       } else {
@@ -186,6 +189,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           reference_number: null,
         });
         setCaseManagerId("");
+        setCaseManager2Id("");
         setInvestigators([]);
       }
     }
@@ -416,6 +420,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         contact_id: data.contact_id || null,
         due_date: data.due_date ? data.due_date.toISOString().split('T')[0] : null,
         case_manager_id: caseManagerId || null,
+        case_manager_2_id: caseManager2Id || null,
         investigator_ids: investigators,
         use_primary_subject_as_title: data.use_primary_subject_as_title,
         budget_hours: data.budget_hours || null,
@@ -474,6 +479,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
       form.reset();
       setCaseManagerId("");
+      setCaseManager2Id("");
       setInvestigators([]);
       onOpenChange(false);
       onSuccess();
@@ -774,30 +780,23 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Case Manager</label>
-                  <Select value={caseManagerId} onValueChange={setCaseManagerId}>
+                  <label className="text-sm font-medium mb-2 block">Case Manager 1 (Primary)</label>
+                  <Select 
+                    value={caseManagerId} 
+                    onValueChange={(value) => {
+                      // Clear secondary if same user selected
+                      if (value === caseManager2Id) {
+                        setCaseManager2Id("");
+                      }
+                      setCaseManagerId(value);
+                    }}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select case manager..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {profiles.map(profile => (
-                        <SelectItem key={profile.id} value={profile.id}>
-                          {profile.full_name || profile.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Add Investigator</label>
-                  <Select value="" onValueChange={handleAddInvestigator}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select investigator..." />
+                      <SelectValue placeholder="Select primary case manager..." />
                     </SelectTrigger>
                     <SelectContent>
                       {profiles
-                        .filter(p => p.id !== caseManagerId && !investigators.includes(p.id))
+                        .filter(p => p.id !== caseManager2Id)
                         .map(profile => (
                           <SelectItem key={profile.id} value={profile.id}>
                             {profile.full_name || profile.email}
@@ -806,6 +805,51 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Case Manager 2 (Secondary)</label>
+                  <Select 
+                    value={caseManager2Id} 
+                    onValueChange={(value) => {
+                      // Clear primary if same user selected
+                      if (value === caseManagerId) {
+                        setCaseManagerId("");
+                      }
+                      setCaseManager2Id(value);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select secondary (optional)..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles
+                        .filter(p => p.id !== caseManagerId)
+                        .map(profile => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.full_name || profile.email}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Add Investigator</label>
+                <Select value="" onValueChange={handleAddInvestigator}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select investigator..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles
+                      .filter(p => p.id !== caseManagerId && p.id !== caseManager2Id && !investigators.includes(p.id))
+                      .map(profile => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.full_name || profile.email}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {investigators.length > 0 && (
