@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -23,27 +23,60 @@ export function ReportTypeUsageChart({ timeRange }: ReportTypeUsageChartProps) {
     queryFn: async () => {
       if (!organization?.id) return [];
 
+      // Fetch reports with template_id
       const { data: reports, error } = await supabase
         .from("generated_reports")
-        .select("title, template_id")
+        .select("template_id, title")
         .eq("organization_id", organization.id)
         .gte("generated_at", timeRange.startDate.toISOString())
         .lte("generated_at", timeRange.endDate.toISOString());
 
       if (error) throw error;
 
-      const templateCounts = new Map<string, number>();
+      // Get unique template IDs (excluding nulls)
+      const templateIds = [...new Set(reports?.map(r => r.template_id).filter(Boolean) as string[])];
+      
+      // Fetch template names
+      let templateMap = new Map<string, string>();
+      if (templateIds.length > 0) {
+        const { data: templates } = await supabase
+          .from("docx_templates")
+          .select("id, name")
+          .in("id", templateIds);
+        
+        templateMap = new Map(templates?.map(t => [t.id, t.name]) || []);
+      }
+
+      // Group by template_id, falling back to title for null template_id
+      const templateCounts = new Map<string, { name: string; count: number }>();
       
       reports?.forEach(report => {
-        const name = report.title || "Unknown Template";
-        templateCounts.set(name, (templateCounts.get(name) || 0) + 1);
+        let key: string;
+        let name: string;
+        
+        if (report.template_id) {
+          key = report.template_id;
+          name = templateMap.get(report.template_id) || "Unknown Template";
+        } else {
+          // For reports without a template_id, group by title
+          key = `_custom_${report.title || "Untitled"}`;
+          name = report.title || "Untitled Report";
+        }
+        
+        const existing = templateCounts.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          templateCounts.set(key, { name, count: 1 });
+        }
       });
 
       return Array.from(templateCounts.entries())
-        .map(([name, count]) => ({
-          name: name.length > 25 ? name.substring(0, 22) + "..." : name,
-          fullName: name,
-          count,
+        .map(([key, value]) => ({
+          key,
+          name: value.name.length > 25 ? value.name.substring(0, 22) + "..." : value.name,
+          fullName: value.name,
+          count: value.count,
         }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
@@ -57,7 +90,7 @@ export function ReportTypeUsageChart({ timeRange }: ReportTypeUsageChartProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <LayoutTemplate className="h-5 w-5" />
-            Report Types Used
+            Templates Used
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -74,7 +107,7 @@ export function ReportTypeUsageChart({ timeRange }: ReportTypeUsageChartProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <LayoutTemplate className="h-5 w-5" />
-          Report Types Used
+          Templates Used
         </CardTitle>
       </CardHeader>
       <CardContent>
