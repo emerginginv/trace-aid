@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { getDocxTemplates, generateDocxReport, saveGeneratedReport, type DocxTemplate } from "@/lib/docxTemplateEngine";
+import { AttachmentEvidenceSelector } from "./AttachmentEvidenceSelector";
 
 import { FileText, Download, Loader2 } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -34,6 +35,7 @@ export const GenerateReportDialog = ({
   
   const [templates, setTemplates] = useState<DocxTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -77,7 +79,9 @@ export const GenerateReportDialog = ({
 
     setGenerating(true);
     try {
-      const result = await generateDocxReport(template.filePath, caseId, organization.id);
+      const result = await generateDocxReport(template.filePath, caseId, organization.id, {
+        selectedAttachmentIds: selectedAttachmentIds.length > 0 ? selectedAttachmentIds : undefined,
+      });
       
       if (result) {
         // Get user ID and save the generated report
@@ -199,6 +203,13 @@ export const GenerateReportDialog = ({
                   </div>
                 )}
               </div>
+
+              {/* Attachment Evidence Selector */}
+              <AttachmentEvidenceSelector
+                caseId={caseId}
+                selectedIds={selectedAttachmentIds}
+                onSelectionChange={setSelectedAttachmentIds}
+              />
 
               <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">

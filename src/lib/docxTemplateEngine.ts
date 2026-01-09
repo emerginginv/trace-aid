@@ -79,11 +79,17 @@ export async function parseDocxTemplate(file: File): Promise<ParseResult> {
   }
 }
 
+// Options for generating DOCX reports
+export interface GenerateDocxOptions {
+  selectedAttachmentIds?: string[];
+}
+
 // Generate a DOCX report from a template
 export async function generateDocxReport(
   templatePath: string,
   caseId: string,
-  organizationId: string
+  organizationId: string,
+  options?: GenerateDocxOptions
 ): Promise<{ blob: Blob; variables: Record<string, string> } | null> {
   try {
     // Download the template from storage
@@ -97,7 +103,9 @@ export async function generateDocxReport(
     }
 
     // Get variable values for this case
-    const variables = await resolveVariables(caseId, organizationId);
+    const variables = await resolveVariables(caseId, organizationId, {
+      selectedAttachmentIds: options?.selectedAttachmentIds,
+    });
 
     // Convert variables to the format docxtemplater expects (without {{ }})
     const templateData: Record<string, string> = {};
