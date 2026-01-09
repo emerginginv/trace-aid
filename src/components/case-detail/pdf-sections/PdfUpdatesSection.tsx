@@ -1,10 +1,16 @@
 import { format } from "date-fns";
-import { MessageSquare, User } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface TimelineEntry {
   time: string;
   description: string;
+}
+
+interface LinkedAttachment {
+  id: string;
+  file_name: string;
+  file_type: string;
 }
 
 interface Update {
@@ -15,6 +21,7 @@ interface Update {
   created_at: string | null;
   user?: { id: string; full_name: string | null } | null;
   activity_timeline?: TimelineEntry[] | null;
+  linkedAttachments?: LinkedAttachment[];
 }
 
 interface PdfUpdatesSectionProps {
@@ -64,6 +71,7 @@ export function PdfUpdatesSection({ updates, caseDescription }: PdfUpdatesSectio
               key={update.id}
               className="p-3 rounded-lg border border-border bg-card"
             >
+              {/* 1. Title & Metadata (type, date, author) */}
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
                   {getUpdateTypeBadge(update.update_type)}
@@ -71,9 +79,11 @@ export function PdfUpdatesSection({ updates, caseDescription }: PdfUpdatesSectio
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0">
                   {update.created_at && format(new Date(update.created_at), "MMM d, yyyy 'at' h:mm a")}
+                  {update.user?.full_name && ` • ${update.user.full_name}`}
                 </span>
               </div>
               
+              {/* 2. Narrative Body (description) */}
               {update.description && (
                 <div 
                   className="text-sm text-muted-foreground prose prose-sm max-w-none"
@@ -81,7 +91,7 @@ export function PdfUpdatesSection({ updates, caseDescription }: PdfUpdatesSectio
                 />
               )}
               
-              {/* Activity Timeline in PDF - clean print format */}
+              {/* 3. Activity Timeline (if present) - clean print format */}
               {update.activity_timeline && update.activity_timeline.length > 0 && (
                 <div 
                   className="mt-3 pt-2"
@@ -119,10 +129,15 @@ export function PdfUpdatesSection({ updates, caseDescription }: PdfUpdatesSectio
                 </div>
               )}
 
-              {update.user?.full_name && (
-                <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                  <User className="h-3 w-3" />
-                  {update.user.full_name}
+              {/* 4. Attached Evidence References (if applicable) */}
+              {update.linkedAttachments && update.linkedAttachments.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-border/50">
+                  <p className="text-xs font-semibold text-foreground mb-1">Evidence:</p>
+                  <ul className="text-xs text-muted-foreground list-disc list-inside space-y-0.5">
+                    {update.linkedAttachments.map((att) => (
+                      <li key={att.id}>{att.file_name}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>

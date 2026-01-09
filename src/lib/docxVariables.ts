@@ -387,6 +387,26 @@ export async function resolveVariables(
       
       // Activity timelines - only include if explicitly enabled
       if (includeActivityTimelines) {
+        // First, get update attachment links
+        const updateIds = updates.map(u => u.id);
+        const { data: updateLinks } = await supabase
+          .from("update_attachment_links")
+          .select(`
+            update_id,
+            case_attachments!inner(id, file_name)
+          `)
+          .in("update_id", updateIds);
+        
+        // Map links to updates
+        const linksMap = new Map<string, string[]>();
+        if (updateLinks) {
+          updateLinks.forEach((link: any) => {
+            const existing = linksMap.get(link.update_id) || [];
+            existing.push(link.case_attachments.file_name);
+            linksMap.set(link.update_id, existing);
+          });
+        }
+        
         const updatesWithTimelines = updates.filter(u => {
           const timeline = u.activity_timeline as { time: string; description: string }[] | null;
           return timeline && timeline.length > 0;
@@ -400,7 +420,14 @@ export async function resolveVariables(
               .sort((a, b) => a.time.localeCompare(b.time))
               .map(entry => `  ${formatTimelineTime(entry.time)} — ${entry.description}`)
               .join("\n");
-            return `[${date}] ${u.title}\n${u.description || ""}\n\nActivity Timeline:\n${timelineText}`;
+            
+            // Add evidence references if available
+            const linkedFiles = linksMap.get(u.id) || [];
+            const evidenceText = linkedFiles.length > 0 
+              ? `\n\nEvidence: ${linkedFiles.join(", ")}` 
+              : "";
+            
+            return `[${date}] ${u.title}\n${u.description || ""}\n\nActivity Timeline:\n${timelineText}${evidenceText}`;
           }).join("\n\n---\n\n");
           
           variables["Updates.with_timelines"] = timelinesFormatted;
