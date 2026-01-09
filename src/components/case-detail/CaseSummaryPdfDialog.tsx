@@ -185,7 +185,7 @@ export function CaseSummaryPdfDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -196,7 +196,7 @@ export function CaseSummaryPdfDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex gap-4 flex-1 min-h-0">
+        <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
           {/* Section Selection */}
           <div className="w-64 shrink-0">
             <div className="flex items-center justify-between mb-3">
@@ -270,7 +270,7 @@ export function CaseSummaryPdfDialog({
           <Separator orientation="vertical" />
 
           {/* Preview */}
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
             <h3 className="font-medium text-sm mb-2">Preview</h3>
             <ScrollArea className="h-[500px] border rounded-lg bg-white">
               {loading || !data ? (
