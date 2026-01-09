@@ -1,3 +1,26 @@
+/**
+ * DOCX Template Variable Resolution
+ * ==================================
+ * 
+ * ACTIVITY TIMELINE CONSTRAINTS (HARD INVARIANTS)
+ * ------------------------------------------------
+ * Activity timelines are READ-ONLY evidence in reports.
+ * They must NEVER:
+ * - Affect billing or invoices (no case_finances references)
+ * - Affect budget calculations (no budget consumption)
+ * - Create entries in case_activities (stored inline in case_updates only)
+ * - Appear on calendars or scheduling (no due_date, no event creation)
+ * - Modify the parent update when excluded from export
+ * 
+ * Timelines are stored as JSON within case_updates.activity_timeline
+ * and are only rendered when explicitly requested via includeActivityTimelines option.
+ * 
+ * When includeActivityTimelines is false:
+ * - Updates are still included via {{Updates.list}}, {{Updates.formatted_list}}, etc.
+ * - Only {{Updates.with_timelines}} output is affected (timelines omitted)
+ * - No updates are removed or modified in the database
+ */
+
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 

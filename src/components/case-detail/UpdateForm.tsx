@@ -178,9 +178,13 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       if (!organizationId) throw new Error("Organization not found");
 
       // Prepare timeline data - only include if checkbox is checked and has entries
-      const timelineData = includeTimeline && timelineEntries.length > 0 
-        ? timelineEntries.filter(e => e.time && e.description) 
-        : null;
+      // TIMELINE CONSTRAINT: This is optional JSON stored inline with the update.
+      // It is NOT linked to case_finances, case_activities, or any scheduling/calendar tables.
+      // Timelines are read-only evidence in reports and do not affect billing or budgets.
+      const timelineData: { time: string; description: string }[] | null = 
+        includeTimeline && timelineEntries.length > 0 
+          ? timelineEntries.filter(e => e.time && e.description) 
+          : null;
 
       const updateData: Record<string, unknown> = {
         case_id: caseId,
