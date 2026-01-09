@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, User, FileText, Paperclip, Download } from "lucide-react";
+import { ArrowLeft, Calendar, User, FileText, Paperclip, Download, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { AttachmentPreviewThumbnail } from "@/components/case-detail/AttachmentPreviewThumbnail";
 
 interface LinkedAttachment {
   id: string;
@@ -17,6 +18,9 @@ interface LinkedAttachment {
   file_name: string;
   file_type: string;
   file_path: string;
+  file_size: number;
+  preview_path?: string | null;
+  preview_status?: string | null;
 }
 
 interface Update {
@@ -91,13 +95,13 @@ const UpdateDetail = () => {
         setUserProfile(profileData);
       }
 
-      // Fetch linked attachments
+      // Fetch linked attachments with full details
       const { data: linksData } = await supabase
         .from("update_attachment_links")
         .select(`
           id,
           attachment_id,
-          case_attachments!inner(file_name, file_type, file_path)
+          case_attachments!inner(file_name, file_type, file_path, file_size, preview_path, preview_status)
         `)
         .eq("update_id", updateData.id);
 
@@ -109,6 +113,9 @@ const UpdateDetail = () => {
             file_name: link.case_attachments.file_name,
             file_type: link.case_attachments.file_type,
             file_path: link.case_attachments.file_path,
+            file_size: link.case_attachments.file_size,
+            preview_path: link.case_attachments.preview_path,
+            preview_status: link.case_attachments.preview_status,
           }))
         );
       }
@@ -122,6 +129,44 @@ const UpdateDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownload = async (attachment: LinkedAttachment) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("case-attachments")
+        .download(attachment.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = attachment.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      toast({
+        title: "Download failed",
+        description: "Failed to download the file.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewAttachment = (attachment: LinkedAttachment) => {
+    if (update) {
+      navigate(`/cases/${update.case_id}/attachments/${attachment.attachment_id}`);
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   if (loading) {
@@ -197,26 +242,67 @@ const UpdateDetail = () => {
           </div>
 
           {/* Linked Attachments Section */}
-          <div className="space-y-2 pt-4 border-t">
+          <div className="space-y-3 pt-4 border-t">
             <div className="flex items-center gap-2 font-semibold">
               <Paperclip className="h-4 w-4" />
               Linked Attachments
+              {linkedAttachments.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {linkedAttachments.length}
+                </Badge>
+              )}
             </div>
             {linkedAttachments.length > 0 ? (
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {linkedAttachments.map((attachment) => (
                   <div
                     key={attachment.id}
-                    className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30"
+                    className="flex items-start gap-3 p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors group"
                   >
-                    <Paperclip className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <div 
+                      className="cursor-pointer shrink-0"
+                      onClick={() => handleViewAttachment(attachment)}
+                    >
+                      <AttachmentPreviewThumbnail
+                        filePath={attachment.file_path}
+                        fileName={attachment.file_name}
+                        fileType={attachment.file_type}
+                        previewPath={attachment.preview_path}
+                        previewStatus={attachment.preview_status}
+                        size="md"
+                        className="rounded"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
+                      <p 
+                        className="text-sm font-medium truncate cursor-pointer hover:text-primary"
+                        onClick={() => handleViewAttachment(attachment)}
+                      >
                         {attachment.file_name}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {attachment.file_type}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatFileSize(attachment.file_size)}
                       </p>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handleViewAttachment(attachment)}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handleDownload(attachment)}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Download
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
