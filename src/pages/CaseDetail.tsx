@@ -49,6 +49,7 @@ interface Case {
   due_date: string | null;
   created_at: string;
   case_manager_id: string | null;
+  case_manager_2_id: string | null;
   investigator_ids: string[];
   closed_by_user_id: string | null;
   closed_at: string | null;
@@ -825,7 +826,8 @@ const CaseDetail = () => {
               <div className="space-y-4">
                 <CaseTeamManager 
                   caseId={id!} 
-                  caseManagerId={caseData.case_manager_id} 
+                  caseManagerId={caseData.case_manager_id}
+                  caseManager2Id={caseData.case_manager_2_id}
                   investigatorIds={caseData.investigator_ids || []} 
                   onUpdate={fetchCaseData} 
                 />

@@ -791,6 +791,7 @@ export type Database = {
           budget_dollars: number | null
           budget_hours: number | null
           budget_notes: string | null
+          case_manager_2_id: string | null
           case_manager_id: string | null
           case_number: string
           closed_at: string | null
@@ -825,6 +826,7 @@ export type Database = {
           budget_dollars?: number | null
           budget_hours?: number | null
           budget_notes?: string | null
+          case_manager_2_id?: string | null
           case_manager_id?: string | null
           case_number: string
           closed_at?: string | null
@@ -859,6 +861,7 @@ export type Database = {
           budget_dollars?: number | null
           budget_hours?: number | null
           budget_notes?: string | null
+          case_manager_2_id?: string | null
           case_manager_id?: string | null
           case_number?: string
           closed_at?: string | null
@@ -894,6 +897,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_case_manager_2_id_fkey"
+            columns: ["case_manager_2_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
