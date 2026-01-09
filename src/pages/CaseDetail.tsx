@@ -663,10 +663,12 @@ const CaseDetail = () => {
           {/* Desktop Action Buttons */}
           {!isVendor && !isMobile && (
             <div className="flex items-center gap-2">
-              <Button variant="outline" className="h-9 px-3" onClick={() => setSummaryPdfDialogOpen(true)}>
-                <FileText className="h-4 w-4 mr-2" />
-                Summary PDF
-              </Button>
+              {isManager && (
+                <Button variant="outline" className="h-9 px-3" onClick={() => setSummaryPdfDialogOpen(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Summary PDF
+                </Button>
+              )}
               <Button variant="outline" className="h-9 px-3" onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
                 <Mail className="h-4 w-4 mr-2" />
                 Send Email
@@ -695,10 +697,12 @@ const CaseDetail = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setSummaryPdfDialogOpen(true)}>
-                <FileText className="h-4 w-4 mr-2" />
-                Summary PDF
-              </DropdownMenuItem>
+              {isManager && (
+                <DropdownMenuItem onClick={() => setSummaryPdfDialogOpen(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Summary PDF
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
                 <Mail className="h-4 w-4 mr-2" />
                 Send Email
