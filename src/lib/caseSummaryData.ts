@@ -201,6 +201,35 @@ export async function fetchCaseSummaryData(caseId: string): Promise<CaseSummaryD
     .eq("case_id", caseId)
     .order("date", { ascending: false });
 
+  // Fetch update attachment links and map to updates
+  const updateIds = (updatesResult.data || []).map((u: any) => u.id);
+  let updatesWithAttachments = updatesResult.data || [];
+  
+  if (updateIds.length > 0) {
+    const { data: updateLinks } = await supabase
+      .from("update_attachment_links")
+      .select(`
+        update_id,
+        case_attachments!inner(id, file_name, file_type)
+      `)
+      .in("update_id", updateIds);
+    
+    if (updateLinks && updateLinks.length > 0) {
+      updatesWithAttachments = (updatesResult.data || []).map((update: any) => {
+        const links = updateLinks.filter((link: any) => link.update_id === update.id);
+        const linkedAttachments = links.map((link: any) => ({
+          id: link.case_attachments.id,
+          file_name: link.case_attachments.file_name,
+          file_type: link.case_attachments.file_type,
+        }));
+        return {
+          ...update,
+          linkedAttachments,
+        };
+      });
+    }
+  }
+
   return {
     case: {
       id: caseData.id,
@@ -231,7 +260,7 @@ export async function fetchCaseSummaryData(caseId: string): Promise<CaseSummaryD
     expenses,
     invoices: invoicesData || [],
     activities: activitiesResult.data || [],
-    updates: updatesResult.data || [],
+    updates: updatesWithAttachments,
     attachments: attachmentsResult.data || [],
     relatedCases: (relatedResult.data || []).filter((c: any) => c.id !== caseId),
     organizationSettings,
