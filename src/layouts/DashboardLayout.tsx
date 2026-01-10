@@ -34,11 +34,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full overflow-x-hidden">
+      <div className="min-h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 flex flex-col min-w-0">
           <ImpersonationBanner />
-          <header className="sticky top-0 z-50 border-b bg-card px-3 sm:px-4 md:px-6 py-3 flex items-center justify-between gap-2 sm:gap-4 shadow-sm">
+          <header className="sticky top-0 z-50 border-b bg-card px-3 sm:px-4 md:px-6 py-3 flex items-center justify-between gap-2 sm:gap-4 shadow-sm relative">
             <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
               <SidebarTrigger />
               {breadcrumbItems.length > 0 && (
@@ -60,7 +60,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
             <HeaderProgressIndicator />
           </header>
-          <div className="flex-1 p-3 sm:p-4 md:p-6">
+          <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden">
             {children}
           </div>
         </main>
