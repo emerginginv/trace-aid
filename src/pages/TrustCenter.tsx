@@ -276,12 +276,18 @@ export default function TrustCenter() {
         {/* Footer */}
         <footer className="text-center text-sm text-muted-foreground space-y-4">
           <div className="flex items-center justify-center gap-6">
+            <Link to="/status" className="hover:text-foreground">System Status</Link>
+            <span>•</span>
             <a href="#" className="hover:text-foreground">Privacy Policy</a>
             <span>•</span>
             <a href="#" className="hover:text-foreground">Terms of Service</a>
             <span>•</span>
             <a href="mailto:security@casewyze.com" className="hover:text-foreground">security@casewyze.com</a>
           </div>
+          <p>
+            We communicate service disruptions transparently via our{' '}
+            <Link to="/status" className="text-primary hover:underline">public status page</Link>.
+          </p>
           <p>
             Last updated: {format(new Date(), 'MMMM yyyy')}
           </p>

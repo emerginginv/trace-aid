@@ -2229,6 +2229,98 @@ export type Database = {
           },
         ]
       }
+      incident_updates: {
+        Row: {
+          id: string
+          incident_id: string
+          message: string
+          posted_at: string
+          posted_by: string
+          status_snapshot: Database["public"]["Enums"]["incident_status"]
+        }
+        Insert: {
+          id?: string
+          incident_id: string
+          message: string
+          posted_at?: string
+          posted_by: string
+          status_snapshot: Database["public"]["Enums"]["incident_status"]
+        }
+        Update: {
+          id?: string
+          incident_id?: string
+          message?: string
+          posted_at?: string
+          posted_by?: string
+          status_snapshot?: Database["public"]["Enums"]["incident_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_updates_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_updates_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          affected_components: string[] | null
+          created_at: string
+          created_by: string
+          id: string
+          resolved_at: string | null
+          severity: Database["public"]["Enums"]["incident_severity"]
+          started_at: string
+          status: Database["public"]["Enums"]["incident_status"]
+          summary: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          affected_components?: string[] | null
+          created_at?: string
+          created_by: string
+          id?: string
+          resolved_at?: string | null
+          severity: Database["public"]["Enums"]["incident_severity"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["incident_status"]
+          summary: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          affected_components?: string[] | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["incident_severity"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["incident_status"]
+          summary?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_payments: {
         Row: {
           amount: number
@@ -3750,6 +3842,44 @@ export type Database = {
           },
         ]
       }
+      service_components: {
+        Row: {
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["component_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["component_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["component_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_components_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       soc2_controls: {
         Row: {
           category: string
@@ -3826,6 +3956,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      status_subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          verification_token: string | null
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          verification_token?: string | null
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          verification_token?: string | null
+          verified?: boolean
+        }
+        Relationships: []
       }
       subject_attachments: {
         Row: {
@@ -4389,6 +4543,15 @@ export type Database = {
         }
         Returns: Json
       }
+      create_incident: {
+        Args: {
+          p_affected_components?: string[]
+          p_severity: Database["public"]["Enums"]["incident_severity"]
+          p_summary: string
+          p_title: string
+        }
+        Returns: string
+      }
       create_pentest: {
         Args: {
           p_end_date?: string
@@ -4584,6 +4747,7 @@ export type Database = {
       get_security_metrics: { Args: never; Returns: Json }
       get_soc2_dashboard: { Args: never; Returns: Json }
       get_sso_config: { Args: { p_org_id: string }; Returns: Json }
+      get_status_page_data: { Args: never; Returns: Json }
       get_trust_center_admin: {
         Args: never
         Returns: {
@@ -4692,6 +4856,14 @@ export type Database = {
         Args: { p_description: string; p_severity: string; p_title: string }
         Returns: Json
       }
+      post_incident_update: {
+        Args: {
+          p_incident_id: string
+          p_message: string
+          p_new_status?: Database["public"]["Enums"]["incident_status"]
+        }
+        Returns: undefined
+      }
       process_subject_erasure: { Args: { p_dsr_id: string }; Returns: Json }
       process_subject_export: { Args: { p_dsr_id: string }; Returns: Json }
       provision_tenant: {
@@ -4766,6 +4938,7 @@ export type Database = {
         }
         Returns: string
       }
+      subscribe_to_status: { Args: { p_email: string }; Returns: Json }
       support_search_users: {
         Args: { p_limit?: number; p_query: string }
         Returns: Json
@@ -4788,6 +4961,13 @@ export type Database = {
           p_linked_vulnerability_id?: string
           p_report_id: string
           p_status: string
+        }
+        Returns: undefined
+      }
+      update_component_status: {
+        Args: {
+          p_component_id: string
+          p_status: Database["public"]["Enums"]["component_status"]
         }
         Returns: undefined
       }
@@ -4860,13 +5040,28 @@ export type Database = {
         Args: { p_org_id: string; p_token: string }
         Returns: boolean
       }
+      verify_status_subscription: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
       verify_tenant_isolation: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "member" | "manager" | "investigator" | "vendor"
       backup_status: "pending" | "running" | "success" | "failed"
       backup_type: "database" | "storage" | "config"
+      component_status:
+        | "operational"
+        | "degraded"
+        | "partial_outage"
+        | "major_outage"
       disaster_severity: "minor" | "major" | "critical"
+      incident_severity: "minor" | "major" | "critical"
+      incident_status:
+        | "investigating"
+        | "identified"
+        | "monitoring"
+        | "resolved"
       pentest_status: "planned" | "in_progress" | "completed" | "cancelled"
       pentest_type:
         | "external"
@@ -5027,7 +5222,20 @@ export const Constants = {
       app_role: ["admin", "member", "manager", "investigator", "vendor"],
       backup_status: ["pending", "running", "success", "failed"],
       backup_type: ["database", "storage", "config"],
+      component_status: [
+        "operational",
+        "degraded",
+        "partial_outage",
+        "major_outage",
+      ],
       disaster_severity: ["minor", "major", "critical"],
+      incident_severity: ["minor", "major", "critical"],
+      incident_status: [
+        "investigating",
+        "identified",
+        "monitoring",
+        "resolved",
+      ],
       pentest_status: ["planned", "in_progress", "completed", "cancelled"],
       pentest_type: [
         "external",

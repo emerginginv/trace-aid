@@ -58,6 +58,7 @@ import PlatformSecurity from "./pages/PlatformSecurity";
 import TrustCenter from "./pages/TrustCenter";
 import TrustCenterAdmin from "./pages/TrustCenterAdmin";
 import SecurityReport from "./pages/SecurityReport";
+import StatusPage from "./pages/StatusPage";
 import NotFound from "./pages/NotFound";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -96,6 +97,8 @@ const App = () => {
             <Route path="/auth" element={<Auth />} />
             {/* Public Trust Center - No auth required */}
             <Route path="/trust" element={<TrustCenter />} />
+            {/* Public Status Page - No auth required */}
+            <Route path="/status" element={<StatusPage />} />
             {/* Public Security Report Form - No auth required */}
             <Route path="/security/report" element={<SecurityReport />} />
             <Route
