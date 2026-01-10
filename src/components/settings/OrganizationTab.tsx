@@ -330,75 +330,76 @@ export function OrganizationTab({
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="logo">Organization Logo</Label>
-            <div className="mt-2 space-y-3">
-              {logoUrl && (
-                <div className="relative inline-block">
-                  <img 
-                    src={logoUrl} 
-                    alt="Organization logo" 
-                    className="h-20 w-auto rounded border border-border"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="logo">Organization Logo</Label>
+              <div className="mt-2 space-y-3">
+                {logoUrl && (
+                  <div className="relative inline-block">
+                    <img 
+                      src={logoUrl} 
+                      alt="Organization logo" 
+                      className="h-16 w-auto rounded border border-border"
+                    />
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={removeLogo}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+                <div>
+                  <Input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    disabled={uploading}
+                    className="cursor-pointer"
                   />
-                  <Button
-                    size="icon"
-                    variant="destructive"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                    onClick={removeLogo}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For invoices, reports, and documents
+                  </p>
                 </div>
-              )}
-              <div>
-                <Input
-                  id="logo"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  disabled={uploading}
-                  className="cursor-pointer"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Upload a logo for your invoices, reports, and documents
-                </p>
               </div>
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="squareLogo">Square Logo (App Branding)</Label>
-            <div className="mt-2 space-y-3">
-              {squareLogoUrl && (
-                <div className="relative inline-block">
-                  <img 
-                    src={squareLogoUrl} 
-                    alt="Square logo" 
-                    className="h-16 w-16 rounded-lg border border-border object-contain bg-background"
+            <div>
+              <Label htmlFor="squareLogo">Square Logo (App Branding)</Label>
+              <div className="mt-2 space-y-3">
+                {squareLogoUrl && (
+                  <div className="relative inline-block">
+                    <img 
+                      src={squareLogoUrl} 
+                      alt="Square logo" 
+                      className="h-16 w-16 rounded-lg border border-border object-contain bg-background"
+                    />
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={removeSquareLogo}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+                <div>
+                  <Input
+                    id="squareLogo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleSquareLogoUpload}
+                    disabled={uploadingSquareLogo}
+                    className="cursor-pointer"
                   />
-                  <Button
-                    size="icon"
-                    variant="destructive"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                    onClick={removeSquareLogo}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Square (1:1) for app sidebar
+                  </p>
                 </div>
-              )}
-              <div>
-                <Input
-                  id="squareLogo"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleSquareLogoUpload}
-                  disabled={uploadingSquareLogo}
-                  className="cursor-pointer"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Upload a square logo (1:1 aspect ratio recommended) for the app sidebar. 
-                  This appears in the top-left corner of the application.
-                </p>
               </div>
             </div>
           </div>
