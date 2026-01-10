@@ -10,6 +10,7 @@ import { HeaderProgressIndicator } from "@/components/ui/header-progress-indicat
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { useBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
+import { HelpButton } from "@/components/help-center";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -54,6 +55,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   <RoleBadge role={role} />
                 </div>
               )}
+              <HelpButton />
               <NotificationCenter />
             </div>
             <HeaderProgressIndicator />
