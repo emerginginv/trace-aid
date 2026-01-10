@@ -14,8 +14,10 @@ import {
   MapPin, Server, Clock, ExternalLink, Info
 } from "lucide-react";
 
+type DataRegion = "us" | "eu";
+
 interface RegionInfo {
-  data_region: string;
+  data_region: DataRegion;
   region_locked: boolean;
   region_selected_at: string | null;
   region_display_name: string;
@@ -56,13 +58,13 @@ export function DataResidencyTab() {
       });
 
       if (error) throw error;
-      return data as RegionInfo;
+      return data as unknown as RegionInfo;
     },
     enabled: !!organization?.id,
   });
 
   const requestMigration = useMutation({
-    mutationFn: async (targetRegion: string) => {
+    mutationFn: async (targetRegion: DataRegion) => {
       const { error } = await supabase.rpc("request_region_migration", {
         p_organization_id: organization!.id,
         p_target_region: targetRegion,
