@@ -59,6 +59,7 @@ import TrustCenter from "./pages/TrustCenter";
 import TrustCenterAdmin from "./pages/TrustCenterAdmin";
 import SecurityReport from "./pages/SecurityReport";
 import StatusPage from "./pages/StatusPage";
+import CustomerSuccess from "./pages/CustomerSuccess";
 import NotFound from "./pages/NotFound";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -508,6 +509,17 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <PlatformSecurity />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Customer Success - SLA & Health Monitoring */}
+        <Route
+          path="/customer-success"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <CustomerSuccess />
               </DashboardLayout>
             </ProtectedRoute>
           }

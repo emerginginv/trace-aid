@@ -185,6 +185,9 @@ export default function SupportConsole() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => navigate('/customer-success')}>
+            Customer Success
+          </Button>
           <Button variant="outline" onClick={() => navigate('/platform-compliance')}>
             SOC-2 Compliance
           </Button>

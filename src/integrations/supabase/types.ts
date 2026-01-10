@@ -1494,6 +1494,59 @@ export type Database = {
           },
         ]
       }
+      customer_health_snapshots: {
+        Row: {
+          active_users_count: number
+          cases_created: number
+          created_at: string
+          feature_adoption_score: number | null
+          id: string
+          organization_id: string
+          period_end: string
+          period_start: string
+          risk_factors: Json | null
+          risk_level: Database["public"]["Enums"]["health_risk_level"]
+          sla_breaches_count: number
+          support_tickets_count: number
+        }
+        Insert: {
+          active_users_count?: number
+          cases_created?: number
+          created_at?: string
+          feature_adoption_score?: number | null
+          id?: string
+          organization_id: string
+          period_end: string
+          period_start: string
+          risk_factors?: Json | null
+          risk_level?: Database["public"]["Enums"]["health_risk_level"]
+          sla_breaches_count?: number
+          support_tickets_count?: number
+        }
+        Update: {
+          active_users_count?: number
+          cases_created?: number
+          created_at?: string
+          feature_adoption_score?: number | null
+          id?: string
+          organization_id?: string
+          period_end?: string
+          period_start?: string
+          risk_factors?: Json | null
+          risk_level?: Database["public"]["Enums"]["health_risk_level"]
+          sla_breaches_count?: number
+          support_tickets_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_health_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_subject_requests: {
         Row: {
           blocked_reason: string | null
@@ -4075,6 +4128,142 @@ export type Database = {
           },
         ]
       }
+      sla_breaches: {
+        Row: {
+          created_at: string
+          customer_notified: boolean
+          id: string
+          impact_summary: string | null
+          measured_value: number
+          notified_at: string | null
+          period_end: string
+          period_start: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          sla_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_notified?: boolean
+          id?: string
+          impact_summary?: string | null
+          measured_value: number
+          notified_at?: string | null
+          period_end: string
+          period_start: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          sla_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_notified?: boolean
+          id?: string
+          impact_summary?: string | null
+          measured_value?: number
+          notified_at?: string | null
+          period_end?: string
+          period_start?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          sla_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_breaches_sla_id_fkey"
+            columns: ["sla_id"]
+            isOneToOne: false
+            referencedRelation: "slas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sla_measurements: {
+        Row: {
+          calculated_at: string
+          id: string
+          measured_value: number
+          period_end: string
+          period_start: string
+          sla_id: string
+          status: Database["public"]["Enums"]["sla_status"]
+        }
+        Insert: {
+          calculated_at?: string
+          id?: string
+          measured_value: number
+          period_end: string
+          period_start: string
+          sla_id: string
+          status: Database["public"]["Enums"]["sla_status"]
+        }
+        Update: {
+          calculated_at?: string
+          id?: string
+          measured_value?: number
+          period_end?: string
+          period_start?: string
+          sla_id?: string
+          status?: Database["public"]["Enums"]["sla_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_measurements_sla_id_fkey"
+            columns: ["sla_id"]
+            isOneToOne: false
+            referencedRelation: "slas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slas: {
+        Row: {
+          contract_id: string | null
+          created_at: string
+          enabled: boolean
+          id: string
+          measurement_window: Database["public"]["Enums"]["sla_window"]
+          metric: Database["public"]["Enums"]["sla_metric"]
+          organization_id: string
+          target_value: number
+        }
+        Insert: {
+          contract_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          measurement_window?: Database["public"]["Enums"]["sla_window"]
+          metric: Database["public"]["Enums"]["sla_metric"]
+          organization_id: string
+          target_value: number
+        }
+        Update: {
+          contract_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          measurement_window?: Database["public"]["Enums"]["sla_window"]
+          metric?: Database["public"]["Enums"]["sla_metric"]
+          organization_id?: string
+          target_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slas_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       soc2_controls: {
         Row: {
           category: string
@@ -4672,6 +4861,14 @@ export type Database = {
         }
         Returns: Json
       }
+      calculate_customer_health: {
+        Args: {
+          p_organization_id: string
+          p_period_end?: string
+          p_period_start?: string
+        }
+        Returns: string
+      }
       calculate_vulnerability_sla: {
         Args: { p_severity: string }
         Returns: string
@@ -4843,6 +5040,7 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
+      get_customer_success_overview: { Args: never; Returns: Json }
       get_disaster_events: {
         Args: { p_limit?: number }
         Returns: {
@@ -4908,6 +5106,10 @@ export type Database = {
           status: string
           title: string
         }[]
+      }
+      get_organization_sla_summary: {
+        Args: { p_organization_id: string }
+        Returns: Json
       }
       get_organization_users: {
         Args: { org_id: string }
@@ -5296,6 +5498,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      upsert_sla: {
+        Args: {
+          p_contract_id?: string
+          p_measurement_window?: string
+          p_metric: string
+          p_organization_id: string
+          p_target_value: number
+        }
+        Returns: string
+      }
       validate_attachment_access: {
         Args: { p_token: string }
         Returns: {
@@ -5338,6 +5550,7 @@ export type Database = {
         | "superseded"
       contract_type: "msa" | "sow" | "order_form" | "dpa" | "nda" | "other"
       disaster_severity: "minor" | "major" | "critical"
+      health_risk_level: "healthy" | "watch" | "at_risk"
       incident_severity: "minor" | "major" | "critical"
       incident_status:
         | "investigating"
@@ -5368,6 +5581,9 @@ export type Database = {
         | "accepted"
         | "rejected"
         | "duplicate"
+      sla_metric: "availability" | "response_time" | "support_response"
+      sla_status: "met" | "breached"
+      sla_window: "monthly" | "quarterly"
       sso_provider_type: "oidc" | "saml"
       vulnerability_source:
         | "pentest"
@@ -5529,6 +5745,7 @@ export const Constants = {
       ],
       contract_type: ["msa", "sow", "order_form", "dpa", "nda", "other"],
       disaster_severity: ["minor", "major", "critical"],
+      health_risk_level: ["healthy", "watch", "at_risk"],
       incident_severity: ["minor", "major", "critical"],
       incident_status: [
         "investigating",
@@ -5563,6 +5780,9 @@ export const Constants = {
         "rejected",
         "duplicate",
       ],
+      sla_metric: ["availability", "response_time", "support_response"],
+      sla_status: ["met", "breached"],
+      sla_window: ["monthly", "quarterly"],
       sso_provider_type: ["oidc", "saml"],
       vulnerability_source: [
         "pentest",
