@@ -2941,6 +2941,7 @@ export type Database = {
           is_valid: boolean
         }[]
       }
+      verify_tenant_isolation: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "member" | "manager" | "investigator" | "vendor"
