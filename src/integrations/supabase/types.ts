@@ -2513,6 +2513,123 @@ export type Database = {
           },
         ]
       }
+      integration_api_keys: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          integration_id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          organization_id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          scopes: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          integration_id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          organization_id: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scopes?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          integration_id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          organization_id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scopes?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_api_keys_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrations: {
+        Row: {
+          auth_type: Database["public"]["Enums"]["integration_auth_type"]
+          available_scopes: string[] | null
+          category: Database["public"]["Enums"]["integration_category"]
+          created_at: string | null
+          default_scopes: string[] | null
+          description: string | null
+          documentation_url: string | null
+          id: string
+          is_active: boolean | null
+          is_first_party: boolean | null
+          logo_url: string | null
+          name: string
+          provider: string
+          required_plan: string | null
+          slug: string
+        }
+        Insert: {
+          auth_type: Database["public"]["Enums"]["integration_auth_type"]
+          available_scopes?: string[] | null
+          category: Database["public"]["Enums"]["integration_category"]
+          created_at?: string | null
+          default_scopes?: string[] | null
+          description?: string | null
+          documentation_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_first_party?: boolean | null
+          logo_url?: string | null
+          name: string
+          provider: string
+          required_plan?: string | null
+          slug: string
+        }
+        Update: {
+          auth_type?: Database["public"]["Enums"]["integration_auth_type"]
+          available_scopes?: string[] | null
+          category?: Database["public"]["Enums"]["integration_category"]
+          created_at?: string | null
+          default_scopes?: string[] | null
+          description?: string | null
+          documentation_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_first_party?: boolean | null
+          logo_url?: string | null
+          name?: string
+          provider?: string
+          required_plan?: string | null
+          slug?: string
+        }
+        Relationships: []
+      }
       invoice_payments: {
         Row: {
           amount: number
@@ -2919,6 +3036,75 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "organization_exports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_integrations: {
+        Row: {
+          access_token_encrypted: string | null
+          config: Json | null
+          disabled_at: string | null
+          disabled_by: string | null
+          error_message: string | null
+          id: string
+          installed_at: string | null
+          installed_by: string | null
+          integration_id: string
+          last_used_at: string | null
+          organization_id: string
+          refresh_token_encrypted: string | null
+          scopes_granted: string[] | null
+          status: Database["public"]["Enums"]["integration_status"] | null
+          token_expires_at: string | null
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          config?: Json | null
+          disabled_at?: string | null
+          disabled_by?: string | null
+          error_message?: string | null
+          id?: string
+          installed_at?: string | null
+          installed_by?: string | null
+          integration_id: string
+          last_used_at?: string | null
+          organization_id: string
+          refresh_token_encrypted?: string | null
+          scopes_granted?: string[] | null
+          status?: Database["public"]["Enums"]["integration_status"] | null
+          token_expires_at?: string | null
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          config?: Json | null
+          disabled_at?: string | null
+          disabled_by?: string | null
+          error_message?: string | null
+          id?: string
+          installed_at?: string | null
+          installed_by?: string | null
+          integration_id?: string
+          last_used_at?: string | null
+          organization_id?: string
+          refresh_token_encrypted?: string | null
+          scopes_granted?: string[] | null
+          status?: Database["public"]["Enums"]["integration_status"] | null
+          token_expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_integrations_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_integrations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -4746,6 +4932,119 @@ export type Database = {
           },
         ]
       }
+      webhook_deliveries: {
+        Row: {
+          attempt_count: number | null
+          created_at: string | null
+          delivered_at: string | null
+          event_type: string
+          id: string
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          webhook_id: string
+        }
+        Insert: {
+          attempt_count?: number | null
+          created_at?: string | null
+          delivered_at?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          response_body?: string | null
+          response_status?: number | null
+          webhook_id: string
+        }
+        Update: {
+          attempt_count?: number | null
+          created_at?: string | null
+          delivered_at?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          disabled_at: string | null
+          enabled: boolean | null
+          endpoint_url: string
+          event_types: string[]
+          failure_count: number | null
+          id: string
+          integration_id: string | null
+          last_failure_at: string | null
+          last_success_at: string | null
+          last_triggered_at: string | null
+          name: string
+          organization_id: string
+          secret_hash: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          disabled_at?: string | null
+          enabled?: boolean | null
+          endpoint_url: string
+          event_types: string[]
+          failure_count?: number | null
+          id?: string
+          integration_id?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          last_triggered_at?: string | null
+          name: string
+          organization_id: string
+          secret_hash: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          disabled_at?: string | null
+          enabled?: boolean | null
+          endpoint_url?: string
+          event_types?: string[]
+          failure_count?: number | null
+          id?: string
+          integration_id?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          last_triggered_at?: string | null
+          name?: string
+          organization_id?: string
+          secret_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhooks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       cases_with_budget_summary: {
@@ -4959,6 +5258,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_integration_api_key: {
+        Args: {
+          p_expires_in_days?: number
+          p_integration_id: string
+          p_name: string
+          p_organization_id: string
+          p_scopes: string[]
+        }
+        Returns: Json
+      }
       create_pentest: {
         Args: {
           p_end_date?: string
@@ -4983,6 +5292,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_webhook: {
+        Args: {
+          p_endpoint_url: string
+          p_event_types: string[]
+          p_integration_id?: string
+          p_name: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
       declare_disaster: {
         Args: {
           p_description: string
@@ -4992,6 +5311,11 @@ export type Database = {
         Returns: string
       }
       delete_role_mapping: { Args: { p_mapping_id: string }; Returns: Json }
+      disable_integration: {
+        Args: { p_integration_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      disable_webhook: { Args: { p_webhook_id: string }; Returns: boolean }
       end_impersonation: { Args: { p_session_token?: string }; Returns: Json }
       enforce_entitlement: {
         Args: { p_action: string; p_organization_id: string; p_payload?: Json }
@@ -5235,6 +5559,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      install_integration: {
+        Args: {
+          p_integration_id: string
+          p_organization_id: string
+          p_scopes?: string[]
+        }
+        Returns: string
+      }
       is_admin_of_any_org: { Args: { _user_id: string }; Returns: boolean }
       is_enterprise_org: { Args: { p_org_id: string }; Returns: boolean }
       is_org_active: { Args: { p_organization_id: string }; Returns: boolean }
@@ -5349,6 +5681,10 @@ export type Database = {
         Returns: Json
       }
       resolve_tenant_by_domain: { Args: { p_hostname: string }; Returns: Json }
+      revoke_integration_api_key: {
+        Args: { p_key_id: string }
+        Returns: boolean
+      }
       revoke_invitation: { Args: { p_invite_id: string }; Returns: Json }
       set_org_legal_hold: {
         Args: {
@@ -5557,6 +5893,16 @@ export type Database = {
         | "identified"
         | "monitoring"
         | "resolved"
+      integration_auth_type: "oauth" | "api_key" | "webhook"
+      integration_category:
+        | "communications"
+        | "storage"
+        | "analytics"
+        | "legal"
+        | "payments"
+        | "productivity"
+        | "security"
+      integration_status: "installed" | "disabled" | "error"
       pentest_status: "planned" | "in_progress" | "completed" | "cancelled"
       pentest_type:
         | "external"
@@ -5753,6 +6099,17 @@ export const Constants = {
         "monitoring",
         "resolved",
       ],
+      integration_auth_type: ["oauth", "api_key", "webhook"],
+      integration_category: [
+        "communications",
+        "storage",
+        "analytics",
+        "legal",
+        "payments",
+        "productivity",
+        "security",
+      ],
+      integration_status: ["installed", "disabled", "error"],
       pentest_status: ["planned", "in_progress", "completed", "cancelled"],
       pentest_type: [
         "external",
