@@ -334,6 +334,100 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
     );
   };
 
+  // Parse and render outline-formatted content
+  const renderFormattedContent = (content: string) => {
+    const lines = content.split('\n');
+    const elements: React.ReactNode[] = [];
+    let currentListItems: { text: string; indent: number }[] = [];
+    let listKey = 0;
+
+    const flushList = () => {
+      if (currentListItems.length === 0) return;
+      
+      elements.push(
+        <ol key={`list-${listKey++}`} className="space-y-2 my-3">
+          {currentListItems.map((item, idx) => (
+            <li 
+              key={idx} 
+              className={cn(
+                "text-foreground",
+                item.indent > 0 && "ml-6 list-disc",
+                item.indent === 0 && "list-decimal ml-4"
+              )}
+            >
+              {item.text}
+            </li>
+          ))}
+        </ol>
+      );
+      currentListItems = [];
+    };
+
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      
+      // Empty line - flush list and add spacing
+      if (!trimmed) {
+        flushList();
+        return;
+      }
+
+      // Check for numbered list item (1., 2., etc.)
+      const numberedMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
+      if (numberedMatch) {
+        currentListItems.push({ text: numberedMatch[2], indent: 0 });
+        return;
+      }
+
+      // Check for lettered sublist (a., b., etc.) or dash sublist
+      const sublistMatch = trimmed.match(/^([a-z])\.\s+(.+)/) || trimmed.match(/^[-•]\s+(.+)/);
+      if (sublistMatch) {
+        const text = sublistMatch[2] || sublistMatch[1];
+        currentListItems.push({ text, indent: 1 });
+        return;
+      }
+
+      // Check if line ends with colon (section header)
+      if (trimmed.endsWith(':') && trimmed.length < 100) {
+        flushList();
+        elements.push(
+          <h4 key={`header-${idx}`} className="font-semibold text-foreground mt-6 mb-2">
+            {trimmed}
+          </h4>
+        );
+        return;
+      }
+
+      // Check if line is all caps or title case with no punctuation (section header)
+      const isHeader = trimmed.length < 80 && 
+        !trimmed.includes('.') && 
+        (trimmed === trimmed.toUpperCase() || 
+         /^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(trimmed) ||
+         /^[A-Z][a-z]+(\s+[a-z]+)*(\s+[A-Z][a-z]+)*$/.test(trimmed));
+      
+      if (isHeader && idx > 0) {
+        flushList();
+        elements.push(
+          <h4 key={`header-${idx}`} className="font-semibold text-foreground mt-6 mb-2">
+            {trimmed}
+          </h4>
+        );
+        return;
+      }
+
+      // Regular paragraph
+      flushList();
+      elements.push(
+        <p key={`para-${idx}`} className="text-foreground leading-relaxed mb-3">
+          {trimmed}
+        </p>
+      );
+    });
+
+    flushList();
+    return elements;
+  };
+
   const renderArticleView = () => {
     if (viewState.type !== "article") return null;
     const { category, article } = viewState;
@@ -351,11 +445,9 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
           </p>
         </div>
         
-        {/* Article content */}
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <div className="whitespace-pre-wrap text-foreground leading-relaxed">
-            {article.content}
-          </div>
+        {/* Article content - rendered as structured outline */}
+        <div className="max-w-none">
+          {renderFormattedContent(article.content)}
         </div>
       </div>
     );
