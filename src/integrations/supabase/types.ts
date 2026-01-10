@@ -3655,6 +3655,62 @@ export type Database = {
           },
         ]
       }
+      reports: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          expires_at: string
+          file_path: string | null
+          file_size_bytes: number | null
+          filters: Json | null
+          generated_at: string | null
+          id: string
+          organization_id: string
+          report_type: Database["public"]["Enums"]["report_type"]
+          requested_by: string
+          status: Database["public"]["Enums"]["report_status"]
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string
+          file_path?: string | null
+          file_size_bytes?: number | null
+          filters?: Json | null
+          generated_at?: string | null
+          id?: string
+          organization_id: string
+          report_type: Database["public"]["Enums"]["report_type"]
+          requested_by: string
+          status?: Database["public"]["Enums"]["report_status"]
+          title: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string
+          file_path?: string | null
+          file_size_bytes?: number | null
+          filters?: Json | null
+          generated_at?: string | null
+          id?: string
+          organization_id?: string
+          report_type?: Database["public"]["Enums"]["report_type"]
+          requested_by?: string
+          status?: Database["public"]["Enums"]["report_status"]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reserved_subdomains: {
         Row: {
           created_at: string
@@ -4744,6 +4800,15 @@ export type Database = {
         Args: { p_action: string; p_organization_id: string; p_payload?: Json }
         Returns: Json
       }
+      generate_audit_bundle: {
+        Args: {
+          p_date_from?: string
+          p_date_to?: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      generate_report_content: { Args: { p_report_id: string }; Returns: Json }
       generate_scim_token: { Args: { p_org_id: string }; Returns: Json }
       get_active_impersonation: { Args: never; Returns: Json }
       get_blocking_contracts: {
@@ -4828,6 +4893,21 @@ export type Database = {
       get_organization_entitlements: {
         Args: { p_organization_id: string }
         Returns: Json
+      }
+      get_organization_reports: {
+        Args: { p_organization_id: string }
+        Returns: {
+          created_at: string
+          expires_at: string
+          filters: Json
+          generated_at: string
+          id: string
+          report_type: string
+          requested_by: string
+          requester_name: string
+          status: string
+          title: string
+        }[]
       }
       get_organization_users: {
         Args: { org_id: string }
@@ -4993,6 +5073,7 @@ export type Database = {
         }
         Returns: Json
       }
+      log_report_download: { Args: { p_report_id: string }; Returns: undefined }
       log_restore_test: {
         Args: {
           p_backup_id?: string
@@ -5051,6 +5132,15 @@ export type Database = {
       request_org_export: {
         Args: { p_export_type?: string; p_organization_id: string }
         Returns: Json
+      }
+      request_report: {
+        Args: {
+          p_filters?: Json
+          p_organization_id: string
+          p_report_type: string
+          p_title: string
+        }
+        Returns: string
       }
       resolve_security_incident: {
         Args: { p_id: string; p_resolution: string }
@@ -5262,6 +5352,13 @@ export type Database = {
         | "api"
         | "mobile"
         | "social_engineering"
+      report_status: "queued" | "generating" | "ready" | "failed"
+      report_type:
+        | "security"
+        | "audit_logs"
+        | "compliance"
+        | "vulnerabilities"
+        | "billing"
       restore_environment: "staging" | "isolated" | "production"
       risk_level: "informational" | "low" | "medium" | "high" | "critical"
       scim_action_type: "create" | "update" | "deactivate" | "reactivate"
@@ -5447,6 +5544,14 @@ export const Constants = {
         "api",
         "mobile",
         "social_engineering",
+      ],
+      report_status: ["queued", "generating", "ready", "failed"],
+      report_type: [
+        "security",
+        "audit_logs",
+        "compliance",
+        "vulnerabilities",
+        "billing",
       ],
       restore_environment: ["staging", "isolated", "production"],
       risk_level: ["informational", "low", "medium", "high", "critical"],
