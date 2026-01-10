@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
+
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 const menuGroups = [{
@@ -180,7 +180,7 @@ export function AppSidebar() {
               </div>
             </>}
         </div>
-        <OrganizationSwitcher />
+        
       </SidebarHeader>
 
       <SidebarContent>
