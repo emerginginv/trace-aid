@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
+import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 const menuGroups = [{
   label: "Navigation",
   items: [{
@@ -181,6 +182,8 @@ export function AppSidebar() {
             </>}
         </div>
         
+        {/* Organization Switcher - shown when user belongs to multiple orgs */}
+        <OrganizationSwitcher />
       </SidebarHeader>
 
       <SidebarContent>

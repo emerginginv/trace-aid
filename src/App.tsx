@@ -51,6 +51,7 @@ import SystemSecurityAnalytics from "./pages/SystemSecurityAnalytics";
 import ReportsHub from "./pages/reports/index";
 import ReportViewer from "./pages/reports/ReportViewer";
 import NotFound from "./pages/NotFound";
+import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
 
@@ -92,6 +93,8 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            {/* Accept Invite Route - handles invitation tokens */}
+            <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route
           path="/dashboard"
           element={
