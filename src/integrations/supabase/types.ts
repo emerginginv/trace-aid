@@ -2980,6 +2980,77 @@ export type Database = {
         }
         Relationships: []
       }
+      penetration_tests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          end_date: string | null
+          findings_count_critical: number | null
+          findings_count_high: number | null
+          findings_count_info: number | null
+          findings_count_low: number | null
+          findings_count_medium: number | null
+          id: string
+          notes: string | null
+          overall_risk: Database["public"]["Enums"]["risk_level"] | null
+          report_file_path: string | null
+          scope: string
+          start_date: string
+          status: Database["public"]["Enums"]["pentest_status"]
+          test_type: Database["public"]["Enums"]["pentest_type"]
+          vendor_name: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          end_date?: string | null
+          findings_count_critical?: number | null
+          findings_count_high?: number | null
+          findings_count_info?: number | null
+          findings_count_low?: number | null
+          findings_count_medium?: number | null
+          id?: string
+          notes?: string | null
+          overall_risk?: Database["public"]["Enums"]["risk_level"] | null
+          report_file_path?: string | null
+          scope: string
+          start_date: string
+          status?: Database["public"]["Enums"]["pentest_status"]
+          test_type: Database["public"]["Enums"]["pentest_type"]
+          vendor_name: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          end_date?: string | null
+          findings_count_critical?: number | null
+          findings_count_high?: number | null
+          findings_count_info?: number | null
+          findings_count_low?: number | null
+          findings_count_medium?: number | null
+          id?: string
+          notes?: string | null
+          overall_risk?: Database["public"]["Enums"]["risk_level"] | null
+          report_file_path?: string | null
+          scope?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["pentest_status"]
+          test_type?: Database["public"]["Enums"]["pentest_type"]
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "penetration_tests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           allowed: boolean
@@ -3442,6 +3513,66 @@ export type Database = {
         }
         Relationships: []
       }
+      security_reports: {
+        Row: {
+          description: string
+          id: string
+          impact_assessment: string | null
+          internal_notes: string | null
+          linked_vulnerability_id: string | null
+          reporter_email: string
+          reporter_name: string | null
+          status: Database["public"]["Enums"]["security_report_status"]
+          steps_to_reproduce: string | null
+          submitted_at: string
+          triaged_at: string | null
+          triaged_by: string | null
+        }
+        Insert: {
+          description: string
+          id?: string
+          impact_assessment?: string | null
+          internal_notes?: string | null
+          linked_vulnerability_id?: string | null
+          reporter_email: string
+          reporter_name?: string | null
+          status?: Database["public"]["Enums"]["security_report_status"]
+          steps_to_reproduce?: string | null
+          submitted_at?: string
+          triaged_at?: string | null
+          triaged_by?: string | null
+        }
+        Update: {
+          description?: string
+          id?: string
+          impact_assessment?: string | null
+          internal_notes?: string | null
+          linked_vulnerability_id?: string | null
+          reporter_email?: string
+          reporter_name?: string | null
+          status?: Database["public"]["Enums"]["security_report_status"]
+          steps_to_reproduce?: string | null
+          submitted_at?: string
+          triaged_at?: string | null
+          triaged_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_reports_linked_vulnerability_id_fkey"
+            columns: ["linked_vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_triaged_by_fkey"
+            columns: ["triaged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       soc2_controls: {
         Row: {
           category: string
@@ -3742,6 +3873,126 @@ export type Database = {
         }
         Relationships: []
       }
+      vulnerabilities: {
+        Row: {
+          accepted_risk_justification: string | null
+          affected_component: string
+          closed_at: string | null
+          created_at: string
+          created_by: string
+          cvss_score: number | null
+          description: string
+          discovered_at: string
+          evidence_file_path: string | null
+          id: string
+          owner_user_id: string | null
+          pen_test_id: string | null
+          resolution_summary: string | null
+          severity: Database["public"]["Enums"]["risk_level"]
+          sla_due_at: string | null
+          source: Database["public"]["Enums"]["vulnerability_source"]
+          status: Database["public"]["Enums"]["vulnerability_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_risk_justification?: string | null
+          affected_component: string
+          closed_at?: string | null
+          created_at?: string
+          created_by: string
+          cvss_score?: number | null
+          description: string
+          discovered_at?: string
+          evidence_file_path?: string | null
+          id?: string
+          owner_user_id?: string | null
+          pen_test_id?: string | null
+          resolution_summary?: string | null
+          severity: Database["public"]["Enums"]["risk_level"]
+          sla_due_at?: string | null
+          source: Database["public"]["Enums"]["vulnerability_source"]
+          status?: Database["public"]["Enums"]["vulnerability_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_risk_justification?: string | null
+          affected_component?: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string
+          cvss_score?: number | null
+          description?: string
+          discovered_at?: string
+          evidence_file_path?: string | null
+          id?: string
+          owner_user_id?: string | null
+          pen_test_id?: string | null
+          resolution_summary?: string | null
+          severity?: Database["public"]["Enums"]["risk_level"]
+          sla_due_at?: string | null
+          source?: Database["public"]["Enums"]["vulnerability_source"]
+          status?: Database["public"]["Enums"]["vulnerability_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerabilities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerabilities_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerabilities_pen_test_id_fkey"
+            columns: ["pen_test_id"]
+            isOneToOne: false
+            referencedRelation: "penetration_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_sla_config: {
+        Row: {
+          id: string
+          severity: Database["public"]["Enums"]["risk_level"]
+          sla_days: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          severity: Database["public"]["Enums"]["risk_level"]
+          sla_days: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          severity?: Database["public"]["Enums"]["risk_level"]
+          sla_days?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_sla_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       cases_with_budget_summary: {
@@ -3848,6 +4099,10 @@ export type Database = {
         Args: { invite_token: string }
         Returns: Json
       }
+      calculate_vulnerability_sla: {
+        Args: { p_severity: string }
+        Returns: string
+      }
       can_access_case_attachment: {
         Args: { file_path: string }
         Returns: boolean
@@ -3879,9 +4134,46 @@ export type Database = {
         }
         Returns: undefined
       }
+      complete_pentest: {
+        Args: {
+          p_findings_critical?: number
+          p_findings_high?: number
+          p_findings_info?: number
+          p_findings_low?: number
+          p_findings_medium?: number
+          p_overall_risk: string
+          p_pentest_id: string
+          p_report_file_path?: string
+        }
+        Returns: undefined
+      }
       complete_review_item: {
         Args: { p_action: string; p_item_id: string; p_notes?: string }
         Returns: Json
+      }
+      create_pentest: {
+        Args: {
+          p_end_date?: string
+          p_notes?: string
+          p_scope: string
+          p_start_date: string
+          p_test_type: string
+          p_vendor_name: string
+        }
+        Returns: string
+      }
+      create_vulnerability: {
+        Args: {
+          p_affected_component: string
+          p_cvss_score?: number
+          p_description: string
+          p_owner_user_id?: string
+          p_pen_test_id?: string
+          p_severity: string
+          p_source: string
+          p_title: string
+        }
+        Returns: string
       }
       declare_disaster: {
         Args: {
@@ -4041,6 +4333,7 @@ export type Database = {
           validated_by_name: string
         }[]
       }
+      get_security_metrics: { Args: never; Returns: Json }
       get_soc2_dashboard: { Args: never; Returns: Json }
       get_trust_center_admin: {
         Args: never
@@ -4213,9 +4506,28 @@ export type Database = {
         }
         Returns: Json
       }
+      submit_security_report: {
+        Args: {
+          p_description: string
+          p_impact_assessment?: string
+          p_reporter_email: string
+          p_reporter_name?: string
+          p_steps_to_reproduce?: string
+        }
+        Returns: string
+      }
       support_search_users: {
         Args: { p_limit?: number; p_query: string }
         Returns: Json
+      }
+      triage_security_report: {
+        Args: {
+          p_internal_notes?: string
+          p_linked_vulnerability_id?: string
+          p_report_id: string
+          p_status: string
+        }
+        Returns: undefined
       }
       update_org_retention_settings: {
         Args: {
@@ -4260,6 +4572,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_vulnerability_status: {
+        Args: {
+          p_accepted_risk_justification?: string
+          p_evidence_file_path?: string
+          p_new_status: string
+          p_resolution_summary?: string
+          p_vulnerability_id: string
+        }
+        Returns: undefined
+      }
       validate_attachment_access: {
         Args: { p_token: string }
         Returns: {
@@ -4279,7 +4601,34 @@ export type Database = {
       backup_status: "pending" | "running" | "success" | "failed"
       backup_type: "database" | "storage" | "config"
       disaster_severity: "minor" | "major" | "critical"
+      pentest_status: "planned" | "in_progress" | "completed" | "cancelled"
+      pentest_type:
+        | "external"
+        | "internal"
+        | "web_app"
+        | "api"
+        | "mobile"
+        | "social_engineering"
       restore_environment: "staging" | "isolated" | "production"
+      risk_level: "informational" | "low" | "medium" | "high" | "critical"
+      security_report_status:
+        | "new"
+        | "triaged"
+        | "accepted"
+        | "rejected"
+        | "duplicate"
+      vulnerability_source:
+        | "pentest"
+        | "scanner"
+        | "responsible_disclosure"
+        | "internal"
+        | "customer_report"
+      vulnerability_status:
+        | "open"
+        | "in_progress"
+        | "mitigated"
+        | "accepted_risk"
+        | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4411,7 +4760,38 @@ export const Constants = {
       backup_status: ["pending", "running", "success", "failed"],
       backup_type: ["database", "storage", "config"],
       disaster_severity: ["minor", "major", "critical"],
+      pentest_status: ["planned", "in_progress", "completed", "cancelled"],
+      pentest_type: [
+        "external",
+        "internal",
+        "web_app",
+        "api",
+        "mobile",
+        "social_engineering",
+      ],
       restore_environment: ["staging", "isolated", "production"],
+      risk_level: ["informational", "low", "medium", "high", "critical"],
+      security_report_status: [
+        "new",
+        "triaged",
+        "accepted",
+        "rejected",
+        "duplicate",
+      ],
+      vulnerability_source: [
+        "pentest",
+        "scanner",
+        "responsible_disclosure",
+        "internal",
+        "customer_report",
+      ],
+      vulnerability_status: [
+        "open",
+        "in_progress",
+        "mitigated",
+        "accepted_risk",
+        "closed",
+      ],
     },
   },
 } as const

@@ -191,6 +191,9 @@ export default function SupportConsole() {
           <Button variant="outline" onClick={() => navigate('/platform-resilience')}>
             Disaster Recovery
           </Button>
+          <Button variant="outline" onClick={() => navigate('/platform-security')}>
+            Vulnerability Mgmt
+          </Button>
           <Button variant="outline" onClick={() => navigate('/trust-admin')}>
             Trust Center
           </Button>
