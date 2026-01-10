@@ -2064,6 +2064,41 @@ export type Database = {
           },
         ]
       }
+      organization_entitlements_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          notes: string | null
+          organization_id: string
+          overrides: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          notes?: string | null
+          organization_id: string
+          overrides?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          notes?: string | null
+          organization_id?: string
+          overrides?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_entitlements_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_invites: {
         Row: {
           accepted_at: string | null
@@ -2239,6 +2274,38 @@ export type Database = {
             foreignKeyName: "organization_settings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_usage: {
+        Row: {
+          cases_count: number
+          organization_id: string
+          seats_used: number
+          storage_bytes: number
+          updated_at: string
+        }
+        Insert: {
+          cases_count?: number
+          organization_id: string
+          seats_used?: number
+          storage_bytes?: number
+          updated_at?: string
+        }
+        Update: {
+          cases_count?: number
+          organization_id?: string
+          seats_used?: number
+          storage_bytes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_usage_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -2934,6 +3001,10 @@ export type Database = {
         Args: { p_subdomain: string }
         Returns: Json
       }
+      enforce_entitlement: {
+        Args: { p_action: string; p_organization_id: string; p_payload?: Json }
+        Returns: Json
+      }
       get_case_budget_summary: {
         Args: { p_case_id: string }
         Returns: {
@@ -2968,6 +3039,10 @@ export type Database = {
           id: string
         }[]
       }
+      get_organization_entitlements: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       get_organization_users: {
         Args: { org_id: string }
         Returns: {
@@ -2990,6 +3065,7 @@ export type Database = {
           role: string
         }[]
       }
+      get_plan_entitlements: { Args: { p_product_id: string }; Returns: Json }
       get_related_cases: {
         Args: { case_id: string }
         Returns: {
