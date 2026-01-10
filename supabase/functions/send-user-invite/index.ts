@@ -112,12 +112,37 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // TODO: Send actual email with invite link
-    // For now, we'll just log it
-    const inviteLink = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${invite.token}&type=invite`;
+    // Log audit event for USER_INVITED
+    await supabase
+      .from('audit_events')
+      .insert({
+        organization_id: organizationId,
+        actor_user_id: user.id,
+        action: 'USER_INVITED',
+        metadata: {
+          email,
+          role,
+          invite_id: invite.id
+        }
+      });
+
+    // Get the organization's subdomain for constructing invite link
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('subdomain')
+      .eq('id', organizationId)
+      .single();
+
+    const baseUrl = org?.subdomain 
+      ? `https://${org.subdomain}.casewyze.com`
+      : Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '') || 'https://app.casewyze.com';
+    
+    const inviteLink = `${baseUrl}/accept-invite?token=${invite.token}`;
+    
     console.log(`Invite created for ${email} with role ${role} in organization ${organizationId}`);
     console.log(`Invite link: ${inviteLink}`);
-    console.log(`Token: ${invite.token}`);
+
+    // TODO: Send actual email with invite link using send-notification-email function
 
     return new Response(
       JSON.stringify({ 

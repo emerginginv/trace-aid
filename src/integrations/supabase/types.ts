@@ -2073,6 +2073,8 @@ export type Database = {
           id: string
           invited_by: string
           organization_id: string
+          revoked_at: string | null
+          revoked_by: string | null
           role: Database["public"]["Enums"]["app_role"]
           token: string
         }
@@ -2084,6 +2086,8 @@ export type Database = {
           id?: string
           invited_by: string
           organization_id: string
+          revoked_at?: string | null
+          revoked_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           token?: string
         }
@@ -2095,6 +2099,8 @@ export type Database = {
           id?: string
           invited_by?: string
           organization_id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           token?: string
         }
@@ -2911,6 +2917,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_invitation: { Args: { p_token: string }; Returns: Json }
       accept_organization_invite: {
         Args: { invite_token: string }
         Returns: Json
@@ -2972,6 +2979,17 @@ export type Database = {
           status: string
         }[]
       }
+      get_pending_invites: {
+        Args: { p_organization_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by_name: string
+          role: string
+        }[]
+      }
       get_related_cases: {
         Args: { case_id: string }
         Returns: {
@@ -2985,6 +3003,17 @@ export type Database = {
         }[]
       }
       get_user_organization: { Args: { _user_id: string }; Returns: string }
+      get_user_organizations: {
+        Args: never
+        Returns: {
+          id: string
+          is_current: boolean
+          logo_url: string
+          name: string
+          primary_domain: string
+          subdomain: string
+        }[]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -3038,6 +3067,7 @@ export type Database = {
         Returns: Json
       }
       resolve_tenant_by_domain: { Args: { p_hostname: string }; Returns: Json }
+      revoke_invitation: { Args: { p_invite_id: string }; Returns: Json }
       update_organization_subscription: {
         Args: {
           p_price_id: string

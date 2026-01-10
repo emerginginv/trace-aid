@@ -17,6 +17,7 @@ import { z } from "zod";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { getPlanLimits, isTrialActive } from "@/lib/planLimits";
 import { Organization, SubscriptionStatus } from "@/contexts/OrganizationContext";
+import { InvitationsPanel } from "./InvitationsPanel";
 
 const inviteSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
@@ -801,6 +802,9 @@ export const UsersManagementTab = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Pending Invitations Panel */}
+      <InvitationsPanel isAdmin={isAdmin} />
     </>
   );
 };
