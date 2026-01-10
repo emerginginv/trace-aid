@@ -22,6 +22,7 @@ import { UsersManagementTab } from "@/components/settings/UsersManagementTab";
 import { PicklistsTab } from "@/components/settings/PicklistsTab";
 import { EmailSettingsTab } from "@/components/settings/EmailSettingsTab";
 import { BillingTab } from "@/components/settings/BillingTab";
+import { HelpCenterAdmin } from "@/components/help-center";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -640,6 +641,13 @@ const Settings = () => {
                 onSave={saveOrganizationSettings}
               />
             </TabsContent>
+
+            {/* Help Center Admin Tab - Admin Only */}
+            {currentUserRole === 'admin' && (
+              <TabsContent value="help-center" className="space-y-6">
+                <HelpCenterAdmin />
+              </TabsContent>
+            )}
 
             {/* Billing Tab */}
             {currentUserRole === 'admin' && (

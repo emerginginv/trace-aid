@@ -1,8 +1,11 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Search, 
   ChevronRight, 
@@ -19,8 +22,12 @@ import {
   Shield,
   BookOpen
 } from "lucide-react";
-import { helpCategories, searchHelpContent, HelpCategory, HelpArticle } from "./helpCenterData";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Database } from "@/integrations/supabase/types";
+
+type HelpCategory = Database["public"]["Tables"]["help_categories"]["Row"];
+type HelpArticle = Database["public"]["Tables"]["help_articles"]["Row"];
 
 interface HelpCenterSheetProps {
   open: boolean;
@@ -43,16 +50,67 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BarChart3,
   Settings,
   Shield,
+  BookOpen,
 };
 
 export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewState, setViewState] = useState<ViewState>({ type: "categories" });
 
+  // Fetch categories
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ["help-categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("help_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data as HelpCategory[];
+    },
+    enabled: open,
+  });
+
+  // Fetch articles
+  const { data: articles = [], isLoading: articlesLoading } = useQuery({
+    queryKey: ["help-articles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("help_articles")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data as HelpArticle[];
+    },
+    enabled: open,
+  });
+
+  // Group articles by category
+  const articlesByCategory = useMemo(() => {
+    const map = new Map<string, HelpArticle[]>();
+    articles.forEach((article) => {
+      if (article.category_id) {
+        const existing = map.get(article.category_id) || [];
+        map.set(article.category_id, [...existing, article]);
+      }
+    });
+    return map;
+  }, [articles]);
+
+  // Search results
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return null;
-    return searchHelpContent(searchQuery);
-  }, [searchQuery]);
+    const lowerQuery = searchQuery.toLowerCase();
+    
+    return articles.filter(
+      (article) =>
+        article.title.toLowerCase().includes(lowerQuery) ||
+        article.summary.toLowerCase().includes(lowerQuery) ||
+        article.content.toLowerCase().includes(lowerQuery)
+    );
+  }, [searchQuery, articles]);
 
   const handleCategoryClick = (category: HelpCategory) => {
     setViewState({ type: "category", category });
@@ -74,42 +132,78 @@ export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      // Reset state when closing
       setSearchQuery("");
       setViewState({ type: "categories" });
     }
     onOpenChange(newOpen);
   };
 
-  const renderIcon = (iconName: string) => {
-    const Icon = iconMap[iconName] || BookOpen;
+  const renderIcon = (iconName: string | null) => {
+    const Icon = iconMap[iconName || "BookOpen"] || BookOpen;
     return <Icon className="h-5 w-5" />;
   };
 
-  const renderCategoriesList = () => (
-    <div className="space-y-2">
-      {helpCategories.map((category) => (
-        <button
-          key={category.id}
-          onClick={() => handleCategoryClick(category)}
-          className={cn(
-            "w-full flex items-center gap-3 p-4 rounded-lg text-left",
-            "bg-card hover:bg-accent border border-border",
-            "transition-colors duration-150"
-          )}
-        >
-          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            {renderIcon(category.icon)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-foreground">{category.title}</h3>
-            <p className="text-sm text-muted-foreground truncate">{category.description}</p>
-          </div>
-          <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-        </button>
-      ))}
-    </div>
-  );
+  const getCategoryForArticle = (article: HelpArticle): HelpCategory | undefined => {
+    return categories.find((c) => c.id === article.category_id);
+  };
+
+  const isLoading = categoriesLoading || articlesLoading;
+
+  const renderCategoriesList = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-lg" />
+          ))}
+        </div>
+      );
+    }
+
+    if (categories.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <BookOpen className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+          <p className="text-muted-foreground">No help content available yet</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        {categories.map((category) => {
+          const categoryArticles = articlesByCategory.get(category.id) || [];
+          return (
+            <button
+              key={category.id}
+              onClick={() => handleCategoryClick(category)}
+              className={cn(
+                "w-full flex items-center gap-3 p-4 rounded-lg text-left",
+                "bg-card hover:bg-accent border border-border",
+                "transition-colors duration-150"
+              )}
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                {renderIcon(category.icon)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-foreground">{category.name}</h3>
+                <p className="text-sm text-muted-foreground truncate">
+                  {category.description || `${categoryArticles.length} articles`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {categoryArticles.length}
+                </span>
+                <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
   const renderSearchResults = () => {
     if (!searchResults) return null;
@@ -129,27 +223,32 @@ export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
         <p className="text-sm text-muted-foreground mb-4">
           {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} found
         </p>
-        {searchResults.map(({ category, article }) => (
-          <button
-            key={article.id}
-            onClick={() => handleArticleClick(category, article)}
-            className={cn(
-              "w-full flex items-start gap-3 p-4 rounded-lg text-left",
-              "bg-card hover:bg-accent border border-border",
-              "transition-colors duration-150"
-            )}
-          >
-            <div className="flex-shrink-0 w-8 h-8 rounded-md bg-muted text-muted-foreground flex items-center justify-center">
-              {renderIcon(category.icon)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-foreground">{article.title}</h4>
-              <p className="text-sm text-muted-foreground truncate">{article.summary}</p>
-              <span className="text-xs text-primary mt-1 inline-block">{category.title}</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
-          </button>
-        ))}
+        {searchResults.map((article) => {
+          const category = getCategoryForArticle(article);
+          if (!category) return null;
+          
+          return (
+            <button
+              key={article.id}
+              onClick={() => handleArticleClick(category, article)}
+              className={cn(
+                "w-full flex items-start gap-3 p-4 rounded-lg text-left",
+                "bg-card hover:bg-accent border border-border",
+                "transition-colors duration-150"
+              )}
+            >
+              <div className="flex-shrink-0 w-8 h-8 rounded-md bg-muted text-muted-foreground flex items-center justify-center">
+                {renderIcon(category.icon)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-foreground">{article.title}</h4>
+                <p className="text-sm text-muted-foreground truncate">{article.summary}</p>
+                <span className="text-xs text-primary mt-1 inline-block">{category.name}</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
+            </button>
+          );
+        })}
       </div>
     );
   };
@@ -157,6 +256,7 @@ export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
   const renderCategoryView = () => {
     if (viewState.type !== "category") return null;
     const { category } = viewState;
+    const categoryArticles = articlesByCategory.get(category.id) || [];
 
     return (
       <div className="space-y-4">
@@ -165,30 +265,38 @@ export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
             {renderIcon(category.icon)}
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">{category.title}</h3>
-            <p className="text-sm text-muted-foreground">{category.articles.length} articles</p>
+            <h3 className="font-semibold text-foreground">{category.name}</h3>
+            <p className="text-sm text-muted-foreground">{categoryArticles.length} articles</p>
           </div>
         </div>
-        <div className="space-y-2">
-          {category.articles.map((article) => (
-            <button
-              key={article.id}
-              onClick={() => handleArticleClick(category, article)}
-              className={cn(
-                "w-full flex items-center gap-3 p-4 rounded-lg text-left",
-                "bg-card hover:bg-accent border border-border",
-                "transition-colors duration-150"
-              )}
-            >
-              <BookOpen className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-foreground">{article.title}</h4>
-                <p className="text-sm text-muted-foreground truncate">{article.summary}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            </button>
-          ))}
-        </div>
+        
+        {categoryArticles.length === 0 ? (
+          <div className="text-center py-8">
+            <BookOpen className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">No articles in this category yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {categoryArticles.map((article) => (
+              <button
+                key={article.id}
+                onClick={() => handleArticleClick(category, article)}
+                className={cn(
+                  "w-full flex items-center gap-3 p-4 rounded-lg text-left",
+                  "bg-card hover:bg-accent border border-border",
+                  "transition-colors duration-150"
+                )}
+              >
+                <BookOpen className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-foreground">{article.title}</h4>
+                  <p className="text-sm text-muted-foreground truncate">{article.summary}</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -201,22 +309,19 @@ export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
       <div className="space-y-6">
         <div className="pb-4 border-b border-border">
           <span className="text-xs text-primary font-medium uppercase tracking-wide">
-            {category.title}
+            {category.name}
           </span>
           <h3 className="font-semibold text-xl text-foreground mt-2">{article.title}</h3>
           <p className="text-muted-foreground mt-1">{article.summary}</p>
+          <p className="text-xs text-muted-foreground mt-3">
+            Last updated: {format(new Date(article.updated_at), "MMMM d, yyyy")}
+          </p>
         </div>
         
-        {/* Placeholder for article content */}
+        {/* Article content */}
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <div className="bg-muted/50 rounded-lg p-6 text-center">
-            <BookOpen className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              Article content will be displayed here.
-            </p>
-            <p className="text-sm text-muted-foreground/70 mt-1">
-              Content is loaded dynamically from the help system.
-            </p>
+          <div className="whitespace-pre-wrap text-foreground leading-relaxed">
+            {article.content}
           </div>
         </div>
       </div>
@@ -228,7 +333,7 @@ export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
     viewState.type === "article" 
       ? "Article" 
       : viewState.type === "category" 
-        ? viewState.category.title 
+        ? viewState.category.name 
         : "Help Center";
 
   return (
