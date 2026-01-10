@@ -13,7 +13,8 @@ import {
   Database,
   ChevronDown,
   Menu,
-  HelpCircle
+  HelpCircle,
+  KeyRound
 } from "lucide-react";
 import {
   Collapsible,
@@ -33,6 +34,7 @@ const navItems: SettingsNavItem[] = [
   { value: "organization", label: "Organization", icon: Building2, roles: ['admin', 'manager'] },
   { value: "permissions", label: "Permissions", icon: Shield, roles: ['admin', 'manager'] },
   { value: "users", label: "Users", icon: Users, roles: ['admin', 'manager'] },
+  { value: "authentication", label: "Authentication", icon: KeyRound, roles: ['admin'] },
   { value: "picklists", label: "Picklists", icon: List, roles: ['admin', 'manager'] },
   { value: "templates", label: "Templates", icon: FileText, roles: ['admin', 'manager'] },
   { value: "email", label: "Email", icon: Mail, roles: ['admin', 'manager'] },
