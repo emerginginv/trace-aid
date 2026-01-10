@@ -215,7 +215,15 @@ export default function TrustCenter() {
               <Shield className="h-3 w-3" />
               Multi-Tenant Isolation
             </Badge>
+            <Badge variant="secondary" className="gap-1">
+              <ExternalLink className="h-3 w-3" />
+              Scoped Integrations
+            </Badge>
           </div>
+          <p className="text-sm text-muted-foreground mt-4">
+            Third-party integrations are permission-scoped. Customers control installation and revocation. 
+            Integration activity is logged and auditable.
+          </p>
         </div>
       </header>
 

@@ -60,6 +60,7 @@ import TrustCenterAdmin from "./pages/TrustCenterAdmin";
 import SecurityReport from "./pages/SecurityReport";
 import StatusPage from "./pages/StatusPage";
 import CustomerSuccess from "./pages/CustomerSuccess";
+import Marketplace from "./pages/Marketplace";
 import NotFound from "./pages/NotFound";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -521,6 +522,15 @@ const App = () => {
               <DashboardLayout>
                 <CustomerSuccess />
               </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Marketplace - Integration Directory */}
+        <Route
+          path="/marketplace"
+          element={
+            <ProtectedRoute>
+              <Marketplace />
             </ProtectedRoute>
           }
         />

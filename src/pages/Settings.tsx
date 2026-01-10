@@ -686,7 +686,12 @@ const Settings = () => {
               </TabsContent>
             )}
 
-            {/* Data & Compliance Tab - Admin Only */}
+            {/* Integrations Tab - Admin Only */}
+            {currentUserRole === 'admin' && (
+              <TabsContent value="integrations" className="space-y-6">
+                <IntegrationsTab />
+              </TabsContent>
+            )}
             {currentUserRole === 'admin' && (
               <TabsContent value="data-compliance" className="space-y-6">
                 <DataComplianceTab />
