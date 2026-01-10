@@ -188,6 +188,9 @@ export default function SupportConsole() {
           <Button variant="outline" onClick={() => navigate('/platform-compliance')}>
             SOC-2 Compliance
           </Button>
+          <Button variant="outline" onClick={() => navigate('/platform-resilience')}>
+            Disaster Recovery
+          </Button>
           <Badge variant="secondary" className="text-sm">
             {platformRole === 'platform_admin' ? 'Platform Admin' : 'Platform Support'}
           </Badge>
