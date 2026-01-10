@@ -3618,6 +3618,53 @@ export type Database = {
           },
         ]
       }
+      trust_center_config: {
+        Row: {
+          content_markdown: string
+          created_at: string
+          display_order: number
+          id: string
+          is_visible: boolean
+          last_reviewed_at: string | null
+          reviewed_by: string | null
+          section: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content_markdown: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          last_reviewed_at?: string | null
+          reviewed_by?: string | null
+          section: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content_markdown?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          last_reviewed_at?: string | null
+          reviewed_by?: string | null
+          section?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trust_center_config_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       update_attachment_links: {
         Row: {
           attachment_id: string
@@ -3995,6 +4042,20 @@ export type Database = {
         }[]
       }
       get_soc2_dashboard: { Args: never; Returns: Json }
+      get_trust_center_admin: {
+        Args: never
+        Returns: {
+          content_markdown: string
+          display_order: number
+          id: string
+          is_visible: boolean
+          last_reviewed_at: string
+          reviewed_by_name: string
+          section: string
+          title: string
+          updated_at: string
+        }[]
+      }
       get_user_organization: { Args: { _user_id: string }; Returns: string }
       get_user_organizations: {
         Args: never
@@ -4179,6 +4240,15 @@ export type Database = {
           p_restore_test_frequency_days?: number
           p_rpo_hours?: number
           p_rto_hours?: number
+        }
+        Returns: undefined
+      }
+      update_trust_center_section: {
+        Args: {
+          p_content_markdown?: string
+          p_is_visible?: boolean
+          p_section: string
+          p_title?: string
         }
         Returns: undefined
       }
