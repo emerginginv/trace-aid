@@ -28,6 +28,7 @@ import { AuthenticationTab } from "@/components/settings/AuthenticationTab";
 import { LegalTab } from "@/components/settings/LegalTab";
 import { ReportsExportsTab } from "@/components/settings/ReportsExportsTab";
 import { SlaSuccessTab } from "@/components/settings/SlaSuccessTab";
+import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
