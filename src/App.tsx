@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { TenantProvider } from "./contexts/TenantContext";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
 import { GlobalLoadingProvider } from "./contexts/GlobalLoadingContext";
 import { GlobalLoadingIndicator } from "./components/ui/global-loading-indicator";
@@ -64,17 +65,18 @@ const queryClient = new QueryClient({
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <GlobalLoadingProvider>
-        <ThemeProvider 
-          attribute="class" 
-          defaultTheme="system" 
-          enableSystem
-          disableTransitionOnChange
-        >
-          <OrganizationProvider>
-            <BreadcrumbProvider>
-              <BrowserRouter>
+    <TenantProvider>
+      <QueryClientProvider client={queryClient}>
+        <GlobalLoadingProvider>
+          <ThemeProvider 
+            attribute="class" 
+            defaultTheme="system" 
+            enableSystem
+            disableTransitionOnChange
+          >
+            <OrganizationProvider>
+              <BreadcrumbProvider>
+                <BrowserRouter>
               <GlobalLoadingIndicator />
               <RouteTransitionDetector />
               <Toaster />
@@ -438,12 +440,13 @@ const App = () => {
         />
         <Route path="*" element={<NotFound />} />
               </Routes>
-              </BrowserRouter>
-            </BreadcrumbProvider>
-          </OrganizationProvider>
-        </ThemeProvider>
-      </GlobalLoadingProvider>
-    </QueryClientProvider>
+                </BrowserRouter>
+              </BreadcrumbProvider>
+            </OrganizationProvider>
+          </ThemeProvider>
+        </GlobalLoadingProvider>
+      </QueryClientProvider>
+    </TenantProvider>
   );
 };
 
