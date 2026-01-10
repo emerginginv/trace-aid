@@ -12,20 +12,21 @@ export function useUserRole() {
   const { organization, loading: orgLoading } = useOrganization();
 
   useEffect(() => {
-    const timestamp = new Date().toISOString();
-    
-    // CRITICAL: Wait for organization context to finish loading
+    // CRITICAL: Wait for organization context to be fully ready
+    // Must have both: loading complete AND organizationId defined
     if (orgLoading) {
-      console.log(`${LOG_PREFIX} [${timestamp}] Waiting for organization context to load...`);
+      console.log(`${LOG_PREFIX} Waiting for organization context to load...`);
       setLoading(true);
       return;
     }
 
-    console.log(`${LOG_PREFIX} [${timestamp}] Organization context ready:`, {
-      orgId: organization?.id,
-      orgName: organization?.name,
-      orgLoading
-    });
+    if (!organization?.id) {
+      console.log(`${LOG_PREFIX} Waiting for organization context - no organizationId yet`);
+      setLoading(true);
+      return;
+    }
+
+    console.log(`${LOG_PREFIX} Organization context ready, fetching role for organization:`, organization.id);
 
     const fetchUserRole = async () => {
       const fetchStart = Date.now();
@@ -60,38 +61,28 @@ export function useUserRole() {
           console.log(`${LOG_PREFIX} Current user:`, targetUserId);
         }
 
-        // CRITICAL: Always get role from organization_members for current org
-        if (organization?.id) {
-          console.log(`${LOG_PREFIX} Fetching role from organization_members for org:`, organization.id);
-          
-          const { data: orgMember, error: orgError } = await supabase
-            .from("organization_members")
-            .select("role")
-            .eq("user_id", targetUserId)
-            .eq("organization_id", organization.id)
-            .maybeSingle();
+        // Organization context is guaranteed to be ready at this point
+        console.log(`${LOG_PREFIX} Fetching role from organization_members for org:`, organization.id);
+        
+        const { data: orgMember, error: orgError } = await supabase
+          .from("organization_members")
+          .select("role")
+          .eq("user_id", targetUserId)
+          .eq("organization_id", organization.id)
+          .maybeSingle();
 
-          if (orgError) {
-            console.error(`${LOG_PREFIX} Error fetching from organization_members:`, orgError);
-          }
+        if (orgError) {
+          console.error(`${LOG_PREFIX} Error fetching from organization_members:`, orgError);
+        }
 
-          if (orgMember?.role) {
-            const duration = Date.now() - fetchStart;
-            console.log(`${LOG_PREFIX} ✅ Role determined from organization_members:`, {
-              role: orgMember.role,
-              orgId: organization.id,
-              orgName: organization.name,
-              userId: targetUserId,
-              durationMs: duration
-            });
-            setRole(orgMember.role as AppRole);
-            setLoading(false);
-            return;
-          } else {
-            console.warn(`${LOG_PREFIX} User not found in organization_members for org:`, organization.id);
-          }
+        if (orgMember?.role) {
+          const duration = Date.now() - fetchStart;
+          console.log(`${LOG_PREFIX} Role determined:`, orgMember.role);
+          setRole(orgMember.role as AppRole);
+          setLoading(false);
+          return;
         } else {
-          console.warn(`${LOG_PREFIX} No organization ID available`);
+          console.warn(`${LOG_PREFIX} User not found in organization_members for org:`, organization.id);
         }
 
         // No organization context or not a member - should not happen in normal flow
