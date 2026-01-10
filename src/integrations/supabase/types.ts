@@ -853,6 +853,8 @@ export type Database = {
           parent_case_id: string | null
           purpose_of_request: string | null
           reference_number: string | null
+          retain_until: string | null
+          retention_days: number | null
           status: string
           title: string
           updated_at: string | null
@@ -888,6 +890,8 @@ export type Database = {
           parent_case_id?: string | null
           purpose_of_request?: string | null
           reference_number?: string | null
+          retain_until?: string | null
+          retention_days?: number | null
           status?: string
           title: string
           updated_at?: string | null
@@ -923,6 +927,8 @@ export type Database = {
           parent_case_id?: string | null
           purpose_of_request?: string | null
           reference_number?: string | null
+          retain_until?: string | null
+          retention_days?: number | null
           status?: string
           title?: string
           updated_at?: string | null
@@ -1086,6 +1092,68 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_subject_requests: {
+        Row: {
+          blocked_reason: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          export_expires_at: string | null
+          export_file_path: string | null
+          id: string
+          organization_id: string
+          reason: string | null
+          request_type: string
+          requested_by: string
+          status: string
+          subject_email: string | null
+          subject_identifier: string
+          updated_at: string
+        }
+        Insert: {
+          blocked_reason?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          export_expires_at?: string | null
+          export_file_path?: string | null
+          id?: string
+          organization_id: string
+          reason?: string | null
+          request_type: string
+          requested_by: string
+          status?: string
+          subject_email?: string | null
+          subject_identifier: string
+          updated_at?: string
+        }
+        Update: {
+          blocked_reason?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          export_expires_at?: string | null
+          export_file_path?: string | null
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          request_type?: string
+          requested_by?: string
+          status?: string
+          subject_email?: string | null
+          subject_identifier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_subject_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -2475,8 +2543,10 @@ export type Database = {
           billing_email: string | null
           created_at: string
           current_users_count: number | null
+          default_retention_days: number
           deleted_at: string | null
           deletion_scheduled_for: string | null
+          gdpr_enabled: boolean
           id: string
           is_active: boolean | null
           legal_hold: boolean
@@ -2504,8 +2574,10 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           current_users_count?: number | null
+          default_retention_days?: number
           deleted_at?: string | null
           deletion_scheduled_for?: string | null
+          gdpr_enabled?: boolean
           id?: string
           is_active?: boolean | null
           legal_hold?: boolean
@@ -2533,8 +2605,10 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           current_users_count?: number | null
+          default_retention_days?: number
           deleted_at?: string | null
           deletion_scheduled_for?: string | null
+          gdpr_enabled?: boolean
           id?: string
           is_active?: boolean | null
           legal_hold?: boolean
@@ -3216,6 +3290,10 @@ export type Database = {
         Args: { file_path: string }
         Returns: boolean
       }
+      can_erase_subject: {
+        Args: { p_organization_id: string; p_subject_identifier: string }
+        Returns: Json
+      }
       cancel_org_deletion: {
         Args: { p_organization_id: string }
         Returns: Json
@@ -3242,6 +3320,21 @@ export type Database = {
           hours_remaining: number
           hours_utilization_pct: number
         }[]
+      }
+      get_case_retention_days: { Args: { p_case_id: string }; Returns: number }
+      get_cases_due_for_retention_purge: {
+        Args: never
+        Returns: {
+          case_id: string
+          case_number: string
+          organization_id: string
+          retain_until: string
+          title: string
+        }[]
+      }
+      get_compliance_dashboard: {
+        Args: { p_organization_id: string }
+        Returns: Json
       }
       get_my_email_change_requests: {
         Args: never
@@ -3370,10 +3463,13 @@ export type Database = {
         }
         Returns: string
       }
+      process_subject_erasure: { Args: { p_dsr_id: string }; Returns: Json }
+      process_subject_export: { Args: { p_dsr_id: string }; Returns: Json }
       provision_tenant: {
         Args: { p_org_name: string; p_subdomain: string }
         Returns: Json
       }
+      purge_case_by_retention: { Args: { p_case_id: string }; Returns: Json }
       purge_organization: { Args: { p_organization_id: string }; Returns: Json }
       request_custom_domain: {
         Args: {
@@ -3409,8 +3505,26 @@ export type Database = {
         }
         Returns: Json
       }
+      submit_dsr: {
+        Args: {
+          p_organization_id: string
+          p_reason?: string
+          p_request_type: string
+          p_subject_email: string
+          p_subject_identifier: string
+        }
+        Returns: Json
+      }
       support_search_users: {
         Args: { p_limit?: number; p_query: string }
+        Returns: Json
+      }
+      update_org_retention_settings: {
+        Args: {
+          p_default_retention_days: number
+          p_gdpr_enabled: boolean
+          p_organization_id: string
+        }
         Returns: Json
       }
       update_organization_subscription: {
