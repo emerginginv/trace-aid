@@ -1,4 +1,5 @@
 import * as React from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Production domains where subdomain-based tenancy applies
 const TENANT_ENABLED_DOMAINS = ["casewyze.com"];
@@ -8,40 +9,24 @@ const RESERVED_SUBDOMAINS = ["app", "www", "localhost"];
 
 interface TenantContextType {
   tenantSubdomain: string | null;
+  customDomain: string | null;
+  isCustomDomain: boolean;
+  resolvedOrgId: string | null;
 }
 
 const TenantContext = React.createContext<TenantContextType | undefined>(undefined);
 
 /**
  * Detects the tenant subdomain from the current hostname.
- * 
- * IMPORTANT: Only detects subdomains on production domains (casewyze.com).
- * Development environments (Lovable previews, localhost) return null.
- * 
- * Examples:
- * - emerging.casewyze.com → "emerging"
- * - test123.casewyze.com → "test123"
- * - app.casewyze.com → null (reserved)
- * - www.casewyze.com → null (reserved)
- * - localhost → null (development)
- * - casewyze.com → null (no subdomain)
- * - *.lovableproject.com → null (development)
  */
 function detectTenantSubdomain(): string | null {
   const hostname = window.location.hostname;
   const parts = hostname.split(".");
 
-  // Must have more than 2 parts to have a subdomain
-  // e.g., "emerging.casewyze.com" has 3 parts
-  if (parts.length <= 2) {
-    return null;
-  }
+  if (parts.length <= 2) return null;
 
-  // Get the base domain (last 2 parts)
   const baseDomain = parts.slice(-2).join(".");
   
-  // Only detect tenant subdomains on production domains
-  // This excludes Lovable preview URLs (*.lovableproject.com) and other dev environments
   if (!TENANT_ENABLED_DOMAINS.includes(baseDomain)) {
     console.log("[TenantContext] Tenant subdomain: null (not on tenant-enabled domain:", baseDomain, ")");
     return null;
@@ -49,7 +34,6 @@ function detectTenantSubdomain(): string | null {
 
   const subdomain = parts[0].toLowerCase();
 
-  // Check if it's a reserved subdomain
   if (RESERVED_SUBDOMAINS.includes(subdomain)) {
     return null;
   }
@@ -57,18 +41,56 @@ function detectTenantSubdomain(): string | null {
   return subdomain;
 }
 
+/**
+ * Check if this is a custom domain (not casewyze.com)
+ */
+function isCustomDomainHostname(): boolean {
+  const hostname = window.location.hostname;
+  return !TENANT_ENABLED_DOMAINS.some(d => hostname.endsWith(d)) && 
+         !hostname.includes("localhost") && 
+         !hostname.includes("lovableproject.com");
+}
+
 export function TenantProvider({ children }: { children: React.ReactNode }) {
-  const [tenantSubdomain] = React.useState<string | null>(() => {
-    const detected = detectTenantSubdomain();
+  const [tenantSubdomain, setTenantSubdomain] = React.useState<string | null>(null);
+  const [customDomain, setCustomDomain] = React.useState<string | null>(null);
+  const [isCustomDomain, setIsCustomDomain] = React.useState(false);
+  const [resolvedOrgId, setResolvedOrgId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const hostname = window.location.hostname;
     
-    // Developer visibility log
-    console.log("Tenant subdomain:", detected);
-    
-    return detected;
-  });
+    // Check if this is a custom domain
+    if (isCustomDomainHostname()) {
+      console.log("[TenantContext] Custom domain detected:", hostname);
+      setIsCustomDomain(true);
+      setCustomDomain(hostname);
+      
+      // Resolve organization via custom domain lookup
+      supabase.rpc('resolve_tenant_by_domain', { p_hostname: hostname })
+        .then(({ data, error }) => {
+          const result = data as { found?: boolean; organization_id?: string; subdomain?: string } | null;
+          if (!error && result?.found) {
+            console.log("[TenantContext] Custom domain resolved to org:", result.organization_id);
+            setResolvedOrgId(result.organization_id || null);
+            setTenantSubdomain(result.subdomain || null);
+          } else {
+            console.warn("[TenantContext] Custom domain not found or inactive:", hostname);
+          }
+        });
+    } else {
+      // Standard subdomain detection
+      const detected = detectTenantSubdomain();
+      console.log("Tenant subdomain:", detected);
+      setTenantSubdomain(detected);
+    }
+  }, []);
 
   const value: TenantContextType = {
     tenantSubdomain,
+    customDomain,
+    isCustomDomain,
+    resolvedOrgId,
   };
 
   return (
@@ -78,10 +100,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * Hook to access the detected tenant subdomain.
- * Returns null if no valid tenant subdomain is detected.
- */
 export function useTenant() {
   const context = React.useContext(TenantContext);
   if (context === undefined) {
@@ -90,10 +108,6 @@ export function useTenant() {
   return context;
 }
 
-/**
- * Utility function to get tenant subdomain outside of React components.
- * Useful for edge cases where context isn't available.
- */
 export function getTenantSubdomain(): string | null {
   return detectTenantSubdomain();
 }

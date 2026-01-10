@@ -258,6 +258,41 @@ export type Database = {
           },
         ]
       }
+      audit_events: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_activities: {
         Row: {
           activity_type: string
@@ -1985,6 +2020,50 @@ export type Database = {
           },
         ]
       }
+      organization_domains: {
+        Row: {
+          created_at: string
+          domain: string
+          domain_type: string
+          id: string
+          last_checked_at: string | null
+          organization_id: string
+          status: string
+          verification_token: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          domain_type: string
+          id?: string
+          last_checked_at?: string | null
+          organization_id: string
+          status?: string
+          verification_token?: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          domain_type?: string
+          id?: string
+          last_checked_at?: string | null
+          organization_id?: string
+          status?: string
+          verification_token?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_domains_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_invites: {
         Row: {
           accepted_at: string | null
@@ -2172,8 +2251,9 @@ export type Database = {
           slug: string | null
           storage_used_gb: number | null
           stripe_customer_id: string | null
+          stripe_price_id: string | null
           stripe_subscription_id: string | null
-          subdomain: string | null
+          subdomain: string
           subscription_product_id: string | null
           subscription_status: string | null
           subscription_tier: string | null
@@ -2192,8 +2272,9 @@ export type Database = {
           slug?: string | null
           storage_used_gb?: number | null
           stripe_customer_id?: string | null
+          stripe_price_id?: string | null
           stripe_subscription_id?: string | null
-          subdomain?: string | null
+          subdomain: string
           subscription_product_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
@@ -2212,8 +2293,9 @@ export type Database = {
           slug?: string | null
           storage_used_gb?: number | null
           stripe_customer_id?: string | null
+          stripe_price_id?: string | null
           stripe_subscription_id?: string | null
-          subdomain?: string | null
+          subdomain?: string
           subscription_product_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
@@ -2401,6 +2483,24 @@ export type Database = {
           updated_at?: string | null
           username?: string
           zip_code?: string | null
+        }
+        Relationships: []
+      }
+      reserved_subdomains: {
+        Row: {
+          created_at: string
+          reason: string | null
+          subdomain: string
+        }
+        Insert: {
+          created_at?: string
+          reason?: string | null
+          subdomain: string
+        }
+        Update: {
+          created_at?: string
+          reason?: string | null
+          subdomain?: string
         }
         Relationships: []
       }
@@ -2823,6 +2923,10 @@ export type Database = {
         Args: { file_path: string }
         Returns: boolean
       }
+      check_subdomain_availability: {
+        Args: { p_subdomain: string }
+        Returns: Json
+      }
       get_case_budget_summary: {
         Args: { p_case_id: string }
         Returns: {
@@ -2920,6 +3024,28 @@ export type Database = {
           p_user_id?: string
         }
         Returns: string
+      }
+      provision_tenant: {
+        Args: { p_org_name: string; p_subdomain: string }
+        Returns: Json
+      }
+      request_custom_domain: {
+        Args: {
+          p_domain: string
+          p_domain_type?: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      resolve_tenant_by_domain: { Args: { p_hostname: string }; Returns: Json }
+      update_organization_subscription: {
+        Args: {
+          p_price_id: string
+          p_status: string
+          p_stripe_customer_id: string
+          p_subscription_id: string
+        }
+        Returns: Json
       }
       update_user_role: {
         Args: {
