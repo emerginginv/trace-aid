@@ -2724,6 +2724,54 @@ export type Database = {
           },
         ]
       }
+      organization_scim_configs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          id: string
+          organization_id: string
+          rotated_at: string | null
+          scim_endpoint_url: string | null
+          scim_token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          organization_id: string
+          rotated_at?: string | null
+          scim_endpoint_url?: string | null
+          scim_token_hash: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          organization_id?: string
+          rotated_at?: string | null
+          scim_endpoint_url?: string | null
+          scim_token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_scim_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_scim_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           address: string | null
@@ -2817,6 +2865,78 @@ export type Database = {
             foreignKeyName: "organization_settings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_sso_configs: {
+        Row: {
+          certificate: string | null
+          client_id: string
+          client_secret_encrypted: string | null
+          created_at: string
+          created_by: string | null
+          default_role: string
+          enabled: boolean
+          enforce_sso: boolean
+          id: string
+          idp_name: string
+          issuer_url: string
+          metadata_url: string | null
+          organization_id: string
+          provider: Database["public"]["Enums"]["sso_provider_type"]
+          sso_login_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          certificate?: string | null
+          client_id: string
+          client_secret_encrypted?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_role?: string
+          enabled?: boolean
+          enforce_sso?: boolean
+          id?: string
+          idp_name: string
+          issuer_url: string
+          metadata_url?: string | null
+          organization_id: string
+          provider?: Database["public"]["Enums"]["sso_provider_type"]
+          sso_login_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          certificate?: string | null
+          client_id?: string
+          client_secret_encrypted?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_role?: string
+          enabled?: boolean
+          enforce_sso?: boolean
+          id?: string
+          idp_name?: string
+          issuer_url?: string
+          metadata_url?: string | null
+          organization_id?: string
+          provider?: Database["public"]["Enums"]["sso_provider_type"]
+          sso_login_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_sso_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_sso_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -3427,6 +3547,63 @@ export type Database = {
           },
         ]
       }
+      scim_provisioning_logs: {
+        Row: {
+          action: Database["public"]["Enums"]["scim_action_type"]
+          created_at: string
+          error_message: string | null
+          external_id: string | null
+          id: string
+          organization_id: string
+          request_payload: Json | null
+          role_assigned: string | null
+          success: boolean
+          target_email: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["scim_action_type"]
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          organization_id: string
+          request_payload?: Json | null
+          role_assigned?: string | null
+          success?: boolean
+          target_email: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["scim_action_type"]
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          organization_id?: string
+          request_payload?: Json | null
+          role_assigned?: string | null
+          success?: boolean
+          target_email?: string
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_provisioning_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scim_provisioning_logs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_audit_log: {
         Row: {
           created_at: string
@@ -3611,6 +3788,44 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      sso_role_mappings: {
+        Row: {
+          app_role: string
+          created_at: string
+          id: string
+          idp_group_name: string
+          organization_id: string
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          app_role?: string
+          created_at?: string
+          id?: string
+          idp_group_name: string
+          organization_id: string
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          app_role?: string
+          created_at?: string
+          id?: string
+          idp_group_name?: string
+          organization_id?: string
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sso_role_mappings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subject_attachments: {
         Row: {
@@ -4099,6 +4314,15 @@ export type Database = {
         Args: { invite_token: string }
         Returns: Json
       }
+      add_role_mapping: {
+        Args: {
+          p_app_role: string
+          p_idp_group_name: string
+          p_org_id: string
+          p_priority?: number
+        }
+        Returns: Json
+      }
       calculate_vulnerability_sla: {
         Args: { p_severity: string }
         Returns: string
@@ -4151,6 +4375,20 @@ export type Database = {
         Args: { p_action: string; p_item_id: string; p_notes?: string }
         Returns: Json
       }
+      configure_sso: {
+        Args: {
+          p_certificate?: string
+          p_client_id: string
+          p_client_secret?: string
+          p_default_role?: string
+          p_idp_name: string
+          p_issuer_url: string
+          p_org_id: string
+          p_provider: string
+          p_sso_login_url?: string
+        }
+        Returns: Json
+      }
       create_pentest: {
         Args: {
           p_end_date?: string
@@ -4183,11 +4421,13 @@ export type Database = {
         }
         Returns: string
       }
+      delete_role_mapping: { Args: { p_mapping_id: string }; Returns: Json }
       end_impersonation: { Args: { p_session_token?: string }; Returns: Json }
       enforce_entitlement: {
         Args: { p_action: string; p_organization_id: string; p_payload?: Json }
         Returns: Json
       }
+      generate_scim_token: { Args: { p_org_id: string }; Returns: Json }
       get_active_impersonation: { Args: never; Returns: Json }
       get_case_budget_summary: {
         Args: { p_case_id: string }
@@ -4232,6 +4472,7 @@ export type Database = {
         }[]
       }
       get_dr_dashboard: { Args: never; Returns: Json }
+      get_identity_dashboard: { Args: { p_org_id: string }; Returns: Json }
       get_my_email_change_requests: {
         Args: never
         Returns: {
@@ -4253,6 +4494,7 @@ export type Database = {
           id: string
         }[]
       }
+      get_org_auth_config: { Args: { p_subdomain: string }; Returns: Json }
       get_org_offboarding_status: {
         Args: { p_organization_id: string }
         Returns: Json
@@ -4333,8 +4575,15 @@ export type Database = {
           validated_by_name: string
         }[]
       }
+      get_role_mappings: { Args: { p_org_id: string }; Returns: Json }
+      get_scim_config: { Args: { p_org_id: string }; Returns: Json }
+      get_scim_logs: {
+        Args: { p_limit?: number; p_org_id: string }
+        Returns: Json
+      }
       get_security_metrics: { Args: never; Returns: Json }
       get_soc2_dashboard: { Args: never; Returns: Json }
+      get_sso_config: { Args: { p_org_id: string }; Returns: Json }
       get_trust_center_admin: {
         Args: never
         Returns: {
@@ -4377,6 +4626,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_of_any_org: { Args: { _user_id: string }; Returns: boolean }
+      is_enterprise_org: { Args: { p_org_id: string }; Returns: boolean }
       is_org_active: { Args: { p_organization_id: string }; Returns: boolean }
       is_org_member: {
         Args: { _org_id: string; _user_id: string }
@@ -4520,6 +4770,18 @@ export type Database = {
         Args: { p_limit?: number; p_query: string }
         Returns: Json
       }
+      toggle_enforce_sso: {
+        Args: { p_enforce: boolean; p_org_id: string }
+        Returns: Json
+      }
+      toggle_scim: {
+        Args: { p_enabled: boolean; p_org_id: string }
+        Returns: Json
+      }
+      toggle_sso: {
+        Args: { p_enabled: boolean; p_org_id: string }
+        Returns: Json
+      }
       triage_security_report: {
         Args: {
           p_internal_notes?: string
@@ -4594,6 +4856,10 @@ export type Database = {
           is_valid: boolean
         }[]
       }
+      validate_scim_token: {
+        Args: { p_org_id: string; p_token: string }
+        Returns: boolean
+      }
       verify_tenant_isolation: { Args: never; Returns: Json }
     }
     Enums: {
@@ -4611,12 +4877,14 @@ export type Database = {
         | "social_engineering"
       restore_environment: "staging" | "isolated" | "production"
       risk_level: "informational" | "low" | "medium" | "high" | "critical"
+      scim_action_type: "create" | "update" | "deactivate" | "reactivate"
       security_report_status:
         | "new"
         | "triaged"
         | "accepted"
         | "rejected"
         | "duplicate"
+      sso_provider_type: "oidc" | "saml"
       vulnerability_source:
         | "pentest"
         | "scanner"
@@ -4771,6 +5039,7 @@ export const Constants = {
       ],
       restore_environment: ["staging", "isolated", "production"],
       risk_level: ["informational", "low", "medium", "high", "critical"],
+      scim_action_type: ["create", "update", "deactivate", "reactivate"],
       security_report_status: [
         "new",
         "triaged",
@@ -4778,6 +5047,7 @@ export const Constants = {
         "rejected",
         "duplicate",
       ],
+      sso_provider_type: ["oidc", "saml"],
       vulnerability_source: [
         "pentest",
         "scanner",
