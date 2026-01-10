@@ -78,10 +78,10 @@ const App = () => {
             disableTransitionOnChange
           >
             <OrganizationProvider>
-              <ImpersonationProvider>
-                <BreadcrumbProvider>
-                  <BrowserRouter>
-              <GlobalLoadingIndicator />
+              <BrowserRouter>
+                <ImpersonationProvider>
+                  <BreadcrumbProvider>
+                    <GlobalLoadingIndicator />
               <RouteTransitionDetector />
               <Toaster />
               <Sonner />
@@ -456,11 +456,11 @@ const App = () => {
           }
         />
         <Route path="*" element={<NotFound />} />
-              </Routes>
-                </BrowserRouter>
-              </BreadcrumbProvider>
-            </ImpersonationProvider>
-          </OrganizationProvider>
+                </Routes>
+                  </BreadcrumbProvider>
+                </ImpersonationProvider>
+              </BrowserRouter>
+            </OrganizationProvider>
           </ThemeProvider>
         </GlobalLoadingProvider>
       </QueryClientProvider>
