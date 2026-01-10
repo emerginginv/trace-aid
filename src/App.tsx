@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { TenantProvider } from "./contexts/TenantContext";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
+import { ImpersonationProvider } from "./contexts/ImpersonationContext";
 import { GlobalLoadingProvider } from "./contexts/GlobalLoadingContext";
 import { GlobalLoadingIndicator } from "./components/ui/global-loading-indicator";
 import { RouteTransitionDetector } from "./hooks/use-route-transition";
@@ -50,6 +51,7 @@ import ReportAnalytics from "./pages/ReportAnalytics";
 import SystemSecurityAnalytics from "./pages/SystemSecurityAnalytics";
 import ReportsHub from "./pages/reports/index";
 import ReportViewer from "./pages/reports/ReportViewer";
+import SupportConsole from "./pages/SupportConsole";
 import NotFound from "./pages/NotFound";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -76,8 +78,9 @@ const App = () => {
             disableTransitionOnChange
           >
             <OrganizationProvider>
-              <BreadcrumbProvider>
-                <BrowserRouter>
+              <ImpersonationProvider>
+                <BreadcrumbProvider>
+                  <BrowserRouter>
               <GlobalLoadingIndicator />
               <RouteTransitionDetector />
               <Toaster />
@@ -441,11 +444,23 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        {/* Support Console - Platform Staff Only */}
+        <Route
+          path="/support-console"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <SupportConsole />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<NotFound />} />
               </Routes>
                 </BrowserRouter>
               </BreadcrumbProvider>
-            </OrganizationProvider>
+            </ImpersonationProvider>
+          </OrganizationProvider>
           </ThemeProvider>
         </GlobalLoadingProvider>
       </QueryClientProvider>

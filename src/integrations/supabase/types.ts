@@ -1537,6 +1537,65 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_sessions: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          ended_at: string | null
+          expires_at: string
+          id: string
+          reason: string
+          session_token: string
+          started_at: string
+          status: string
+          target_organization_id: string
+          target_organization_name: string
+          target_user_email: string
+          target_user_id: string
+          target_user_name: string | null
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          reason: string
+          session_token?: string
+          started_at?: string
+          status?: string
+          target_organization_id: string
+          target_organization_name: string
+          target_user_email: string
+          target_user_id: string
+          target_user_name?: string | null
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          reason?: string
+          session_token?: string
+          started_at?: string
+          status?: string
+          target_organization_id?: string
+          target_organization_name?: string
+          target_user_email?: string
+          target_user_id?: string
+          target_user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_sessions_target_organization_id_fkey"
+            columns: ["target_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_batches: {
         Row: {
           completed_at: string | null
@@ -2484,6 +2543,42 @@ export type Database = {
           },
         ]
       }
+      platform_users: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          platform_role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          platform_role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          platform_role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -3001,10 +3096,12 @@ export type Database = {
         Args: { p_subdomain: string }
         Returns: Json
       }
+      end_impersonation: { Args: { p_session_token?: string }; Returns: Json }
       enforce_entitlement: {
         Args: { p_action: string; p_organization_id: string; p_payload?: Json }
         Returns: Json
       }
+      get_active_impersonation: { Args: never; Returns: Json }
       get_case_budget_summary: {
         Args: { p_case_id: string }
         Returns: {
@@ -3066,6 +3163,7 @@ export type Database = {
         }[]
       }
       get_plan_entitlements: { Args: { p_product_id: string }; Returns: Json }
+      get_platform_role: { Args: { p_user_id: string }; Returns: string }
       get_related_cases: {
         Args: { case_id: string }
         Returns: {
@@ -3110,6 +3208,7 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      is_platform_staff: { Args: { p_user_id: string }; Returns: boolean }
       is_username_available: {
         Args: { check_username: string }
         Returns: boolean
@@ -3144,6 +3243,18 @@ export type Database = {
       }
       resolve_tenant_by_domain: { Args: { p_hostname: string }; Returns: Json }
       revoke_invitation: { Args: { p_invite_id: string }; Returns: Json }
+      start_impersonation: {
+        Args: {
+          p_reason: string
+          p_target_org_id: string
+          p_target_user_id: string
+        }
+        Returns: Json
+      }
+      support_search_users: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: Json
+      }
       update_organization_subscription: {
         Args: {
           p_price_id: string
