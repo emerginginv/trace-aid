@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.access-attachment]
 verify_jwt = false
+
+[functions.scim]
+verify_jwt = false
