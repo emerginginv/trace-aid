@@ -45,6 +45,7 @@ const navItems: SettingsNavItem[] = [
   { value: "billing", label: "Billing", icon: CreditCard, roles: ['admin'] },
   { value: "legal", label: "Legal", icon: Scale, roles: ['admin'] },
   { value: "reports", label: "Reports & Exports", icon: FileBarChart, roles: ['admin'] },
+  { value: "sla", label: "SLA & Success", icon: Shield, roles: ['admin'] },
   { value: "data-compliance", label: "Data & Compliance", icon: Shield, roles: ['admin'] },
   { value: "data-integrity", label: "Data Integrity", icon: Database, roles: ['admin'] },
 ];
