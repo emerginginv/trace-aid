@@ -23,6 +23,7 @@ import { PicklistsTab } from "@/components/settings/PicklistsTab";
 import { EmailSettingsTab } from "@/components/settings/EmailSettingsTab";
 import { BillingTab } from "@/components/settings/BillingTab";
 import { HelpCenterAdmin } from "@/components/help-center";
+import { DataComplianceTab } from "@/components/settings/DataComplianceTab";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -656,6 +657,13 @@ const Settings = () => {
                   organization={organization}
                   subscriptionStatus={subscriptionStatus}
                 />
+              </TabsContent>
+            )}
+
+            {/* Data & Compliance Tab - Admin Only */}
+            {currentUserRole === 'admin' && (
+              <TabsContent value="data-compliance" className="space-y-6">
+                <DataComplianceTab />
               </TabsContent>
             )}
 
