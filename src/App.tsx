@@ -54,8 +54,10 @@ import ReportViewer from "./pages/reports/ReportViewer";
 import SupportConsole from "./pages/SupportConsole";
 import PlatformCompliance from "./pages/PlatformCompliance";
 import PlatformResilience from "./pages/PlatformResilience";
+import PlatformSecurity from "./pages/PlatformSecurity";
 import TrustCenter from "./pages/TrustCenter";
 import TrustCenterAdmin from "./pages/TrustCenterAdmin";
+import SecurityReport from "./pages/SecurityReport";
 import NotFound from "./pages/NotFound";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -94,6 +96,8 @@ const App = () => {
             <Route path="/auth" element={<Auth />} />
             {/* Public Trust Center - No auth required */}
             <Route path="/trust" element={<TrustCenter />} />
+            {/* Public Security Report Form - No auth required */}
+            <Route path="/security/report" element={<SecurityReport />} />
             <Route
               path="/onboarding"
               element={
@@ -490,6 +494,17 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <TrustCenterAdmin />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Platform Security - Vulnerability Management */}
+        <Route
+          path="/platform-security"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <PlatformSecurity />
               </DashboardLayout>
             </ProtectedRoute>
           }
