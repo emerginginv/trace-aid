@@ -57,44 +57,20 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   // Get tenant subdomain from TenantContext
   const { tenantSubdomain } = useTenant();
 
-  const fetchAllUserOrganizations = async (userId: string): Promise<Organization[]> => {
-    console.log(`${LOG_PREFIX} Fetching all organizations for user:`, userId);
-    
-    // Get all organization memberships for this user
-    const { data: memberData, error: memberError } = await supabase
-      .from("organization_members")
-      .select("organization_id, role")
-      .eq("user_id", userId);
-
-    if (memberError || !memberData || memberData.length === 0) {
-      console.warn(`${LOG_PREFIX} No organization memberships found for user:`, userId);
-      return [];
-    }
-
-    console.log(`${LOG_PREFIX} Found ${memberData.length} organization membership(s):`, memberData);
-
-    const orgIds = memberData.map(m => m.organization_id);
-    
-    // Fetch all organizations
-    const { data: orgsData, error: orgsError } = await supabase
-      .from("organizations")
-      .select("*")
-      .in("id", orgIds);
-
-    if (orgsError || !orgsData) {
-      console.error(`${LOG_PREFIX} Error fetching organizations:`, orgsError);
-      return [];
-    }
-
-    console.log(`${LOG_PREFIX} Fetched ${orgsData.length} organization(s):`, orgsData.map(o => ({ id: o.id, name: o.name })));
-    return orgsData as Organization[];
+  /**
+   * Clear all organization state
+   */
+  const clearOrganizationState = () => {
+    console.log(`${LOG_PREFIX} Clearing organization context`);
+    setOrganization(null);
+    setOrganizations([]);
   };
 
   /**
    * Fetch organization by subdomain (for multi-tenant routing)
    */
   const fetchOrganizationBySubdomain = async (subdomain: string): Promise<Organization | null> => {
-    console.log(`${LOG_PREFIX} Fetching organization by subdomain:`, subdomain);
+    console.log(`${LOG_PREFIX} Resolving organization for subdomain:`, subdomain);
     
     const { data, error } = await supabase
       .from("organizations")
@@ -113,125 +89,152 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       return null;
     }
 
-    console.log(`${LOG_PREFIX} Organization loaded:`, subdomain);
+    console.log(`${LOG_PREFIX} Organization loaded for subdomain:`, subdomain);
     return data as Organization;
   };
 
+  /**
+   * Verify user membership in organization
+   */
+  const verifyUserMembership = async (userId: string, organizationId: string): Promise<boolean> => {
+    const { data: membership, error } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", userId)
+      .eq("organization_id", organizationId)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error(`${LOG_PREFIX} Error verifying membership:`, error);
+      return false;
+    }
+
+    return !!membership;
+  };
+
+  /**
+   * Fetch all organizations user belongs to (for organization list only)
+   */
+  const fetchAllUserOrganizations = async (userId: string): Promise<Organization[]> => {
+    const { data: memberData, error: memberError } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", userId);
+
+    if (memberError || !memberData || memberData.length === 0) {
+      return [];
+    }
+
+    const orgIds = memberData.map(m => m.organization_id);
+    
+    const { data: orgsData, error: orgsError } = await supabase
+      .from("organizations")
+      .select("*")
+      .in("id", orgIds);
+
+    if (orgsError || !orgsData) {
+      return [];
+    }
+
+    return orgsData as Organization[];
+  };
+
   const refreshOrganization = async () => {
-    const timestamp = new Date().toISOString();
-    console.log(`${LOG_PREFIX} [${timestamp}] refreshOrganization called`);
+    console.log(`${LOG_PREFIX} refreshOrganization called`);
     
     try {
+      // Step 1: Check authentication
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
         console.log(`${LOG_PREFIX} No authenticated user, clearing organization`);
-        setOrganization(null);
-        setOrganizations([]);
+        clearOrganizationState();
         setLoading(false);
         return;
       }
 
       console.log(`${LOG_PREFIX} Authenticated user:`, user.id);
 
-      // If we have a tenant subdomain, prioritize loading that organization
-      if (tenantSubdomain) {
-        console.log(`${LOG_PREFIX} Tenant subdomain detected, loading organization by subdomain:`, tenantSubdomain);
-        
-        const subdomainOrg = await fetchOrganizationBySubdomain(tenantSubdomain);
-        
-        if (subdomainOrg) {
-          // Verify user is a member of this organization
-          const { data: membership } = await supabase
-            .from("organization_members")
-            .select("organization_id")
-            .eq("user_id", user.id)
-            .eq("organization_id", subdomainOrg.id)
-            .maybeSingle();
-
-          if (membership) {
-            // User is a member of this organization, use it
-            setOrganization(subdomainOrg);
-            localStorage.setItem(SELECTED_ORG_KEY, subdomainOrg.id);
-            
-            // Also fetch all orgs for the switcher
-            const allOrgs = await fetchAllUserOrganizations(user.id);
-            setOrganizations(allOrgs);
-            
-            console.log(`${LOG_PREFIX} ✅ Organization loaded via subdomain:`, {
-              id: subdomainOrg.id,
-              name: subdomainOrg.name,
-              subdomain: subdomainOrg.subdomain
-            });
-            setLoading(false);
-            return;
-          } else {
-            console.warn(`${LOG_PREFIX} User is not a member of organization:`, subdomainOrg.id);
-            // Fall through to normal organization loading
-          }
-        } else {
-          console.warn(`${LOG_PREFIX} No organization found for subdomain:`, tenantSubdomain);
-          // Fall through to normal organization loading
-        }
-      }
-
-      // Standard organization loading (no subdomain or subdomain org not found)
-      const allOrgs = await fetchAllUserOrganizations(user.id);
-      setOrganizations(allOrgs);
-
-      if (allOrgs.length === 0) {
-        console.warn(`${LOG_PREFIX} ⚠️ User not in any organization`);
-        setOrganization(null);
+      // Step 2: Validate tenantSubdomain - SUBDOMAIN IS REQUIRED
+      if (!tenantSubdomain) {
+        console.log(`${LOG_PREFIX} No tenant subdomain present, clearing organization`);
+        clearOrganizationState();
         setLoading(false);
         return;
       }
 
-      // Check localStorage for previously selected org
-      const savedOrgId = localStorage.getItem(SELECTED_ORG_KEY);
-      console.log(`${LOG_PREFIX} Saved organization ID from localStorage:`, savedOrgId);
+      console.log(`${LOG_PREFIX} Resolving organization for subdomain:`, tenantSubdomain);
+
+      // Step 3: Fetch organization by subdomain ONLY
+      const subdomainOrg = await fetchOrganizationBySubdomain(tenantSubdomain);
       
-      let selectedOrg = allOrgs.find(org => org.id === savedOrgId);
-      
-      // If no saved selection or saved org not in list, use first org
-      if (!selectedOrg) {
-        console.log(`${LOG_PREFIX} No valid saved org, using first organization`);
-        selectedOrg = allOrgs[0];
-        localStorage.setItem(SELECTED_ORG_KEY, selectedOrg.id);
+      if (!subdomainOrg) {
+        console.warn(`${LOG_PREFIX} No organization found for subdomain:`, tenantSubdomain);
+        clearOrganizationState();
+        setLoading(false);
+        return;
       }
 
-      console.log(`${LOG_PREFIX} ✅ Selected organization:`, {
-        id: selectedOrg.id,
-        name: selectedOrg.name,
-        tier: selectedOrg.subscription_tier
-      });
+      console.log(`${LOG_PREFIX} Organization loaded for subdomain:`, tenantSubdomain);
+
+      // Step 4: Verify user membership - MANDATORY
+      const isMember = await verifyUserMembership(user.id, subdomainOrg.id);
       
-      setOrganization(selectedOrg);
+      if (!isMember) {
+        console.warn(`${LOG_PREFIX} User is not a member of organization for subdomain:`, tenantSubdomain);
+        clearOrganizationState();
+        setLoading(false);
+        return;
+      }
+
+      console.log(`${LOG_PREFIX} User is member of organization`);
+
+      // Step 5: Set organization context - ONLY via subdomain resolution
+      setOrganization(subdomainOrg);
+      localStorage.setItem(SELECTED_ORG_KEY, subdomainOrg.id);
+      
+      // Fetch all orgs for the organizations list (informational only)
+      const allOrgs = await fetchAllUserOrganizations(user.id);
+      setOrganizations(allOrgs);
+
+      console.log(`${LOG_PREFIX} ✅ Organization context finalized:`, {
+        id: subdomainOrg.id,
+        name: subdomainOrg.name,
+        subdomain: subdomainOrg.subdomain
+      });
+
     } catch (error) {
       console.error(`${LOG_PREFIX} ❌ Error in refreshOrganization:`, error);
-      setOrganization(null);
-      setOrganizations([]);
+      clearOrganizationState();
     } finally {
-      console.log(`${LOG_PREFIX} Setting loading to false`);
       setLoading(false);
     }
   };
 
   const switchOrganization = async (orgId: string) => {
-    console.log(`${LOG_PREFIX} Switching organization to:`, orgId);
+    // In subdomain-based multi-tenancy, switching organizations is not allowed
+    // The organization is determined solely by the subdomain
+    console.warn(`${LOG_PREFIX} Organization switching is disabled in subdomain mode`);
+    
+    // If there's no subdomain, we could allow switching, but for now we enforce strict subdomain-only behavior
+    if (tenantSubdomain) {
+      console.warn(`${LOG_PREFIX} Cannot switch organization when subdomain is present:`, tenantSubdomain);
+      return;
+    }
+
+    // Fallback behavior only if no subdomain (should not happen in normal flow)
     const selectedOrg = organizations.find(org => org.id === orgId);
     if (selectedOrg) {
       localStorage.setItem(SELECTED_ORG_KEY, orgId);
       setOrganization(selectedOrg);
-      console.log(`${LOG_PREFIX} ✅ Organization switched to:`, { id: selectedOrg.id, name: selectedOrg.name });
-      // Refresh subscription status for the new org
+      console.log(`${LOG_PREFIX} Organization switched to:`, { id: selectedOrg.id, name: selectedOrg.name });
       setTimeout(() => checkSubscription(), 0);
-    } else {
-      console.warn(`${LOG_PREFIX} ⚠️ Organization not found in list:`, orgId);
     }
   };
 
   const checkSubscription = async () => {
     try {
-      // Only check subscription if user is authenticated
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.log("Skipping subscription check - no active session");
@@ -247,11 +250,8 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       setSubscriptionStatus(data);
 
-      // Update organization subscription status in database
       if (organization && data) {
-        // Use getPlanLimits to determine the tier based on product ID
-        const planInfo = getPlanLimits(data.product_id);
-        const tier = data.product_id ? "standard" : "free"; // Just use "standard" for any paid plan
+        const tier = data.product_id ? "standard" : "free";
         
         await supabase
           .from("organizations")
@@ -272,23 +272,24 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    console.log(`${LOG_PREFIX} useEffect triggered, tenantSubdomain:`, tenantSubdomain);
     refreshOrganization();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`${LOG_PREFIX} Auth state changed:`, event);
+      
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
         refreshOrganization();
-        // Defer checkSubscription to avoid potential deadlocks
         setTimeout(() => checkSubscription(), 0);
       } else if (event === "SIGNED_OUT") {
         console.log(`${LOG_PREFIX} User signed out, clearing organization`);
-        setOrganization(null);
-        setOrganizations([]);
+        clearOrganizationState();
         setSubscriptionStatus(null);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [tenantSubdomain]); // Re-run when subdomain changes
+  }, [tenantSubdomain]);
 
   return (
     <OrganizationContext.Provider value={{ 
