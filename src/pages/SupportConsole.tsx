@@ -184,12 +184,15 @@ export default function SupportConsole() {
             Impersonate users to assist with support requests
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={() => navigate('/platform-compliance')}>
             SOC-2 Compliance
           </Button>
           <Button variant="outline" onClick={() => navigate('/platform-resilience')}>
             Disaster Recovery
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/trust-admin')}>
+            Trust Center
           </Button>
           <Badge variant="secondary" className="text-sm">
             {platformRole === 'platform_admin' ? 'Platform Admin' : 'Platform Support'}
