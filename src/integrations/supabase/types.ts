@@ -2079,6 +2079,56 @@ export type Database = {
           },
         ]
       }
+      organization_deletions: {
+        Row: {
+          canceled_at: string | null
+          canceled_by: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          purged_at: string | null
+          reason: string
+          requested_by: string
+          scheduled_for: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          canceled_at?: string | null
+          canceled_by?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          purged_at?: string | null
+          reason: string
+          requested_by: string
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          canceled_at?: string | null
+          canceled_by?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          purged_at?: string | null
+          reason?: string
+          requested_by?: string
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_deletions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_domains: {
         Row: {
           created_at: string
@@ -2153,6 +2203,56 @@ export type Database = {
             foreignKeyName: "organization_entitlements_overrides_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_exports: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          expires_at: string | null
+          export_type: string
+          file_path: string | null
+          file_size_bytes: number | null
+          id: string
+          organization_id: string
+          requested_by: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          export_type?: string
+          file_path?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          organization_id: string
+          requested_by: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          export_type?: string
+          file_path?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          organization_id?: string
+          requested_by?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_exports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -2375,12 +2475,20 @@ export type Database = {
           billing_email: string | null
           created_at: string
           current_users_count: number | null
+          deleted_at: string | null
+          deletion_scheduled_for: string | null
           id: string
           is_active: boolean | null
+          legal_hold: boolean
+          legal_hold_reason: string | null
+          legal_hold_set_at: string | null
+          legal_hold_set_by: string | null
           logo_url: string | null
           max_users: number | null
           name: string
+          retention_days: number
           slug: string | null
+          status: string
           storage_used_gb: number | null
           stripe_customer_id: string | null
           stripe_price_id: string | null
@@ -2396,12 +2504,20 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           current_users_count?: number | null
+          deleted_at?: string | null
+          deletion_scheduled_for?: string | null
           id?: string
           is_active?: boolean | null
+          legal_hold?: boolean
+          legal_hold_reason?: string | null
+          legal_hold_set_at?: string | null
+          legal_hold_set_by?: string | null
           logo_url?: string | null
           max_users?: number | null
           name: string
+          retention_days?: number
           slug?: string | null
+          status?: string
           storage_used_gb?: number | null
           stripe_customer_id?: string | null
           stripe_price_id?: string | null
@@ -2417,12 +2533,20 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           current_users_count?: number | null
+          deleted_at?: string | null
+          deletion_scheduled_for?: string | null
           id?: string
           is_active?: boolean | null
+          legal_hold?: boolean
+          legal_hold_reason?: string | null
+          legal_hold_set_at?: string | null
+          legal_hold_set_by?: string | null
           logo_url?: string | null
           max_users?: number | null
           name?: string
+          retention_days?: number
           slug?: string | null
+          status?: string
           storage_used_gb?: number | null
           stripe_customer_id?: string | null
           stripe_price_id?: string | null
@@ -3092,6 +3216,10 @@ export type Database = {
         Args: { file_path: string }
         Returns: boolean
       }
+      cancel_org_deletion: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       check_subdomain_availability: {
         Args: { p_subdomain: string }
         Returns: Json
@@ -3136,6 +3264,10 @@ export type Database = {
           id: string
         }[]
       }
+      get_org_offboarding_status: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       get_organization_entitlements: {
         Args: { p_organization_id: string }
         Returns: Json
@@ -3149,6 +3281,14 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["app_role"]
           status: string
+        }[]
+      }
+      get_organizations_due_for_purge: {
+        Args: never
+        Returns: {
+          organization_id: string
+          organization_name: string
+          scheduled_for: string
         }[]
       }
       get_pending_invites: {
@@ -3204,6 +3344,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_of_any_org: { Args: { _user_id: string }; Returns: boolean }
+      is_org_active: { Args: { p_organization_id: string }; Returns: boolean }
       is_org_member: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
@@ -3233,6 +3374,7 @@ export type Database = {
         Args: { p_org_name: string; p_subdomain: string }
         Returns: Json
       }
+      purge_organization: { Args: { p_organization_id: string }; Returns: Json }
       request_custom_domain: {
         Args: {
           p_domain: string
@@ -3241,8 +3383,24 @@ export type Database = {
         }
         Returns: Json
       }
+      request_org_deletion: {
+        Args: { p_organization_id: string; p_reason: string }
+        Returns: Json
+      }
+      request_org_export: {
+        Args: { p_export_type?: string; p_organization_id: string }
+        Returns: Json
+      }
       resolve_tenant_by_domain: { Args: { p_hostname: string }; Returns: Json }
       revoke_invitation: { Args: { p_invite_id: string }; Returns: Json }
+      set_org_legal_hold: {
+        Args: {
+          p_enable: boolean
+          p_organization_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       start_impersonation: {
         Args: {
           p_reason: string

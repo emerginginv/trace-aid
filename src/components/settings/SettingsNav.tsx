@@ -39,6 +39,7 @@ const navItems: SettingsNavItem[] = [
   { value: "data-import", label: "Data Import", icon: Upload, roles: ['admin', 'manager'] },
   { value: "help-center", label: "Help Center", icon: HelpCircle, roles: ['admin'] },
   { value: "billing", label: "Billing", icon: CreditCard, roles: ['admin'] },
+  { value: "data-compliance", label: "Data & Compliance", icon: Shield, roles: ['admin'] },
   { value: "data-integrity", label: "Data Integrity", icon: Database, roles: ['admin'] },
 ];
 
