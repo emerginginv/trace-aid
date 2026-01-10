@@ -184,9 +184,14 @@ export default function SupportConsole() {
             Impersonate users to assist with support requests
           </p>
         </div>
-        <Badge variant="secondary" className="text-sm">
-          {platformRole === 'platform_admin' ? 'Platform Admin' : 'Platform Support'}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate('/platform-compliance')}>
+            SOC-2 Compliance
+          </Button>
+          <Badge variant="secondary" className="text-sm">
+            {platformRole === 'platform_admin' ? 'Platform Admin' : 'Platform Support'}
+          </Badge>
+        </div>
       </div>
 
       {/* Warning */}
