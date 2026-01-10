@@ -1,6 +1,5 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 export interface ImpersonationSession {
   active: boolean;
@@ -38,7 +37,6 @@ const ImpersonationContext = React.createContext<ImpersonationContextType | unde
 const LOG_PREFIX = "[Impersonation]";
 
 export function ImpersonationProvider({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
   const [session, setSession] = React.useState<ImpersonationSession | null>(null);
   const [isPlatformStaff, setIsPlatformStaff] = React.useState(false);
   const [platformRole, setPlatformRole] = React.useState<string | null>(null);
@@ -181,16 +179,15 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
       // Clear local state
       setSession({ active: false });
 
-      // Redirect to support console or home
-      navigate('/support-console');
-      window.location.reload();
+      // Redirect to support console or home using window.location
+      window.location.href = '/support-console';
     } catch (err) {
       console.error(LOG_PREFIX, "End error:", err);
       // Force clear anyway
       setSession({ active: false });
       window.location.href = '/';
     }
-  }, [session?.session_token, navigate]);
+  }, [session?.session_token]);
 
   const value: ImpersonationContextType = {
     session,
