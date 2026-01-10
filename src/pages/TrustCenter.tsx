@@ -289,6 +289,9 @@ export default function TrustCenter() {
             <Link to="/status" className="text-primary hover:underline">public status page</Link>.
           </p>
           <p>
+            Enterprise audit exports available. Time-scoped, organization-isolated reporting.
+          </p>
+          <p>
             Last updated: {format(new Date(), 'MMMM yyyy')}
           </p>
           <p className="text-xs">

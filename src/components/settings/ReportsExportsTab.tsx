@@ -55,7 +55,7 @@ export function ReportsExportsTab() {
   const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 90));
   const [dateTo, setDateTo] = useState<Date>(new Date());
 
-  const isEnterprise = organization?.plan === "enterprise";
+  const isEnterprise = organization?.subscription_tier === "pro"; // Pro tier = Enterprise features
 
   // Fetch existing reports
   const { data: reports, isLoading } = useQuery({
@@ -103,11 +103,11 @@ export function ReportsExportsTab() {
         p_report_id: reportId,
       });
       if (error) throw error;
-      return data;
+      return { content: data, reportId };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ content, reportId }) => {
       // Download as JSON
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(content, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -115,8 +115,8 @@ export function ReportsExportsTab() {
       a.click();
       URL.revokeObjectURL(url);
       
-      // Log download
-      supabase.rpc("log_report_download", { p_report_id: data.report_id }).catch(console.error);
+      // Log download (fire and forget)
+      void supabase.rpc("log_report_download", { p_report_id: reportId });
       
       toast.success("Report downloaded");
       queryClient.invalidateQueries({ queryKey: ["organization-reports"] });
