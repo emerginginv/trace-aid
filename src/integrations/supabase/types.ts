@@ -397,6 +397,54 @@ export type Database = {
           },
         ]
       }
+      backups: {
+        Row: {
+          backup_type: Database["public"]["Enums"]["backup_type"]
+          checksum: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          error_message: string | null
+          id: string
+          location: string
+          retention_expires_at: string
+          size_bytes: number | null
+          started_at: string
+          status: Database["public"]["Enums"]["backup_status"]
+        }
+        Insert: {
+          backup_type: Database["public"]["Enums"]["backup_type"]
+          checksum?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          error_message?: string | null
+          id?: string
+          location: string
+          retention_expires_at: string
+          size_bytes?: number | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["backup_status"]
+        }
+        Update: {
+          backup_type?: Database["public"]["Enums"]["backup_type"]
+          checksum?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          error_message?: string | null
+          id?: string
+          location?: string
+          retention_expires_at?: string
+          size_bytes?: number | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["backup_status"]
+        }
+        Relationships: []
+      }
       case_activities: {
         Row: {
           activity_type: string
@@ -1365,6 +1413,63 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      disaster_events: {
+        Row: {
+          created_at: string
+          declared_at: string
+          declared_by: string
+          description: string
+          id: string
+          incident_id: string | null
+          lessons_learned: string | null
+          outcome_summary: string | null
+          recovery_completed_at: string | null
+          recovery_started_at: string | null
+          severity: Database["public"]["Enums"]["disaster_severity"]
+        }
+        Insert: {
+          created_at?: string
+          declared_at?: string
+          declared_by: string
+          description: string
+          id?: string
+          incident_id?: string | null
+          lessons_learned?: string | null
+          outcome_summary?: string | null
+          recovery_completed_at?: string | null
+          recovery_started_at?: string | null
+          severity: Database["public"]["Enums"]["disaster_severity"]
+        }
+        Update: {
+          created_at?: string
+          declared_at?: string
+          declared_by?: string
+          description?: string
+          id?: string
+          incident_id?: string | null
+          lessons_learned?: string | null
+          outcome_summary?: string | null
+          recovery_completed_at?: string | null
+          recovery_started_at?: string | null
+          severity?: Database["public"]["Enums"]["disaster_severity"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disaster_events_declared_by_fkey"
+            columns: ["declared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disaster_events_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "security_incidents"
             referencedColumns: ["id"]
           },
         ]
@@ -3090,6 +3195,44 @@ export type Database = {
         }
         Relationships: []
       }
+      recovery_objectives: {
+        Row: {
+          backup_retention_days: number
+          id: string
+          restore_test_frequency_days: number
+          rpo_hours: number
+          rto_hours: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          backup_retention_days?: number
+          id?: string
+          restore_test_frequency_days?: number
+          rpo_hours?: number
+          rto_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          backup_retention_days?: number
+          id?: string
+          restore_test_frequency_days?: number
+          rpo_hours?: number
+          rto_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_objectives_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reserved_subdomains: {
         Row: {
           created_at: string
@@ -3107,6 +3250,63 @@ export type Database = {
           subdomain?: string
         }
         Relationships: []
+      }
+      restore_tests: {
+        Row: {
+          backup_id: string | null
+          completed_at: string | null
+          created_at: string
+          environment: Database["public"]["Enums"]["restore_environment"]
+          id: string
+          notes: string | null
+          restore_type: Database["public"]["Enums"]["backup_type"]
+          started_at: string
+          status: Database["public"]["Enums"]["backup_status"]
+          validated_by: string | null
+          validation_checklist: Json | null
+        }
+        Insert: {
+          backup_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          environment?: Database["public"]["Enums"]["restore_environment"]
+          id?: string
+          notes?: string | null
+          restore_type: Database["public"]["Enums"]["backup_type"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["backup_status"]
+          validated_by?: string | null
+          validation_checklist?: Json | null
+        }
+        Update: {
+          backup_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          environment?: Database["public"]["Enums"]["restore_environment"]
+          id?: string
+          notes?: string | null
+          restore_type?: Database["public"]["Enums"]["backup_type"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["backup_status"]
+          validated_by?: string | null
+          validation_checklist?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restore_tests_backup_id_fkey"
+            columns: ["backup_id"]
+            isOneToOne: false
+            referencedRelation: "backups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restore_tests_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       retainer_funds: {
         Row: {
@@ -3624,9 +3824,25 @@ export type Database = {
       collect_audit_evidence: { Args: { p_days?: number }; Returns: Json }
       collect_rls_evidence: { Args: never; Returns: Json }
       complete_access_review: { Args: { p_review_id: string }; Returns: Json }
+      complete_disaster_recovery: {
+        Args: {
+          p_event_id: string
+          p_lessons_learned?: string
+          p_outcome_summary: string
+        }
+        Returns: undefined
+      }
       complete_review_item: {
         Args: { p_action: string; p_item_id: string; p_notes?: string }
         Returns: Json
+      }
+      declare_disaster: {
+        Args: {
+          p_description: string
+          p_incident_id?: string
+          p_severity: string
+        }
+        Returns: string
       }
       end_impersonation: { Args: { p_session_token?: string }; Returns: Json }
       enforce_entitlement: {
@@ -3662,6 +3878,21 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
+      get_disaster_events: {
+        Args: { p_limit?: number }
+        Returns: {
+          declared_at: string
+          declared_by_name: string
+          description: string
+          id: string
+          incident_id: string
+          outcome_summary: string
+          recovery_completed_at: string
+          recovery_started_at: string
+          severity: string
+        }[]
+      }
+      get_dr_dashboard: { Args: never; Returns: Json }
       get_my_email_change_requests: {
         Args: never
         Returns: {
@@ -3723,6 +3954,20 @@ export type Database = {
       }
       get_plan_entitlements: { Args: { p_product_id: string }; Returns: Json }
       get_platform_role: { Args: { p_user_id: string }; Returns: string }
+      get_recent_backups: {
+        Args: { p_limit?: number }
+        Returns: {
+          backup_type: string
+          completed_at: string
+          description: string
+          id: string
+          location: string
+          retention_expires_at: string
+          size_bytes: number
+          started_at: string
+          status: string
+        }[]
+      }
       get_related_cases: {
         Args: { case_id: string }
         Returns: {
@@ -3733,6 +3978,20 @@ export type Database = {
           instance_number: number
           status: string
           title: string
+        }[]
+      }
+      get_restore_tests: {
+        Args: { p_limit?: number }
+        Returns: {
+          backup_id: string
+          completed_at: string
+          environment: string
+          id: string
+          notes: string
+          restore_type: string
+          started_at: string
+          status: string
+          validated_by_name: string
         }[]
       }
       get_soc2_dashboard: { Args: never; Returns: Json }
@@ -3780,6 +4039,18 @@ export type Database = {
         Args: { _case_id: string; _user_id: string }
         Returns: boolean
       }
+      log_backup: {
+        Args: {
+          p_backup_type: string
+          p_checksum?: string
+          p_description?: string
+          p_location: string
+          p_retention_days?: number
+          p_size_bytes?: number
+          p_status?: string
+        }
+        Returns: string
+      }
       log_platform_change: {
         Args: {
           p_description: string
@@ -3789,6 +4060,17 @@ export type Database = {
           p_type: string
         }
         Returns: Json
+      }
+      log_restore_test: {
+        Args: {
+          p_backup_id?: string
+          p_environment?: string
+          p_notes?: string
+          p_restore_type?: string
+          p_status?: string
+          p_validation_checklist?: Json
+        }
+        Returns: string
       }
       log_security_event: {
         Args: {
@@ -3848,6 +4130,10 @@ export type Database = {
         Args: { p_org_id?: string; p_type?: string }
         Returns: Json
       }
+      start_disaster_recovery: {
+        Args: { p_event_id: string }
+        Returns: undefined
+      }
       start_impersonation: {
         Args: {
           p_reason: string
@@ -3887,6 +4173,15 @@ export type Database = {
         }
         Returns: Json
       }
+      update_recovery_objectives: {
+        Args: {
+          p_backup_retention_days?: number
+          p_restore_test_frequency_days?: number
+          p_rpo_hours?: number
+          p_rto_hours?: number
+        }
+        Returns: undefined
+      }
       update_user_role: {
         Args: {
           _new_role: Database["public"]["Enums"]["app_role"]
@@ -3911,6 +4206,10 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "member" | "manager" | "investigator" | "vendor"
+      backup_status: "pending" | "running" | "success" | "failed"
+      backup_type: "database" | "storage" | "config"
+      disaster_severity: "minor" | "major" | "critical"
+      restore_environment: "staging" | "isolated" | "production"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4039,6 +4338,10 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "member", "manager", "investigator", "vendor"],
+      backup_status: ["pending", "running", "success", "failed"],
+      backup_type: ["database", "storage", "config"],
+      disaster_severity: ["minor", "major", "critical"],
+      restore_environment: ["staging", "isolated", "production"],
     },
   },
 } as const

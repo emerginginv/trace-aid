@@ -53,6 +53,7 @@ import ReportsHub from "./pages/reports/index";
 import ReportViewer from "./pages/reports/ReportViewer";
 import SupportConsole from "./pages/SupportConsole";
 import PlatformCompliance from "./pages/PlatformCompliance";
+import PlatformResilience from "./pages/PlatformResilience";
 import NotFound from "./pages/NotFound";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -463,6 +464,17 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <PlatformCompliance />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Platform Resilience - Disaster Recovery */}
+        <Route
+          path="/platform-resilience"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <PlatformResilience />
               </DashboardLayout>
             </ProtectedRoute>
           }
