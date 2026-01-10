@@ -9,6 +9,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { BudgetAdjustmentForm } from "./BudgetAdjustmentForm";
 import { BudgetWarningBanner } from "./BudgetWarningBanner";
 import { getBudgetStatusStyles, formatBudgetCurrency, formatBudgetHours } from "@/lib/budgetUtils";
+import { ContextualHelp } from "@/components/help-center";
 
 interface BudgetSummaryData {
   budget_hours_authorized: number;
@@ -71,6 +72,7 @@ export function CaseBudgetWidget({ caseId, refreshKey, onAdjustmentSuccess, onVi
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Budget Status
+            <ContextualHelp feature="case_budgets" />
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -90,6 +92,7 @@ export function CaseBudgetWidget({ caseId, refreshKey, onAdjustmentSuccess, onVi
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Budget Status
+            <ContextualHelp feature="case_budgets" />
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center py-4">
@@ -158,6 +161,7 @@ export function CaseBudgetWidget({ caseId, refreshKey, onAdjustmentSuccess, onVi
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Clock className="h-4 w-4" />
           Budget Status
+          <ContextualHelp feature="case_budgets" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
