@@ -156,14 +156,33 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       console.log(`${LOG_PREFIX} Authenticated user:`, user.id);
 
-      // Step 2: Validate tenantSubdomain - SUBDOMAIN IS REQUIRED
+      // Step 2: Handle no subdomain (development mode or non-tenant domain)
       if (!tenantSubdomain) {
-        console.log(`${LOG_PREFIX} No tenant subdomain present, clearing organization`);
-        clearOrganizationState();
+        console.log(`${LOG_PREFIX} No tenant subdomain - using development fallback`);
+        
+        // Fetch all organizations user belongs to
+        const allOrgs = await fetchAllUserOrganizations(user.id);
+        setOrganizations(allOrgs);
+        
+        if (allOrgs.length === 0) {
+          console.log(`${LOG_PREFIX} User has no organizations`);
+          clearOrganizationState();
+          setLoading(false);
+          return;
+        }
+        
+        // Try to restore from localStorage, or use first org
+        const storedOrgId = localStorage.getItem(SELECTED_ORG_KEY);
+        const selectedOrg = allOrgs.find(org => org.id === storedOrgId) || allOrgs[0];
+        
+        setOrganization(selectedOrg);
+        localStorage.setItem(SELECTED_ORG_KEY, selectedOrg.id);
+        console.log(`${LOG_PREFIX} Development mode - using organization:`, selectedOrg.name);
         setLoading(false);
         return;
       }
 
+      // Step 3: Production subdomain-based resolution
       console.log(`${LOG_PREFIX} Resolving organization for subdomain:`, tenantSubdomain);
 
       // Step 3: Fetch organization by subdomain ONLY
