@@ -1494,6 +1494,47 @@ export type Database = {
           },
         ]
       }
+      control_plane_tenants: {
+        Row: {
+          created_at: string | null
+          custom_domain: string | null
+          data_region: Database["public"]["Enums"]["data_region"]
+          id: string
+          organization_id: string
+          status: string
+          subdomain: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_domain?: string | null
+          data_region: Database["public"]["Enums"]["data_region"]
+          id?: string
+          organization_id: string
+          status?: string
+          subdomain?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_domain?: string | null
+          data_region?: Database["public"]["Enums"]["data_region"]
+          id?: string
+          organization_id?: string
+          status?: string
+          subdomain?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "control_plane_tenants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_health_snapshots: {
         Row: {
           active_users_count: number
@@ -3449,6 +3490,8 @@ export type Database = {
           billing_email: string | null
           created_at: string
           current_users_count: number | null
+          custom_domain: string | null
+          data_region: Database["public"]["Enums"]["data_region"]
           default_retention_days: number
           deleted_at: string | null
           deletion_scheduled_for: string | null
@@ -3462,6 +3505,8 @@ export type Database = {
           logo_url: string | null
           max_users: number | null
           name: string
+          region_locked: boolean | null
+          region_selected_at: string | null
           retention_days: number
           slug: string | null
           status: string
@@ -3480,6 +3525,8 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           current_users_count?: number | null
+          custom_domain?: string | null
+          data_region?: Database["public"]["Enums"]["data_region"]
           default_retention_days?: number
           deleted_at?: string | null
           deletion_scheduled_for?: string | null
@@ -3493,6 +3540,8 @@ export type Database = {
           logo_url?: string | null
           max_users?: number | null
           name: string
+          region_locked?: boolean | null
+          region_selected_at?: string | null
           retention_days?: number
           slug?: string | null
           status?: string
@@ -3511,6 +3560,8 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           current_users_count?: number | null
+          custom_domain?: string | null
+          data_region?: Database["public"]["Enums"]["data_region"]
           default_retention_days?: number
           deleted_at?: string | null
           deletion_scheduled_for?: string | null
@@ -3524,6 +3575,8 @@ export type Database = {
           logo_url?: string | null
           max_users?: number | null
           name?: string
+          region_locked?: boolean | null
+          region_selected_at?: string | null
           retention_days?: number
           slug?: string | null
           status?: string
@@ -3784,6 +3837,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          allowed_regions: string[] | null
           avatar_url: string | null
           city: string | null
           color: string | null
@@ -3808,6 +3862,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          allowed_regions?: string[] | null
           avatar_url?: string | null
           city?: string | null
           color?: string | null
@@ -3832,6 +3887,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          allowed_regions?: string[] | null
           avatar_url?: string | null
           city?: string | null
           color?: string | null
@@ -3890,6 +3946,136 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      region_migration_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          contract_amendment_id: string | null
+          current_region: Database["public"]["Enums"]["data_region"]
+          id: string
+          metadata: Json | null
+          notes: string | null
+          organization_id: string
+          requested_at: string | null
+          requested_by: string | null
+          status: string
+          target_region: Database["public"]["Enums"]["data_region"]
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          contract_amendment_id?: string | null
+          current_region: Database["public"]["Enums"]["data_region"]
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          organization_id: string
+          requested_at?: string | null
+          requested_by?: string | null
+          status?: string
+          target_region: Database["public"]["Enums"]["data_region"]
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          contract_amendment_id?: string | null
+          current_region?: Database["public"]["Enums"]["data_region"]
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          organization_id?: string
+          requested_at?: string | null
+          requested_by?: string | null
+          status?: string
+          target_region?: Database["public"]["Enums"]["data_region"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "region_migration_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "region_migration_requests_contract_amendment_id_fkey"
+            columns: ["contract_amendment_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "region_migration_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "region_migration_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regional_access_logs: {
+        Row: {
+          action: string
+          block_reason: string | null
+          blocked: boolean | null
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          org_region: Database["public"]["Enums"]["data_region"] | null
+          organization_id: string | null
+          requested_region: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          block_reason?: string | null
+          blocked?: boolean | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          org_region?: Database["public"]["Enums"]["data_region"] | null
+          organization_id?: string | null
+          requested_region?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          block_reason?: string | null
+          blocked?: boolean | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          org_region?: Database["public"]["Enums"]["data_region"] | null
+          organization_id?: string | null
+          requested_region?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regional_access_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -5188,6 +5374,10 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
+      check_region_access: {
+        Args: { p_organization_id: string; p_request_region: string }
+        Returns: Json
+      }
       check_subdomain_availability: {
         Args: { p_subdomain: string }
         Returns: Json
@@ -5413,6 +5603,10 @@ export type Database = {
         Returns: Json
       }
       get_organization_entitlements: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      get_organization_region_info: {
         Args: { p_organization_id: string }
         Returns: Json
       }
@@ -5667,6 +5861,14 @@ export type Database = {
         Args: { p_export_type?: string; p_organization_id: string }
         Returns: Json
       }
+      request_region_migration: {
+        Args: {
+          p_notes?: string
+          p_organization_id: string
+          p_target_region: Database["public"]["Enums"]["data_region"]
+        }
+        Returns: string
+      }
       request_report: {
         Args: {
           p_filters?: Json
@@ -5693,6 +5895,14 @@ export type Database = {
           p_reason?: string
         }
         Returns: Json
+      }
+      set_organization_region: {
+        Args: {
+          p_force?: boolean
+          p_organization_id: string
+          p_region: Database["public"]["Enums"]["data_region"]
+        }
+        Returns: boolean
       }
       sign_contract: {
         Args: {
@@ -5885,6 +6095,7 @@ export type Database = {
         | "terminated"
         | "superseded"
       contract_type: "msa" | "sow" | "order_form" | "dpa" | "nda" | "other"
+      data_region: "us" | "eu"
       disaster_severity: "minor" | "major" | "critical"
       health_risk_level: "healthy" | "watch" | "at_risk"
       incident_severity: "minor" | "major" | "critical"
@@ -6090,6 +6301,7 @@ export const Constants = {
         "superseded",
       ],
       contract_type: ["msa", "sow", "order_form", "dpa", "nda", "other"],
+      data_region: ["us", "eu"],
       disaster_severity: ["minor", "major", "critical"],
       health_risk_level: ["healthy", "watch", "at_risk"],
       incident_severity: ["minor", "major", "critical"],
