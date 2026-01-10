@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CaseManagerCard } from "./CaseManagerCard";
 import { usePermissions } from "@/hooks/usePermissions";
+import { ContextualHelp } from "@/components/help-center";
 
 interface Profile {
   id: string;
@@ -287,6 +288,7 @@ export const CaseTeamManager = ({
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Users className="h-5 w-5" />
           Team
+          <ContextualHelp feature="case_manager_assignment" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

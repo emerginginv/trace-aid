@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -32,6 +32,8 @@ type HelpArticle = Database["public"]["Tables"]["help_articles"]["Row"];
 interface HelpCenterSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Optional: Open directly to an article by related_feature */
+  initialFeature?: string;
 }
 
 type ViewState = 
@@ -53,9 +55,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BookOpen,
 };
 
-export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
+export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCenterSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewState, setViewState] = useState<ViewState>({ type: "categories" });
+  const [hasNavigatedToFeature, setHasNavigatedToFeature] = useState(false);
 
   // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
@@ -87,6 +90,33 @@ export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
     enabled: open,
   });
 
+  // Navigate to feature article when data is loaded
+  useEffect(() => {
+    if (
+      open &&
+      initialFeature &&
+      !hasNavigatedToFeature &&
+      articles.length > 0 &&
+      categories.length > 0
+    ) {
+      const article = articles.find((a) => a.related_feature === initialFeature);
+      if (article) {
+        const category = categories.find((c) => c.id === article.category_id);
+        if (category) {
+          setViewState({ type: "article", category, article });
+          setHasNavigatedToFeature(true);
+        }
+      }
+    }
+  }, [open, initialFeature, articles, categories, hasNavigatedToFeature]);
+
+  // Reset navigation flag when sheet closes
+  useEffect(() => {
+    if (!open) {
+      setHasNavigatedToFeature(false);
+    }
+  }, [open]);
+
   // Group articles by category
   const articlesByCategory = useMemo(() => {
     const map = new Map<string, HelpArticle[]>();
@@ -99,17 +129,19 @@ export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
     return map;
   }, [articles]);
 
-  // Search results
+  // Enhanced search - matches title, summary, content, and related_feature
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return null;
     const lowerQuery = searchQuery.toLowerCase();
     
-    return articles.filter(
-      (article) =>
-        article.title.toLowerCase().includes(lowerQuery) ||
-        article.summary.toLowerCase().includes(lowerQuery) ||
-        article.content.toLowerCase().includes(lowerQuery)
-    );
+    return articles.filter((article) => {
+      const titleMatch = article.title.toLowerCase().includes(lowerQuery);
+      const summaryMatch = article.summary.toLowerCase().includes(lowerQuery);
+      const contentMatch = article.content.toLowerCase().includes(lowerQuery);
+      const featureMatch = article.related_feature?.toLowerCase().includes(lowerQuery);
+      
+      return titleMatch || summaryMatch || contentMatch || featureMatch;
+    });
   }, [searchQuery, articles]);
 
   const handleCategoryClick = (category: HelpCategory) => {
@@ -134,6 +166,7 @@ export function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetProps) {
     if (!newOpen) {
       setSearchQuery("");
       setViewState({ type: "categories" });
+      setHasNavigatedToFeature(false);
     }
     onOpenChange(newOpen);
   };

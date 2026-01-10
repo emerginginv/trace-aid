@@ -2,6 +2,7 @@ import { BarChart3 } from "lucide-react";
 import { ANALYTICS_CATEGORIES } from "@/lib/analytics/categories";
 import { AnalyticsCategoryCard } from "@/components/analytics/AnalyticsCategoryCard";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
+import { ContextualHelp } from "@/components/help-center";
 
 const Analytics = () => {
   useSetBreadcrumbs([{ label: "Analytics" }]);
@@ -14,6 +15,7 @@ const Analytics = () => {
               <BarChart3 className="w-6 h-6 text-primary" />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Analytics</h1>
+            <ContextualHelp feature="analytics_overview" size="md" />
           </div>
           <p className="text-muted-foreground mt-2 max-w-2xl">
             Insights, metrics, and reports across your organization. Explore dashboards by category or generate custom reports.

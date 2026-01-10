@@ -35,6 +35,7 @@ import { AttachmentAccessLogDialog } from "./AttachmentAccessLogDialog";
 import { CaseAccessAuditPanel } from "./CaseAccessAuditPanel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ContextualHelp } from "@/components/help-center";
 
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
@@ -1139,11 +1140,14 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                 <span className="max-w-[100px] truncate">{getSelectedFolderLabel()}</span>
               </Button>
             )}
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold">Attachments</h2>
-              <p className="text-muted-foreground text-sm">
-                {filteredAttachments.length} file{filteredAttachments.length !== 1 ? 's' : ''}
-              </p>
+            <div className="flex items-center gap-2">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold">Attachments</h2>
+                <p className="text-muted-foreground text-sm">
+                  {filteredAttachments.length} file{filteredAttachments.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <ContextualHelp feature="attachments_and_sharing" />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

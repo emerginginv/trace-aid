@@ -22,6 +22,7 @@ import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibi
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { AttachmentPickerDialog } from "./AttachmentPicker";
 import { ActivityTimelineDisplay } from "./ActivityTimelineDisplay";
+import { ContextualHelp } from "@/components/help-center";
 interface TimelineEntry {
   time: string;
   description: string;
@@ -328,9 +329,12 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   return (
     <>
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">Case Updates</h2>
-          <p className="text-muted-foreground">Showing {sortedUpdates.length} update{sortedUpdates.length !== 1 ? 's' : ''}</p>
+        <div className="flex items-center gap-2">
+          <div>
+            <h2 className="text-2xl font-bold">Case Updates</h2>
+            <p className="text-muted-foreground">Showing {sortedUpdates.length} update{sortedUpdates.length !== 1 ? 's' : ''}</p>
+          </div>
+          <ContextualHelp feature="activity_timelines" />
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <DropdownMenu>
