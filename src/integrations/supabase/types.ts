@@ -14,6 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_review_items: {
+        Row: {
+          action_taken: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          organization_id: string | null
+          review_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          user_id: string | null
+          user_role: string
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          review_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id?: string | null
+          user_role: string
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          review_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id?: string | null
+          user_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_review_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_review_items_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "access_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_reviews: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          organization_id: string | null
+          review_period_end: string | null
+          review_period_start: string | null
+          review_type: string | null
+          reviewer_id: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          review_period_end?: string | null
+          review_period_start?: string | null
+          review_type?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          review_period_end?: string | null
+          review_period_start?: string | null
+          review_type?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           address: string | null
@@ -1001,6 +1105,69 @@ export type Database = {
           },
         ]
       }
+      change_log: {
+        Row: {
+          change_type: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          id: string
+          impact_level: string | null
+          ticket_reference: string | null
+          title: string
+        }
+        Insert: {
+          change_type: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          id?: string
+          impact_level?: string | null
+          ticket_reference?: string | null
+          title: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          id?: string
+          impact_level?: string | null
+          ticket_reference?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      compliance_exports: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          export_type: string
+          file_path: string | null
+          id: string
+          requested_by: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          export_type: string
+          file_path?: string | null
+          id?: string
+          requested_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          export_type?: string
+          file_path?: string | null
+          id?: string
+          requested_by?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           account_id: string | null
@@ -1092,6 +1259,50 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      control_evidence: {
+        Row: {
+          collected_at: string | null
+          collected_by: string | null
+          control_id: string | null
+          description: string
+          evidence_type: string
+          file_path: string | null
+          id: string
+          metadata: Json | null
+          source: string
+        }
+        Insert: {
+          collected_at?: string | null
+          collected_by?: string | null
+          control_id?: string | null
+          description: string
+          evidence_type: string
+          file_path?: string | null
+          id?: string
+          metadata?: Json | null
+          source?: string
+        }
+        Update: {
+          collected_at?: string | null
+          collected_by?: string | null
+          control_id?: string | null
+          description?: string
+          evidence_type?: string
+          file_path?: string | null
+          id?: string
+          metadata?: Json | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "control_evidence_control_id_fkey"
+            columns: ["control_id"]
+            isOneToOne: false
+            referencedRelation: "soc2_controls"
             referencedColumns: ["id"]
           },
         ]
@@ -2741,6 +2952,33 @@ export type Database = {
           },
         ]
       }
+      platform_staff: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          role: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       platform_users: {
         Row: {
           created_at: string
@@ -2961,6 +3199,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      security_incidents: {
+        Row: {
+          created_at: string | null
+          description: string
+          detected_at: string | null
+          id: string
+          incident_number: string | null
+          reported_by: string | null
+          resolution_summary: string | null
+          resolved_at: string | null
+          severity: string
+          status: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          detected_at?: string | null
+          id?: string
+          incident_number?: string | null
+          reported_by?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          detected_at?: string | null
+          id?: string
+          incident_number?: string | null
+          reported_by?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      soc2_controls: {
+        Row: {
+          category: string
+          control_code: string
+          created_at: string | null
+          description: string
+          frequency: string | null
+          id: string
+          implementation_notes: string | null
+          is_active: boolean | null
+          owner_role: string | null
+          title: string
+        }
+        Insert: {
+          category: string
+          control_code: string
+          created_at?: string | null
+          description: string
+          frequency?: string | null
+          id?: string
+          implementation_notes?: string | null
+          is_active?: boolean | null
+          owner_role?: string | null
+          title: string
+        }
+        Update: {
+          category?: string
+          control_code?: string
+          created_at?: string | null
+          description?: string
+          frequency?: string | null
+          id?: string
+          implementation_notes?: string | null
+          is_active?: boolean | null
+          owner_role?: string | null
+          title?: string
+        }
+        Relationships: []
       }
       subject_attachments: {
         Row: {
@@ -3302,6 +3621,13 @@ export type Database = {
         Args: { p_subdomain: string }
         Returns: Json
       }
+      collect_audit_evidence: { Args: { p_days?: number }; Returns: Json }
+      collect_rls_evidence: { Args: never; Returns: Json }
+      complete_access_review: { Args: { p_review_id: string }; Returns: Json }
+      complete_review_item: {
+        Args: { p_action: string; p_item_id: string; p_notes?: string }
+        Returns: Json
+      }
       end_impersonation: { Args: { p_session_token?: string }; Returns: Json }
       enforce_entitlement: {
         Args: { p_action: string; p_organization_id: string; p_payload?: Json }
@@ -3409,6 +3735,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_soc2_dashboard: { Args: never; Returns: Json }
       get_user_organization: { Args: { _user_id: string }; Returns: string }
       get_user_organizations: {
         Args: never
@@ -3442,7 +3769,9 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
-      is_platform_staff: { Args: { p_user_id: string }; Returns: boolean }
+      is_platform_staff:
+        | { Args: never; Returns: boolean }
+        | { Args: { p_user_id: string }; Returns: boolean }
       is_username_available: {
         Args: { check_username: string }
         Returns: boolean
@@ -3450,6 +3779,16 @@ export type Database = {
       is_vendor_case_accessible: {
         Args: { _case_id: string; _user_id: string }
         Returns: boolean
+      }
+      log_platform_change: {
+        Args: {
+          p_description: string
+          p_impact?: string
+          p_ticket?: string
+          p_title: string
+          p_type: string
+        }
+        Returns: Json
       }
       log_security_event: {
         Args: {
@@ -3462,6 +3801,10 @@ export type Database = {
           p_user_id?: string
         }
         Returns: string
+      }
+      log_security_incident: {
+        Args: { p_description: string; p_severity: string; p_title: string }
+        Returns: Json
       }
       process_subject_erasure: { Args: { p_dsr_id: string }; Returns: Json }
       process_subject_export: { Args: { p_dsr_id: string }; Returns: Json }
@@ -3487,6 +3830,10 @@ export type Database = {
         Args: { p_export_type?: string; p_organization_id: string }
         Returns: Json
       }
+      resolve_security_incident: {
+        Args: { p_id: string; p_resolution: string }
+        Returns: Json
+      }
       resolve_tenant_by_domain: { Args: { p_hostname: string }; Returns: Json }
       revoke_invitation: { Args: { p_invite_id: string }; Returns: Json }
       set_org_legal_hold: {
@@ -3495,6 +3842,10 @@ export type Database = {
           p_organization_id: string
           p_reason?: string
         }
+        Returns: Json
+      }
+      start_access_review: {
+        Args: { p_org_id?: string; p_type?: string }
         Returns: Json
       }
       start_impersonation: {

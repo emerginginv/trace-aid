@@ -52,6 +52,7 @@ import SystemSecurityAnalytics from "./pages/SystemSecurityAnalytics";
 import ReportsHub from "./pages/reports/index";
 import ReportViewer from "./pages/reports/ReportViewer";
 import SupportConsole from "./pages/SupportConsole";
+import PlatformCompliance from "./pages/PlatformCompliance";
 import NotFound from "./pages/NotFound";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -451,6 +452,17 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <SupportConsole />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Platform Compliance - Platform Staff Only */}
+        <Route
+          path="/platform-compliance"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <PlatformCompliance />
               </DashboardLayout>
             </ProtectedRoute>
           }
