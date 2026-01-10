@@ -38,7 +38,7 @@ const menuGroups = [{
     title: "Retainers",
     icon: Wallet,
     url: "/retainers",
-    roles: ['admin', 'manager', 'investigator']
+    roles: ['admin', 'manager']
   }, {
     title: "My Expenses",
     icon: DollarSign,
@@ -48,7 +48,7 @@ const menuGroups = [{
     title: "Time & Expenses",
     icon: Receipt,
     url: "/expenses",
-    roles: ['admin', 'manager', 'investigator']
+    roles: ['admin', 'manager']
   }, {
     title: "Invoices",
     icon: FileText,
@@ -61,12 +61,12 @@ const menuGroups = [{
     title: "Accounts",
     icon: Building2,
     url: "/accounts",
-    roles: ['admin', 'manager', 'investigator']
+    roles: ['admin', 'manager']
   }, {
     title: "Contacts",
     icon: Users,
     url: "/contacts",
-    roles: ['admin', 'manager', 'investigator']
+    roles: ['admin', 'manager']
   }]
 }, {
   label: "Analytics & Reporting",
@@ -79,7 +79,7 @@ const menuGroups = [{
     title: "Analytics",
     icon: BarChart3,
     url: "/analytics",
-    roles: ['admin', 'manager', 'investigator']
+    roles: ['admin', 'manager']
   }]
 }];
 export function AppSidebar() {
