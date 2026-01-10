@@ -1311,6 +1311,145 @@ export type Database = {
           },
         ]
       }
+      contract_notifications: {
+        Row: {
+          contract_id: string
+          id: string
+          notification_type: string
+          sent_at: string
+          sent_to: string[]
+        }
+        Insert: {
+          contract_id: string
+          id?: string
+          notification_type: string
+          sent_at?: string
+          sent_to: string[]
+        }
+        Update: {
+          contract_id?: string
+          id?: string
+          notification_type?: string
+          sent_at?: string
+          sent_to?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_notifications_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          auto_renews: boolean
+          contract_type: Database["public"]["Enums"]["contract_type"]
+          created_at: string
+          created_by: string
+          description: string | null
+          effective_date: string | null
+          expiration_date: string | null
+          file_path: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          renewal_notice_days: number | null
+          renewal_term_days: number | null
+          signed_at: string | null
+          signed_by: string | null
+          signer_email: string | null
+          signer_title: string | null
+          status: Database["public"]["Enums"]["contract_status"]
+          supersedes_contract_id: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+          version: string | null
+        }
+        Insert: {
+          auto_renews?: boolean
+          contract_type: Database["public"]["Enums"]["contract_type"]
+          created_at?: string
+          created_by: string
+          description?: string | null
+          effective_date?: string | null
+          expiration_date?: string | null
+          file_path?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          renewal_notice_days?: number | null
+          renewal_term_days?: number | null
+          signed_at?: string | null
+          signed_by?: string | null
+          signer_email?: string | null
+          signer_title?: string | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          supersedes_contract_id?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string | null
+        }
+        Update: {
+          auto_renews?: boolean
+          contract_type?: Database["public"]["Enums"]["contract_type"]
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          effective_date?: string | null
+          expiration_date?: string | null
+          file_path?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          renewal_notice_days?: number | null
+          renewal_term_days?: number | null
+          signed_at?: string | null
+          signed_by?: string | null
+          signer_email?: string | null
+          signer_title?: string | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          supersedes_contract_id?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_supersedes_contract_id_fkey"
+            columns: ["supersedes_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       control_evidence: {
         Row: {
           collected_at: string | null
@@ -4543,6 +4682,21 @@ export type Database = {
         }
         Returns: Json
       }
+      create_contract: {
+        Args: {
+          p_auto_renews?: boolean
+          p_contract_type: Database["public"]["Enums"]["contract_type"]
+          p_description?: string
+          p_effective_date?: string
+          p_expiration_date?: string
+          p_file_path?: string
+          p_organization_id: string
+          p_renewal_term_days?: number
+          p_title: string
+          p_version?: string
+        }
+        Returns: string
+      }
       create_incident: {
         Args: {
           p_affected_components?: string[]
@@ -4592,6 +4746,10 @@ export type Database = {
       }
       generate_scim_token: { Args: { p_org_id: string }; Returns: Json }
       get_active_impersonation: { Args: never; Returns: Json }
+      get_blocking_contracts: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       get_case_budget_summary: {
         Args: { p_case_id: string }
         Returns: {
@@ -4635,6 +4793,7 @@ export type Database = {
         }[]
       }
       get_dr_dashboard: { Args: never; Returns: Json }
+      get_expiring_contracts: { Args: never; Returns: Json }
       get_identity_dashboard: { Args: { p_org_id: string }; Returns: Json }
       get_my_email_change_requests: {
         Args: never
@@ -4659,6 +4818,10 @@ export type Database = {
       }
       get_org_auth_config: { Args: { p_subdomain: string }; Returns: Json }
       get_org_offboarding_status: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      get_organization_contracts: {
         Args: { p_organization_id: string }
         Returns: Json
       }
@@ -4778,6 +4941,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      has_active_dpa: { Args: { p_organization_id: string }; Returns: boolean }
       has_permission: {
         Args: { _feature_key: string; _user_id: string }
         Returns: boolean
@@ -4902,6 +5066,16 @@ export type Database = {
         }
         Returns: Json
       }
+      sign_contract: {
+        Args: {
+          p_contract_id: string
+          p_file_path?: string
+          p_signed_by: string
+          p_signer_email?: string
+          p_signer_title?: string
+        }
+        Returns: undefined
+      }
       start_access_review: {
         Args: { p_org_id?: string; p_type?: string }
         Returns: Json
@@ -4968,6 +5142,14 @@ export type Database = {
         Args: {
           p_component_id: string
           p_status: Database["public"]["Enums"]["component_status"]
+        }
+        Returns: undefined
+      }
+      update_contract_status: {
+        Args: {
+          p_contract_id: string
+          p_notes?: string
+          p_status: Database["public"]["Enums"]["contract_status"]
         }
         Returns: undefined
       }
@@ -5055,6 +5237,16 @@ export type Database = {
         | "degraded"
         | "partial_outage"
         | "major_outage"
+      contract_status:
+        | "draft"
+        | "sent"
+        | "pending_signature"
+        | "signed"
+        | "active"
+        | "expired"
+        | "terminated"
+        | "superseded"
+      contract_type: "msa" | "sow" | "order_form" | "dpa" | "nda" | "other"
       disaster_severity: "minor" | "major" | "critical"
       incident_severity: "minor" | "major" | "critical"
       incident_status:
@@ -5228,6 +5420,17 @@ export const Constants = {
         "partial_outage",
         "major_outage",
       ],
+      contract_status: [
+        "draft",
+        "sent",
+        "pending_signature",
+        "signed",
+        "active",
+        "expired",
+        "terminated",
+        "superseded",
+      ],
+      contract_type: ["msa", "sow", "order_form", "dpa", "nda", "other"],
       disaster_severity: ["minor", "major", "critical"],
       incident_severity: ["minor", "major", "critical"],
       incident_status: [

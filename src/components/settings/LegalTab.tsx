@@ -1,0 +1,559 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { useEntitlements } from "@/hooks/use-entitlements";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { 
+  FileText, 
+  Plus, 
+  Upload, 
+  Calendar, 
+  CheckCircle2, 
+  AlertTriangle,
+  Clock,
+  Shield,
+  Lock,
+  Download,
+  Pencil
+} from "lucide-react";
+import { format, differenceInDays } from "date-fns";
+import { Database } from "@/integrations/supabase/types";
+
+type ContractType = Database["public"]["Enums"]["contract_type"];
+type ContractStatus = Database["public"]["Enums"]["contract_status"];
+
+interface Contract {
+  id: string;
+  contract_type: ContractType;
+  title: string;
+  description: string | null;
+  status: ContractStatus;
+  version: string | null;
+  effective_date: string | null;
+  expiration_date: string | null;
+  auto_renews: boolean;
+  renewal_term_days: number | null;
+  signed_at: string | null;
+  signed_by: string | null;
+  signer_email: string | null;
+  file_path: string | null;
+  created_at: string;
+  days_until_expiration: number | null;
+}
+
+const contractTypeLabels: Record<ContractType, string> = {
+  msa: "Master Service Agreement",
+  sow: "Statement of Work",
+  order_form: "Order Form",
+  dpa: "Data Processing Agreement",
+  nda: "Non-Disclosure Agreement",
+  other: "Other"
+};
+
+const statusConfig: Record<ContractStatus, { label: string; color: string; icon: typeof CheckCircle2 }> = {
+  draft: { label: "Draft", color: "bg-gray-100 text-gray-800", icon: FileText },
+  sent: { label: "Sent", color: "bg-blue-100 text-blue-800", icon: Clock },
+  pending_signature: { label: "Pending Signature", color: "bg-yellow-100 text-yellow-800", icon: Clock },
+  signed: { label: "Signed", color: "bg-green-100 text-green-800", icon: CheckCircle2 },
+  active: { label: "Active", color: "bg-green-100 text-green-800", icon: CheckCircle2 },
+  expired: { label: "Expired", color: "bg-red-100 text-red-800", icon: AlertTriangle },
+  terminated: { label: "Terminated", color: "bg-red-100 text-red-800", icon: AlertTriangle },
+  superseded: { label: "Superseded", color: "bg-gray-100 text-gray-800", icon: FileText }
+};
+
+export function LegalTab() {
+  const { organization } = useOrganization();
+  const { entitlements } = useEntitlements();
+  const queryClient = useQueryClient();
+  
+  const [newContractOpen, setNewContractOpen] = useState(false);
+  const [signContractOpen, setSignContractOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  
+  // Form state
+  const [contractType, setContractType] = useState<ContractType>("msa");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [version, setVersion] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState("");
+  const [expirationDate, setExpirationDate] = useState("");
+  const [autoRenews, setAutoRenews] = useState(false);
+  const [renewalTermDays, setRenewalTermDays] = useState("");
+  
+  // Sign form state
+  const [signedBy, setSignedBy] = useState("");
+  const [signerEmail, setSignerEmail] = useState("");
+  const [signerTitle, setSignerTitle] = useState("");
+
+  const isEnterprise = entitlements?.subscription_tier === 'enterprise';
+
+  // Fetch contracts
+  const { data: contracts, isLoading } = useQuery({
+    queryKey: ['organization-contracts', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+      const { data, error } = await supabase.rpc('get_organization_contracts', {
+        p_organization_id: organization.id
+      });
+      if (error) throw error;
+      return (data as unknown as Contract[]) || [];
+    },
+    enabled: !!organization?.id && isEnterprise
+  });
+
+  // Create contract mutation
+  const createContractMutation = useMutation({
+    mutationFn: async () => {
+      if (!organization?.id) throw new Error("No organization");
+      const { data, error } = await supabase.rpc('create_contract', {
+        p_organization_id: organization.id,
+        p_contract_type: contractType,
+        p_title: title,
+        p_description: description || null,
+        p_version: version || null,
+        p_effective_date: effectiveDate || null,
+        p_expiration_date: expirationDate || null,
+        p_auto_renews: autoRenews,
+        p_renewal_term_days: renewalTermDays ? parseInt(renewalTermDays) : null
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-contracts'] });
+      toast.success("Contract created");
+      setNewContractOpen(false);
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create contract");
+    }
+  });
+
+  // Sign contract mutation
+  const signContractMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedContract) throw new Error("No contract selected");
+      const { error } = await supabase.rpc('sign_contract', {
+        p_contract_id: selectedContract.id,
+        p_signed_by: signedBy,
+        p_signer_email: signerEmail || null,
+        p_signer_title: signerTitle || null
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-contracts'] });
+      toast.success("Contract marked as signed");
+      setSignContractOpen(false);
+      setSelectedContract(null);
+      setSignedBy("");
+      setSignerEmail("");
+      setSignerTitle("");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to sign contract");
+    }
+  });
+
+  const resetForm = () => {
+    setContractType("msa");
+    setTitle("");
+    setDescription("");
+    setVersion("");
+    setEffectiveDate("");
+    setExpirationDate("");
+    setAutoRenews(false);
+    setRenewalTermDays("");
+  };
+
+  // Check for DPA
+  const hasDpa = contracts?.some(c => 
+    c.contract_type === 'dpa' && 
+    ['signed', 'active'].includes(c.status)
+  );
+
+  // Get active and expiring contracts
+  const activeContracts = contracts?.filter(c => ['signed', 'active'].includes(c.status)) || [];
+  const expiringContracts = activeContracts.filter(c => 
+    c.days_until_expiration !== null && c.days_until_expiration <= 90
+  );
+
+  if (!isEnterprise) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+              <Lock className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Enterprise Feature</h3>
+              <p className="text-muted-foreground mt-1">
+                Contract management and DPAs are available on Enterprise plans
+              </p>
+            </div>
+            <Button>Upgrade to Enterprise</Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* DPA Status Banner */}
+      {!hasDpa && (
+        <Alert>
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            No Data Processing Agreement on file. Enterprise features may require a signed DPA.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Expiring Contracts Warning */}
+      {expiringContracts.length > 0 && (
+        <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+          <AlertTriangle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800 dark:text-orange-200">
+            {expiringContracts.length} contract(s) expiring within 90 days
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Legal Agreements</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage contracts, DPAs, and legal documents
+          </p>
+        </div>
+        <Dialog open={newContractOpen} onOpenChange={setNewContractOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Agreement
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add Legal Agreement</DialogTitle>
+              <DialogDescription>
+                Create a new contract or agreement record
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Agreement Type</Label>
+                  <Select value={contractType} onValueChange={(v) => setContractType(v as ContractType)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="msa">Master Service Agreement</SelectItem>
+                      <SelectItem value="dpa">Data Processing Agreement</SelectItem>
+                      <SelectItem value="sow">Statement of Work</SelectItem>
+                      <SelectItem value="order_form">Order Form</SelectItem>
+                      <SelectItem value="nda">Non-Disclosure Agreement</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Version</Label>
+                  <Input
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                    placeholder="e.g., v1.0"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Title</Label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Agreement title"
+                />
+              </div>
+              <div>
+                <Label>Description (optional)</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief description..."
+                  rows={2}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Effective Date</Label>
+                  <Input
+                    type="date"
+                    value={effectiveDate}
+                    onChange={(e) => setEffectiveDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Expiration Date</Label>
+                  <Input
+                    type="date"
+                    value={expirationDate}
+                    onChange={(e) => setExpirationDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="autoRenews"
+                    checked={autoRenews}
+                    onChange={(e) => setAutoRenews(e.target.checked)}
+                    className="rounded"
+                  />
+                  <Label htmlFor="autoRenews" className="text-sm">Auto-renews</Label>
+                </div>
+                {autoRenews && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">for</Label>
+                    <Input
+                      type="number"
+                      value={renewalTermDays}
+                      onChange={(e) => setRenewalTermDays(e.target.value)}
+                      placeholder="365"
+                      className="w-20"
+                    />
+                    <Label className="text-sm">days</Label>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNewContractOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={() => createContractMutation.mutate()}
+                disabled={!title || createContractMutation.isPending}
+              >
+                {createContractMutation.isPending ? "Creating..." : "Create Agreement"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Contracts by Type */}
+      <Tabs defaultValue="all">
+        <TabsList>
+          <TabsTrigger value="all">All ({contracts?.length || 0})</TabsTrigger>
+          <TabsTrigger value="active">Active ({activeContracts.length})</TabsTrigger>
+          <TabsTrigger value="dpa">DPAs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-4">
+          <ContractsList 
+            contracts={contracts || []} 
+            isLoading={isLoading}
+            onSign={(contract) => {
+              setSelectedContract(contract);
+              setSignContractOpen(true);
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="active" className="mt-4">
+          <ContractsList 
+            contracts={activeContracts} 
+            isLoading={isLoading}
+            onSign={(contract) => {
+              setSelectedContract(contract);
+              setSignContractOpen(true);
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="dpa" className="mt-4">
+          <ContractsList 
+            contracts={contracts?.filter(c => c.contract_type === 'dpa') || []} 
+            isLoading={isLoading}
+            onSign={(contract) => {
+              setSelectedContract(contract);
+              setSignContractOpen(true);
+            }}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Sign Contract Dialog */}
+      <Dialog open={signContractOpen} onOpenChange={setSignContractOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark as Signed</DialogTitle>
+            <DialogDescription>
+              Record signature details for: {selectedContract?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Signed By (Name) *</Label>
+              <Input
+                value={signedBy}
+                onChange={(e) => setSignedBy(e.target.value)}
+                placeholder="Full name of signer"
+              />
+            </div>
+            <div>
+              <Label>Signer Email</Label>
+              <Input
+                type="email"
+                value={signerEmail}
+                onChange={(e) => setSignerEmail(e.target.value)}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div>
+              <Label>Signer Title</Label>
+              <Input
+                value={signerTitle}
+                onChange={(e) => setSignerTitle(e.target.value)}
+                placeholder="e.g., CEO, General Counsel"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSignContractOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => signContractMutation.mutate()}
+              disabled={!signedBy || signContractMutation.isPending}
+            >
+              {signContractMutation.isPending ? "Saving..." : "Confirm Signature"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ContractsList({ 
+  contracts, 
+  isLoading,
+  onSign 
+}: { 
+  contracts: Contract[]; 
+  isLoading: boolean;
+  onSign: (contract: Contract) => void;
+}) {
+  if (isLoading) {
+    return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
+  }
+
+  if (contracts.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center">
+            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No agreements found</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {contracts.map((contract) => {
+        const config = statusConfig[contract.status];
+        const StatusIcon = config.icon;
+        const isExpiringSoon = contract.days_until_expiration !== null && 
+          contract.days_until_expiration <= 30 && 
+          contract.days_until_expiration > 0;
+
+        return (
+          <Card key={contract.id}>
+            <CardContent className="py-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium">{contract.title}</h3>
+                    <Badge variant="outline" className="text-xs">
+                      {contractTypeLabels[contract.contract_type]}
+                    </Badge>
+                    <Badge className={config.color}>
+                      <StatusIcon className="h-3 w-3 mr-1" />
+                      {config.label}
+                    </Badge>
+                  </div>
+                  {contract.description && (
+                    <p className="text-sm text-muted-foreground">{contract.description}</p>
+                  )}
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                    {contract.version && (
+                      <span>Version: {contract.version}</span>
+                    )}
+                    {contract.effective_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Effective: {format(new Date(contract.effective_date), "PP")}
+                      </span>
+                    )}
+                    {contract.expiration_date && (
+                      <span className={`flex items-center gap-1 ${isExpiringSoon ? 'text-orange-600 font-medium' : ''}`}>
+                        <Clock className="h-3 w-3" />
+                        Expires: {format(new Date(contract.expiration_date), "PP")}
+                        {contract.days_until_expiration !== null && contract.days_until_expiration > 0 && (
+                          <span className="ml-1">({contract.days_until_expiration} days)</span>
+                        )}
+                      </span>
+                    )}
+                    {contract.auto_renews && (
+                      <Badge variant="secondary" className="text-xs">Auto-renews</Badge>
+                    )}
+                  </div>
+                  {contract.signed_by && (
+                    <p className="text-xs text-muted-foreground">
+                      Signed by {contract.signed_by}
+                      {contract.signed_at && ` on ${format(new Date(contract.signed_at), "PP")}`}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {contract.file_path && (
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {['draft', 'sent', 'pending_signature'].includes(contract.status) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => onSign(contract)}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Mark Signed
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}

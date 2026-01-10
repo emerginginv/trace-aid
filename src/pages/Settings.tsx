@@ -25,6 +25,7 @@ import { BillingTab } from "@/components/settings/BillingTab";
 import { HelpCenterAdmin } from "@/components/help-center";
 import { DataComplianceTab } from "@/components/settings/DataComplianceTab";
 import { AuthenticationTab } from "@/components/settings/AuthenticationTab";
+import { LegalTab } from "@/components/settings/LegalTab";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -658,6 +659,13 @@ const Settings = () => {
                   organization={organization}
                   subscriptionStatus={subscriptionStatus}
                 />
+              </TabsContent>
+            )}
+
+            {/* Legal Tab - Admin Only */}
+            {currentUserRole === 'admin' && (
+              <TabsContent value="legal" className="space-y-6">
+                <LegalTab />
               </TabsContent>
             )}
 
