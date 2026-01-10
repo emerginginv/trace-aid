@@ -2165,6 +2165,7 @@ export type Database = {
           created_at: string
           current_users_count: number | null
           id: string
+          is_active: boolean | null
           logo_url: string | null
           max_users: number | null
           name: string
@@ -2172,6 +2173,7 @@ export type Database = {
           storage_used_gb: number | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          subdomain: string | null
           subscription_product_id: string | null
           subscription_status: string | null
           subscription_tier: string | null
@@ -2183,6 +2185,7 @@ export type Database = {
           created_at?: string
           current_users_count?: number | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           max_users?: number | null
           name: string
@@ -2190,6 +2193,7 @@ export type Database = {
           storage_used_gb?: number | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          subdomain?: string | null
           subscription_product_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
@@ -2201,6 +2205,7 @@ export type Database = {
           created_at?: string
           current_users_count?: number | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           max_users?: number | null
           name?: string
@@ -2208,6 +2213,7 @@ export type Database = {
           storage_used_gb?: number | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          subdomain?: string | null
           subscription_product_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
