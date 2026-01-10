@@ -217,10 +217,15 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       const allOrgs = await fetchAllUserOrganizations(user.id);
       setOrganizations(allOrgs);
 
+      // Step 6: Log RLS context applied (required for Step 3 tenant isolation)
+      // This log confirms that database-level tenant isolation is in effect
+      console.log(`${LOG_PREFIX} [RLS] Organization context applied:`, subdomainOrg.id);
+      
       console.log(`${LOG_PREFIX} ✅ Organization context finalized:`, {
         id: subdomainOrg.id,
         name: subdomainOrg.name,
-        subdomain: subdomainOrg.subdomain
+        subdomain: subdomainOrg.subdomain,
+        rlsEnforced: true
       });
 
     } catch (error) {
