@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -888,14 +888,7 @@ const AllExpenses = () => {
                     />
                   )}
                   {isVisible("actions") && (
-                    <SortableTableHead
-                      column=""
-                      label="Actions"
-                      sortColumn=""
-                      sortDirection="asc"
-                      onSort={() => {}}
-                      className="text-right"
-                    />
+                    <TableHead className="text-right">Actions</TableHead>
                   )}
                 </TableRow>
               </TableHeader>

@@ -13,7 +13,7 @@ import { ContactForm } from "@/components/ContactForm";
 import { EmailComposer } from "@/components/EmailComposer";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -438,14 +438,7 @@ const Contacts = () => {
                   />
                 )}
                 {isVisible("actions") && (
-                  <SortableTableHead
-                    column=""
-                    label="Actions"
-                    sortColumn=""
-                    sortDirection="asc"
-                    onSort={() => {}}
-                    className="w-[120px]"
-                  />
+                  <TableHead className="w-[120px]">Actions</TableHead>
                 )}
               </TableRow>
             </TableHeader>
