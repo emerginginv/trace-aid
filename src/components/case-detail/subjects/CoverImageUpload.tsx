@@ -115,7 +115,7 @@ export const CoverImageUpload = ({
   const hasCover = signedCoverUrl || currentCoverUrl;
 
   return (
-    <>
+    <div className="relative h-full w-full group">
       <input
         ref={fileInputRef}
         type="file"
@@ -145,16 +145,16 @@ export const CoverImageUpload = ({
         </>
       )}
       
-      {/* Hover overlay for editing */}
+      {/* Hover overlay for editing - uses group-hover for reliable visibility */}
       {!readOnly && (
-        <div className="absolute inset-0 opacity-0 hover:opacity-100 pointer-events-none hover:pointer-events-auto transition-opacity bg-black/40 flex items-center justify-center gap-2">
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity bg-black/40 flex items-center justify-center gap-2">
           {uploading ? (
-            <Button variant="secondary" disabled>
+            <Button variant="secondary" disabled className="pointer-events-auto">
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Uploading...
             </Button>
           ) : (
-            <>
+            <div className="pointer-events-auto flex items-center gap-2">
               <Button 
                 variant="secondary" 
                 onClick={() => fileInputRef.current?.click()}
@@ -171,10 +171,10 @@ export const CoverImageUpload = ({
                   <X className="w-4 h-4" />
                 </Button>
               )}
-            </>
+            </div>
           )}
         </div>
       )}
-    </>
+    </div>
   );
 };
