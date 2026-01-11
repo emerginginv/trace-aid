@@ -30,6 +30,7 @@ import { InlineEditCell } from "@/components/ui/inline-edit-cell";
 import { CaseCardManagerDisplay } from "@/components/cases/CaseCardManagerDisplay";
 import { CaseCardFinancialWidget } from "@/components/cases/CaseCardFinancialWidget";
 import { CaseCardFinancialSummary } from "@/components/cases/CaseCardFinancialSummary";
+import { getStatusStyleFromPicklist, isClosedStatus } from "@/lib/statusUtils";
 
 interface CaseManager {
   id: string;
@@ -249,22 +250,9 @@ const Cases = () => {
     }
   };
 
-  const getStatusStyle = (status: string) => {
-    const statusItem = statusPicklists.find(s => s.value === status);
-    if (statusItem?.color) {
-      return {
-        backgroundColor: `${statusItem.color}20`,
-        color: statusItem.color,
-        borderColor: `${statusItem.color}40`
-      };
-    }
-    return {};
-  };
+  const getStatusStyle = (status: string) => getStatusStyleFromPicklist(status, statusPicklists);
 
-  const isClosedCase = (status: string) => {
-    const statusItem = statusPicklists.find(s => s.value === status);
-    return statusItem?.status_type === 'closed';
-  };
+  const isClosedCase = (status: string) => isClosedStatus(status, statusPicklists);
 
   // Inline status update handler with optimistic UI
   const handleInlineStatusChange = useCallback(async (caseId: string, newStatus: string): Promise<boolean> => {

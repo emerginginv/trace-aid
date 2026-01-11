@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Briefcase, Search, ExternalLink, ArrowUpDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { getStatusStyleFromPicklist } from "@/lib/statusUtils";
+import { useCaseStatusPicklists } from "@/hooks/use-case-status-picklists";
 
 interface RelatedCasesWidgetProps {
   entityType: "account" | "contact";
@@ -41,12 +43,7 @@ interface CaseItem {
   case_manager_id: string | null;
 }
 
-interface CaseStatus {
-  id: string;
-  value: string;
-  color: string | null;
-  status_type: string | null;
-}
+// CaseStatus type is now provided by the useCaseStatusPicklists hook
 
 interface Profile {
   id: string;
@@ -61,11 +58,11 @@ const LOAD_MORE_LIMIT = 25;
 
 export function RelatedCasesWidget({ entityType, entityId }: RelatedCasesWidgetProps) {
   const { organization } = useOrganization();
+  const { caseStatuses } = useCaseStatusPicklists();
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [caseStatuses, setCaseStatuses] = useState<CaseStatus[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [sortColumn, setSortColumn] = useState<SortColumn>("updated_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -74,7 +71,6 @@ export function RelatedCasesWidget({ entityType, entityId }: RelatedCasesWidgetP
   useEffect(() => {
     if (organization?.id && entityId) {
       fetchCases();
-      fetchCaseStatuses();
     }
   }, [organization?.id, entityId, entityType]);
 
@@ -132,36 +128,9 @@ export function RelatedCasesWidget({ entityType, entityId }: RelatedCasesWidgetP
     }
   };
 
-  const fetchCaseStatuses = async () => {
-    if (!organization?.id) return;
+  // Case statuses are now provided by the useCaseStatusPicklists hook
 
-    try {
-      const { data, error } = await supabase
-        .from("picklists")
-        .select("id, value, color, status_type")
-        .eq("organization_id", organization.id)
-        .eq("type", "case_status")
-        .eq("is_active", true)
-        .order("display_order");
-
-      if (error) throw error;
-      setCaseStatuses(data || []);
-    } catch (error) {
-      console.error("Error fetching case statuses:", error);
-    }
-  };
-
-  const getStatusStyle = (status: string) => {
-    const statusItem = caseStatuses.find((s) => s.value === status);
-    if (statusItem?.color) {
-      return {
-        backgroundColor: `${statusItem.color}20`,
-        color: statusItem.color,
-        borderColor: `${statusItem.color}40`,
-      };
-    }
-    return {};
-  };
+  const getStatusStyle = (status: string) => getStatusStyleFromPicklist(status, caseStatuses);
 
   const getStatusLabel = (status: string) => {
     const statusItem = caseStatuses.find((s) => s.value === status);

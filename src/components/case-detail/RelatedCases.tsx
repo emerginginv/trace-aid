@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Loader2, FolderOpen } from "lucide-react";
 import { format } from "date-fns";
+import { getStatusStyleFromPicklist } from "@/lib/statusUtils";
+import { useCaseStatusPicklists } from "@/hooks/use-case-status-picklists";
 
 interface RelatedCase {
   id: string;
@@ -26,33 +28,11 @@ export function RelatedCases({ caseId, currentInstanceNumber }: RelatedCasesProp
   const { organization } = useOrganization();
   const [relatedCases, setRelatedCases] = useState<RelatedCase[]>([]);
   const [loading, setLoading] = useState(true);
-  const [caseStatuses, setCaseStatuses] = useState<Array<{
-    value: string;
-    color: string;
-    status_type?: string;
-  }>>([]);
+  const { caseStatuses } = useCaseStatusPicklists();
 
   useEffect(() => {
     fetchRelatedCases();
-    fetchCaseStatuses();
   }, [caseId, organization?.id]);
-
-  const fetchCaseStatuses = async () => {
-    try {
-      const { data } = await supabase
-        .from("picklists")
-        .select("value, color, status_type")
-        .eq("type", "case_status")
-        .eq("is_active", true)
-        .or(organization?.id ? `organization_id.eq.${organization.id},organization_id.is.null` : 'organization_id.is.null');
-
-      if (data) {
-        setCaseStatuses(data);
-      }
-    } catch (error) {
-      console.error("Error fetching case statuses:", error);
-    }
-  };
 
   const fetchRelatedCases = async () => {
     try {
@@ -70,17 +50,7 @@ export function RelatedCases({ caseId, currentInstanceNumber }: RelatedCasesProp
     }
   };
 
-  const getStatusStyle = (status: string) => {
-    const statusItem = caseStatuses.find((s) => s.value === status);
-    if (statusItem?.color) {
-      return {
-        backgroundColor: `${statusItem.color}20`,
-        color: statusItem.color,
-        borderColor: `${statusItem.color}40`,
-      };
-    }
-    return {};
-  };
+  const getStatusStyle = (status: string) => getStatusStyleFromPicklist(status, caseStatuses);
 
   // Only show if there are multiple instances
   if (relatedCases.length <= 1) {
