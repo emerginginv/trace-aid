@@ -1,10 +1,16 @@
-import { useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import { AnalyticsReportViewer } from "@/components/analytics/reports/AnalyticsReportViewer";
 import { getReport } from "@/lib/analytics/reports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import ProfitTrendsReport from "./ProfitTrendsReport";
+
+// Custom reports that have their own components (not using AnalyticsReportViewer)
+const CUSTOM_REPORTS: Record<string, React.ComponentType> = {
+  "profit-trends": ProfitTrendsReport,
+};
 
 export default function ReportViewer() {
   const { reportId } = useParams<{ reportId: string }>();
@@ -26,6 +32,12 @@ export default function ReportViewer() {
         </CardContent>
       </Card>
     );
+  }
+  
+  // Check for custom reports first
+  const CustomReportComponent = CUSTOM_REPORTS[reportId];
+  if (CustomReportComponent) {
+    return <CustomReportComponent />;
   }
   
   const report = getReport(reportId);

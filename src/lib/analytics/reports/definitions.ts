@@ -484,9 +484,9 @@ export const reportCategories: ReportCategoryInfo[] = [
   {
     id: "finances",
     name: "Financial Reports",
-    description: "Time entries, expenses, and invoice tracking",
+    description: "Time entries, expenses, invoices, and profit trends",
     icon: "DollarSign",
-    reports: ["time-entries", "expense-entries", "invoices"],
+    reports: ["time-entries", "expense-entries", "invoices", "profit-trends"],
   },
   {
     id: "activities",
