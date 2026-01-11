@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -26,7 +26,11 @@ import {
   Shield,
   Lock,
   Download,
-  Pencil
+  Pencil,
+  Building2,
+  User,
+  Eye,
+  X
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Database } from "@/integrations/supabase/types";
@@ -51,6 +55,22 @@ interface Contract {
   file_path: string | null;
   created_at: string;
   days_until_expiration: number | null;
+  account_id: string | null;
+  account_name: string | null;
+  contact_id: string | null;
+  contact_name: string | null;
+}
+
+interface Account {
+  id: string;
+  name: string;
+}
+
+interface Contact {
+  id: string;
+  first_name: string;
+  last_name: string;
+  account_id: string | null;
 }
 
 const contractTypeLabels: Record<ContractType, string> = {
@@ -77,9 +97,11 @@ export function LegalTab() {
   const { organization } = useOrganization();
   const { entitlements } = useEntitlements();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [newContractOpen, setNewContractOpen] = useState(false);
   const [signContractOpen, setSignContractOpen] = useState(false);
+  const [viewContractOpen, setViewContractOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   
   // Form state
@@ -91,6 +113,10 @@ export function LegalTab() {
   const [expirationDate, setExpirationDate] = useState("");
   const [autoRenews, setAutoRenews] = useState(false);
   const [renewalTermDays, setRenewalTermDays] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [selectedContactId, setSelectedContactId] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Sign form state
   const [signedBy, setSignedBy] = useState("");
@@ -117,32 +143,127 @@ export function LegalTab() {
     enabled: !!organization?.id && isEnterprise
   });
 
+  // Fetch accounts for dropdown
+  const { data: accounts } = useQuery({
+    queryKey: ['organization-accounts', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('id, name')
+        .eq('organization_id', organization.id)
+        .order('name');
+      if (error) throw error;
+      return (data as Account[]) || [];
+    },
+    enabled: !!organization?.id && isEnterprise
+  });
+
+  // Fetch contacts for dropdown (filtered by account if selected)
+  const { data: allContacts } = useQuery({
+    queryKey: ['organization-contacts', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name, account_id')
+        .eq('organization_id', organization.id)
+        .order('last_name');
+      if (error) throw error;
+      return (data as Contact[]) || [];
+    },
+    enabled: !!organization?.id && isEnterprise
+  });
+
+  // Filter contacts by selected account
+  const filteredContacts = selectedAccountId 
+    ? allContacts?.filter(c => c.account_id === selectedAccountId) 
+    : allContacts;
+
+  // Upload file to storage
+  const uploadFile = async (file: File): Promise<string | null> => {
+    if (!organization?.id) return null;
+    
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${organization.id}/${crypto.randomUUID()}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('contracts')
+      .upload(fileName, file);
+    
+    if (error) {
+      console.error('Upload error:', error);
+      throw new Error('Failed to upload file');
+    }
+    
+    return fileName;
+  };
+
+  // Download file from storage
+  const downloadFile = async (filePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('contracts')
+        .createSignedUrl(filePath, 60);
+      
+      if (error) throw error;
+      
+      // Open in new tab or download
+      const link = document.createElement('a');
+      link.href = data.signedUrl;
+      link.download = fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download file');
+    }
+  };
+
   // Create contract mutation
   const createContractMutation = useMutation({
     mutationFn: async () => {
       if (!organization?.id) throw new Error("No organization");
-      const { data, error } = await supabase.rpc('create_contract', {
-        p_organization_id: organization.id,
-        p_contract_type: contractType,
-        p_title: title,
-        p_description: description || null,
-        p_version: version || null,
-        p_effective_date: effectiveDate || null,
-        p_expiration_date: expirationDate || null,
-        p_auto_renews: autoRenews,
-        p_renewal_term_days: renewalTermDays ? parseInt(renewalTermDays) : null
-      });
-      if (error) throw error;
-      return data;
+      
+      setIsUploading(true);
+      let filePath: string | null = null;
+      
+      try {
+        // Upload file if selected
+        if (selectedFile) {
+          filePath = await uploadFile(selectedFile);
+        }
+        
+        const { data, error } = await supabase.rpc('create_contract', {
+          p_organization_id: organization.id,
+          p_contract_type: contractType,
+          p_title: title,
+          p_description: description || null,
+          p_version: version || null,
+          p_effective_date: effectiveDate || null,
+          p_expiration_date: expirationDate || null,
+          p_auto_renews: autoRenews,
+          p_renewal_term_days: renewalTermDays ? parseInt(renewalTermDays) : null,
+          p_file_path: filePath,
+          p_account_id: selectedAccountId || null,
+          p_contact_id: selectedContactId || null
+        });
+        if (error) throw error;
+        return data;
+      } finally {
+        setIsUploading(false);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization-contracts'] });
-      toast.success("Contract created");
+      toast.success("Agreement created successfully");
       setNewContractOpen(false);
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to create contract");
+      toast.error(error.message || "Failed to create agreement");
     }
   });
 
@@ -160,7 +281,7 @@ export function LegalTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization-contracts'] });
-      toast.success("Contract marked as signed");
+      toast.success("Agreement marked as signed");
       setSignContractOpen(false);
       setSelectedContract(null);
       setSignedBy("");
@@ -168,7 +289,7 @@ export function LegalTab() {
       setSignerTitle("");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to sign contract");
+      toast.error(error.message || "Failed to sign agreement");
     }
   });
 
@@ -181,6 +302,24 @@ export function LegalTab() {
     setExpirationDate("");
     setAutoRenews(false);
     setRenewalTermDays("");
+    setSelectedAccountId("");
+    setSelectedContactId("");
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size must be less than 10MB");
+        return;
+      }
+      setSelectedFile(file);
+    }
   };
 
   // Check for DPA
@@ -233,7 +372,7 @@ export function LegalTab() {
         <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
           <AlertTriangle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800 dark:text-orange-200">
-            {expiringContracts.length} contract(s) expiring within 90 days
+            {expiringContracts.length} agreement(s) expiring within 90 days
           </AlertDescription>
         </Alert>
       )}
@@ -243,7 +382,7 @@ export function LegalTab() {
         <div>
           <h2 className="text-lg font-semibold">Legal Agreements</h2>
           <p className="text-sm text-muted-foreground">
-            Manage contracts, DPAs, and legal documents
+            Manage contracts, DPAs, and legal documents with vendors
           </p>
         </div>
         <Dialog open={newContractOpen} onOpenChange={setNewContractOpen}>
@@ -253,14 +392,53 @@ export function LegalTab() {
               Add Agreement
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add Legal Agreement</DialogTitle>
               <DialogDescription>
-                Create a new contract or agreement record
+                Create a new contract or agreement record and attach documents
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              {/* Vendor Selection */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Vendor Account</Label>
+                  <Select value={selectedAccountId} onValueChange={(v) => {
+                    setSelectedAccountId(v);
+                    setSelectedContactId(""); // Reset contact when account changes
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {accounts?.map(account => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Vendor Contact</Label>
+                  <Select value={selectedContactId} onValueChange={setSelectedContactId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select contact..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {filteredContacts?.map(contact => (
+                        <SelectItem key={contact.id} value={contact.id}>
+                          {contact.first_name} {contact.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Agreement Type</Label>
@@ -304,6 +482,54 @@ export function LegalTab() {
                   rows={2}
                 />
               </div>
+
+              {/* File Upload */}
+              <div>
+                <Label>Upload Document</Label>
+                <div className="mt-1">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="contract-file"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {selectedFile ? "Change File" : "Select File"}
+                    </Button>
+                    {selectedFile && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedFile(null);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {selectedFile && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Accepts PDF, Word documents. Max 10MB.
+                  </p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Effective Date</Label>
@@ -352,9 +578,9 @@ export function LegalTab() {
               <Button variant="outline" onClick={() => setNewContractOpen(false)}>Cancel</Button>
               <Button 
                 onClick={() => createContractMutation.mutate()}
-                disabled={!title || createContractMutation.isPending}
+                disabled={!title || createContractMutation.isPending || isUploading}
               >
-                {createContractMutation.isPending ? "Creating..." : "Create Agreement"}
+                {isUploading ? "Uploading..." : createContractMutation.isPending ? "Creating..." : "Create Agreement"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -377,6 +603,15 @@ export function LegalTab() {
               setSelectedContract(contract);
               setSignContractOpen(true);
             }}
+            onView={(contract) => {
+              setSelectedContract(contract);
+              setViewContractOpen(true);
+            }}
+            onDownload={(contract) => {
+              if (contract.file_path) {
+                downloadFile(contract.file_path, `${contract.title}.pdf`);
+              }
+            }}
           />
         </TabsContent>
 
@@ -388,6 +623,15 @@ export function LegalTab() {
               setSelectedContract(contract);
               setSignContractOpen(true);
             }}
+            onView={(contract) => {
+              setSelectedContract(contract);
+              setViewContractOpen(true);
+            }}
+            onDownload={(contract) => {
+              if (contract.file_path) {
+                downloadFile(contract.file_path, `${contract.title}.pdf`);
+              }
+            }}
           />
         </TabsContent>
 
@@ -398,6 +642,15 @@ export function LegalTab() {
             onSign={(contract) => {
               setSelectedContract(contract);
               setSignContractOpen(true);
+            }}
+            onView={(contract) => {
+              setSelectedContract(contract);
+              setViewContractOpen(true);
+            }}
+            onDownload={(contract) => {
+              if (contract.file_path) {
+                downloadFile(contract.file_path, `${contract.title}.pdf`);
+              }
             }}
           />
         </TabsContent>
@@ -450,6 +703,121 @@ export function LegalTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* View Contract Dialog */}
+      <Dialog open={viewContractOpen} onOpenChange={setViewContractOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedContract?.title}</DialogTitle>
+            <DialogDescription>
+              Agreement details and metadata
+            </DialogDescription>
+          </DialogHeader>
+          {selectedContract && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Type</Label>
+                  <p className="font-medium">{contractTypeLabels[selectedContract.contract_type]}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Status</Label>
+                  <Badge className={statusConfig[selectedContract.status].color}>
+                    {statusConfig[selectedContract.status].label}
+                  </Badge>
+                </div>
+              </div>
+
+              {(selectedContract.account_name || selectedContract.contact_name) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedContract.account_name && (
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Vendor Account</Label>
+                      <p className="font-medium flex items-center gap-1">
+                        <Building2 className="h-4 w-4" />
+                        {selectedContract.account_name}
+                      </p>
+                    </div>
+                  )}
+                  {selectedContract.contact_name && (
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Vendor Contact</Label>
+                      <p className="font-medium flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        {selectedContract.contact_name}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedContract.description && (
+                <div>
+                  <Label className="text-muted-foreground text-xs">Description</Label>
+                  <p>{selectedContract.description}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-4">
+                {selectedContract.version && (
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Version</Label>
+                    <p>{selectedContract.version}</p>
+                  </div>
+                )}
+                {selectedContract.effective_date && (
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Effective Date</Label>
+                    <p>{format(new Date(selectedContract.effective_date), "PP")}</p>
+                  </div>
+                )}
+                {selectedContract.expiration_date && (
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Expiration Date</Label>
+                    <p>{format(new Date(selectedContract.expiration_date), "PP")}</p>
+                  </div>
+                )}
+              </div>
+
+              {selectedContract.signed_by && (
+                <div className="border-t pt-4">
+                  <Label className="text-muted-foreground text-xs">Signature Information</Label>
+                  <p className="font-medium">{selectedContract.signed_by}</p>
+                  {selectedContract.signer_email && (
+                    <p className="text-sm text-muted-foreground">{selectedContract.signer_email}</p>
+                  )}
+                  {selectedContract.signed_at && (
+                    <p className="text-sm text-muted-foreground">
+                      Signed on {format(new Date(selectedContract.signed_at), "PPp")}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {selectedContract.file_path && (
+                <div className="border-t pt-4">
+                  <Label className="text-muted-foreground text-xs">Document</Label>
+                  <Button
+                    variant="outline"
+                    className="mt-1"
+                    onClick={() => {
+                      if (selectedContract.file_path) {
+                        downloadFile(selectedContract.file_path, `${selectedContract.title}.pdf`);
+                      }
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Agreement
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewContractOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -457,11 +825,15 @@ export function LegalTab() {
 function ContractsList({ 
   contracts, 
   isLoading,
-  onSign 
+  onSign,
+  onView,
+  onDownload
 }: { 
   contracts: Contract[]; 
   isLoading: boolean;
   onSign: (contract: Contract) => void;
+  onView: (contract: Contract) => void;
+  onDownload: (contract: Contract) => void;
 }) {
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
@@ -493,9 +865,14 @@ function ContractsList({
           <Card key={contract.id}>
             <CardContent className="py-4">
               <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium">{contract.title}</h3>
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 
+                      className="font-medium cursor-pointer hover:underline"
+                      onClick={() => onView(contract)}
+                    >
+                      {contract.title}
+                    </h3>
                     <Badge variant="outline" className="text-xs">
                       {contractTypeLabels[contract.contract_type]}
                     </Badge>
@@ -507,6 +884,25 @@ function ContractsList({
                   {contract.description && (
                     <p className="text-sm text-muted-foreground">{contract.description}</p>
                   )}
+                  
+                  {/* Vendor Info */}
+                  {(contract.account_name || contract.contact_name) && (
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      {contract.account_name && (
+                        <span className="flex items-center gap-1">
+                          <Building2 className="h-3 w-3" />
+                          {contract.account_name}
+                        </span>
+                      )}
+                      {contract.contact_name && (
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          {contract.contact_name}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
                     {contract.version && (
                       <span>Version: {contract.version}</span>
@@ -538,8 +934,11 @@ function ContractsList({
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => onView(contract)}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
                   {contract.file_path && (
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => onDownload(contract)}>
                       <Download className="h-4 w-4" />
                     </Button>
                   )}
