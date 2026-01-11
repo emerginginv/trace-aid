@@ -6061,16 +6061,14 @@ export type Database = {
         Args: { p_action: string; p_organization_id: string; p_payload?: Json }
         Returns: Json
       }
-      generate_audit_bundle:
-        | { Args: { p_org_id: string }; Returns: Json }
-        | {
-            Args: {
-              p_date_from?: string
-              p_date_to?: string
-              p_organization_id: string
-            }
-            Returns: Json
-          }
+      generate_audit_bundle: {
+        Args: {
+          p_date_from: string
+          p_date_to: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
       generate_next_case_number: {
         Args: { p_organization_id: string; p_parent_case_id?: string }
         Returns: Json
