@@ -87,9 +87,10 @@ export const SubjectCardView = ({
 }: SubjectCardViewProps) => {
   const subjectsForImages = subjects.map(s => ({ 
     id: s.id, 
-    profile_image_url: s.profile_image_url || null 
+    profile_image_url: s.profile_image_url || null,
+    cover_image_url: s.cover_image_url || null
   }));
-  const { signedUrls } = useSubjectProfileImages(subjectsForImages);
+  const { signedUrls, signedCoverUrls } = useSubjectProfileImages(subjectsForImages);
   const Icon = getCategoryIcon(category);
 
   // Fetch social links for person subjects
@@ -148,6 +149,7 @@ export const SubjectCardView = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {subjects.map((subject) => {
         const imageUrl = subject.profile_image_url ? signedUrls[subject.id] : null;
+        const coverUrl = subject.cover_image_url ? signedCoverUrls[subject.id] : null;
         const subtitle = getSubjectSubtitle(subject);
         const isArchived = subject.status === 'archived';
 
@@ -155,16 +157,29 @@ export const SubjectCardView = ({
           <Card
             key={subject.id}
             className={cn(
-              "relative pt-14 transition-shadow hover:shadow-md cursor-pointer group",
+              "relative overflow-hidden transition-shadow hover:shadow-md cursor-pointer group",
               isArchived && "opacity-70"
             )}
             onClick={() => onNavigate(subject)}
           >
+            {/* Cover Image Section */}
+            <div className="h-20 relative">
+              {coverUrl ? (
+                <img 
+                  src={coverUrl} 
+                  alt="" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-muted" />
+              )}
+            </div>
+
             {/* Status Badge */}
             {isArchived && (
               <Badge 
                 variant="secondary" 
-                className="absolute top-3 right-3 text-xs"
+                className="absolute top-2 right-2 text-xs z-10"
               >
                 Archived
               </Badge>
@@ -173,14 +188,14 @@ export const SubjectCardView = ({
             {/* Primary Badge */}
             {subject.is_primary && !isArchived && (
               <Badge 
-                className="absolute top-3 right-3 text-xs bg-primary/10 text-primary border-primary/20"
+                className="absolute top-2 right-2 text-xs bg-primary/10 text-primary border-primary/20 z-10"
               >
                 Primary
               </Badge>
             )}
 
-            {/* Overlapping Avatar/Icon */}
-            <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+            {/* Overlapping Avatar/Icon - positioned to overlap cover */}
+            <div className="absolute top-8 left-1/2 -translate-x-1/2 z-10">
               {imageUrl ? (
                 <Avatar 
                   className={cn(
@@ -249,7 +264,7 @@ export const SubjectCardView = ({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <CardContent className="pt-0 flex flex-col items-center text-center">
+            <CardContent className="pt-14 flex flex-col items-center text-center">
               {/* Name */}
               <h3 className="font-semibold text-foreground truncate w-full">
                 {subject.display_name || subject.name}
