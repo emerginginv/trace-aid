@@ -74,6 +74,8 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   const [caseStatuses, setCaseStatuses] = useState<Array<{ id: string; value: string }>>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [generatedCaseNumber, setGeneratedCaseNumber] = useState<string>("");
+  const [seriesNumber, setSeriesNumber] = useState<number | null>(null);
+  const [seriesInstance, setSeriesInstance] = useState<number | null>(null);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -160,6 +162,49 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
 
   const generateCaseNumber = async () => {
     try {
+      // Get the session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("No session available");
+        return;
+      }
+
+      // Call edge function to get atomic case number
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-case-number`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            organization_id: organizationId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        // Fallback to legacy method if edge function fails
+        console.warn("Edge function failed, using fallback method");
+        await generateCaseNumberFallback();
+        return;
+      }
+
+      const result = await response.json();
+      setGeneratedCaseNumber(result.case_number);
+      setSeriesNumber(result.series_number);
+      setSeriesInstance(result.series_instance);
+    } catch (error) {
+      console.error("Error generating case number:", error);
+      // Fallback to legacy method
+      await generateCaseNumberFallback();
+    }
+  };
+
+  // Fallback method for existing installations
+  const generateCaseNumberFallback = async () => {
+    try {
       const { data: existingCases } = await supabase
         .from("cases")
         .select("case_number, instance_number")
@@ -183,7 +228,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
       const caseNumber = `CASE-${String(nextNumber).padStart(5, "0")}`;
       setGeneratedCaseNumber(caseNumber);
     } catch (error) {
-      console.error("Error generating case number:", error);
+      console.error("Error in fallback case number generation:", error);
     }
   };
 
@@ -210,6 +255,9 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         is_draft: true,
         draft_created_by: currentUserId,
         reference_number: data.reference_number || null,
+        // New series tracking fields
+        series_number: seriesNumber || undefined,
+        series_instance: seriesInstance || 1,
       };
 
       // Set assignment based on selection
