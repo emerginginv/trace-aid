@@ -37,6 +37,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
+import { getStatusStyleFromPicklist, isClosedStatus } from "@/lib/statusUtils";
 
 interface Case {
   id: string;
@@ -266,22 +267,11 @@ const CaseDetail = () => {
     return "bg-muted";
   };
 
-  const getStatusStyle = (status: string) => {
-    const statusItem = caseStatuses.find(s => s.value === status);
-    if (statusItem?.color) {
-      return {
-        backgroundColor: `${statusItem.color}20`,
-        color: statusItem.color,
-        borderColor: `${statusItem.color}40`
-      };
-    }
-    return {};
-  };
+  const getStatusStyle = (status: string) => getStatusStyleFromPicklist(status, caseStatuses);
 
   const isClosedCase = () => {
     if (!caseData) return false;
-    const statusItem = caseStatuses.find(s => s.value === caseData.status);
-    return statusItem?.status_type === 'closed';
+    return isClosedStatus(caseData.status, caseStatuses);
   };
 
   const handleStatusChange = async (newStatus: string): Promise<boolean> => {
