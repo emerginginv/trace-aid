@@ -404,15 +404,15 @@ export function LegalTab() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Vendor Account</Label>
-                  <Select value={selectedAccountId} onValueChange={(v) => {
-                    setSelectedAccountId(v);
+                  <Select value={selectedAccountId || "none"} onValueChange={(v) => {
+                    setSelectedAccountId(v === "none" ? "" : v);
                     setSelectedContactId(""); // Reset contact when account changes
                   }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select account..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {accounts?.map(account => (
                         <SelectItem key={account.id} value={account.id}>
                           {account.name}
@@ -423,12 +423,12 @@ export function LegalTab() {
                 </div>
                 <div>
                   <Label>Vendor Contact</Label>
-                  <Select value={selectedContactId} onValueChange={setSelectedContactId}>
+                  <Select value={selectedContactId || "none"} onValueChange={(v) => setSelectedContactId(v === "none" ? "" : v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select contact..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {filteredContacts?.map(contact => (
                         <SelectItem key={contact.id} value={contact.id}>
                           {contact.first_name} {contact.last_name}
