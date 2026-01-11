@@ -819,6 +819,44 @@ export type Database = {
           },
         ]
       }
+      case_number_format_audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          new_value: Json | null
+          organization_id: string
+          previous_value: Json | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          new_value?: Json | null
+          organization_id: string
+          previous_value?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          new_value?: Json | null
+          organization_id?: string
+          previous_value?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_number_format_audit_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_subjects: {
         Row: {
           archived_at: string | null
@@ -1025,6 +1063,7 @@ export type Database = {
           case_manager_2_id: string | null
           case_manager_id: string | null
           case_number: string
+          case_type_tag: string | null
           closed_at: string | null
           closed_by_user_id: string | null
           contact_id: string | null
@@ -1052,6 +1091,8 @@ export type Database = {
           reference_number: string | null
           retain_until: string | null
           retention_days: number | null
+          series_instance: number | null
+          series_number: number | null
           status: string
           title: string
           updated_at: string | null
@@ -1066,6 +1107,7 @@ export type Database = {
           case_manager_2_id?: string | null
           case_manager_id?: string | null
           case_number: string
+          case_type_tag?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
           contact_id?: string | null
@@ -1093,6 +1135,8 @@ export type Database = {
           reference_number?: string | null
           retain_until?: string | null
           retention_days?: number | null
+          series_instance?: number | null
+          series_number?: number | null
           status?: string
           title: string
           updated_at?: string | null
@@ -1107,6 +1151,7 @@ export type Database = {
           case_manager_2_id?: string | null
           case_manager_id?: string | null
           case_number?: string
+          case_type_tag?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
           contact_id?: string | null
@@ -1134,6 +1179,8 @@ export type Database = {
           reference_number?: string | null
           retain_until?: string | null
           retention_days?: number | null
+          series_instance?: number | null
+          series_number?: number | null
           status?: string
           title?: string
           updated_at?: string | null
@@ -3656,6 +3703,9 @@ export type Database = {
       organizations: {
         Row: {
           billing_email: string | null
+          case_number_format: string | null
+          case_series_counter: number | null
+          case_series_padding: number | null
           created_at: string
           current_users_count: number | null
           custom_domain: string | null
@@ -3695,6 +3745,9 @@ export type Database = {
         }
         Insert: {
           billing_email?: string | null
+          case_number_format?: string | null
+          case_series_counter?: number | null
+          case_series_padding?: number | null
           created_at?: string
           current_users_count?: number | null
           custom_domain?: string | null
@@ -3734,6 +3787,9 @@ export type Database = {
         }
         Update: {
           billing_email?: string | null
+          case_number_format?: string | null
+          case_series_counter?: number | null
+          case_series_padding?: number | null
           created_at?: string
           current_users_count?: number | null
           custom_domain?: string | null
@@ -3910,6 +3966,7 @@ export type Database = {
           is_active: boolean
           organization_id: string | null
           status_type: string | null
+          tag: string | null
           type: string
           updated_at: string
           user_id: string
@@ -3923,6 +3980,7 @@ export type Database = {
           is_active?: boolean
           organization_id?: string | null
           status_type?: string | null
+          tag?: string | null
           type: string
           updated_at?: string
           user_id: string
@@ -3936,6 +3994,7 @@ export type Database = {
           is_active?: boolean
           organization_id?: string | null
           status_type?: string | null
+          tag?: string | null
           type?: string
           updated_at?: string
           user_id?: string
@@ -5964,6 +6023,10 @@ export type Database = {
           p_date_to?: string
           p_organization_id: string
         }
+        Returns: Json
+      }
+      generate_next_case_number: {
+        Args: { p_organization_id: string; p_parent_case_id?: string }
         Returns: Json
       }
       generate_report_content: { Args: { p_report_id: string }; Returns: Json }

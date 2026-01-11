@@ -28,6 +28,7 @@ import { AuthenticationTab } from "@/components/settings/AuthenticationTab";
 import { LegalTab } from "@/components/settings/LegalTab";
 import { ReportsExportsTab } from "@/components/settings/ReportsExportsTab";
 import { SlaSuccessTab } from "@/components/settings/SlaSuccessTab";
+import { CaseNumberingSection } from "@/components/settings/CaseNumberingSection";
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
 import { LoginBrandingSection } from "@/components/settings/LoginBrandingSection";
 
@@ -640,6 +641,14 @@ const Settings = () => {
                     }
                   }}
                   saving={saving}
+                />
+              )}
+
+              {/* Case Numbering - Admin only */}
+              {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+                <CaseNumberingSection
+                  organizationId={organization?.id || null}
+                  currentUserId={currentUserId}
                 />
               )}
             </TabsContent>
