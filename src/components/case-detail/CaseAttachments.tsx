@@ -1291,7 +1291,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -1301,9 +1301,9 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
               className="pl-9"
             />
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-3 w-full sm:w-auto">
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="flex-1 sm:w-32">
+              <SelectTrigger className="flex-1 sm:w-40">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
@@ -1316,7 +1316,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
               </SelectContent>
             </Select>
             <Select value={tagFilter} onValueChange={setTagFilter}>
-              <SelectTrigger className="flex-1 sm:w-32">
+              <SelectTrigger className="flex-1 sm:w-40">
                 <SelectValue placeholder="Tags" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
@@ -1332,22 +1332,24 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                 )}
               </SelectContent>
             </Select>
-            <div className="flex gap-1 border rounded-md p-0.5">
-              <Button 
-                variant={viewMode === "list" ? "secondary" : "ghost"} 
-                size="icon"
-                onClick={() => setViewMode("list")}
-                className="h-9 w-9"
-              >
-                <List className="h-4 w-4" />
-              </Button>
+            <div className="flex gap-1 border rounded-md p-1 h-10">
               <Button 
                 variant={viewMode === "card" ? "secondary" : "ghost"} 
-                size="icon"
+                size="sm"
                 onClick={() => setViewMode("card")}
-                className="h-9 w-9"
+                className="h-7 w-7 p-0"
+                aria-label="Card view"
               >
-                <LayoutGrid className="h-4 w-4" />
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </Button>
+              <Button 
+                variant={viewMode === "list" ? "secondary" : "ghost"} 
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="h-7 w-7 p-0"
+                aria-label="List view"
+              >
+                <List className="h-3.5 w-3.5" />
               </Button>
             </div>
             <ColumnVisibility
