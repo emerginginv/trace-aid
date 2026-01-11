@@ -260,32 +260,50 @@ export const BillingTab = ({
         <h3 className="text-lg font-semibold mb-2">Additional Storage</h3>
         <p className="text-muted-foreground text-sm mb-4">Need more space? Add extra storage to your plan.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
-          {STORAGE_ADDON_TIERS.map((addon) => (
-            <Card key={addon.name}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <HardDrive className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-base">{addon.name}</CardTitle>
-                </div>
-                <CardDescription>
-                  <span className="text-2xl font-bold text-foreground">{addon.price}</span>
-                  <span className="text-muted-foreground">/month</span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  onClick={() => handleAddStorageAddon(addon.priceId)}
-                  disabled={billingLoading === addon.priceId || !subscriptionStatus?.subscribed}
-                >
-                  {billingLoading === addon.priceId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {!subscriptionStatus?.subscribed ? "Subscribe to a plan first" : "Add Storage"}
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2 text-center">Bills immediately</p>
-              </CardContent>
-            </Card>
-          ))}
+          {STORAGE_ADDON_TIERS.map((addon) => {
+            const hasAddon = subscriptionStatus?.storage_addon_ids?.includes(addon.productId);
+            
+            return (
+              <Card 
+                key={addon.name}
+                className={hasAddon ? "border-primary shadow-lg ring-2 ring-primary/20" : ""}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="w-5 h-5 text-primary" />
+                      <CardTitle className="text-base">{addon.name}</CardTitle>
+                    </div>
+                    {hasAddon && <Badge variant="secondary">Current</Badge>}
+                  </div>
+                  <CardDescription>
+                    <span className="text-2xl font-bold text-foreground">{addon.price}</span>
+                    <span className="text-muted-foreground">/month</span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {hasAddon ? (
+                    <Button className="w-full" variant="secondary" disabled>
+                      Current Add-on
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={() => handleAddStorageAddon(addon.priceId)}
+                        disabled={billingLoading === addon.priceId || !subscriptionStatus?.subscribed}
+                      >
+                        {billingLoading === addon.priceId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {!subscriptionStatus?.subscribed ? "Subscribe to a plan first" : "Add Storage"}
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2 text-center">Bills immediately</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
 
