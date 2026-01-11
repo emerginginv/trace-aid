@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FileText, Users, Bot, Clock, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink } from "lucide-react";
+import { HelpfulHeader } from "@/components/help-center/ContextualHelp";
 import { format, subDays, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -274,7 +275,9 @@ export default function Updates() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">All Updates</h1>
+        <HelpfulHeader feature="global_updates">
+          <h1 className="text-2xl font-bold tracking-tight">All Updates</h1>
+        </HelpfulHeader>
         <p className="text-muted-foreground">View and manage updates across all cases</p>
       </div>
 
