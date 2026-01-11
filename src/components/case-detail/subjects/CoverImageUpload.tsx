@@ -147,7 +147,7 @@ export const CoverImageUpload = ({
       
       {/* Hover overlay for editing */}
       {!readOnly && (
-        <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity bg-black/40 flex items-center justify-center gap-2">
+        <div className="absolute inset-0 opacity-0 hover:opacity-100 pointer-events-none hover:pointer-events-auto transition-opacity bg-black/40 flex items-center justify-center gap-2">
           {uploading ? (
             <Button variant="secondary" disabled>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
