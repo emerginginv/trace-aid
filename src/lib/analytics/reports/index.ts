@@ -28,6 +28,7 @@ export {
   salesTrendDetailReport,
   profitDistributionReport,
   agingByClientReport,
+  agingDetailReport,
   reportRegistry,
   reportCategories,
   getReport,

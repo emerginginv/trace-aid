@@ -98,6 +98,19 @@ export const agingByClientReport: ReportDefinition = {
   relatedMetrics: ["financial.accounts_receivable"],
 };
 
+export const agingDetailReport: ReportDefinition = {
+  id: "aging-detail",
+  name: "Aging Detail",
+  description: "Detailed line-by-line view of outstanding invoices with days aging",
+  category: "sales",
+  sourceTable: "invoices",
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
+  defaultSort: { field: "daysOutstanding", direction: "desc" },
+  totals: [],
+  relatedMetrics: ["financial.accounts_receivable"],
+};
+
 // ============================================
 // REPORT REGISTRY
 // ============================================
@@ -110,6 +123,7 @@ export const reportRegistry: Record<string, ReportDefinition> = {
   "sales-trend-detail": salesTrendDetailReport,
   "profit-distribution": profitDistributionReport,
   "aging-by-client": agingByClientReport,
+  "aging-detail": agingDetailReport,
 };
 
 // ============================================
@@ -122,7 +136,7 @@ export const reportCategories: ReportCategoryInfo[] = [
     name: "Sales Reports",
     description: "Revenue, profit trends, and sales analytics",
     icon: "TrendingUp",
-    reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary", "sales-trend-detail", "profit-distribution", "aging-by-client"],
+    reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary", "sales-trend-detail", "profit-distribution", "aging-by-client", "aging-detail"],
   },
 ];
 
