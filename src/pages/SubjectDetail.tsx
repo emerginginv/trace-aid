@@ -388,7 +388,7 @@ const SubjectDetail = () => {
               {SUBJECT_CATEGORY_SINGULAR[subject.subject_type]}
             </Badge>
             {subject.is_primary && (
-              <Badge className="bg-primary/90 text-primary-foreground">
+              <Badge className="bg-primary text-white">
                 Primary
               </Badge>
             )}

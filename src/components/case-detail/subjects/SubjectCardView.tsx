@@ -188,7 +188,7 @@ export const SubjectCardView = ({
             {/* Primary Badge */}
             {subject.is_primary && !isArchived && (
               <Badge 
-                className="absolute top-2 right-2 text-xs bg-primary/10 text-primary border-primary/20 z-10"
+                className="absolute top-2 right-2 text-xs bg-primary text-white z-10"
               >
                 Primary
               </Badge>
