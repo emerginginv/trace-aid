@@ -181,15 +181,20 @@ export const SubjectCardView = ({
 
             {/* Overlapping Avatar/Icon */}
             <div className="absolute -top-10 left-1/2 -translate-x-1/2">
-              {category === 'person' ? (
+              {imageUrl ? (
                 <Avatar 
                   className={cn(
-                    "h-24 w-24 border-4 border-card shadow-md",
-                    imageUrl && "cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
+                    "h-24 w-24 border-4 border-card shadow-md cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
                   )}
-                  onClick={imageUrl ? (e) => handleImageClick(e, imageUrl, subject.display_name || subject.name) : undefined}
+                  onClick={(e) => handleImageClick(e, imageUrl, subject.display_name || subject.name)}
                 >
-                  <AvatarImage src={imageUrl || undefined} alt={subject.display_name || subject.name} />
+                  <AvatarImage src={imageUrl} alt={subject.display_name || subject.name} />
+                  <AvatarFallback className="text-xl bg-muted">
+                    {category === 'person' ? getInitials(subject.display_name || subject.name) : <Icon className="h-10 w-10 text-muted-foreground" />}
+                  </AvatarFallback>
+                </Avatar>
+              ) : category === 'person' ? (
+                <Avatar className="h-24 w-24 border-4 border-card shadow-md">
                   <AvatarFallback className="text-xl bg-muted">
                     {getInitials(subject.display_name || subject.name)}
                   </AvatarFallback>
