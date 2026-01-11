@@ -8,7 +8,7 @@ type Permission = {
 };
 
 export function usePermissions() {
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
@@ -56,7 +56,7 @@ export function usePermissions() {
 
   return {
     permissions,
-    loading,
+    loading: loading || roleLoading,
     hasPermission,
   };
 }
