@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Button } from "@/components/ui/button";
 import { Search, List, LayoutGrid } from "lucide-react";
 import { SubjectStatus } from "./types";
 
@@ -35,7 +35,7 @@ export const SubjectFilters = ({
         />
       </div>
       <Select value={statusFilter} onValueChange={(v) => onStatusFilterChange(v as SubjectStatus | 'all')}>
-        <SelectTrigger className="w-full sm:w-[150px]">
+        <SelectTrigger className="w-full sm:w-40">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -44,19 +44,26 @@ export const SubjectFilters = ({
           <SelectItem value="archived">Archived</SelectItem>
         </SelectContent>
       </Select>
-      <ToggleGroup 
-        type="single" 
-        value={viewMode} 
-        onValueChange={(v) => v && onViewModeChange(v as ViewMode)}
-        className="border rounded-md"
-      >
-        <ToggleGroupItem value="list" aria-label="List view" className="px-3">
-          <List className="h-4 w-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem value="cards" aria-label="Cards view" className="px-3">
-          <LayoutGrid className="h-4 w-4" />
-        </ToggleGroupItem>
-      </ToggleGroup>
+      <div className="flex gap-1 border rounded-md p-1 h-10">
+        <Button
+          variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => onViewModeChange('cards')}
+          className="h-7 w-7 p-0"
+          aria-label="Cards view"
+        >
+          <LayoutGrid className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => onViewModeChange('list')}
+          className="h-7 w-7 p-0"
+          aria-label="List view"
+        >
+          <List className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 };
