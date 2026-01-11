@@ -669,6 +669,13 @@ const Settings = () => {
               />
             </TabsContent>
 
+            {/* Authentication Tab - Admin Only */}
+            {currentUserRole === 'admin' && (
+              <TabsContent value="authentication" className="space-y-6">
+                <AuthenticationTab />
+              </TabsContent>
+            )}
+
             {/* Picklists Tab */}
             <TabsContent value="picklists">
               <PicklistsTab
