@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useEntitlements } from "@/hooks/use-entitlements";
+import { isEnterprisePlan } from "@/lib/planDetection";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,12 +52,17 @@ const statusColors: Record<string, string> = {
 
 export function ReportsExportsTab() {
   const { organization } = useOrganization();
+  const { entitlements } = useEntitlements();
   const queryClient = useQueryClient();
   const [selectedType, setSelectedType] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 90));
   const [dateTo, setDateTo] = useState<Date>(new Date());
 
-  const isEnterprise = organization?.subscription_tier === "pro"; // Pro tier = Enterprise features
+  // Check enterprise status via entitlements (includes trial awareness) or fallback to org tier
+  const isEnterprise = isEnterprisePlan(
+    entitlements?.subscription_tier,
+    entitlements?.subscription_product_id
+  ) || isEnterprisePlan(organization?.subscription_tier, organization?.subscription_product_id);
 
   // Fetch existing reports
   const { data: reports, isLoading } = useQuery({

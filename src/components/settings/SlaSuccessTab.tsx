@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useEntitlements } from "@/hooks/use-entitlements";
+import { isEnterprisePlan } from "@/lib/planDetection";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -68,7 +70,13 @@ const riskIcons: Record<string, React.ReactNode> = {
 
 export function SlaSuccessTab() {
   const { organization } = useOrganization();
-  const isEnterprise = organization?.subscription_tier === "pro";
+  const { entitlements } = useEntitlements();
+  
+  // Check enterprise status via entitlements (includes trial awareness) or fallback to org tier
+  const isEnterprise = isEnterprisePlan(
+    entitlements?.subscription_tier,
+    entitlements?.subscription_product_id
+  ) || isEnterprisePlan(organization?.subscription_tier, organization?.subscription_product_id);
 
   const { data: summary, isLoading } = useQuery({
     queryKey: ["sla-summary", organization?.id],
