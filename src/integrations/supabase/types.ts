@@ -4365,6 +4365,7 @@ export type Database = {
       }
       reports: {
         Row: {
+          content: Json | null
           created_at: string
           error_message: string | null
           expires_at: string
@@ -4380,6 +4381,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          content?: Json | null
           created_at?: string
           error_message?: string | null
           expires_at?: string
@@ -4395,6 +4397,7 @@ export type Database = {
           title: string
         }
         Update: {
+          content?: Json | null
           created_at?: string
           error_message?: string | null
           expires_at?: string
