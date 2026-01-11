@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Camera, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { logSubjectAudit } from "@/lib/subjectAuditLogger";
 
 interface CoverImageUploadProps {
   subjectId: string;

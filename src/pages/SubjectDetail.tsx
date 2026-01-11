@@ -44,6 +44,7 @@ import {
   LinkedEntitiesPanel,
 } from "@/components/case-detail/subjects";
 import { CoverImageUpload } from "@/components/case-detail/subjects/CoverImageUpload";
+import { logSubjectAudit } from "@/lib/subjectAuditLogger";
 
 const getCategoryIcon = (category: SubjectCategory) => {
   switch (category) {
@@ -213,6 +214,8 @@ const SubjectDetail = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      const previousValues = { status: subject.status, archived_at: subject.archived_at, archived_by: subject.archived_by };
+
       const { error } = await supabase
         .from('case_subjects')
         .update({
@@ -223,6 +226,17 @@ const SubjectDetail = () => {
         .eq('id', subject.id);
 
       if (error) throw error;
+
+      // Log audit for archive action
+      await logSubjectAudit({
+        subject_id: subject.id,
+        case_id: caseId!,
+        organization_id: subject.organization_id,
+        action: 'archived',
+        previous_values: previousValues,
+        new_values: { status: 'archived', archived_at: new Date().toISOString(), archived_by: user.id },
+      });
+
       toast.success('Subject archived');
       fetchSubjectDetails();
     } catch (error) {
@@ -234,6 +248,8 @@ const SubjectDetail = () => {
   const handleUnarchive = async () => {
     if (!subject) return;
     try {
+      const previousValues = { status: subject.status, archived_at: subject.archived_at, archived_by: subject.archived_by };
+
       const { error } = await supabase
         .from('case_subjects')
         .update({
@@ -244,6 +260,17 @@ const SubjectDetail = () => {
         .eq('id', subject.id);
 
       if (error) throw error;
+
+      // Log audit for restore action
+      await logSubjectAudit({
+        subject_id: subject.id,
+        case_id: caseId!,
+        organization_id: subject.organization_id,
+        action: 'restored',
+        previous_values: previousValues,
+        new_values: { status: 'active', archived_at: null, archived_by: null },
+      });
+
       toast.success('Subject unarchived');
       fetchSubjectDetails();
     } catch (error) {

@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { logSocialLinkAudit } from "@/lib/subjectAuditLogger";
 
 interface SocialMediaLinksWidgetProps {
   subjectId: string;
@@ -66,12 +67,29 @@ export const SocialMediaLinksWidget = ({
     if (!deletingLink) return;
 
     try {
+      // Store previous values for audit
+      const previousValues = {
+        platform: deletingLink.platform,
+        url: deletingLink.url,
+        label: deletingLink.label,
+      };
+
       const { error } = await supabase
         .from("subject_social_links")
         .delete()
         .eq("id", deletingLink.id);
 
       if (error) throw error;
+
+      // Log audit for deletion
+      await logSocialLinkAudit({
+        social_link_id: deletingLink.id,
+        subject_id: subjectId,
+        organization_id: organizationId,
+        action: 'deleted',
+        previous_values: previousValues,
+      });
+
       toast.success("Link removed");
       fetchLinks();
     } catch (error) {
