@@ -7,14 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Subject, ITEM_TYPES } from "../types";
+import { Subject, ITEM_TYPES, ITEM_CONDITIONS } from "../types";
 import { ProfileImageUpload } from "../../ProfileImageUpload";
 
 const itemSchema = z.object({
   name: z.string().min(1, "Item name is required"),
   item_type: z.string().min(1, "Item type is required"),
   description: z.string().optional(),
+  brand: z.string().optional(),
+  model: z.string().optional(),
+  color: z.string().optional(),
   serial_number: z.string().optional(),
+  dimensions: z.string().optional(),
+  condition: z.string().optional(),
   evidence_reference: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -38,7 +43,12 @@ export const ItemForm = ({ subject, onSubmit, isSubmitting, readOnly = false }: 
       name: subject?.name || "",
       item_type: details.item_type || "",
       description: details.item_description || details.description || "",
+      brand: details.brand || "",
+      model: details.model || "",
+      color: details.color || "",
       serial_number: details.serial_number || "",
+      dimensions: details.dimensions || "",
+      condition: details.condition || "",
       evidence_reference: details.evidence_reference || "",
       notes: subject?.notes || "",
     },
@@ -120,6 +130,91 @@ export const ItemForm = ({ subject, onSubmit, isSubmitting, readOnly = false }: 
                   disabled={readOnly}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="brand"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Brand</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Apple, Samsung" {...field} disabled={readOnly} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="model"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Model</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., iPhone 15 Pro" {...field} disabled={readOnly} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="color"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Color</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Black, Silver" {...field} disabled={readOnly} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="dimensions"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dimensions</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., 10x5x2 inches" {...field} disabled={readOnly} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="condition"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Condition</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value} disabled={readOnly}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select condition" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {ITEM_CONDITIONS.map((cond) => (
+                    <SelectItem key={cond.value} value={cond.value}>
+                      {cond.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

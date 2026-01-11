@@ -98,6 +98,16 @@ export const ITEM_TYPES = [
   { value: 'other', label: 'Other' },
 ] as const;
 
+export const ITEM_CONDITIONS = [
+  { value: 'new', label: 'New' },
+  { value: 'like_new', label: 'Like New' },
+  { value: 'good', label: 'Good' },
+  { value: 'fair', label: 'Fair' },
+  { value: 'poor', label: 'Poor' },
+  { value: 'damaged', label: 'Damaged' },
+  { value: 'unknown', label: 'Unknown' },
+] as const;
+
 export const US_STATES = [
   { value: 'AL', label: 'Alabama' },
   { value: 'AK', label: 'Alaska' },

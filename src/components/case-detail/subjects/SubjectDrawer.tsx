@@ -225,7 +225,12 @@ export const SubjectDrawer = ({
       const details: Record<string, any> = {
         item_type: values.item_type,
         item_description: values.description,
+        brand: values.brand,
+        model: values.model,
+        color: values.color,
         serial_number: values.serial_number,
+        dimensions: values.dimensions,
+        condition: values.condition,
         evidence_reference: values.evidence_reference,
       };
 
