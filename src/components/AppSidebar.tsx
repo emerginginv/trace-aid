@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Briefcase, Users, Building2, Shield, DollarSign, Calendar, FileText, Info, Wallet, Receipt, BarChart3, ClipboardList, ChevronDown, UserSearch, ListTodo } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Building2, Shield, DollarSign, Calendar, FileText, Info, Wallet, Receipt, BarChart3, ClipboardList, ChevronDown, UserSearch, ListTodo, FileEdit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton } from "@/components/ui/sidebar";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -216,7 +216,7 @@ export function AppSidebar() {
                   {/* Render Cases collapsible menu for Navigation group */}
                   {showCasesMenu && (
                     <Collapsible 
-                      defaultOpen={location.pathname.startsWith('/cases') || location.pathname === '/subjects' || location.pathname === '/tasks'}
+                      defaultOpen={location.pathname.startsWith('/cases') || location.pathname === '/subjects' || location.pathname === '/tasks' || location.pathname === '/updates'}
                       className="group/collapsible"
                     >
                       <SidebarMenuItem>
@@ -257,6 +257,16 @@ export function AppSidebar() {
                               >
                                 <ListTodo className="w-4 h-4" />
                                 <span>Tasks & Events</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton 
+                                onClick={() => navigate('/updates')}
+                                isActive={location.pathname === '/updates'}
+                                className="cursor-pointer"
+                              >
+                                <FileEdit className="w-4 h-4" />
+                                <span>Updates</span>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           </SidebarMenuSub>
