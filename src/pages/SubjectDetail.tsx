@@ -106,6 +106,7 @@ const SubjectDetail = () => {
   const [signedCoverUrl, setSignedCoverUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [coverModalOpen, setCoverModalOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   useSetBreadcrumbs(
@@ -325,6 +326,7 @@ const SubjectDetail = () => {
                   setSignedCoverUrl(null);
                 }
               }}
+              onImageClick={signedCoverUrl ? () => setCoverModalOpen(true) : undefined}
               readOnly={isArchived}
             />
           </div>
@@ -644,6 +646,14 @@ const SubjectDetail = () => {
         onClose={() => setImageModalOpen(false)}
         imageUrl={signedImageUrl}
         alt={subject?.display_name || subject?.name || "Profile image"}
+      />
+
+      {/* Cover Image Modal */}
+      <ProfileImageModal
+        isOpen={coverModalOpen}
+        onClose={() => setCoverModalOpen(false)}
+        imageUrl={signedCoverUrl}
+        alt={`${subject?.display_name || subject?.name || "Subject"} cover image`}
       />
 
       {/* Edit Drawer */}

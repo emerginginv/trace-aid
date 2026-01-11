@@ -9,6 +9,7 @@ interface CoverImageUploadProps {
   currentCoverUrl?: string | null;
   signedCoverUrl?: string | null;
   onCoverChange?: (url: string | null) => void;
+  onImageClick?: () => void;
   readOnly?: boolean;
 }
 
@@ -17,6 +18,7 @@ export const CoverImageUpload = ({
   currentCoverUrl, 
   signedCoverUrl,
   onCoverChange,
+  onImageClick,
   readOnly = false 
 }: CoverImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
@@ -128,7 +130,13 @@ export const CoverImageUpload = ({
         <img 
           src={signedCoverUrl} 
           alt="Cover" 
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${onImageClick ? 'cursor-zoom-in' : ''}`}
+          onClick={(e) => {
+            if (onImageClick) {
+              e.stopPropagation();
+              onImageClick();
+            }
+          }}
         />
       ) : (
         <>
