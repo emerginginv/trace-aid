@@ -1,4 +1,4 @@
-external_record_id,name,subject_type,notes,profile_image_url,date_of_birth,ssn_last4,address,phone,email,employer,occupation,make,model,year,color,license_plate,vin,business_name,ein,website
-SUBJ-001,John Smith,person,Primary claimant,,1985-06-15,1234,789 Elm St,555-777-8888,jsmith@email.com,Acme Corp,Warehouse Worker,,,,,,,,,
-SUBJ-002,2020 Honda Accord,vehicle,Subject's primary vehicle,,,,,,,,,Honda,Accord,2020,Silver,ABC-1234,1HGBH41JXMN109186,,,
-SUBJ-003,Smith Consulting LLC,business,Subject's side business,,,,,,,,,,,,,,Smith Consulting LLC,12-3456789,www.smithconsulting.com
+external_record_id,external_case_id,name,subject_type,notes,profile_image_url,date_of_birth,ssn_last4,address,phone,email,employer,occupation,make,model,year,color,license_plate,vin,business_name,ein,website
+SUBJ-001,CASE-001,John Smith,person,Primary claimant,,1985-06-15,1234,789 Elm St,555-777-8888,jsmith@email.com,Acme Corp,Warehouse Worker,,,,,,,,,
+SUBJ-002,CASE-001,2020 Honda Accord,vehicle,Subject's primary vehicle,,,,,,,,,Honda,Accord,2020,Silver,ABC-1234,1HGBH41JXMN109186,,,
+SUBJ-003,CASE-001,Smith Consulting LLC,business,Subject's side business,,,,,,,,,,,,,,Smith Consulting LLC,12-3456789,www.smithconsulting.com
