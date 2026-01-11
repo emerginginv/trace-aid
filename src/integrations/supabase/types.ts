@@ -203,6 +203,72 @@ export type Database = {
           },
         ]
       }
+      ai_import_sessions: {
+        Row: {
+          ai_analysis: Json | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          files_metadata: Json
+          id: string
+          import_batch_id: string | null
+          organization_id: string
+          source_system: string | null
+          status: string
+          updated_at: string
+          user_exclusions: Json | null
+          user_id: string
+          user_mappings: Json | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          files_metadata?: Json
+          id?: string
+          import_batch_id?: string | null
+          organization_id: string
+          source_system?: string | null
+          status?: string
+          updated_at?: string
+          user_exclusions?: Json | null
+          user_id: string
+          user_mappings?: Json | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          files_metadata?: Json
+          id?: string
+          import_batch_id?: string | null
+          organization_id?: string
+          source_system?: string | null
+          status?: string
+          updated_at?: string
+          user_exclusions?: Json | null
+          user_id?: string
+          user_mappings?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_import_sessions_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_import_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachment_access: {
         Row: {
           access_count: number
