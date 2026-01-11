@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { 
   FileText, 
@@ -30,13 +31,16 @@ import {
   Building2,
   User,
   Eye,
-  X
+  X,
+  Briefcase,
+  Users
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Database } from "@/integrations/supabase/types";
 
 type ContractType = Database["public"]["Enums"]["contract_type"];
 type ContractStatus = Database["public"]["Enums"]["contract_status"];
+type AgreementCategory = "client" | "vendor";
 
 interface Contract {
   id: string;
@@ -55,10 +59,14 @@ interface Contract {
   file_path: string | null;
   created_at: string;
   days_until_expiration: number | null;
+  agreement_category: AgreementCategory;
   account_id: string | null;
   account_name: string | null;
   contact_id: string | null;
   contact_name: string | null;
+  vendor_user_id: string | null;
+  vendor_name: string | null;
+  vendor_email: string | null;
 }
 
 interface Account {
@@ -71,6 +79,13 @@ interface Contact {
   first_name: string;
   last_name: string;
   account_id: string | null;
+}
+
+interface VendorUser {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  company_name: string | null;
 }
 
 const contractTypeLabels: Record<ContractType, string> = {
@@ -105,6 +120,7 @@ export function LegalTab() {
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   
   // Form state
+  const [agreementCategory, setAgreementCategory] = useState<AgreementCategory>("client");
   const [contractType, setContractType] = useState<ContractType>("msa");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -115,6 +131,7 @@ export function LegalTab() {
   const [renewalTermDays, setRenewalTermDays] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [selectedContactId, setSelectedContactId] = useState<string>("");
+  const [selectedVendorUserId, setSelectedVendorUserId] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   
@@ -143,7 +160,7 @@ export function LegalTab() {
     enabled: !!organization?.id && isEnterprise
   });
 
-  // Fetch accounts for dropdown
+  // Fetch accounts for dropdown (clients)
   const { data: accounts } = useQuery({
     queryKey: ['organization-accounts', organization?.id],
     queryFn: async () => {
@@ -171,6 +188,43 @@ export function LegalTab() {
         .order('last_name');
       if (error) throw error;
       return (data as Contact[]) || [];
+    },
+    enabled: !!organization?.id && isEnterprise
+  });
+
+  // Fetch vendor users (users with vendor role)
+  const { data: vendorUsers } = useQuery({
+    queryKey: ['vendor-users', organization?.id],
+    queryFn: async (): Promise<VendorUser[]> => {
+      if (!organization?.id) return [];
+      
+      // First get vendor role user IDs - use type assertion to avoid deep type instantiation
+      const roleResult = await supabase
+        .from('user_roles' as any)
+        .select('user_id')
+        .eq('role', 'vendor')
+        .eq('organization_id', organization.id);
+      if (roleResult.error) throw roleResult.error;
+      
+      const roleData = roleResult.data as { user_id: string }[] | null;
+      
+      if (!roleData || roleData.length === 0) return [];
+      
+      const vendorUserIds = (roleData as any[]).map((r: any) => r.user_id);
+      
+      // Then get profile info for those users
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, company_name')
+        .in('id', vendorUserIds);
+      if (profileError) throw profileError;
+      
+      return (profileData || []).map(p => ({
+        user_id: p.id,
+        full_name: p.full_name,
+        email: p.email,
+        company_name: p.company_name
+      }));
     },
     enabled: !!organization?.id && isEnterprise
   });
@@ -227,6 +281,11 @@ export function LegalTab() {
     mutationFn: async () => {
       if (!organization?.id) throw new Error("No organization");
       
+      // Validate vendor agreement has vendor selected
+      if (agreementCategory === 'vendor' && !selectedVendorUserId) {
+        throw new Error("Please select a vendor for this agreement");
+      }
+      
       setIsUploading(true);
       let filePath: string | null = null;
       
@@ -247,8 +306,10 @@ export function LegalTab() {
           p_auto_renews: autoRenews,
           p_renewal_term_days: renewalTermDays ? parseInt(renewalTermDays) : null,
           p_file_path: filePath,
-          p_account_id: selectedAccountId || null,
-          p_contact_id: selectedContactId || null
+          p_agreement_category: agreementCategory,
+          p_account_id: agreementCategory === 'client' ? (selectedAccountId || null) : null,
+          p_contact_id: agreementCategory === 'client' ? (selectedContactId || null) : null,
+          p_vendor_user_id: agreementCategory === 'vendor' ? selectedVendorUserId : null
         });
         if (error) throw error;
         return data;
@@ -294,6 +355,7 @@ export function LegalTab() {
   });
 
   const resetForm = () => {
+    setAgreementCategory("client");
     setContractType("msa");
     setTitle("");
     setDescription("");
@@ -304,6 +366,7 @@ export function LegalTab() {
     setRenewalTermDays("");
     setSelectedAccountId("");
     setSelectedContactId("");
+    setSelectedVendorUserId("");
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -333,6 +396,10 @@ export function LegalTab() {
   const expiringContracts = activeContracts.filter(c => 
     c.days_until_expiration !== null && c.days_until_expiration <= 90
   );
+  
+  // Filter by category
+  const clientContracts = contracts?.filter(c => c.agreement_category === 'client') || [];
+  const vendorContracts = contracts?.filter(c => c.agreement_category === 'vendor') || [];
 
   if (!isEnterprise) {
     return (
@@ -382,10 +449,13 @@ export function LegalTab() {
         <div>
           <h2 className="text-lg font-semibold">Legal Agreements</h2>
           <p className="text-sm text-muted-foreground">
-            Manage contracts, DPAs, and legal documents with vendors
+            Manage contracts, DPAs, and legal documents with clients and vendors
           </p>
         </div>
-        <Dialog open={newContractOpen} onOpenChange={setNewContractOpen}>
+        <Dialog open={newContractOpen} onOpenChange={(open) => {
+          setNewContractOpen(open);
+          if (!open) resetForm();
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -400,48 +470,120 @@ export function LegalTab() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              {/* Vendor Selection */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Vendor Account</Label>
-                  <Select value={selectedAccountId || "none"} onValueChange={(v) => {
-                    setSelectedAccountId(v === "none" ? "" : v);
-                    setSelectedContactId(""); // Reset contact when account changes
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select account..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {accounts?.map(account => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Vendor Contact</Label>
-                  <Select value={selectedContactId || "none"} onValueChange={(v) => setSelectedContactId(v === "none" ? "" : v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select contact..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {filteredContacts?.map(contact => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.first_name} {contact.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Agreement Category Selection */}
+              <div>
+                <Label className="text-sm font-medium mb-3 block">Agreement Type</Label>
+                <RadioGroup 
+                  value={agreementCategory} 
+                  onValueChange={(v) => {
+                    setAgreementCategory(v as AgreementCategory);
+                    // Reset party selections when switching
+                    setSelectedAccountId("");
+                    setSelectedContactId("");
+                    setSelectedVendorUserId("");
+                  }}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <div className="relative">
+                    <RadioGroupItem value="client" id="client" className="peer sr-only" />
+                    <Label
+                      htmlFor="client"
+                      className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
+                    >
+                      <Building2 className="h-6 w-6 mb-2" />
+                      <span className="font-medium">Client Agreement</span>
+                      <span className="text-xs text-muted-foreground text-center mt-1">
+                        Contracts with your clients
+                      </span>
+                    </Label>
+                  </div>
+                  <div className="relative">
+                    <RadioGroupItem value="vendor" id="vendor" className="peer sr-only" />
+                    <Label
+                      htmlFor="vendor"
+                      className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
+                    >
+                      <Briefcase className="h-6 w-6 mb-2" />
+                      <span className="font-medium">Vendor Agreement</span>
+                      <span className="text-xs text-muted-foreground text-center mt-1">
+                        Contracts with service providers
+                      </span>
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
+
+              {/* Party Selection based on category */}
+              {agreementCategory === 'client' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Account (Client)</Label>
+                    <Select value={selectedAccountId || "none"} onValueChange={(v) => {
+                      setSelectedAccountId(v === "none" ? "" : v);
+                      setSelectedContactId(""); // Reset contact when account changes
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {accounts?.map(account => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Contact</Label>
+                    <Select 
+                      value={selectedContactId || "none"} 
+                      onValueChange={(v) => setSelectedContactId(v === "none" ? "" : v)}
+                      disabled={!selectedAccountId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={selectedAccountId ? "Select contact..." : "Select account first"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {filteredContacts?.map(contact => (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {contact.first_name} {contact.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <Label>Vendor *</Label>
+                  <Select value={selectedVendorUserId || "none"} onValueChange={(v) => setSelectedVendorUserId(v === "none" ? "" : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vendor..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {vendorUsers?.map(vendor => (
+                        <SelectItem key={vendor.user_id} value={vendor.user_id}>
+                          {vendor.full_name || vendor.email}
+                          {vendor.company_name && ` (${vendor.company_name})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {vendorUsers?.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      No vendors found. Add users with the "vendor" role first.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Agreement Type</Label>
+                  <Label>Contract Type</Label>
                   <Select value={contractType} onValueChange={(v) => setContractType(v as ContractType)}>
                     <SelectTrigger>
                       <SelectValue />
@@ -466,7 +608,7 @@ export function LegalTab() {
                 </div>
               </div>
               <div>
-                <Label>Title</Label>
+                <Label>Title *</Label>
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -578,7 +720,7 @@ export function LegalTab() {
               <Button variant="outline" onClick={() => setNewContractOpen(false)}>Cancel</Button>
               <Button 
                 onClick={() => createContractMutation.mutate()}
-                disabled={!title || createContractMutation.isPending || isUploading}
+                disabled={!title || createContractMutation.isPending || isUploading || (agreementCategory === 'vendor' && !selectedVendorUserId)}
               >
                 {isUploading ? "Uploading..." : createContractMutation.isPending ? "Creating..." : "Create Agreement"}
               </Button>
@@ -591,6 +733,14 @@ export function LegalTab() {
       <Tabs defaultValue="all">
         <TabsList>
           <TabsTrigger value="all">All ({contracts?.length || 0})</TabsTrigger>
+          <TabsTrigger value="client">
+            <Building2 className="h-3 w-3 mr-1" />
+            Clients ({clientContracts.length})
+          </TabsTrigger>
+          <TabsTrigger value="vendor">
+            <Briefcase className="h-3 w-3 mr-1" />
+            Vendors ({vendorContracts.length})
+          </TabsTrigger>
           <TabsTrigger value="active">Active ({activeContracts.length})</TabsTrigger>
           <TabsTrigger value="dpa">DPAs</TabsTrigger>
         </TabsList>
@@ -598,6 +748,46 @@ export function LegalTab() {
         <TabsContent value="all" className="mt-4">
           <ContractsList 
             contracts={contracts || []} 
+            isLoading={isLoading}
+            onSign={(contract) => {
+              setSelectedContract(contract);
+              setSignContractOpen(true);
+            }}
+            onView={(contract) => {
+              setSelectedContract(contract);
+              setViewContractOpen(true);
+            }}
+            onDownload={(contract) => {
+              if (contract.file_path) {
+                downloadFile(contract.file_path, `${contract.title}.pdf`);
+              }
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="client" className="mt-4">
+          <ContractsList 
+            contracts={clientContracts} 
+            isLoading={isLoading}
+            onSign={(contract) => {
+              setSelectedContract(contract);
+              setSignContractOpen(true);
+            }}
+            onView={(contract) => {
+              setSelectedContract(contract);
+              setViewContractOpen(true);
+            }}
+            onDownload={(contract) => {
+              if (contract.file_path) {
+                downloadFile(contract.file_path, `${contract.title}.pdf`);
+              }
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="vendor" className="mt-4">
+          <ContractsList 
+            contracts={vendorContracts} 
             isLoading={isLoading}
             onSign={(contract) => {
               setSelectedContract(contract);
@@ -715,7 +905,17 @@ export function LegalTab() {
           </DialogHeader>
           {selectedContract && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Category</Label>
+                  <Badge variant="outline" className="mt-1">
+                    {selectedContract.agreement_category === 'client' ? (
+                      <><Building2 className="h-3 w-3 mr-1" /> Client Agreement</>
+                    ) : (
+                      <><Briefcase className="h-3 w-3 mr-1" /> Vendor Agreement</>
+                    )}
+                  </Badge>
+                </div>
                 <div>
                   <Label className="text-muted-foreground text-xs">Type</Label>
                   <p className="font-medium">{contractTypeLabels[selectedContract.contract_type]}</p>
@@ -728,11 +928,12 @@ export function LegalTab() {
                 </div>
               </div>
 
-              {(selectedContract.account_name || selectedContract.contact_name) && (
-                <div className="grid grid-cols-2 gap-4">
+              {/* Party Information */}
+              {selectedContract.agreement_category === 'client' && (selectedContract.account_name || selectedContract.contact_name) && (
+                <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg">
                   {selectedContract.account_name && (
                     <div>
-                      <Label className="text-muted-foreground text-xs">Vendor Account</Label>
+                      <Label className="text-muted-foreground text-xs">Client Account</Label>
                       <p className="font-medium flex items-center gap-1">
                         <Building2 className="h-4 w-4" />
                         {selectedContract.account_name}
@@ -741,12 +942,25 @@ export function LegalTab() {
                   )}
                   {selectedContract.contact_name && (
                     <div>
-                      <Label className="text-muted-foreground text-xs">Vendor Contact</Label>
+                      <Label className="text-muted-foreground text-xs">Contact</Label>
                       <p className="font-medium flex items-center gap-1">
                         <User className="h-4 w-4" />
                         {selectedContract.contact_name}
                       </p>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {selectedContract.agreement_category === 'vendor' && selectedContract.vendor_name && (
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <Label className="text-muted-foreground text-xs">Vendor</Label>
+                  <p className="font-medium flex items-center gap-1">
+                    <Briefcase className="h-4 w-4" />
+                    {selectedContract.vendor_name}
+                  </p>
+                  {selectedContract.vendor_email && (
+                    <p className="text-sm text-muted-foreground">{selectedContract.vendor_email}</p>
                   )}
                 </div>
               )}
@@ -874,6 +1088,13 @@ function ContractsList({
                       {contract.title}
                     </h3>
                     <Badge variant="outline" className="text-xs">
+                      {contract.agreement_category === 'client' ? (
+                        <><Building2 className="h-3 w-3 mr-1" /> Client</>
+                      ) : (
+                        <><Briefcase className="h-3 w-3 mr-1" /> Vendor</>
+                      )}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
                       {contractTypeLabels[contract.contract_type]}
                     </Badge>
                     <Badge className={config.color}>
@@ -885,8 +1106,8 @@ function ContractsList({
                     <p className="text-sm text-muted-foreground">{contract.description}</p>
                   )}
                   
-                  {/* Vendor Info */}
-                  {(contract.account_name || contract.contact_name) && (
+                  {/* Party Info */}
+                  {contract.agreement_category === 'client' && (contract.account_name || contract.contact_name) && (
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       {contract.account_name && (
                         <span className="flex items-center gap-1">
@@ -900,6 +1121,15 @@ function ContractsList({
                           {contract.contact_name}
                         </span>
                       )}
+                    </div>
+                  )}
+                  
+                  {contract.agreement_category === 'vendor' && contract.vendor_name && (
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Briefcase className="h-3 w-3" />
+                        {contract.vendor_name}
+                      </span>
                     </div>
                   )}
 
@@ -934,20 +1164,16 @@ function ContractsList({
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => onView(contract)}>
+                  <Button variant="ghost" size="sm" onClick={() => onView(contract)}>
                     <Eye className="h-4 w-4" />
                   </Button>
                   {contract.file_path && (
-                    <Button variant="outline" size="sm" onClick={() => onDownload(contract)}>
+                    <Button variant="ghost" size="sm" onClick={() => onDownload(contract)}>
                       <Download className="h-4 w-4" />
                     </Button>
                   )}
-                  {['draft', 'sent', 'pending_signature'].includes(contract.status) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => onSign(contract)}
-                    >
+                  {!['signed', 'active'].includes(contract.status) && (
+                    <Button variant="outline" size="sm" onClick={() => onSign(contract)}>
                       <Pencil className="h-4 w-4 mr-1" />
                       Mark Signed
                     </Button>
