@@ -206,8 +206,14 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
   }, []);
 
   const handleContinue = () => {
+    if (pendingFiles.length > 0) {
+      toast.warning("Please upload or clear your pending files before continuing");
+      return;
+    }
     onContinue(attachments.length);
   };
+
+  const hasPendingFiles = pendingFiles.length > 0;
 
   if (!hasStarted && attachments.length === 0) {
     return (
@@ -363,11 +369,17 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
         </div>
       )}
 
+      {hasPendingFiles && (
+        <p className="text-sm text-amber-600 dark:text-amber-400">
+          You have {pendingFiles.length} pending file{pendingFiles.length !== 1 ? "s" : ""}. Please upload or clear them before continuing.
+        </p>
+      )}
+
       <WizardNavigation
         currentStep={5}
         onBack={onBack}
         onContinue={handleContinue}
-        canContinue={true}
+        canContinue={!hasPendingFiles && !isUploading}
       />
     </div>
   );
