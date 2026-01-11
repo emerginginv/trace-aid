@@ -7,11 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Map plan_key to Stripe price IDs
+// Map plan_key to Stripe price IDs (LIVE)
 const PLAN_PRICE_MAP: Record<string, string> = {
-  solo: "price_1SdV7dRWPtpjyF4h7Qa9JdFr",      // The Investigator - $12/month
-  team: "price_1SdVEjRWPtpjyF4h3d5E7a7D",      // The Agency - $39/month
-  enterprise: "price_1SdVFPRWPtpjyF4hp7WfLXFC", // The Enterprise - $69/month
+  solo: "price_1SoSGhRWPtpjyF4hTusfPPiG",      // The Investigator - $12/month
+  team: "price_1SoSGsRWPtpjyF4hwra8HTaV",      // The Agency - $39/month
+  enterprise: "price_1SoSH5RWPtpjyF4hXd6atI6G", // The Enterprise - $69/month
 };
 
 const logStep = (step: string, details?: Record<string, unknown>) => {
