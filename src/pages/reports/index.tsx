@@ -83,6 +83,9 @@ export default function ReportsHub() {
               <Link to="/reports/budget-status">Budget Status</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
+              <Link to="/reports/profit-trends">Profit Trends</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
               <Link to="/reports/tasks">Tasks</Link>
             </Button>
           </div>
