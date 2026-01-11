@@ -7,6 +7,7 @@ import { isEnterprisePlan } from "@/lib/planDetection";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -337,27 +338,57 @@ export function ReportsExportsTab() {
                       Expires {format(new Date(report.expires_at), "MMM d, yyyy")}
                     </p>
                   </div>
-                  {report.status === "queued" && (
-                    <Button
-                      size="sm"
-                      onClick={() => generateReport.mutate(report.id)}
-                      disabled={generateReport.isPending}
-                    >
-                      {generateReport.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Generate
-                    </Button>
-                  )}
-                  {report.status === "ready" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => generateReport.mutate(report.id)}
-                      disabled={generateReport.isPending}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {report.status === "queued" && (
+                      <Button
+                        size="sm"
+                        onClick={() => generateReport.mutate(report.id)}
+                        disabled={generateReport.isPending}
+                      >
+                        {generateReport.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Generate
+                      </Button>
+                    )}
+                    {report.status === "generating" && (
+                      <Button size="sm" variant="outline" disabled>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </Button>
+                    )}
+                    {report.status === "ready" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => generateReport.mutate(report.id)}
+                        disabled={generateReport.isPending}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    )}
+                    {report.status === "failed" && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => generateReport.mutate(report.id)}
+                              disabled={generateReport.isPending}
+                            >
+                              {generateReport.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Retry
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs">
+                            <p className="text-xs">
+                              {(report as any).error_message || "Generation failed. Click to retry."}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
