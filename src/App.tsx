@@ -16,6 +16,7 @@ import { Onboarding } from "./components/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
+import SubjectDetail from "./pages/SubjectDetail";
 import Calendar from "./pages/Calendar";
 import Finance from "./pages/Finance";
 import AllExpenses from "./pages/AllExpenses";
@@ -139,6 +140,16 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <CaseDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/:caseId/subjects/:subjectId"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <SubjectDetail />
               </DashboardLayout>
             </ProtectedRoute>
           }
