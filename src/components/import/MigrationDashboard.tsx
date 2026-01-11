@@ -39,9 +39,10 @@ interface DashboardStats {
 
 interface MigrationDashboardProps {
   onStartNew?: () => void;
+  onRefresh?: () => void;
 }
 
-export function MigrationDashboard({ onStartNew }: MigrationDashboardProps) {
+export function MigrationDashboard({ onStartNew, onRefresh }: MigrationDashboardProps) {
   const { organization } = useOrganization();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -55,7 +56,9 @@ export function MigrationDashboard({ onStartNew }: MigrationDashboardProps) {
     }
   }, [organization?.id]);
 
+  // Expose refresh function via prop callback
   const loadDashboardData = async () => {
+    onRefresh?.();
     setLoading(true);
     try {
       // Fetch all import batches
@@ -208,23 +211,15 @@ export function MigrationDashboard({ onStartNew }: MigrationDashboardProps) {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={onStartNew}>
-          <FileDown className="h-4 w-4 mr-2" />
-          New Import
-        </Button>
-        {pendingErrors > 0 && (
+      {/* Quick Actions - Only show if there are pending corrections */}
+      {pendingErrors > 0 && (
+        <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => navigate('/import/review')}>
             <AlertTriangle className="h-4 w-4 mr-2" />
             Review Corrections ({pendingErrors})
           </Button>
-        )}
-        <Button variant="ghost" onClick={loadDashboardData}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
+        </div>
+      )}
 
       {/* Recent Imports */}
       <Card>
