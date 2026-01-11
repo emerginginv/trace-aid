@@ -21,7 +21,6 @@ import {
   Eye, 
   EyeOff,
   Settings2,
-  ExternalLink,
   AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
@@ -253,26 +252,65 @@ export function IntegrationsTab() {
     toast.success("Copied to clipboard");
   };
 
-  const availableScopes = [
-    "cases:read",
-    "cases:write",
-    "attachments:read",
-    "attachments:write",
-    "reports:read",
-    "updates:read",
-    "updates:write",
-    "webhooks:receive",
+  // Comprehensive API scopes organized by category
+  const scopeCategories = [
+    {
+      name: "Cases & Subjects",
+      scopes: ["cases:read", "cases:write", "subjects:read", "subjects:write"],
+    },
+    {
+      name: "Activities & Updates",
+      scopes: ["activities:read", "activities:write", "updates:read", "updates:write"],
+    },
+    {
+      name: "Files & Documents",
+      scopes: ["attachments:read", "attachments:write", "documents:read", "documents:write"],
+    },
+    {
+      name: "Finances",
+      scopes: ["finances:read", "finances:write"],
+    },
+    {
+      name: "CRM",
+      scopes: ["contacts:read", "contacts:write", "accounts:read", "accounts:write"],
+    },
+    {
+      name: "Other",
+      scopes: ["reports:read", "webhooks:manage"],
+    },
   ];
 
-  const availableEvents = [
-    "case.created",
-    "case.updated",
-    "case.closed",
-    "update.created",
-    "attachment.uploaded",
-    "invoice.created",
-    "invoice.paid",
+  const availableScopes = scopeCategories.flatMap((cat) => cat.scopes);
+
+  // Comprehensive webhook events organized by entity
+  const eventCategories = [
+    {
+      name: "Cases",
+      events: ["case.created", "case.updated", "case.closed", "case.deleted"],
+    },
+    {
+      name: "Subjects",
+      events: ["subject.created", "subject.updated", "subject.deleted"],
+    },
+    {
+      name: "Activities",
+      events: ["activity.created", "activity.updated", "activity.completed", "activity.deleted"],
+    },
+    {
+      name: "Updates & Attachments",
+      events: ["update.created", "update.deleted", "attachment.uploaded", "attachment.deleted"],
+    },
+    {
+      name: "Finances",
+      events: ["expense.created", "expense.approved", "expense.rejected", "time.logged", "invoice.created", "invoice.paid"],
+    },
+    {
+      name: "CRM",
+      events: ["contact.created", "contact.updated", "account.created", "account.updated"],
+    },
   ];
+
+  const availableEvents = eventCategories.flatMap((cat) => cat.events);
 
   return (
     <Card>
@@ -311,9 +349,13 @@ export function IntegrationsTab() {
               <div className="text-center py-8 border rounded-lg">
                 <Package className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                 <p className="text-muted-foreground mb-4">No integrations installed</p>
-                <Button asChild>
-                  <a href="/marketplace">Browse Marketplace</a>
-                </Button>
+                <div className="flex items-center justify-center gap-2">
+                  <Button variant="outline" disabled className="gap-2">
+                    <Package className="h-4 w-4" />
+                    Marketplace
+                    <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -373,11 +415,10 @@ export function IntegrationsTab() {
               </div>
             )}
             <div className="pt-4">
-              <Button variant="outline" asChild>
-                <a href="/marketplace">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Browse Marketplace
-                </a>
+              <Button variant="outline" disabled className="gap-2">
+                <Package className="h-4 w-4" />
+                Marketplace
+                <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
               </Button>
             </div>
           </TabsContent>
@@ -534,23 +575,30 @@ export function IntegrationsTab() {
               </div>
               <div>
                 <Label>Scopes</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {availableScopes.map((scope) => (
-                    <label key={scope} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={keyScopes.includes(scope)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setKeyScopes([...keyScopes, scope]);
-                          } else {
-                            setKeyScopes(keyScopes.filter((s) => s !== scope));
-                          }
-                        }}
-                        className="rounded"
-                      />
-                      <code className="text-xs">{scope}</code>
-                    </label>
+                <div className="space-y-4 mt-2 max-h-64 overflow-y-auto pr-2">
+                  {scopeCategories.map((category) => (
+                    <div key={category.name}>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">{category.name}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {category.scopes.map((scope) => (
+                          <label key={scope} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={keyScopes.includes(scope)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setKeyScopes([...keyScopes, scope]);
+                                } else {
+                                  setKeyScopes(keyScopes.filter((s) => s !== scope));
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <code className="text-xs">{scope}</code>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -651,23 +699,30 @@ export function IntegrationsTab() {
               </div>
               <div>
                 <Label>Events</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {availableEvents.map((event) => (
-                    <label key={event} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={webhookEvents.includes(event)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setWebhookEvents([...webhookEvents, event]);
-                          } else {
-                            setWebhookEvents(webhookEvents.filter((ev) => ev !== event));
-                          }
-                        }}
-                        className="rounded"
-                      />
-                      <code className="text-xs">{event}</code>
-                    </label>
+                <div className="space-y-4 mt-2 max-h-64 overflow-y-auto pr-2">
+                  {eventCategories.map((category) => (
+                    <div key={category.name}>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">{category.name}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {category.events.map((event) => (
+                          <label key={event} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={webhookEvents.includes(event)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setWebhookEvents([...webhookEvents, event]);
+                                } else {
+                                  setWebhookEvents(webhookEvents.filter((ev) => ev !== event));
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <code className="text-xs">{event}</code>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
