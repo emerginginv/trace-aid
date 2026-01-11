@@ -503,11 +503,10 @@ const SubjectDetail = () => {
                 <CardTitle className="text-lg">Address</CardTitle>
               </CardHeader>
               <CardContent className="divide-y divide-border">
-                <SubjectDetailField icon={MapPin} label="Street Address" value={details.street_address} />
-                <SubjectDetailField icon={MapPin} label="Address Line 2" value={details.address_line_2} />
+                <SubjectDetailField icon={MapPin} label="Street" value={details.street} />
                 <SubjectDetailField icon={Building2} label="City" value={details.city} />
                 <SubjectDetailField icon={MapPin} label="State" value={getStateLabel(details.state)} />
-                <SubjectDetailField icon={Hash} label="Zip Code" value={details.zip_code} />
+                <SubjectDetailField icon={Hash} label="Zip Code" value={details.zip} />
                 {(details.latitude || details.longitude) && (
                   <SubjectDetailField 
                     icon={Globe} 
