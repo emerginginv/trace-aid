@@ -29,6 +29,12 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_ANON_KEY") ?? ""
   );
 
+  // Service role client for admin operations
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
   try {
     const body = await req.json();
     const { priceId, planKey, organizationId } = body;
@@ -75,7 +81,7 @@ serve(async (req) => {
     let verifiedOrgId = organizationId;
     
     if (organizationId) {
-      const { data: membership, error: memberError } = await supabaseClient
+      const { data: membership, error: memberError } = await supabaseAdmin
         .from("organization_members")
         .select("organization_id, role")
         .eq("user_id", user.id)
@@ -89,8 +95,8 @@ serve(async (req) => {
       
       logStep("Organization membership verified", { organizationId, role: membership.role });
     } else {
-      // Get user's first organization if not specified
-      const { data: membership, error: memberError } = await supabaseClient
+      // Get user's first organization where they are admin
+      const { data: membership, error: memberError } = await supabaseAdmin
         .from("organization_members")
         .select("organization_id")
         .eq("user_id", user.id)
@@ -99,6 +105,7 @@ serve(async (req) => {
         .maybeSingle();
       
       if (memberError || !membership) {
+        logStep("No admin organization found", { error: memberError?.message });
         throw new Error("User does not have an organization");
       }
       
@@ -107,7 +114,7 @@ serve(async (req) => {
     }
 
     // Get organization details
-    const { data: org, error: orgError } = await supabaseClient
+    const { data: org, error: orgError } = await supabaseAdmin
       .from("organizations")
       .select("id, name, billing_email, stripe_customer_id")
       .eq("id", verifiedOrgId)
@@ -154,12 +161,7 @@ serve(async (req) => {
         logStep("Created new Stripe customer", { customerId });
       }
       
-      // Store customer ID in organization (using service role for this update)
-      const supabaseAdmin = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-      
+      // Store customer ID in organization
       await supabaseAdmin
         .from("organizations")
         .update({ stripe_customer_id: customerId })
