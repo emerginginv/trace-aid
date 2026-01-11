@@ -3,6 +3,30 @@
 export type SubjectCategory = 'person' | 'vehicle' | 'location' | 'item';
 export type SubjectStatus = 'active' | 'archived';
 
+export type SocialPlatform = 
+  | 'facebook' 
+  | 'instagram' 
+  | 'x' 
+  | 'linkedin' 
+  | 'tiktok' 
+  | 'snapchat' 
+  | 'youtube' 
+  | 'reddit' 
+  | 'whatsapp' 
+  | 'telegram' 
+  | 'other';
+
+export interface SubjectSocialLink {
+  id: string;
+  subject_id: string;
+  organization_id: string;
+  platform: SocialPlatform;
+  label: string | null;
+  url: string;
+  created_at: string;
+  created_by: string | null;
+}
+
 export interface SubjectLink {
   id: string;
   case_id: string;

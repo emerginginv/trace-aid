@@ -4940,6 +4940,54 @@ export type Database = {
           },
         ]
       }
+      subject_social_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          organization_id: string
+          platform: string
+          subject_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          organization_id: string
+          platform: string
+          subject_id: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          organization_id?: string
+          platform?: string
+          subject_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_social_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_social_links_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_header_footer_config: {
         Row: {
           created_at: string | null
