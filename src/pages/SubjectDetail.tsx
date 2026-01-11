@@ -444,6 +444,7 @@ const SubjectDetail = () => {
             <LinkedEntitiesPanel
               subjectId={subject.id}
               caseId={caseId!}
+              organizationId={subject.organization_id}
               subjectType={subject.subject_type}
             />
           </>
@@ -480,6 +481,7 @@ const SubjectDetail = () => {
             <LinkedEntitiesPanel
               subjectId={subject.id}
               caseId={caseId!}
+              organizationId={subject.organization_id}
               subjectType={subject.subject_type}
             />
           </>
@@ -520,6 +522,7 @@ const SubjectDetail = () => {
             <LinkedEntitiesPanel
               subjectId={subject.id}
               caseId={caseId!}
+              organizationId={subject.organization_id}
               subjectType={subject.subject_type}
             />
           </>
@@ -563,6 +566,7 @@ const SubjectDetail = () => {
             <LinkedEntitiesPanel
               subjectId={subject.id}
               caseId={caseId!}
+              organizationId={subject.organization_id}
               subjectType={subject.subject_type}
             />
           </>

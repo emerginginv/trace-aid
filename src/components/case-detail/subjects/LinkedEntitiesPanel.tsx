@@ -2,14 +2,28 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Car, MapPin, Package, ChevronRight, Link as LinkIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { User, Car, MapPin, Package, ChevronRight, Link as LinkIcon, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Subject, SubjectCategory, SUBJECT_CATEGORY_SINGULAR } from "./types";
+import { LinkSubjectDialog } from "./LinkSubjectDialog";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface LinkedEntitiesPanelProps {
   subjectId: string;
   caseId: string;
+  organizationId: string;
   subjectType: SubjectCategory;
 }
 
@@ -34,16 +48,22 @@ interface LinkedSubject {
   status: string;
   link_type: string;
   direction: 'outgoing' | 'incoming';
+  linkId: string;
 }
 
 export const LinkedEntitiesPanel = ({
   subjectId,
   caseId,
+  organizationId,
   subjectType,
 }: LinkedEntitiesPanelProps) => {
   const navigate = useNavigate();
   const [linkedSubjects, setLinkedSubjects] = useState<LinkedSubject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
+  const [subjectToUnlink, setSubjectToUnlink] = useState<LinkedSubject | null>(null);
+  const [unlinking, setUnlinking] = useState(false);
 
   useEffect(() => {
     fetchLinkedSubjects();
@@ -54,7 +74,7 @@ export const LinkedEntitiesPanel = ({
       // Fetch outgoing links (this subject -> other subjects)
       const { data: outgoingLinks, error: outError } = await supabase
         .from("subject_links")
-        .select("target_subject_id, link_type")
+        .select("id, target_subject_id, link_type")
         .eq("source_subject_id", subjectId);
 
       if (outError) throw outError;
@@ -62,7 +82,7 @@ export const LinkedEntitiesPanel = ({
       // Fetch incoming links (other subjects -> this subject)
       const { data: incomingLinks, error: inError } = await supabase
         .from("subject_links")
-        .select("source_subject_id, link_type")
+        .select("id, source_subject_id, link_type")
         .eq("target_subject_id", subjectId);
 
       if (inError) throw inError;
@@ -97,6 +117,7 @@ export const LinkedEntitiesPanel = ({
             subject_type: subject.subject_type as SubjectCategory,
             link_type: link.link_type,
             direction: 'outgoing',
+            linkId: link.id,
           });
         }
       });
@@ -109,6 +130,7 @@ export const LinkedEntitiesPanel = ({
             subject_type: subject.subject_type as SubjectCategory,
             link_type: link.link_type,
             direction: 'incoming',
+            linkId: link.id,
           });
         }
       });
@@ -118,6 +140,36 @@ export const LinkedEntitiesPanel = ({
       console.error("Error fetching linked subjects:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUnlinkClick = (e: React.MouseEvent, subject: LinkedSubject) => {
+    e.stopPropagation();
+    setSubjectToUnlink(subject);
+    setUnlinkDialogOpen(true);
+  };
+
+  const handleUnlink = async () => {
+    if (!subjectToUnlink) return;
+
+    setUnlinking(true);
+    try {
+      const { error } = await supabase
+        .from("subject_links")
+        .delete()
+        .eq("id", subjectToUnlink.linkId);
+
+      if (error) throw error;
+
+      toast.success(`Unlinked ${subjectToUnlink.display_name || subjectToUnlink.name}`);
+      fetchLinkedSubjects();
+    } catch (error) {
+      console.error("Error unlinking subject:", error);
+      toast.error("Failed to unlink subject");
+    } finally {
+      setUnlinking(false);
+      setUnlinkDialogOpen(false);
+      setSubjectToUnlink(null);
     }
   };
 
@@ -147,6 +199,7 @@ export const LinkedEntitiesPanel = ({
   };
 
   const relevantCategories = getRelevantCategories();
+  const existingLinkedIds = linkedSubjects.map(s => s.id);
 
   if (loading) {
     return (
@@ -165,68 +218,130 @@ export const LinkedEntitiesPanel = ({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Linked Entities</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {relevantCategories.map(category => {
-          const subjects = groupedByCategory[category] || [];
-          const Icon = getCategoryIcon(category);
-          const categoryLabel = category === 'person' ? 'People' : 
-            category === 'vehicle' ? 'Vehicles' : 
-            category === 'location' ? 'Locations' : 'Items';
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-lg">Linked Entities</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLinkDialogOpen(true)}
+            className="h-8"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Link
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {relevantCategories.map(category => {
+            const subjects = groupedByCategory[category] || [];
+            const Icon = getCategoryIcon(category);
+            const categoryLabel = category === 'person' ? 'People' : 
+              category === 'vehicle' ? 'Vehicles' : 
+              category === 'location' ? 'Locations' : 'Items';
 
-          return (
-            <div key={category}>
-              <div className="flex items-center gap-2 mb-2">
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">
-                  {categoryLabel}
-                </span>
-              </div>
-              
-              {subjects.length === 0 ? (
-                <p className="text-sm text-muted-foreground/60 italic pl-6">
-                  No linked {categoryLabel.toLowerCase()}
-                </p>
-              ) : (
-                <div className="space-y-1 pl-6">
-                  {subjects.map(subject => (
-                    <button
-                      key={subject.id}
-                      onClick={() => navigate(`/cases/${caseId}/subjects/${subject.id}`)}
-                      className={cn(
-                        "w-full flex items-center justify-between gap-2 p-2 rounded-lg",
-                        "border border-border bg-card hover:bg-accent/50 transition-colors text-left group"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-medium truncate">
-                          {subject.display_name || subject.name}
-                        </span>
-                        {subject.status === 'archived' && (
-                          <Badge variant="secondary" className="text-xs">
-                            Archived
-                          </Badge>
-                        )}
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                  ))}
+            return (
+              <div key={category}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {categoryLabel}
+                  </span>
                 </div>
-              )}
-            </div>
-          );
-        })}
+                
+                {subjects.length === 0 ? (
+                  <p className="text-sm text-muted-foreground/60 italic pl-6">
+                    No linked {categoryLabel.toLowerCase()}
+                  </p>
+                ) : (
+                  <div className="space-y-1 pl-6">
+                    {subjects.map(subject => (
+                      <div
+                        key={subject.id}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-lg",
+                          "border border-border bg-card group"
+                        )}
+                      >
+                        <button
+                          onClick={() => navigate(`/cases/${caseId}/subjects/${subject.id}`)}
+                          className="flex-1 flex items-center justify-between gap-2 hover:bg-accent/50 rounded transition-colors text-left min-w-0"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-medium truncate">
+                              {subject.display_name || subject.name}
+                            </span>
+                            {subject.link_type && (
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                {subject.link_type}
+                              </Badge>
+                            )}
+                            {subject.status === 'archived' && (
+                              <Badge variant="secondary" className="text-xs shrink-0">
+                                Archived
+                              </Badge>
+                            )}
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                          onClick={(e) => handleUnlinkClick(e, subject)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
-        {linkedSubjects.length === 0 && (
-          <div className="text-center py-4 text-muted-foreground">
-            <LinkIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No linked entities</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          {linkedSubjects.length === 0 && (
+            <div className="text-center py-4 text-muted-foreground">
+              <LinkIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No linked entities</p>
+              <p className="text-xs mt-1">Click "Link" to connect subjects</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <LinkSubjectDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        caseId={caseId}
+        organizationId={organizationId}
+        sourceSubjectId={subjectId}
+        sourceSubjectType={subjectType}
+        existingLinkedIds={existingLinkedIds}
+        onSuccess={fetchLinkedSubjects}
+      />
+
+      <AlertDialog open={unlinkDialogOpen} onOpenChange={setUnlinkDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unlink Subject</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unlink "{subjectToUnlink?.display_name || subjectToUnlink?.name}"? 
+              This will remove the relationship between these subjects.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unlinking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUnlink}
+              disabled={unlinking}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {unlinking ? "Unlinking..." : "Unlink"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
