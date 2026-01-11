@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { getPlanLimits, isTrialActive, getTrialDaysRemaining, PRICING_TIERS, STORAGE_ADDON_TIERS } from "@/lib/planLimits";
 import { Organization, SubscriptionStatus } from "@/contexts/OrganizationContext";
+import { BillingStatusSection } from "@/components/billing/BillingStatusSection";
+import { BillingHistorySection } from "@/components/billing/BillingHistorySection";
 
 interface BillingTabProps {
   organization: Organization | null;
@@ -83,6 +85,14 @@ export const BillingTab = ({
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Billing Status Section */}
+      <BillingStatusSection
+        organization={organization}
+        subscriptionStatus={subscriptionStatus}
+        onManageSubscription={handleManageSubscription}
+        loading={billingLoading === "portal"}
+      />
 
       {/* Current Plan & Usage */}
       {organization && (() => {
@@ -261,6 +271,9 @@ export const BillingTab = ({
           ))}
         </div>
       </div>
+
+      {/* Billing History Section */}
+      <BillingHistorySection organizationId={organization?.id} />
     </div>
   );
 };
