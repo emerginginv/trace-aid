@@ -233,9 +233,15 @@ export function HelpCenterAdmin() {
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{getCategoryName(article)}</Badge>
-                    </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant="secondary" 
+                      className="whitespace-nowrap max-w-[160px] truncate inline-block"
+                      title={getCategoryName(article)}
+                    >
+                      {getCategoryName(article)}
+                    </Badge>
+                  </TableCell>
                     <TableCell className="text-muted-foreground">
                       {format(new Date(article.updated_at), "MMM d, yyyy")}
                     </TableCell>
