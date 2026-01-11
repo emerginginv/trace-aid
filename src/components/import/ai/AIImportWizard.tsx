@@ -15,7 +15,7 @@ import { AIImportProgress } from "./AIImportProgress";
 import { AIUploadedFile, AIAnalysisResult, AIColumnMapping } from "@/lib/aiImportTypes";
 
 interface AIImportWizardProps {
-  onBack: () => void;
+  onBack?: () => void;
   onComplete: () => void;
 }
 
