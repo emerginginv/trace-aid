@@ -29,6 +29,7 @@ export {
   profitDistributionReport,
   agingByClientReport,
   agingDetailReport,
+  revenueTrendsComparisonReport,
   reportRegistry,
   reportCategories,
   getReport,
