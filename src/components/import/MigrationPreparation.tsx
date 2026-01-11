@@ -12,6 +12,7 @@ import { getAllEntitiesSorted, getRequiredColumns } from "@/lib/templateColumnDe
 import { ImportOrderDiagram } from "./ImportOrderDiagram";
 import { ColumnGuideModal } from "./ColumnGuideModal";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useToast } from "@/hooks/use-toast";
 
 interface MigrationPreparationProps {
   onBack: () => void;
@@ -68,6 +69,7 @@ export function MigrationPreparation({ onBack, onContinue }: MigrationPreparatio
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const [selectedEntityType, setSelectedEntityType] = useState<string | null>(null);
   const [showBestPractices, setShowBestPractices] = useState(false);
+  const { toast } = useToast();
   
   const allEntities = getAllEntitiesSorted();
   const allChecked = checkedItems.size === CHECKLIST_ITEMS.length;
@@ -83,8 +85,28 @@ export function MigrationPreparation({ onBack, onContinue }: MigrationPreparatio
   };
 
   const downloadAllTemplates = () => {
-    // Open templates directory
-    window.open('/import-templates/', '_blank');
+    // Get all template files to download
+    const files = [
+      ...allEntities.map(entity => entity.fileName),
+      'README.md'
+    ];
+    
+    // Download each file with a staggered delay to prevent browser blocking
+    files.forEach((file, index) => {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = `/import-templates/${file}`;
+        link.download = file;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, index * 150);
+    });
+    
+    toast({
+      title: "Downloading templates",
+      description: `${files.length} files are being downloaded...`,
+    });
   };
 
   return (
