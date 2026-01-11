@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Shield, Eye, EyeOff } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTenantBranding, isValidHexColor } from "@/hooks/use-tenant-branding";
+import { useFavicon } from "@/hooks/use-favicon";
 const signInSchema = z.object({
   email: z.string().trim().min(1, "Email or username is required").max(255, "Input must be less than 255 characters"),
   password: z.string().min(1, "Password is required")
@@ -52,6 +53,9 @@ const Auth = () => {
   const accentColor = showTenantBranding && branding?.accent_color && isValidHexColor(branding.accent_color)
     ? branding.accent_color
     : null;
+
+  // Set favicon from organization's square logo (always, not gated by branding_enabled)
+  useFavicon(branding?.favicon_url);
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),

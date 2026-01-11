@@ -7,6 +7,7 @@ export interface TenantBranding {
   logo_url: string | null;
   brand_name: string | null;
   accent_color: string | null;
+  favicon_url: string | null;
 }
 
 /**
