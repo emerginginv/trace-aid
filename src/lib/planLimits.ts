@@ -101,6 +101,13 @@ export const STORAGE_ADDONS: Record<string, StorageAddon> = {
     price_id: "price_1SoSgxDvYSpsz5yY4PCEEF1a",
     product_id: "prod_Tm0i3vt8F2ogpH",
   },
+  "prod_Tm0kAH1O6WKVnl": {
+    storage_gb: 5000,
+    name: "5TB Storage Add-on",
+    price: 199,
+    price_id: "price_1SoSidDvYSpsz5yYAfOCDhMz",
+    product_id: "prod_Tm0kAH1O6WKVnl",
+  },
 };
 
 // Pricing tiers for the billing page (LIVE)
@@ -168,6 +175,13 @@ export const STORAGE_ADDON_TIERS = [
     priceId: "price_1SoSgxDvYSpsz5yY4PCEEF1a",
     productId: "prod_Tm0i3vt8F2ogpH",
     storageGb: 1000,
+  },
+  {
+    name: "5TB Storage",
+    price: "$199",
+    priceId: "price_1SoSidDvYSpsz5yYAfOCDhMz",
+    productId: "prod_Tm0kAH1O6WKVnl",
+    storageGb: 5000,
   },
 ];
 
