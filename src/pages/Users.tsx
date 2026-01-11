@@ -7,6 +7,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -651,14 +652,7 @@ const Users = () => {
                     />
                   )}
                   {isVisible("actions") && (
-                    <SortableTableHead
-                      column=""
-                      label="Actions"
-                      sortColumn=""
-                      sortDirection="asc"
-                      onSort={() => {}}
-                      className="text-right"
-                    />
+                    <TableHead className="text-right">Actions</TableHead>
                   )}
                 </TableRow>
               </TableHeader>

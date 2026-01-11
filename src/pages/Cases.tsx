@@ -13,7 +13,7 @@ import { CaseForm } from "@/components/CaseForm";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -722,14 +722,7 @@ const Cases = () => {
                     />
                   )}
                   {isVisible("actions") && (
-                    <SortableTableHead
-                      column=""
-                      label="Actions"
-                      sortColumn=""
-                      sortDirection="asc"
-                      onSort={() => {}}
-                      className="text-right"
-                    />
+                    <TableHead className="text-right">Actions</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
