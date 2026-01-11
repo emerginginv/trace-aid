@@ -220,7 +220,7 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
                 {renderIcon(category.icon)}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-foreground">{category.name}</h3>
+                <h3 className="font-medium text-foreground text-base">{category.name}</h3>
                 <p className="text-sm text-muted-foreground truncate">
                   {category.description || `${categoryArticles.length} articles`}
                 </p>
@@ -274,7 +274,7 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
                 {renderIcon(category.icon)}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-foreground">{article.title}</h4>
+                <h4 className="font-medium text-foreground text-sm">{article.title}</h4>
                 <p className="text-sm text-muted-foreground truncate">{article.summary}</p>
                 <span className="text-xs text-primary mt-1 inline-block">{category.name}</span>
               </div>
@@ -298,7 +298,7 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
             {renderIcon(category.icon)}
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">{category.name}</h3>
+            <h3 className="font-semibold text-foreground text-base">{category.name}</h3>
             <p className="text-sm text-muted-foreground">{categoryArticles.length} articles</p>
           </div>
         </div>
@@ -322,7 +322,7 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
               >
                 <BookOpen className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-foreground">{article.title}</h4>
+                  <h4 className="font-medium text-foreground text-sm">{article.title}</h4>
                   <p className="text-sm text-muted-foreground truncate">{article.summary}</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
