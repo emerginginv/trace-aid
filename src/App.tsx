@@ -12,6 +12,7 @@ import { GlobalLoadingIndicator } from "./components/ui/global-loading-indicator
 import { RouteTransitionDetector } from "./hooks/use-route-transition";
 import { BreadcrumbProvider } from "./contexts/BreadcrumbContext";
 import { FaviconProvider } from "./components/FaviconProvider";
+import { NavigationProvider } from "./contexts/NavigationContext";
 import Auth from "./pages/Auth";
 import { Onboarding } from "./components/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -94,9 +95,10 @@ const App = () => {
           >
             <OrganizationProvider>
               <BrowserRouter>
-                <ImpersonationProvider>
-                  <BreadcrumbProvider>
-                    <FaviconProvider>
+                <NavigationProvider>
+                  <ImpersonationProvider>
+                    <BreadcrumbProvider>
+                      <FaviconProvider>
                       <GlobalLoadingIndicator />
               <RouteTransitionDetector />
               <Toaster />
@@ -593,9 +595,10 @@ const App = () => {
         />
         <Route path="*" element={<NotFound />} />
                 </Routes>
-                    </FaviconProvider>
-                  </BreadcrumbProvider>
-                </ImpersonationProvider>
+                      </FaviconProvider>
+                    </BreadcrumbProvider>
+                  </ImpersonationProvider>
+                </NavigationProvider>
               </BrowserRouter>
             </OrganizationProvider>
           </ThemeProvider>

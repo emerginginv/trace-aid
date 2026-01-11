@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ const STAT_CARDS = [
 export default function Updates() {
   const navigate = useNavigate();
   const { organization } = useOrganization();
+  const { navigateWithSource } = useNavigationSource();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
 
   const [updates, setUpdates] = useState<UpdateWithCase[]>([]);
@@ -268,7 +270,7 @@ export default function Updates() {
   };
 
   const navigateToUpdate = (update: UpdateWithCase) => {
-    navigate(`/updates/${update.id}`);
+    navigateWithSource(navigate, `/updates/${update.id}`, 'updates_list');
   };
 
   return (

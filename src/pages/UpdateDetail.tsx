@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
+import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ const UpdateDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { getBackRoute } = useNavigationSource();
   const [update, setUpdate] = useState<Update | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [linkedAttachments, setLinkedAttachments] = useState<LinkedAttachment[]>([]);
@@ -209,15 +211,19 @@ const UpdateDetail = () => {
     return null;
   }
 
+  // Calculate fallback route and context-aware back route
+  const fallbackRoute = update ? `/cases/${update.case_id}` : '/cases';
+  const backRoute = getBackRoute(fallbackRoute);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <Button
         variant="ghost"
-        onClick={() => navigate(`/cases/${update.case_id}`)}
+        onClick={() => navigate(backRoute)}
         className="mb-4"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Case
+        Back
       </Button>
 
       <Card>

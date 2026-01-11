@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
+import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -101,6 +102,7 @@ const getStateLabel = (value: string | null | undefined): string => {
 const SubjectDetail = () => {
   const { caseId, subjectId } = useParams();
   const navigate = useNavigate();
+  const { getBackRoute } = useNavigationSource();
   const [subject, setSubject] = useState<Subject | null>(null);
   const [caseInfo, setCaseInfo] = useState<{ title: string; case_number: string } | null>(null);
   const [signedImageUrl, setSignedImageUrl] = useState<string | null>(null);
@@ -109,6 +111,10 @@ const SubjectDetail = () => {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [coverModalOpen, setCoverModalOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  
+  // Calculate fallback route and context-aware back route
+  const fallbackRoute = `/cases/${caseId}?tab=subjects`;
+  const backRoute = getBackRoute(fallbackRoute);
 
   useSetBreadcrumbs(
     subject && caseInfo
@@ -287,9 +293,9 @@ const SubjectDetail = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${caseId}?tab=subjects`)}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(backRoute)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Subjects
+            Back
           </Button>
         </div>
         <Card>
@@ -309,9 +315,9 @@ const SubjectDetail = () => {
     <div className="space-y-6">
       {/* Header Actions */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${caseId}?tab=subjects`)}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(backRoute)}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Subjects
+          Back
         </Button>
         <div className="flex items-center gap-2">
           {isArchived ? (

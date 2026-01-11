@@ -11,6 +11,7 @@ import { SubjectCardView } from "./SubjectCardView";
 import { SubjectDrawer } from "./SubjectDrawer";
 import { CaseTabSkeleton } from "../CaseTabSkeleton";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigationSource } from "@/hooks/useNavigationSource";
 
 interface SubjectSubTabProps {
   caseId: string;
@@ -27,6 +28,7 @@ const getStoredViewMode = (): ViewMode => {
 export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }: SubjectSubTabProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { navigateWithSource } = useNavigationSource();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,7 +100,7 @@ export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }
   };
 
   const handleNavigateToDetail = (subject: Subject) => {
-    navigate(`/cases/${caseId}/subjects/${subject.id}`);
+    navigateWithSource(navigate, `/cases/${caseId}/subjects/${subject.id}`, 'case_subjects_tab');
   };
 
   const handleEditInDrawer = (subject: Subject) => {

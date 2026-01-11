@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,7 @@ export default function Tasks() {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const { navigateWithSource } = useNavigationSource();
 
   const [activities, setActivities] = useState<ActivityWithCase[]>([]);
   const [loading, setLoading] = useState(true);
@@ -262,7 +264,7 @@ export default function Tasks() {
   };
 
   const navigateToCase = (caseId: string) => {
-    navigate(`/cases/${caseId}`);
+    navigateWithSource(navigate, `/cases/${caseId}`, 'tasks_list');
   };
 
   const isOverdue = (dueDate: string | null, status: string) => {
