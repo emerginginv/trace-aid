@@ -101,33 +101,49 @@ export default function Subjects() {
     setLoading(true);
 
     try {
-      console.log("Subjects: Starting query...");
-      const { data, error } = await supabase
+      // Step 1: Fetch subjects
+      const { data: subjectsData, error: subjectsError } = await supabase
         .from("case_subjects")
-        .select(`
-          id, case_id, organization_id, subject_type, name, display_name, details, notes, status, role, profile_image_url, cover_image_url, is_primary, created_at, updated_at,
-          cases(id, case_number, title)
-        `)
+        .select("*")
         .eq("organization_id", organization.id)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Subjects: Query error:", error);
-        throw error;
+      if (subjectsError) {
+        console.error("Subjects: Query error:", subjectsError);
+        throw subjectsError;
       }
 
-      console.log("Subjects: Query returned", data?.length || 0, "results");
+      // Step 2: Get unique case IDs and fetch cases separately
+      const caseIds = [...new Set((subjectsData || []).map(s => s.case_id))];
+      let casesMap: Record<string, { id: string; case_number: string; title: string }> = {};
 
-      // Transform the data to handle the single case object
-      const subjectsData: SubjectWithCase[] = (data || []).map((item: any) => ({
-        ...item,
-        cases: item.cases || { id: '', case_number: '', title: 'Unknown Case' }
-      }));
-      setSubjects(subjectsData);
+      if (caseIds.length > 0) {
+        const { data: cases } = await supabase
+          .from("cases")
+          .select("id, case_number, title")
+          .in("id", caseIds);
+
+        if (cases) {
+          casesMap = cases.reduce((acc, c) => {
+            acc[c.id] = c;
+            return acc;
+          }, {} as typeof casesMap);
+        }
+      }
+
+      // Step 3: Merge subjects with their cases
+      const enrichedSubjects: SubjectWithCase[] = (subjectsData || [])
+        .filter(s => casesMap[s.case_id]) // Only include subjects with valid cases
+        .map((item: any) => ({
+          ...item,
+          cases: casesMap[item.case_id]
+        }));
+
+      setSubjects(enrichedSubjects);
 
       // Calculate counts for active subjects
       const newCounts: SubjectCounts = { person: 0, vehicle: 0, location: 0, item: 0 };
-      subjectsData.forEach((s) => {
+      enrichedSubjects.forEach((s) => {
         if (s.status === 'active' && s.subject_type in newCounts) {
           newCounts[s.subject_type as keyof SubjectCounts]++;
         }
