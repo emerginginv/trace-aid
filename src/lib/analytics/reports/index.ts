@@ -30,6 +30,7 @@ export {
   agingByClientReport,
   agingDetailReport,
   revenueTrendsComparisonReport,
+  expenseDetailReport,
   reportRegistry,
   reportCategories,
   getReport,
