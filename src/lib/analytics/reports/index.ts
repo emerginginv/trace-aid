@@ -22,6 +22,7 @@ export { calculateReportTotals, formatTotalValue } from "./totals";
 // Definitions
 export {
   profitTrendsReport,
+  profitByInvoiceReport,
   reportRegistry,
   reportCategories,
   getReport,
