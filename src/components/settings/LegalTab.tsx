@@ -198,21 +198,19 @@ export function LegalTab() {
     queryFn: async (): Promise<VendorUser[]> => {
       if (!organization?.id) return [];
       
-      // First get vendor role user IDs - use type assertion to avoid deep type instantiation
-      const roleResult = await supabase
-        .from('user_roles' as any)
+      // Query user_roles with explicit any typing to avoid deep type instantiation
+      const { data, error } = await (supabase as any)
+        .from('user_roles')
         .select('user_id')
         .eq('role', 'vendor')
         .eq('organization_id', organization.id);
-      if (roleResult.error) throw roleResult.error;
       
-      const roleData = roleResult.data as { user_id: string }[] | null;
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
       
-      if (!roleData || roleData.length === 0) return [];
+      const vendorUserIds = data.map((r: any) => r.user_id as string);
       
-      const vendorUserIds = (roleData as any[]).map((r: any) => r.user_id);
-      
-      // Then get profile info for those users
+      // Get profile info for vendor users
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, full_name, email, company_name')
