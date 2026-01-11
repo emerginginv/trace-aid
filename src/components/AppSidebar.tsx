@@ -1,14 +1,17 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Briefcase, Users, Building2, Shield, DollarSign, Calendar, FileText, Info, Wallet, Receipt, BarChart3, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Building2, Shield, DollarSign, Calendar, FileText, Info, Wallet, Receipt, BarChart3, ClipboardList, ChevronDown, UserSearch, ListTodo } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton } from "@/components/ui/sidebar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
+
+// Regular menu items (non-collapsible)
 const menuGroups = [{
   label: "Navigation",
   items: [{
@@ -21,11 +24,6 @@ const menuGroups = [{
     icon: FileText,
     url: "/cases",
     roles: ['vendor']
-  }, {
-    title: "Cases",
-    icon: Briefcase,
-    url: "/cases",
-    roles: ['admin', 'manager', 'investigator']
   }, {
     title: "Calendar",
     icon: Calendar,
@@ -198,17 +196,71 @@ export function AppSidebar() {
         
         {menuGroups.map(group => {
         const visibleItems = group.items.filter(item => !role || item.roles.includes(role));
-        if (visibleItems.length === 0) return null;
+        if (visibleItems.length === 0 && group.label !== "Navigation") return null;
+
+        // For Navigation group, also check if Cases should be shown
+        const showCasesMenu = group.label === "Navigation" && role && ['admin', 'manager', 'investigator'].includes(role);
+
         return <SidebarGroup key={group.label}>
               <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  {/* Render regular menu items */}
                   {visibleItems.map(item => <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton onClick={() => navigate(item.url)} isActive={location.pathname === item.url} className="w-full">
                         <item.icon className="w-4 h-4" />
                         <span>{item.title}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>)}
+                  
+                  {/* Render Cases collapsible menu for Navigation group */}
+                  {showCasesMenu && (
+                    <Collapsible 
+                      defaultOpen={location.pathname.startsWith('/cases') || location.pathname === '/subjects' || location.pathname === '/tasks'}
+                      className="group/collapsible"
+                    >
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton className="w-full">
+                            <Briefcase className="w-4 h-4" />
+                            <span>Cases</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton 
+                                onClick={() => navigate('/cases')}
+                                isActive={location.pathname === '/cases'}
+                              >
+                                <Briefcase className="w-4 h-4" />
+                                <span>All Cases</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton 
+                                onClick={() => navigate('/subjects')}
+                                isActive={location.pathname === '/subjects'}
+                              >
+                                <UserSearch className="w-4 h-4" />
+                                <span>Subjects</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton 
+                                onClick={() => navigate('/tasks')}
+                                isActive={location.pathname === '/tasks'}
+                              >
+                                <ListTodo className="w-4 h-4" />
+                                <span>Tasks & Events</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>;
