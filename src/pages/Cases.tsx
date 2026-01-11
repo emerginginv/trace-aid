@@ -425,7 +425,7 @@ const Cases = () => {
             {isVendor ? 'View and update your assigned cases' : 'Manage and track your investigation cases'}
           </p>
         </div>
-        {!isVendor && hasPermission('add_cases') && <Button className="gap-2" onClick={() => setFormOpen(true)}>
+        {!isVendor && hasPermission('add_cases') && <Button className="gap-2" onClick={() => navigate('/cases/new')}>
             <Plus className="w-4 h-4" />
             New Case
           </Button>}

@@ -16,6 +16,7 @@ import { Onboarding } from "./components/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
+import { CaseWizard } from "./components/case-wizard";
 import SubjectDetail from "./pages/SubjectDetail";
 import Calendar from "./pages/Calendar";
 import Finance from "./pages/Finance";
@@ -130,6 +131,16 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <Cases />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/new"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <CaseWizard />
               </DashboardLayout>
             </ProtectedRoute>
           }
