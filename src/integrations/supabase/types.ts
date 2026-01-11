@@ -1483,6 +1483,7 @@ export type Database = {
       }
       contracts: {
         Row: {
+          agreement_category: string
           auto_renews: boolean
           contract_type: Database["public"]["Enums"]["contract_type"]
           created_at: string
@@ -1505,9 +1506,11 @@ export type Database = {
           title: string
           updated_at: string
           updated_by: string | null
+          vendor_user_id: string | null
           version: string | null
         }
         Insert: {
+          agreement_category?: string
           auto_renews?: boolean
           contract_type: Database["public"]["Enums"]["contract_type"]
           created_at?: string
@@ -1530,9 +1533,11 @@ export type Database = {
           title: string
           updated_at?: string
           updated_by?: string | null
+          vendor_user_id?: string | null
           version?: string | null
         }
         Update: {
+          agreement_category?: string
           auto_renews?: boolean
           contract_type?: Database["public"]["Enums"]["contract_type"]
           created_at?: string
@@ -1555,6 +1560,7 @@ export type Database = {
           title?: string
           updated_at?: string
           updated_by?: string | null
+          vendor_user_id?: string | null
           version?: string | null
         }
         Relationships: [
@@ -5977,21 +5983,43 @@ export type Database = {
         }
         Returns: Json
       }
-      create_contract: {
-        Args: {
-          p_auto_renews?: boolean
-          p_contract_type: Database["public"]["Enums"]["contract_type"]
-          p_description?: string
-          p_effective_date?: string
-          p_expiration_date?: string
-          p_file_path?: string
-          p_organization_id: string
-          p_renewal_term_days?: number
-          p_title: string
-          p_version?: string
-        }
-        Returns: string
-      }
+      create_contract:
+        | {
+            Args: {
+              p_auto_renews?: boolean
+              p_contract_type: Database["public"]["Enums"]["contract_type"]
+              p_description?: string
+              p_effective_date?: string
+              p_expiration_date?: string
+              p_file_path?: string
+              p_organization_id: string
+              p_renewal_term_days?: number
+              p_title: string
+              p_version?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_account_id?: string
+              p_agreement_category?: string
+              p_auto_renews?: boolean
+              p_contact_id?: string
+              p_contract_type: string
+              p_description?: string
+              p_effective_date?: string
+              p_expiration_date?: string
+              p_file_path?: string
+              p_notes?: string
+              p_organization_id: string
+              p_renewal_notice_days?: number
+              p_renewal_term_days?: number
+              p_title: string
+              p_vendor_user_id?: string
+              p_version?: string
+            }
+            Returns: string
+          }
       create_incident: {
         Args: {
           p_affected_components?: string[]
@@ -6160,23 +6188,34 @@ export type Database = {
         Returns: {
           account_id: string
           account_name: string
+          agreement_category: string
           auto_renews: boolean
           contact_id: string
           contact_name: string
-          contract_type: Database["public"]["Enums"]["contract_type"]
+          contract_type: string
           created_at: string
-          days_until_expiration: number
+          created_by: string
           description: string
           effective_date: string
           expiration_date: string
           file_path: string
           id: string
+          notes: string
+          organization_id: string
+          renewal_notice_days: number
           renewal_term_days: number
           signed_at: string
           signed_by: string
           signer_email: string
-          status: Database["public"]["Enums"]["contract_status"]
+          signer_title: string
+          status: string
+          supersedes_contract_id: string
           title: string
+          updated_at: string
+          updated_by: string
+          vendor_email: string
+          vendor_name: string
+          vendor_user_id: string
           version: string
         }[]
       }
