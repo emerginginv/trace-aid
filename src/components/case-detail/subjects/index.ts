@@ -2,6 +2,7 @@ export { SubjectsTab } from './SubjectsTab';
 export { SubjectSubTab } from './SubjectSubTab';
 export { SubjectDrawer } from './SubjectDrawer';
 export { SubjectListView } from './SubjectListView';
+export { SubjectCardView } from './SubjectCardView';
 export { SubjectFilters } from './SubjectFilters';
 export * from './types';
 export * from './forms/PersonForm';
