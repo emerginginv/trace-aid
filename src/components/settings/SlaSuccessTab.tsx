@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import { isEnterprisePlan } from "@/lib/planDetection";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +14,7 @@ import {
   TrendingUp, Users, FolderOpen, Lock, Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SlaList } from "./SlaList";
 
 interface SlaSummary {
   slas: Array<{
@@ -71,12 +73,16 @@ const riskIcons: Record<string, React.ReactNode> = {
 export function SlaSuccessTab() {
   const { organization } = useOrganization();
   const { entitlements } = useEntitlements();
+  const { isAdmin, isManager } = useUserRole();
   
   // Check enterprise status via entitlements (includes trial awareness) or fallback to org tier
   const isEnterprise = isEnterprisePlan(
     entitlements?.subscription_tier,
     entitlements?.subscription_product_id
   ) || isEnterprisePlan(organization?.subscription_tier, organization?.subscription_product_id);
+  
+  // Allow admins and managers to configure SLAs
+  const canManageSlas = isAdmin || isManager;
 
   const { data: summary, isLoading } = useQuery({
     queryKey: ["sla-summary", organization?.id],
@@ -134,6 +140,9 @@ export function SlaSuccessTab() {
 
   return (
     <div className="space-y-6">
+      {/* SLA Configuration - Admin/Manager only */}
+      {canManageSlas && <SlaList />}
+      
       {/* Health Overview */}
       {summary?.health && (
         <Card>
