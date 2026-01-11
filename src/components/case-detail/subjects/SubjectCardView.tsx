@@ -9,11 +9,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Archive, ArchiveRestore, Eye, Edit, User, Car, MapPin, Package } from "lucide-react";
+import { MoreVertical, Archive, ArchiveRestore, Eye, Edit, User, Car, MapPin, Package, MoreHorizontal } from "lucide-react";
 import { Subject, SubjectCategory, SUBJECT_CATEGORY_SINGULAR } from "./types";
 import { useSubjectProfileImages } from "@/hooks/use-subject-profile-images";
 import { cn } from "@/lib/utils";
 import { ProfileImageModal } from "./ProfileImageModal";
+import { SocialLinkIcon, getPlatformConfig, SocialPlatform } from "./SocialPlatformIcons";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SubjectCardViewProps {
   subjects: Subject[];
@@ -86,6 +91,34 @@ export const SubjectCardView = ({
   }));
   const { signedUrls } = useSubjectProfileImages(subjectsForImages);
   const Icon = getCategoryIcon(category);
+
+  // Fetch social links for person subjects
+  const personSubjectIds = category === 'person' 
+    ? subjects.map(s => s.id) 
+    : [];
+  
+  const { data: socialLinks = [] } = useQuery({
+    queryKey: ['subject-social-links-cards', personSubjectIds],
+    queryFn: async () => {
+      if (personSubjectIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('subject_social_links')
+        .select('*')
+        .in('subject_id', personSubjectIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: personSubjectIds.length > 0,
+  });
+
+  // Group social links by subject id
+  const socialLinksBySubject = socialLinks.reduce((acc, link) => {
+    if (!acc[link.subject_id]) {
+      acc[link.subject_id] = [];
+    }
+    acc[link.subject_id].push(link);
+    return acc;
+  }, {} as Record<string, typeof socialLinks>);
 
   // Image modal state
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -211,22 +244,78 @@ export const SubjectCardView = ({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <CardContent className="pt-0 text-center">
+            <CardContent className="pt-0 flex flex-col items-center text-center">
               {/* Name */}
-              <h3 className="font-semibold text-foreground truncate">
+              <h3 className="font-semibold text-foreground truncate w-full">
                 {subject.display_name || subject.name}
               </h3>
 
               {/* Subtitle */}
               {subtitle && (
-                <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                <p className="text-sm text-muted-foreground mt-0.5 truncate w-full">
                   {subtitle}
                 </p>
               )}
 
+              {/* Date of Birth (People only) */}
+              {category === 'person' && (() => {
+                const dob = subject.details?.date_of_birth;
+                if (!dob) return null;
+                try {
+                  const formattedDob = format(new Date(dob), "MMM d, yyyy");
+                  return (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      DOB: {formattedDob}
+                    </p>
+                  );
+                } catch {
+                  return null;
+                }
+              })()}
+
+              {/* Social Media Icons (People only) */}
+              {category === 'person' && (() => {
+                const subjectLinks = socialLinksBySubject[subject.id] || [];
+                if (subjectLinks.length === 0) return null;
+                
+                const displayedLinks = subjectLinks.slice(0, 5);
+                const overflowCount = subjectLinks.length - 5;
+                
+                return (
+                  <div 
+                    className="flex items-center justify-center gap-1 mt-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <TooltipProvider>
+                      {displayedLinks.map((link) => (
+                        <SocialLinkIcon
+                          key={link.id}
+                          platform={link.platform as SocialPlatform}
+                          url={link.url}
+                          label={link.label || undefined}
+                          size="sm"
+                        />
+                      ))}
+                      {overflowCount > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                              +{overflowCount}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{overflowCount} more link{overflowCount > 1 ? 's' : ''}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </TooltipProvider>
+                  </div>
+                );
+              })()}
+
               {/* Notes */}
               {subject.notes && (
-                <p className="text-sm text-muted-foreground/80 mt-3 line-clamp-3 text-left">
+                <p className="text-sm text-muted-foreground/80 mt-3 line-clamp-3 text-center w-full">
                   {subject.notes}
                 </p>
               )}
