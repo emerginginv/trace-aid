@@ -31,6 +31,7 @@ export {
   agingDetailReport,
   revenueTrendsComparisonReport,
   expenseDetailReport,
+  expenseDetailByStaffReport,
   reportRegistry,
   reportCategories,
   getReport,

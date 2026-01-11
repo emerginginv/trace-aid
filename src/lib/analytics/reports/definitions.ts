@@ -141,6 +141,19 @@ export const expenseDetailReport: ReportDefinition = {
   relatedMetrics: ["financial.total_expenses"],
 };
 
+export const expenseDetailByStaffReport: ReportDefinition = {
+  id: "expense-detail-by-staff",
+  name: "Expense Detail by Staff",
+  description: "Expense entries grouped by staff member with subtotals",
+  category: "expense",
+  sourceTable: "case_finances",
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
+  defaultSort: { field: "staffName", direction: "asc" },
+  totals: [],
+  relatedMetrics: ["financial.total_expenses"],
+};
+
 // ============================================
 // REPORT REGISTRY
 // ============================================
@@ -156,6 +169,7 @@ export const reportRegistry: Record<string, ReportDefinition> = {
   "aging-detail": agingDetailReport,
   "revenue-trends-comparison": revenueTrendsComparisonReport,
   "expense-detail": expenseDetailReport,
+  "expense-detail-by-staff": expenseDetailByStaffReport,
 };
 
 // ============================================
@@ -175,7 +189,7 @@ export const reportCategories: ReportCategoryInfo[] = [
     name: "Expense Reports",
     description: "Expense tracking, detail, and analysis reports",
     icon: "Receipt",
-    reports: ["expense-detail"],
+    reports: ["expense-detail", "expense-detail-by-staff"],
   },
 ];
 
