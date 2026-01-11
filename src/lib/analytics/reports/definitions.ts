@@ -72,6 +72,19 @@ export const salesTrendDetailReport: ReportDefinition = {
   relatedMetrics: ["financial.revenue_growth"],
 };
 
+export const profitDistributionReport: ReportDefinition = {
+  id: "profit-distribution",
+  name: "Profit Distribution",
+  description: "Profit breakdown by client with expense analysis and visual charts",
+  category: "sales",
+  sourceTable: "invoices",
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
+  defaultSort: { field: "profit", direction: "desc" },
+  totals: [],
+  relatedMetrics: ["financial.profit_margin"],
+};
+
 // ============================================
 // REPORT REGISTRY
 // ============================================
@@ -82,6 +95,7 @@ export const reportRegistry: Record<string, ReportDefinition> = {
   "income-distribution": incomeDistributionReport,
   "transaction-summary": transactionSummaryReport,
   "sales-trend-detail": salesTrendDetailReport,
+  "profit-distribution": profitDistributionReport,
 };
 
 // ============================================
@@ -94,7 +108,7 @@ export const reportCategories: ReportCategoryInfo[] = [
     name: "Sales Reports",
     description: "Revenue, profit trends, and sales analytics",
     icon: "TrendingUp",
-    reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary", "sales-trend-detail"],
+    reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary", "sales-trend-detail", "profit-distribution"],
   },
 ];
 

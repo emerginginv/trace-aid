@@ -26,6 +26,7 @@ export {
   incomeDistributionReport,
   transactionSummaryReport,
   salesTrendDetailReport,
+  profitDistributionReport,
   reportRegistry,
   reportCategories,
   getReport,
