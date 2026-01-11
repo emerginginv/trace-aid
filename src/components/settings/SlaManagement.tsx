@@ -46,11 +46,53 @@ interface SlaManagementProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const metricOptions: { value: SlaMetric; label: string; description: string }[] = [
-  { value: "availability", label: "System Availability", description: "Platform uptime percentage" },
-  { value: "response_time", label: "Response Time", description: "API/page response performance" },
-  { value: "support_response", label: "Support Response Time", description: "Time to first support reply" },
-];
+interface MetricConfig {
+  label: string;
+  description: string;
+  unit: string;
+  unitLabel: string;
+  placeholder: string;
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+}
+
+const metricConfig: Record<SlaMetric, MetricConfig> = {
+  availability: {
+    label: "System Availability",
+    description: "Platform uptime percentage",
+    unit: "%",
+    unitLabel: "Target Uptime (%)",
+    placeholder: "99.9",
+    min: 0,
+    max: 100,
+    step: 0.01,
+    defaultValue: 99.9,
+  },
+  response_time: {
+    label: "Response Time",
+    description: "API/page response performance",
+    unit: "ms",
+    unitLabel: "Maximum Response Time (ms)",
+    placeholder: "200",
+    min: 1,
+    max: 60000,
+    step: 1,
+    defaultValue: 200,
+  },
+  support_response: {
+    label: "Support Response Time",
+    description: "Time to first support reply",
+    unit: "hrs",
+    unitLabel: "Maximum Response Time (hours)",
+    placeholder: "4",
+    min: 0.5,
+    max: 168,
+    step: 0.5,
+    defaultValue: 4,
+  },
+};
 
 const windowOptions: { value: SlaWindow; label: string }[] = [
   { value: "monthly", label: "Monthly" },
@@ -62,12 +104,16 @@ export function SlaManagement({ existingSla, open, onOpenChange }: SlaManagement
   const queryClient = useQueryClient();
   const isEditing = !!existingSla;
 
+  const getDefaultValue = (metric: SlaMetric) => metricConfig[metric].defaultValue;
+
   const [formData, setFormData] = useState<SlaFormData>({
     metric: (existingSla?.metric as SlaMetric) || "availability",
-    target_value: existingSla?.target_value || 99.9,
+    target_value: existingSla?.target_value ?? getDefaultValue((existingSla?.metric as SlaMetric) || "availability"),
     measurement_window: (existingSla?.measurement_window as SlaWindow) || "monthly",
     enabled: existingSla?.enabled ?? true,
   });
+
+  const currentMetricConfig = metricConfig[formData.metric];
 
   const createMutation = useMutation({
     mutationFn: async (data: SlaFormData) => {
@@ -159,17 +205,24 @@ export function SlaManagement({ existingSla, open, onOpenChange }: SlaManagement
               <Label htmlFor="metric">Metric</Label>
               <Select
                 value={formData.metric}
-                onValueChange={(value) => setFormData({ ...formData, metric: value as SlaMetric })}
+                onValueChange={(value) => {
+                  const newMetric = value as SlaMetric;
+                  setFormData({
+                    ...formData,
+                    metric: newMetric,
+                    target_value: metricConfig[newMetric].defaultValue,
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select metric" />
                 </SelectTrigger>
                 <SelectContent>
-                  {metricOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+                  {(Object.keys(metricConfig) as SlaMetric[]).map((key) => (
+                    <SelectItem key={key} value={key}>
                       <div>
-                        <span>{option.label}</span>
-                        <p className="text-xs text-muted-foreground">{option.description}</p>
+                        <span>{metricConfig[key].label}</span>
+                        <p className="text-xs text-muted-foreground">{metricConfig[key].description}</p>
                       </div>
                     </SelectItem>
                   ))}
@@ -178,20 +231,29 @@ export function SlaManagement({ existingSla, open, onOpenChange }: SlaManagement
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="target_value">Target Value (%)</Label>
-              <Input
-                id="target_value"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                value={formData.target_value}
-                onChange={(e) =>
-                  setFormData({ ...formData, target_value: parseFloat(e.target.value) || 0 })
-                }
-              />
+              <Label htmlFor="target_value">{currentMetricConfig.unitLabel}</Label>
+              <div className="relative">
+                <Input
+                  id="target_value"
+                  type="number"
+                  step={currentMetricConfig.step}
+                  min={currentMetricConfig.min}
+                  max={currentMetricConfig.max}
+                  placeholder={currentMetricConfig.placeholder}
+                  value={formData.target_value}
+                  onChange={(e) =>
+                    setFormData({ ...formData, target_value: parseFloat(e.target.value) || 0 })
+                  }
+                  className="pr-12"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  {currentMetricConfig.unit}
+                </span>
+              </div>
               <p className="text-xs text-muted-foreground">
-                The target percentage to meet (e.g., 99.9% uptime)
+                {formData.metric === "availability"
+                  ? "The target percentage to meet (e.g., 99.9% uptime)"
+                  : `Maximum allowed before SLA breach`}
               </p>
             </div>
 

@@ -43,6 +43,17 @@ const metricLabels: Record<string, string> = {
   support_response: "Support Response Time",
 };
 
+const metricUnits: Record<string, string> = {
+  availability: "%",
+  response_time: "ms",
+  support_response: "hrs",
+};
+
+const formatTargetValue = (metric: string, value: number): string => {
+  const unit = metricUnits[metric] || "";
+  return `${value}${unit}`;
+};
+
 export function SlaList() {
   const { organization } = useOrganization();
   const queryClient = useQueryClient();
@@ -141,7 +152,7 @@ export function SlaList() {
                   <TableCell className="font-medium">
                     {metricLabels[sla.metric] || sla.metric}
                   </TableCell>
-                  <TableCell>{sla.target_value}%</TableCell>
+                  <TableCell>{formatTargetValue(sla.metric, sla.target_value)}</TableCell>
                   <TableCell className="capitalize">{sla.measurement_window}</TableCell>
                   <TableCell>
                     <Badge variant={sla.enabled ? "default" : "secondary"}>
