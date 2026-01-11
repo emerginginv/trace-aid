@@ -85,9 +85,22 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
   },
 };
 
-// Storage add-ons (LIVE) - TODO: Create these products in Stripe
+// Storage add-ons (LIVE)
 export const STORAGE_ADDONS: Record<string, StorageAddon> = {
-  // Placeholder - will need new product IDs when created
+  "prod_Tm0iJWv16Bm9jt": {
+    storage_gb: 500,
+    name: "500GB Storage Add-on",
+    price: 29,
+    price_id: "price_1SoSggDvYSpsz5yYwU1voHX2",
+    product_id: "prod_Tm0iJWv16Bm9jt",
+  },
+  "prod_Tm0i3vt8F2ogpH": {
+    storage_gb: 1000,
+    name: "1TB Storage Add-on",
+    price: 49,
+    price_id: "price_1SoSgxDvYSpsz5yY4PCEEF1a",
+    product_id: "prod_Tm0i3vt8F2ogpH",
+  },
 };
 
 // Pricing tiers for the billing page (LIVE)
@@ -140,14 +153,23 @@ export const PRICING_TIERS = [
   },
 ];
 
-// Storage add-on tiers for billing page (LIVE) - TODO: Create these products
-export const STORAGE_ADDON_TIERS: Array<{
-  name: string;
-  price: string;
-  priceId: string;
-  productId: string;
-  storageGb: number;
-}> = [];
+// Storage add-on tiers for billing page (LIVE)
+export const STORAGE_ADDON_TIERS = [
+  {
+    name: "500GB Storage",
+    price: "$29",
+    priceId: "price_1SoSggDvYSpsz5yYwU1voHX2",
+    productId: "prod_Tm0iJWv16Bm9jt",
+    storageGb: 500,
+  },
+  {
+    name: "1TB Storage",
+    price: "$49",
+    priceId: "price_1SoSgxDvYSpsz5yY4PCEEF1a",
+    productId: "prod_Tm0i3vt8F2ogpH",
+    storageGb: 1000,
+  },
+];
 
 export function getPlanLimits(productId: string | null): PlanLimits {
   if (!productId) return PLAN_LIMITS.free;
