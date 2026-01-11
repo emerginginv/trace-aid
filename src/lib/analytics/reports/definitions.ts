@@ -20,12 +20,26 @@ export const profitTrendsReport: ReportDefinition = {
   relatedMetrics: ["financial.profit_margin"],
 };
 
+export const profitByInvoiceReport: ReportDefinition = {
+  id: "profit-by-invoice",
+  name: "Profit By Invoice",
+  description: "Invoice-level profit analysis with client and status filtering",
+  category: "sales",
+  sourceTable: "invoices",
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
+  defaultSort: { field: "date", direction: "desc" },
+  totals: [],
+  relatedMetrics: ["financial.profit_margin"],
+};
+
 // ============================================
 // REPORT REGISTRY
 // ============================================
 
 export const reportRegistry: Record<string, ReportDefinition> = {
   "profit-trends": profitTrendsReport,
+  "profit-by-invoice": profitByInvoiceReport,
 };
 
 // ============================================
@@ -38,7 +52,7 @@ export const reportCategories: ReportCategoryInfo[] = [
     name: "Sales Reports",
     description: "Revenue, profit trends, and sales analytics",
     icon: "TrendingUp",
-    reports: ["profit-trends"],
+    reports: ["profit-trends", "profit-by-invoice"],
   },
 ];
 
