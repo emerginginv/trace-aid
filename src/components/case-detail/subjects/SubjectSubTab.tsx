@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,7 @@ const getStoredViewMode = (): ViewMode => {
 
 export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }: SubjectSubTabProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,6 +43,13 @@ export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }
   useEffect(() => {
     fetchSubjects();
   }, [caseId, category]);
+
+  // Refetch subjects when navigating back to this view (e.g., after editing cover image)
+  useEffect(() => {
+    if (!loading) {
+      fetchSubjects();
+    }
+  }, [location.key]);
 
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);

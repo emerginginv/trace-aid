@@ -42,18 +42,29 @@ export const CoverImageUpload = ({
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) {
+        toast.error("You must be logged in to upload images");
+        return;
+      }
 
       // Create unique file path for cover images
       const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}/cover_${Date.now()}.${fileExt}`;
 
+      console.log("Uploading cover image:", fileName);
+
       // Upload to storage
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from("subject-profile-images")
         .upload(fileName, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        toast.error(`Upload failed: ${uploadError.message}`);
+        return;
+      }
+
+      console.log("Upload successful:", uploadData);
 
       // Update the subject with the cover image URL
       const { error: updateError } = await supabase
@@ -61,18 +72,24 @@ export const CoverImageUpload = ({
         .update({ cover_image_url: fileName })
         .eq("id", subjectId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Database update error:", updateError);
+        toast.error(`Failed to save cover: ${updateError.message}`);
+        return;
+      }
 
+      console.log("Database updated successfully");
       onCoverChange?.(fileName);
       toast.success("Cover photo uploaded successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading cover image:", error);
-      toast.error("Failed to upload cover photo");
+      toast.error(`Failed to upload cover photo: ${error?.message || "Unknown error"}`);
+    } finally {
+      setUploading(false);
+      // Always reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-    } finally {
-      setUploading(false);
     }
   };
 

@@ -314,10 +314,13 @@ const SubjectDetail = () => {
               subjectId={subject.id}
               currentCoverUrl={subject.cover_image_url}
               signedCoverUrl={signedCoverUrl}
-              onCoverChange={(url) => {
+              onCoverChange={async (url) => {
                 setSubject(prev => prev ? { ...prev, cover_image_url: url } : null);
                 if (url) {
-                  generateSignedUrl(url, 'cover');
+                  // Clear old signed URL first to show loading state
+                  setSignedCoverUrl(null);
+                  // Generate new signed URL
+                  await generateSignedUrl(url, 'cover');
                 } else {
                   setSignedCoverUrl(null);
                 }
