@@ -821,9 +821,12 @@ export type Database = {
       }
       case_subjects: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           case_id: string
           created_at: string
           details: Json | null
+          display_name: string | null
           external_record_id: string | null
           external_system_name: string | null
           id: string
@@ -834,14 +837,19 @@ export type Database = {
           notes: string | null
           organization_id: string
           profile_image_url: string | null
+          role: string | null
+          status: string
           subject_type: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           case_id: string
           created_at?: string
           details?: Json | null
+          display_name?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           id?: string
@@ -852,14 +860,19 @@ export type Database = {
           notes?: string | null
           organization_id: string
           profile_image_url?: string | null
+          role?: string | null
+          status?: string
           subject_type: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           case_id?: string
           created_at?: string
           details?: Json | null
+          display_name?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           id?: string
@@ -870,11 +883,20 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           profile_image_url?: string | null
+          role?: string | null
+          status?: string
           subject_type?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "case_subjects_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "case_subjects_import_batch_id_fkey"
             columns: ["import_batch_id"]
@@ -4790,6 +4812,127 @@ export type Database = {
           },
           {
             foreignKeyName: "subject_attachments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subject_links: {
+        Row: {
+          case_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          link_type: string
+          organization_id: string
+          source_subject_id: string
+          target_subject_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          link_type: string
+          organization_id: string
+          source_subject_id: string
+          target_subject_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          link_type?: string
+          organization_id?: string
+          source_subject_id?: string
+          target_subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_links_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_links_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_links_source_subject_id_fkey"
+            columns: ["source_subject_id"]
+            isOneToOne: false
+            referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_links_target_subject_id_fkey"
+            columns: ["target_subject_id"]
+            isOneToOne: false
+            referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subject_references: {
+        Row: {
+          created_at: string | null
+          id: string
+          organization_id: string
+          reference_id: string
+          reference_table: string
+          reference_type: string
+          subject_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          organization_id: string
+          reference_id: string
+          reference_table: string
+          reference_type: string
+          subject_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          organization_id?: string
+          reference_id?: string
+          reference_table?: string
+          reference_type?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_references_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_references_subject_id_fkey"
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "case_subjects"
