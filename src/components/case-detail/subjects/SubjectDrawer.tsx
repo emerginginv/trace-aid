@@ -42,7 +42,11 @@ export const SubjectDrawer = ({
       if (values.date_of_birth) {
         details.date_of_birth = format(values.date_of_birth, "yyyy-MM-dd");
       }
-      if (values.physical_description) details.physical_description = values.physical_description;
+      if (values.height) details.height = values.height;
+      if (values.weight) details.weight = values.weight;
+      if (values.hair_color) details.hair_color = values.hair_color;
+      if (values.eye_color) details.eye_color = values.eye_color;
+      if (values.identifying_marks) details.identifying_marks = values.identifying_marks;
       if (values.aliases && values.aliases.length > 0) details.aliases = values.aliases;
 
       const subjectData = {

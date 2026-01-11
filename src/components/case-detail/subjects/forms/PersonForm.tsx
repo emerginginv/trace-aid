@@ -20,7 +20,11 @@ const personSchema = z.object({
   name: z.string().min(1, "Full name is required"),
   role: z.string().min(1, "Role is required"),
   date_of_birth: z.date().optional().nullable(),
-  physical_description: z.string().optional(),
+  height: z.string().optional(),
+  weight: z.string().optional(),
+  hair_color: z.string().optional(),
+  eye_color: z.string().optional(),
+  identifying_marks: z.string().optional(),
   aliases: z.array(z.string()).optional(),
   notes: z.string().optional(),
 });
@@ -50,7 +54,11 @@ export const PersonForm = ({ subject, onSubmit, isSubmitting, readOnly = false }
       name: subject?.name || "",
       role: subject?.role || "",
       date_of_birth: details.date_of_birth ? new Date(details.date_of_birth) : null,
-      physical_description: details.physical_description || "",
+      height: details.height || "",
+      weight: details.weight || "",
+      hair_color: details.hair_color || "",
+      eye_color: details.eye_color || "",
+      identifying_marks: details.identifying_marks || "",
       aliases: existingAliases,
       notes: subject?.notes || "",
     },
@@ -178,24 +186,89 @@ export const PersonForm = ({ subject, onSubmit, isSubmitting, readOnly = false }
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="physical_description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Physical Description</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Height, weight, distinguishing features..."
-                  className="min-h-[80px]"
-                  {...field}
-                  disabled={readOnly}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Physical Description Section */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium">Physical Description</h3>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="height"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Height</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., 5'10&quot;" {...field} disabled={readOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="weight"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weight</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., 180 lbs" {...field} disabled={readOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="hair_color"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Hair Color</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Brown" {...field} disabled={readOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="eye_color"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Eye Color</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Blue" {...field} disabled={readOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="identifying_marks"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Identifying Marks</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Scars, tattoos, birthmarks..."
+                    className="min-h-[60px]"
+                    {...field}
+                    disabled={readOnly}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}
