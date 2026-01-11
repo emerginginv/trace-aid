@@ -20,7 +20,6 @@ import { SlaList } from "./SlaList";
 interface SlaSummary {
   slas: Array<{
     id: string;
-    name: string;
     metric: string;
     target_value: number;
     measurement_period: string;
@@ -237,7 +236,7 @@ export function SlaSuccessTab() {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{sla.name || metricLabels[sla.metric] || sla.metric}</span>
+                      <span className="font-medium">{metricLabels[sla.metric] || sla.metric}</span>
                       {sla.latest_measurement && (
                         <Badge
                           variant={sla.latest_measurement.is_met ? "default" : "destructive"}
