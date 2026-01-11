@@ -1,6 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useBillingGate } from "@/hooks/useBillingGate";
 import { PaymentPending } from "./PaymentPending";
+import { SubscriptionCanceled } from "./SubscriptionCanceled";
+import { PastDueBanner } from "./PastDueBanner";
 import { Loader2 } from "lucide-react";
 
 interface BillingGateProps {
@@ -9,16 +11,19 @@ interface BillingGateProps {
 
 /**
  * Wraps protected routes to ensure billing is active.
- * Shows PaymentPending screen when subscription_status is 'pending_payment'.
+ * Handles all billing states: pending_payment, past_due, canceled, active
  */
 export function BillingGate({ children }: BillingGateProps) {
   const { 
-    isBlocked, 
     isPendingPayment, 
+    isCanceled,
+    isPastDue,
     loading, 
     organization,
     refreshOrganization,
   } = useBillingGate();
+  
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Show loading state while checking
   if (loading) {
@@ -37,7 +42,7 @@ export function BillingGate({ children }: BillingGateProps) {
     return <>{children}</>;
   }
 
-  // Block access for pending payment
+  // Block access for pending payment - show plan selection
   if (isPendingPayment) {
     return (
       <PaymentPending
@@ -48,6 +53,27 @@ export function BillingGate({ children }: BillingGateProps) {
     );
   }
 
-  // Allow access for active subscriptions
+  // Block access for canceled subscription
+  if (isCanceled) {
+    return (
+      <SubscriptionCanceled
+        organizationId={organization.id}
+        organizationName={organization.name}
+        onRefresh={refreshOrganization}
+      />
+    );
+  }
+
+  // Allow access with warning banner for past due
+  if (isPastDue && !bannerDismissed) {
+    return (
+      <>
+        <PastDueBanner onDismiss={() => setBannerDismissed(true)} />
+        {children}
+      </>
+    );
+  }
+
+  // Allow full access for active subscriptions
   return <>{children}</>;
 }
