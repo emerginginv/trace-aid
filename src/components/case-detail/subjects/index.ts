@@ -9,6 +9,7 @@ export { SubjectDetailField } from './SubjectDetailField';
 export { SocialMediaLinksWidget } from './SocialMediaLinksWidget';
 export { AddSocialLinkDialog } from './AddSocialLinkDialog';
 export { LinkedEntitiesPanel } from './LinkedEntitiesPanel';
+export { LinkSubjectDialog } from './LinkSubjectDialog';
 export { SocialLinkIcon, SocialLinkButton, SOCIAL_PLATFORMS, getPlatformConfig } from './SocialPlatformIcons';
 export * from './types';
 export * from './forms/PersonForm';
