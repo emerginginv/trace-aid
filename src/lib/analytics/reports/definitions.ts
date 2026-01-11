@@ -111,6 +111,19 @@ export const agingDetailReport: ReportDefinition = {
   relatedMetrics: ["financial.accounts_receivable"],
 };
 
+export const revenueTrendsComparisonReport: ReportDefinition = {
+  id: "revenue-trends-comparison",
+  name: "Revenue Trends Comparison",
+  description: "Year-over-year revenue comparison with billed vs collected analysis",
+  category: "sales",
+  sourceTable: "invoices",
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
+  defaultSort: { field: "month", direction: "asc" },
+  totals: [],
+  relatedMetrics: ["financial.revenue_growth"],
+};
+
 // ============================================
 // REPORT REGISTRY
 // ============================================
@@ -124,6 +137,7 @@ export const reportRegistry: Record<string, ReportDefinition> = {
   "profit-distribution": profitDistributionReport,
   "aging-by-client": agingByClientReport,
   "aging-detail": agingDetailReport,
+  "revenue-trends-comparison": revenueTrendsComparisonReport,
 };
 
 // ============================================
@@ -136,7 +150,7 @@ export const reportCategories: ReportCategoryInfo[] = [
     name: "Sales Reports",
     description: "Revenue, profit trends, and sales analytics",
     icon: "TrendingUp",
-    reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary", "sales-trend-detail", "profit-distribution", "aging-by-client", "aging-detail"],
+    reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary", "sales-trend-detail", "profit-distribution", "aging-by-client", "aging-detail", "revenue-trends-comparison"],
   },
 ];
 
