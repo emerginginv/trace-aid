@@ -85,6 +85,19 @@ export const profitDistributionReport: ReportDefinition = {
   relatedMetrics: ["financial.profit_margin"],
 };
 
+export const agingByClientReport: ReportDefinition = {
+  id: "aging-by-client",
+  name: "Aging by Client",
+  description: "Accounts receivable aging grouped by client with 30/60/90+ day buckets",
+  category: "sales",
+  sourceTable: "invoices",
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
+  defaultSort: { field: "total", direction: "desc" },
+  totals: [],
+  relatedMetrics: ["financial.accounts_receivable"],
+};
+
 // ============================================
 // REPORT REGISTRY
 // ============================================
@@ -96,6 +109,7 @@ export const reportRegistry: Record<string, ReportDefinition> = {
   "transaction-summary": transactionSummaryReport,
   "sales-trend-detail": salesTrendDetailReport,
   "profit-distribution": profitDistributionReport,
+  "aging-by-client": agingByClientReport,
 };
 
 // ============================================
@@ -108,7 +122,7 @@ export const reportCategories: ReportCategoryInfo[] = [
     name: "Sales Reports",
     description: "Revenue, profit trends, and sales analytics",
     icon: "TrendingUp",
-    reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary", "sales-trend-detail", "profit-distribution"],
+    reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary", "sales-trend-detail", "profit-distribution", "aging-by-client"],
   },
 ];
 
