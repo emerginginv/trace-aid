@@ -27,6 +27,7 @@ export {
   transactionSummaryReport,
   salesTrendDetailReport,
   profitDistributionReport,
+  agingByClientReport,
   reportRegistry,
   reportCategories,
   getReport,
