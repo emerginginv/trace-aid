@@ -334,33 +334,84 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
     );
   };
 
-  // Parse and render outline-formatted content
+  // Process inline formatting (bold, links)
+  const processInlineFormatting = (text: string): React.ReactNode => {
+    const parts: React.ReactNode[] = [];
+    let remaining = text;
+    let partKey = 0;
+
+    while (remaining.length > 0) {
+      // Check for bold **text**
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+      if (boldMatch && boldMatch.index !== undefined) {
+        if (boldMatch.index > 0) {
+          parts.push(remaining.slice(0, boldMatch.index));
+        }
+        parts.push(<strong key={`bold-${partKey++}`}>{boldMatch[1]}</strong>);
+        remaining = remaining.slice(boldMatch.index + boldMatch[0].length);
+        continue;
+      }
+
+      // Check for links [text](url)
+      const linkMatch = remaining.match(/\[(.+?)\]\((.+?)\)/);
+      if (linkMatch && linkMatch.index !== undefined) {
+        if (linkMatch.index > 0) {
+          parts.push(remaining.slice(0, linkMatch.index));
+        }
+        parts.push(
+          <a 
+            key={`link-${partKey++}`} 
+            href={linkMatch[2]} 
+            className="text-primary underline hover:text-primary/80"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {linkMatch[1]}
+          </a>
+        );
+        remaining = remaining.slice(linkMatch.index + linkMatch[0].length);
+        continue;
+      }
+
+      // No more patterns found, add the rest
+      parts.push(remaining);
+      break;
+    }
+
+    return parts.length === 1 ? parts[0] : parts;
+  };
+
+  // Parse and render formatted content (Markdown + outline format)
   const renderFormattedContent = (content: string) => {
     const lines = content.split('\n');
     const elements: React.ReactNode[] = [];
-    let currentListItems: { text: string; indent: number }[] = [];
+    let currentListItems: { text: string; indent: number; type: 'ol' | 'ul' }[] = [];
+    let currentListType: 'ol' | 'ul' | null = null;
     let listKey = 0;
 
     const flushList = () => {
       if (currentListItems.length === 0) return;
       
+      const ListTag = currentListType === 'ol' ? 'ol' : 'ul';
+      const listClass = currentListType === 'ol' ? 'list-decimal' : 'list-disc';
+      
       elements.push(
-        <ol key={`list-${listKey++}`} className="space-y-2 my-3">
+        <ListTag key={`list-${listKey++}`} className={`${listClass} ml-5 space-y-1 my-3 text-sm text-foreground`}>
           {currentListItems.map((item, idx) => (
             <li 
               key={idx} 
               className={cn(
-                "text-foreground",
-                item.indent > 0 && "ml-6 list-disc",
-                item.indent === 0 && "list-decimal ml-4"
+                "leading-relaxed",
+                item.indent > 0 && "ml-4"
               )}
             >
-              {item.text}
+              {processInlineFormatting(item.text)}
             </li>
           ))}
-        </ol>
+        </ListTag>
       );
       currentListItems = [];
+      currentListType = null;
     };
 
     lines.forEach((line, idx) => {
@@ -372,44 +423,74 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
         return;
       }
 
-      // Check for numbered list item (1., 2., etc.)
-      const numberedMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
-      if (numberedMatch) {
-        currentListItems.push({ text: numberedMatch[2], indent: 0 });
-        return;
-      }
-
-      // Check for lettered sublist (a., b., etc.) or dash sublist
-      const sublistMatch = trimmed.match(/^([a-z])\.\s+(.+)/) || trimmed.match(/^[-•]\s+(.+)/);
-      if (sublistMatch) {
-        const text = sublistMatch[2] || sublistMatch[1];
-        currentListItems.push({ text, indent: 1 });
-        return;
-      }
-
-      // Check if line ends with colon (section header)
-      if (trimmed.endsWith(':') && trimmed.length < 100) {
+      // Markdown h2: ## Header
+      if (trimmed.startsWith('## ')) {
         flushList();
         elements.push(
-          <h4 key={`header-${idx}`} className="font-semibold text-foreground mt-6 mb-2">
-            {trimmed}
+          <h2 key={`h2-${idx}`} className="text-base font-semibold text-foreground mt-5 mb-2">
+            {processInlineFormatting(trimmed.slice(3))}
+          </h2>
+        );
+        return;
+      }
+
+      // Markdown h3: ### Header
+      if (trimmed.startsWith('### ')) {
+        flushList();
+        elements.push(
+          <h3 key={`h3-${idx}`} className="text-sm font-semibold text-foreground mt-4 mb-2">
+            {processInlineFormatting(trimmed.slice(4))}
+          </h3>
+        );
+        return;
+      }
+
+      // Old format #Header (single hash followed by letter, no space)
+      if (/^#[A-Z]/.test(trimmed)) {
+        flushList();
+        elements.push(
+          <h4 key={`h4-${idx}`} className="text-sm font-semibold text-foreground mt-4 mb-2">
+            {trimmed.slice(1)}
           </h4>
         );
         return;
       }
 
-      // Check if line is all caps or title case with no punctuation (section header)
-      const isHeader = trimmed.length < 80 && 
-        !trimmed.includes('.') && 
-        (trimmed === trimmed.toUpperCase() || 
-         /^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(trimmed) ||
-         /^[A-Z][a-z]+(\s+[a-z]+)*(\s+[A-Z][a-z]+)*$/.test(trimmed));
-      
-      if (isHeader && idx > 0) {
+      // Numbered list item (1., 2., etc.)
+      const numberedMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
+      if (numberedMatch) {
+        if (currentListType !== 'ol') {
+          flushList();
+          currentListType = 'ol';
+        }
+        currentListItems.push({ text: numberedMatch[2], indent: 0, type: 'ol' });
+        return;
+      }
+
+      // Bullet list (-, •, *)
+      const bulletMatch = trimmed.match(/^[-•*]\s+(.+)/);
+      if (bulletMatch) {
+        if (currentListType !== 'ul') {
+          flushList();
+          currentListType = 'ul';
+        }
+        currentListItems.push({ text: bulletMatch[1], indent: 0, type: 'ul' });
+        return;
+      }
+
+      // Lettered sublist (a., b., etc.)
+      const sublistMatch = trimmed.match(/^([a-z])\.\s+(.+)/);
+      if (sublistMatch && currentListItems.length > 0) {
+        currentListItems.push({ text: sublistMatch[2], indent: 1, type: currentListType || 'ul' });
+        return;
+      }
+
+      // Section header ending with colon
+      if (trimmed.endsWith(':') && trimmed.length < 100 && !trimmed.includes('.')) {
         flushList();
         elements.push(
-          <h4 key={`header-${idx}`} className="font-semibold text-foreground mt-6 mb-2">
-            {trimmed}
+          <h4 key={`header-${idx}`} className="text-sm font-semibold text-foreground mt-5 mb-2">
+            {processInlineFormatting(trimmed)}
           </h4>
         );
         return;
@@ -418,8 +499,8 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
       // Regular paragraph
       flushList();
       elements.push(
-        <p key={`para-${idx}`} className="text-foreground leading-relaxed mb-3">
-          {trimmed}
+        <p key={`para-${idx}`} className="text-sm text-foreground leading-relaxed mb-3">
+          {processInlineFormatting(trimmed)}
         </p>
       );
     });
