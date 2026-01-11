@@ -919,6 +919,8 @@ export type Database = {
       case_updates: {
         Row: {
           activity_timeline: Json | null
+          ai_approved_by: string | null
+          ai_source_update_ids: string[] | null
           case_id: string
           created_at: string | null
           description: string | null
@@ -927,6 +929,7 @@ export type Database = {
           id: string
           import_batch_id: string | null
           import_timestamp: string | null
+          is_ai_summary: boolean | null
           organization_id: string | null
           title: string
           update_type: string
@@ -934,6 +937,8 @@ export type Database = {
         }
         Insert: {
           activity_timeline?: Json | null
+          ai_approved_by?: string | null
+          ai_source_update_ids?: string[] | null
           case_id: string
           created_at?: string | null
           description?: string | null
@@ -942,6 +947,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
+          is_ai_summary?: boolean | null
           organization_id?: string | null
           title: string
           update_type?: string
@@ -949,6 +955,8 @@ export type Database = {
         }
         Update: {
           activity_timeline?: Json | null
+          ai_approved_by?: string | null
+          ai_source_update_ids?: string[] | null
           case_id?: string
           created_at?: string | null
           description?: string | null
@@ -957,12 +965,20 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
+          is_ai_summary?: boolean | null
           organization_id?: string | null
           title?: string
           update_type?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "case_updates_ai_approved_by_fkey"
+            columns: ["ai_approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "case_updates_case_id_fkey"
             columns: ["case_id"]
