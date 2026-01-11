@@ -1,7 +1,8 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { CaseDetailNav } from "@/components/case-detail/CaseDetailNav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -720,171 +721,152 @@ const CaseDetail = () => {
         </div>
       </div>
 
-      {/* Tabs - Now at top */}
+      {/* Tabs with sidebar navigation */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <div className="overflow-x-auto scrollbar-hide">
-          <TabsList className={`
-            inline-flex sm:grid w-auto sm:w-full gap-1
-            ${isVendor ? 'sm:grid-cols-2' : 'sm:grid-cols-9'}
-          `}>
-            {!isVendor && <TabsTrigger value="info" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <Briefcase className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Info
-            </TabsTrigger>}
-            {!isVendor && <TabsTrigger value="budget" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <Clock className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Budget
-            </TabsTrigger>}
-            {!isVendor && <TabsTrigger value="subjects" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <Users className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Subjects
-            </TabsTrigger>}
-            <TabsTrigger value="updates" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <FilePenLine className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Updates
-            </TabsTrigger>
-            {!isVendor && <TabsTrigger value="activities" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <ClipboardList className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Activities
-            </TabsTrigger>}
-            {!isVendor && <TabsTrigger value="calendar" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <Calendar className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Calendar
-            </TabsTrigger>}
-            {!isVendor && <TabsTrigger value="finances" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <DollarSign className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Finances
-            </TabsTrigger>}
-            <TabsTrigger value="attachments" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <Paperclip className="h-4 w-4 mr-1.5" />
-              Attachments
-            </TabsTrigger>
-            {!isVendor && <TabsTrigger value="reports" className="text-xs sm:text-sm px-3 sm:px-2 whitespace-nowrap min-h-[40px] sm:min-h-[36px]">
-              <FilePenLine className="h-4 w-4 mr-1.5 hidden sm:inline" />
-              Reports
-            </TabsTrigger>}
-          </TabsList>
-        </div>
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Left sidebar navigation */}
+          <div className="w-full md:w-56 shrink-0">
+            <div className="md:sticky md:top-6">
+              <CaseDetailNav 
+                currentTab={activeTab}
+                onTabChange={handleTabChange}
+                isVendor={isVendor}
+                hasReportsPermission={hasPermission('view_reports')}
+              />
+            </div>
+          </div>
 
-        {/* Info Tab - New consolidated tab */}
-        {!isVendor && (
-          <TabsContent value="info" className="mt-4 sm:mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
-            {/* Case Details Card */}
-            <div className="xl:col-span-1 lg:col-span-2 flex flex-col">
-            <Card className="flex-1">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Briefcase className="h-5 w-5" />
-                    Case Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {caseData.description && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Case Objective</p>
-                      <p className="text-sm">{caseData.description}</p>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                    <InfoItem label="Account" value={account?.name} />
-                    <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
-                    <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
-                    <InfoItem label="Reference No." value={caseData.reference_number} />
-                    <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
-                    <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
-                    {isClosed && caseData.closed_at && (
-                      <InfoItem label="Closed" value={new Date(caseData.closed_at).toLocaleDateString()} className="text-muted-foreground" />
-                    )}
+          {/* Right content area */}
+          <div className="flex-1 min-w-0">
+            {/* Info Tab */}
+            {!isVendor && (
+              <TabsContent value="info" className="mt-0">
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
+                  {/* Case Details Card */}
+                  <div className="xl:col-span-1 lg:col-span-2 flex flex-col">
+                    <Card className="flex-1">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <Briefcase className="h-5 w-5" />
+                          Case Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {caseData.description && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Case Objective</p>
+                            <p className="text-sm">{caseData.description}</p>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                          <InfoItem label="Account" value={account?.name} />
+                          <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
+                          <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
+                          <InfoItem label="Reference No." value={caseData.reference_number} />
+                          <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
+                          <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
+                          {isClosed && caseData.closed_at && (
+                            <InfoItem label="Closed" value={new Date(caseData.closed_at).toLocaleDateString()} className="text-muted-foreground" />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
 
-              {/* Budget + Retainer Column */}
-              <div className="space-y-4 flex flex-col">
-                <CaseBudgetWidget 
+                  {/* Budget + Retainer Column */}
+                  <div className="space-y-4 flex flex-col">
+                    <CaseBudgetWidget 
+                      caseId={id!} 
+                      refreshKey={budgetRefreshKey}
+                      onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)}
+                      onViewHistory={handleViewBudgetHistory}
+                    />
+                    {organization?.id && <RetainerFundsWidget caseId={id!} organizationId={organization.id} />}
+                  </div>
+
+                  {/* Team + Related Cases Column */}
+                  <div className="space-y-4">
+                    <CaseTeamManager 
+                      caseId={id!} 
+                      caseManagerId={caseData.case_manager_id}
+                      caseManager2Id={caseData.case_manager_2_id}
+                      investigatorIds={caseData.investigator_ids || []} 
+                      onUpdate={fetchCaseData} 
+                    />
+                    <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
+                  </div>
+                </div>
+              </TabsContent>
+            )}
+
+            {/* Budget Tab */}
+            {!isVendor && (
+              <TabsContent value="budget" className="mt-0">
+                <div ref={budgetTabRef} className="space-y-6 scroll-mt-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <BudgetSummary 
+                      caseId={id!} 
+                      refreshKey={budgetRefreshKey} 
+                      onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
+                    />
+                    <BudgetConsumptionSnapshot caseId={id!} refreshKey={budgetRefreshKey} />
+                  </div>
+                  <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} highlight={highlightHistory} />
+                </div>
+              </TabsContent>
+            )}
+
+            {/* Subjects Tab */}
+            {!isVendor && (
+              <TabsContent value="subjects" className="mt-0">
+                <SubjectsTab caseId={id!} isClosedCase={isClosed} />
+              </TabsContent>
+            )}
+
+            {/* Updates Tab */}
+            <TabsContent value="updates" className="mt-0">
+              <CaseUpdates caseId={id!} isClosedCase={isClosed} />
+            </TabsContent>
+
+            {/* Activities Tab */}
+            {!isVendor && (
+              <TabsContent value="activities" className="mt-0">
+                <CaseActivities caseId={id!} isClosedCase={isClosed} />
+              </TabsContent>
+            )}
+
+            {/* Calendar Tab */}
+            {!isVendor && (
+              <TabsContent value="calendar" className="mt-0">
+                <CaseCalendar caseId={id!} isClosedCase={isClosed} />
+              </TabsContent>
+            )}
+
+            {/* Finances Tab */}
+            {!isVendor && (
+              <TabsContent value="finances" className="mt-0">
+                <CaseFinances caseId={id!} isClosedCase={isClosed} />
+              </TabsContent>
+            )}
+
+            {/* Attachments Tab */}
+            <TabsContent value="attachments" className="mt-0">
+              <CaseAttachments caseId={id!} isClosedCase={isClosed} />
+            </TabsContent>
+
+            {/* Reports Tab */}
+            {!isVendor && hasPermission('view_reports') && (
+              <TabsContent value="reports" className="mt-0">
+                <CaseReports 
+                  key={reportsRefreshKey}
                   caseId={id!} 
-                  refreshKey={budgetRefreshKey}
-                  onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)}
-                  onViewHistory={handleViewBudgetHistory}
+                  isClosedCase={isClosed}
+                  onGenerateReport={() => setReportDialogOpen(true)}
                 />
-                {organization?.id && <RetainerFundsWidget caseId={id!} organizationId={organization.id} />}
-              </div>
-
-              {/* Team + Related Cases Column */}
-              <div className="space-y-4">
-                <CaseTeamManager 
-                  caseId={id!} 
-                  caseManagerId={caseData.case_manager_id}
-                  caseManager2Id={caseData.case_manager_2_id}
-                  investigatorIds={caseData.investigator_ids || []} 
-                  onUpdate={fetchCaseData} 
-                />
-                <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
-              </div>
-            </div>
-          </TabsContent>
-        )}
-
-        {!isVendor && (
-          <TabsContent value="budget" className="mt-4 sm:mt-6">
-            <div ref={budgetTabRef} className="space-y-6 scroll-mt-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <BudgetSummary 
-                  caseId={id!} 
-                  refreshKey={budgetRefreshKey} 
-                  onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
-                />
-                <BudgetConsumptionSnapshot caseId={id!} refreshKey={budgetRefreshKey} />
-              </div>
-              <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} highlight={highlightHistory} />
-            </div>
-          </TabsContent>
-        )}
-
-        {!isVendor && (
-          <TabsContent value="subjects" className="mt-4 sm:mt-6">
-            <SubjectsTab caseId={id!} isClosedCase={isClosed} />
-          </TabsContent>
-        )}
-
-        <TabsContent value="updates" className="mt-4 sm:mt-6">
-          <CaseUpdates caseId={id!} isClosedCase={isClosed} />
-        </TabsContent>
-
-        {!isVendor && (
-          <TabsContent value="activities" className="mt-4 sm:mt-6">
-            <CaseActivities caseId={id!} isClosedCase={isClosed} />
-          </TabsContent>
-        )}
-
-        {!isVendor && (
-          <TabsContent value="calendar" className="mt-4 sm:mt-6">
-            <CaseCalendar caseId={id!} isClosedCase={isClosed} />
-          </TabsContent>
-        )}
-
-        {!isVendor && (
-          <TabsContent value="finances" className="mt-4 sm:mt-6">
-            <CaseFinances caseId={id!} isClosedCase={isClosed} />
-          </TabsContent>
-        )}
-
-        <TabsContent value="attachments" className="mt-4 sm:mt-6">
-          <CaseAttachments caseId={id!} isClosedCase={isClosed} />
-        </TabsContent>
-
-        {!isVendor && hasPermission('view_reports') && (
-          <TabsContent value="reports" className="mt-4 sm:mt-6">
-            <CaseReports 
-              key={reportsRefreshKey}
-              caseId={id!} 
-              isClosedCase={isClosed}
-              onGenerateReport={() => setReportDialogOpen(true)}
-            />
-          </TabsContent>
-        )}
+              </TabsContent>
+            )}
+          </div>
+        </div>
       </Tabs>
 
       <CaseForm open={editFormOpen} onOpenChange={setEditFormOpen} onSuccess={fetchCaseData} editingCase={caseData || undefined} />
