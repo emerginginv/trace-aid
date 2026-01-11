@@ -12,7 +12,7 @@ import { CaseDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { toast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { CaseForm } from "@/components/CaseForm";
-import { CaseSubjects } from "@/components/case-detail/CaseSubjects";
+import { SubjectsTab } from "@/components/case-detail/subjects";
 import { CaseUpdates } from "@/components/case-detail/CaseUpdates";
 import { CaseActivities } from "@/components/case-detail/CaseActivities";
 import { CaseFinances } from "@/components/case-detail/CaseFinances";
@@ -855,7 +855,7 @@ const CaseDetail = () => {
 
         {!isVendor && (
           <TabsContent value="subjects" className="mt-4 sm:mt-6">
-            <CaseSubjects caseId={id!} isClosedCase={isClosed} />
+            <SubjectsTab caseId={id!} isClosedCase={isClosed} />
           </TabsContent>
         )}
 

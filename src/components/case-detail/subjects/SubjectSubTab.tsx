@@ -49,6 +49,7 @@ export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }
       const mappedSubjects: Subject[] = (data || []).map((s) => ({
         ...s,
         subject_type: s.subject_type as SubjectCategory,
+        details: (typeof s.details === 'object' && s.details !== null ? s.details : {}) as Record<string, any>,
         status: (s.status || 'active') as SubjectStatus,
         display_name: s.display_name || s.name,
         role: s.role || null,
