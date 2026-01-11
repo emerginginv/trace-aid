@@ -7,11 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
 
-// Map Stripe product IDs to plan keys
+// Map Stripe product IDs to plan keys (LIVE)
 const PLAN_KEY_MAP: Record<string, string> = {
-  "prod_TagUwxglXyq7Ls": "solo",
-  "prod_TagbsPhNweUFpe": "team",
-  "prod_Tagc0lPxc1XjVC": "enterprise",
+  "prod_Tm0HQ5XmPP0DwX": "solo",      // The Investigator
+  "prod_Tm0HJQsiIJHUMu": "team",      // The Agency
+  "prod_Tm0HLrO2c5CJS0": "enterprise", // The Enterprise
 };
 
 const logStep = (step: string, details?: Record<string, unknown>) => {

@@ -1,5 +1,4 @@
-// Plan limits configuration
-// Replace the product/price IDs with your actual Stripe IDs
+// Plan limits configuration - LIVE Stripe IDs
 
 export type PlanKey = "solo" | "team" | "enterprise";
 
@@ -22,11 +21,11 @@ export interface StorageAddon {
   product_id: string;
 }
 
-// Map Stripe product IDs to plan keys
+// Map Stripe product IDs to plan keys (LIVE)
 export const PLAN_KEY_MAP: Record<string, PlanKey> = {
-  "prod_TagUwxglXyq7Ls": "solo",
-  "prod_TagbsPhNweUFpe": "team",
-  "prod_Tagc0lPxc1XjVC": "enterprise",
+  "prod_Tm0HQ5XmPP0DwX": "solo",      // The Investigator
+  "prod_Tm0HJQsiIJHUMu": "team",      // The Agency
+  "prod_Tm0HLrO2c5CJS0": "enterprise", // The Enterprise
 };
 
 /**
@@ -38,10 +37,10 @@ export function getPlanKeyFromProductId(productId: string | null): PlanKey {
   return PLAN_KEY_MAP[productId] || "solo";
 }
 
-// Main subscription plans
+// Main subscription plans (LIVE)
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   // The Investigator - $12/month
-  "prod_TagUwxglXyq7Ls": {
+  "prod_Tm0HQ5XmPP0DwX": {
     max_admin_users: 2,
     storage_gb: 50,
     name: "The Investigator",
@@ -52,7 +51,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     plan_key: "solo",
   },
   // The Agency - $39/month
-  "prod_TagbsPhNweUFpe": {
+  "prod_Tm0HJQsiIJHUMu": {
     max_admin_users: 5,
     storage_gb: 250,
     name: "The Agency",
@@ -63,7 +62,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     plan_key: "team",
   },
   // The Enterprise - $69/month
-  "prod_Tagc0lPxc1XjVC": {
+  "prod_Tm0HLrO2c5CJS0": {
     max_admin_users: 16,
     storage_gb: 500,
     name: "The Enterprise",
@@ -86,31 +85,31 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
   },
 };
 
-// Storage add-ons (can be purchased in addition to main plan)
+// Storage add-ons (LIVE)
 export const STORAGE_ADDONS: Record<string, StorageAddon> = {
-  "prod_TagpgL61tfiDeS": {
+  "prod_Tm0HyA08LN2tww": {
     storage_gb: 500,
     name: "500GB Storage Add-on",
     price: 29,
-    price_id: "price_1SdVRQRWPtpjyF4hkNZADRsE",
-    product_id: "prod_TagpgL61tfiDeS",
+    price_id: "price_1SoSHFRWPtpjyF4hS7aIZ1Sz",
+    product_id: "prod_Tm0HyA08LN2tww",
   },
-  "prod_TagqN9os8BWfbU": {
+  "prod_Tm0IoM7iMpXsZz": {
     storage_gb: 1000,
     name: "1TB Storage Add-on",
     price: 49,
-    price_id: "price_1SdVScRWPtpjyF4hhvt5adQw",
-    product_id: "prod_TagqN9os8BWfbU",
+    price_id: "price_1SoSHSRWPtpjyF4hPA9BPkCV",
+    product_id: "prod_Tm0IoM7iMpXsZz",
   },
 };
 
-// Pricing tiers for the billing page
+// Pricing tiers for the billing page (LIVE)
 export const PRICING_TIERS = [
   {
     name: "The Investigator",
     price: "$12",
-    priceId: "price_1SdV7dRWPtpjyF4h7Qa9JdFr",
-    productId: "prod_TagUwxglXyq7Ls",
+    priceId: "price_1SoSGhRWPtpjyF4hTusfPPiG",
+    productId: "prod_Tm0HQ5XmPP0DwX",
     features: [
       "2 Admin Users",
       "50GB Storage",
@@ -124,8 +123,8 @@ export const PRICING_TIERS = [
   {
     name: "The Agency",
     price: "$39",
-    priceId: "price_1SdVEjRWPtpjyF4h3d5E7a7D",
-    productId: "prod_TagbsPhNweUFpe",
+    priceId: "price_1SoSGsRWPtpjyF4hwra8HTaV",
+    productId: "prod_Tm0HJQsiIJHUMu",
     features: [
       "5 Admin Users",
       "250GB Storage",
@@ -140,8 +139,8 @@ export const PRICING_TIERS = [
   {
     name: "The Enterprise",
     price: "$69",
-    priceId: "price_1SdVFPRWPtpjyF4hp7WfLXFC",
-    productId: "prod_Tagc0lPxc1XjVC",
+    priceId: "price_1SoSH5RWPtpjyF4hXd6atI6G",
+    productId: "prod_Tm0HLrO2c5CJS0",
     features: [
       "16 Admin Users",
       "500GB Storage",
@@ -154,20 +153,20 @@ export const PRICING_TIERS = [
   },
 ];
 
-// Storage add-on tiers for billing page
+// Storage add-on tiers for billing page (LIVE)
 export const STORAGE_ADDON_TIERS = [
   {
     name: "500GB Storage",
     price: "$29",
-    priceId: "price_1SdVRQRWPtpjyF4hkNZADRsE",
-    productId: "prod_TagpgL61tfiDeS",
+    priceId: "price_1SoSHFRWPtpjyF4hS7aIZ1Sz",
+    productId: "prod_Tm0HyA08LN2tww",
     storageGb: 500,
   },
   {
     name: "1TB Storage",
     price: "$49",
-    priceId: "price_1SdVScRWPtpjyF4hhvt5adQw",
-    productId: "prod_TagqN9os8BWfbU",
+    priceId: "price_1SoSHSRWPtpjyF4hPA9BPkCV",
+    productId: "prod_Tm0IoM7iMpXsZz",
     storageGb: 1000,
   },
 ];
