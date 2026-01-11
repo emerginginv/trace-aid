@@ -54,6 +54,22 @@ export const BillingTab = ({
       });
   };
 
+  const handleAddStorageAddon = (priceId: string) => {
+    setBillingLoading(priceId);
+    supabase.functions.invoke("create-storage-addon", {
+      body: { priceId },
+    }).then(({ data, error }) => {
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    }).catch((error: any) => {
+      toast.error(error.message);
+    }).finally(() => {
+      setBillingLoading(null);
+    });
+  };
+
   const getCurrentTier = () => {
     if (!subscriptionStatus?.product_id) return null;
     const tier = PRICING_TIERS.find(t => t.productId === subscriptionStatus.product_id);
@@ -260,12 +276,13 @@ export const BillingTab = ({
                 <Button
                   className="w-full"
                   variant="outline"
-                  onClick={() => handleSubscribe(addon.priceId)}
+                  onClick={() => handleAddStorageAddon(addon.priceId)}
                   disabled={billingLoading === addon.priceId || !subscriptionStatus?.subscribed}
                 >
                   {billingLoading === addon.priceId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {!subscriptionStatus?.subscribed ? "Subscribe to a plan first" : "Add Storage"}
                 </Button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">Bills immediately</p>
               </CardContent>
             </Card>
           ))}
