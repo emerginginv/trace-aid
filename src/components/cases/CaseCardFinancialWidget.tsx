@@ -23,32 +23,32 @@ export function CaseCardFinancialWidget({
   const clampedUtilization = Math.min(utilizationPct, 100);
 
   return (
-    <div className="pt-3 mt-3 border-t border-border/50 space-y-2">
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div>
-          <p className="text-xs text-muted-foreground">Budget</p>
-          <p className="text-sm font-medium">{formatBudgetCurrency(budgetDollars)}</p>
+    <div className="pt-3 mt-3 border-t border-border/50 space-y-3">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="text-center p-2 rounded-lg bg-muted/30">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Budget</p>
+          <p className="text-sm font-semibold">{formatBudgetCurrency(budgetDollars)}</p>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Spent</p>
-          <p className="text-sm font-medium">{formatBudgetCurrency(dollarsConsumed)}</p>
+        <div className="text-center p-2 rounded-lg bg-muted/30">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Spent</p>
+          <p className="text-sm font-semibold">{formatBudgetCurrency(dollarsConsumed)}</p>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Remaining</p>
-          <p className={`text-sm font-medium ${dollarsRemaining < 0 ? textClass : ""}`}>
+        <div className="text-center p-2 rounded-lg bg-muted/30">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Remaining</p>
+          <p className={`text-sm font-semibold ${dollarsRemaining < 0 ? textClass : ""}`}>
             {dollarsRemaining < 0 ? "-" : ""}
             {formatBudgetCurrency(Math.abs(dollarsRemaining))}
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-2.5 bg-muted/50 rounded-full overflow-hidden shadow-inner">
           <div
-            className={`h-full rounded-full transition-all ${progressClass}`}
+            className={`h-full rounded-full transition-all duration-500 ease-out shadow-sm ${progressClass}`}
             style={{ width: `${clampedUtilization}%` }}
           />
         </div>
-        <span className={`text-xs font-medium ${utilizationPct >= 80 ? textClass : "text-muted-foreground"}`}>
+        <span className={`text-xs font-semibold tabular-nums min-w-[36px] text-right ${textClass}`}>
           {Math.round(utilizationPct)}%
         </span>
       </div>
