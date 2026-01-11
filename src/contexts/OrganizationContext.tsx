@@ -317,6 +317,36 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [tenantSubdomain]);
 
+  // Realtime subscription for organization changes (billing status updates)
+  useEffect(() => {
+    if (!organization?.id) return;
+
+    console.log(`${LOG_PREFIX} Setting up realtime subscription for organization:`, organization.id);
+
+    const channel = supabase
+      .channel(`org-${organization.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'organizations',
+          filter: `id=eq.${organization.id}`,
+        },
+        (payload) => {
+          console.log(`${LOG_PREFIX} Organization updated via realtime:`, payload);
+          // Refresh organization data when subscription status changes
+          refreshOrganization();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log(`${LOG_PREFIX} Cleaning up realtime subscription`);
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id]);
+
   return (
     <OrganizationContext.Provider value={{ 
       organization, 
