@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
-import { getPlanLimits } from "@/lib/planLimits";
+import { getPlanKeyFromProductId } from "@/lib/planLimits";
 import { useTenant } from "./TenantContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export interface Organization {
   id: string;
@@ -12,7 +14,7 @@ export interface Organization {
   is_active: boolean;
   logo_url: string | null;
   subscription_tier: "free" | "standard" | "pro";
-  subscription_status: "active" | "inactive" | "past_due" | "canceled" | "pending_payment";
+  subscription_status: "active" | "trialing" | "inactive" | "past_due" | "canceled" | "pending_payment";
   max_users: number;
   billing_email: string | null;
   stripe_subscription_id: string | null;
@@ -55,6 +57,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   
   // Get tenant subdomain from TenantContext
   const { tenantSubdomain } = useTenant();
@@ -274,26 +277,60 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      console.log(`${LOG_PREFIX} Subscription check response:`, data);
       setSubscriptionStatus(data);
 
       if (organization && data) {
-        const tier = data.product_id ? "standard" : "free";
+        // Get plan key from product ID for accurate mapping
+        const planKey = getPlanKeyFromProductId(data.product_id);
         
-        await supabase
+        // Map to tier: enterprise = "pro", team = "standard", solo/none = "free"/"standard"
+        let tier: "free" | "standard" | "pro" = "free";
+        if (planKey === "enterprise") {
+          tier = "pro";
+        } else if (planKey === "team" || planKey === "solo") {
+          tier = data.product_id ? "standard" : "free";
+        }
+        
+        // Determine subscription status - preserve trialing status
+        const status = data.status || (data.subscribed ? "active" : "inactive");
+        
+        console.log(`${LOG_PREFIX} Updating organization with:`, {
+          tier,
+          status,
+          planKey,
+          productId: data.product_id
+        });
+        
+        const { error: updateError } = await supabase
           .from("organizations")
           .update({
             subscription_tier: tier,
-            subscription_status: data.status || (data.subscribed ? "active" : "inactive"),
+            subscription_status: status,
             stripe_subscription_id: data.subscription_id,
             trial_ends_at: data.trial_end,
             subscription_product_id: data.product_id,
+            plan_key: planKey,
           })
           .eq("id", organization.id);
+
+        if (updateError) {
+          console.error(`${LOG_PREFIX} Error updating organization subscription:`, updateError);
+          toast.error("Failed to sync subscription status");
+          return;
+        }
+
+        console.log(`${LOG_PREFIX} Organization subscription updated successfully`);
+
+        // Invalidate entitlements cache to force immediate refresh
+        await queryClient.invalidateQueries({ queryKey: ['entitlements', organization.id] });
+        console.log(`${LOG_PREFIX} Entitlements cache invalidated`);
 
         await refreshOrganization();
       }
     } catch (error) {
       console.error("Error in checkSubscription:", error);
+      toast.error("Error checking subscription");
     }
   };
 
