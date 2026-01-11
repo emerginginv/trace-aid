@@ -23,7 +23,8 @@ import { ImportExecutionEngine } from "@/lib/importExecutionEngine";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LayoutDashboard, Upload } from "lucide-react";
+import { LayoutDashboard, Upload, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useSearchParams } from "react-router-dom";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 
@@ -310,6 +311,11 @@ export default function DataImport() {
     setActiveTab('wizard');
     setCurrentStep('welcome');
   };
+
+  const [refreshKey, setRefreshKey] = useState(0);
+  const handleRefreshDashboard = () => {
+    setRefreshKey(prev => prev + 1);
+  };
   
   return (
     <div className="container max-w-5xl py-8 space-y-8">
@@ -323,19 +329,27 @@ export default function DataImport() {
 
       {/* Dashboard / Wizard Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="dashboard" className="gap-2">
-            <LayoutDashboard className="h-4 w-4" />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="wizard" className="gap-2">
-            <Upload className="h-4 w-4" />
-            New Import
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between">
+          <TabsList className="grid max-w-md grid-cols-2">
+            <TabsTrigger value="dashboard" className="gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="wizard" className="gap-2">
+              <Upload className="h-4 w-4" />
+              New Import
+            </TabsTrigger>
+          </TabsList>
+          {activeTab === 'dashboard' && (
+            <Button variant="ghost" size="sm" onClick={handleRefreshDashboard}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          )}
+        </div>
 
         <TabsContent value="dashboard" className="mt-6">
-          <MigrationDashboard onStartNew={handleStartNewFromDashboard} />
+          <MigrationDashboard key={refreshKey} onStartNew={handleStartNewFromDashboard} onRefresh={handleRefreshDashboard} />
         </TabsContent>
 
         <TabsContent value="wizard" className="mt-6 space-y-6">
