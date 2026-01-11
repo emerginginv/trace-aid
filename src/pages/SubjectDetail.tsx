@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ContactDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { Subject, SubjectCategory, PERSON_ROLES, VEHICLE_TYPES, LOCATION_TYPES, ITEM_TYPES, US_STATES, SUBJECT_CATEGORY_SINGULAR } from "@/components/case-detail/subjects/types";
-import { ProfileImageModal } from "@/components/case-detail/subjects/ProfileImageModal";
+import { ProfileImageModal, SubjectDrawer } from "@/components/case-detail/subjects";
 
 const getCategoryIcon = (category: SubjectCategory) => {
   switch (category) {
@@ -120,6 +120,7 @@ const SubjectDetail = () => {
   const [signedImageUrl, setSignedImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   useSetBreadcrumbs(
     subject && caseInfo
@@ -304,7 +305,7 @@ const SubjectDetail = () => {
               Archive
             </Button>
           )}
-          <Button onClick={() => navigate(`/cases/${caseId}?tab=subjects&edit=${subject.id}`)}>
+          <Button onClick={() => setEditDrawerOpen(true)}>
             <Edit className="w-4 h-4 mr-2" />
             Edit {SUBJECT_CATEGORY_SINGULAR[subject.subject_type]}
           </Button>
@@ -519,6 +520,19 @@ const SubjectDetail = () => {
         imageUrl={signedImageUrl}
         alt={subject?.display_name || subject?.name || "Profile image"}
       />
+
+      {/* Edit Drawer */}
+      {subject && caseId && (
+        <SubjectDrawer
+          open={editDrawerOpen}
+          onOpenChange={setEditDrawerOpen}
+          subject={subject}
+          category={subject.subject_type}
+          caseId={caseId}
+          organizationId={subject.organization_id}
+          onSuccess={fetchSubjectDetails}
+        />
+      )}
     </div>
   );
 };
