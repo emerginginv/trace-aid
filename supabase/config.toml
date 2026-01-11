@@ -9,6 +9,15 @@ verify_jwt = false
 [functions.scim]
 verify_jwt = false
 
+[functions.sso-initiate]
+verify_jwt = false
+
+[functions.sso-callback]
+verify_jwt = false
+
+[functions.sso-metadata]
+verify_jwt = false
+
 [functions.generate-update-summary]
 verify_jwt = true
 

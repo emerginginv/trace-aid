@@ -565,6 +565,99 @@ export function AuthenticationTab() {
               </div>
             </CardContent>
           </Card>
+
+          {/* SSO Configuration URLs */}
+          {dashboard.sso?.configured && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">SSO Configuration URLs</CardTitle>
+                <CardDescription>
+                  Use these URLs to configure your identity provider
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">SSO Login URL</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 p-2 bg-muted rounded text-xs font-mono truncate">
+                        {`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-initiate?org_id=${organization?.id}`}
+                      </code>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => copyToClipboard(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-initiate?org_id=${organization?.id}`)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Redirect users here to initiate SSO login
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Callback URL (ACS URL)</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 p-2 bg-muted rounded text-xs font-mono truncate">
+                        {`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-callback`}
+                      </code>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => copyToClipboard(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-callback`)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Configure this as the callback/redirect URI in your IdP
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">SP Entity ID / Issuer</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 p-2 bg-muted rounded text-xs font-mono truncate">
+                        {`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-metadata?org_id=${organization?.id}`}
+                      </code>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => copyToClipboard(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-metadata?org_id=${organization?.id}`)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Use this as the Service Provider Entity ID
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">SAML Metadata</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-metadata?org_id=${organization?.id}&format=saml`, '_blank')}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Download SAML Metadata
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-metadata?org_id=${organization?.id}&format=info`, '_blank')}
+                      >
+                        View Setup Info
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* SCIM Tab */}
