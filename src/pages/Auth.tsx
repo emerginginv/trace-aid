@@ -126,7 +126,7 @@ const Auth = () => {
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/billing`,
           data: {
             full_name: data.fullName
           }
@@ -135,15 +135,23 @@ const Auth = () => {
       if (error) {
         toast.error(error.message);
       } else if (authData.user) {
-        toast.success("Account created! Redirecting...");
+        toast.success("Account created! Setting up your workspace...");
 
-        // Check if user has vendor role
+        // Wait a moment for the organization trigger to complete
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Check if user has vendor role - vendors skip payment
         const {
           data: roleData
         } = await supabase.from("user_roles").select("role").eq("user_id", authData.user.id).maybeSingle();
-        setTimeout(() => {
-          navigate("/dashboard"); // Dashboard automatically shows vendor view based on role
-        }, 1000);
+        
+        if (roleData?.role === "vendor") {
+          // Vendors go directly to dashboard
+          navigate("/dashboard");
+        } else {
+          // Regular users go to billing to select plan (BillingGate will handle it)
+          navigate("/billing");
+        }
       }
     } catch (error) {
       toast.error("An unexpected error occurred");
