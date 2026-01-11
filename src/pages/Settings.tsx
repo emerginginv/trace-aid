@@ -29,6 +29,7 @@ import { LegalTab } from "@/components/settings/LegalTab";
 import { ReportsExportsTab } from "@/components/settings/ReportsExportsTab";
 import { SlaSuccessTab } from "@/components/settings/SlaSuccessTab";
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
+import { LoginBrandingSection } from "@/components/settings/LoginBrandingSection";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -94,6 +95,12 @@ const Settings = () => {
   const [feinNumber, setFeinNumber] = useState("");
   const [terms, setTerms] = useState("");
   const [uploading, setUploading] = useState(false);
+  
+  // Login Branding State
+  const [loginBrandingEnabled, setLoginBrandingEnabled] = useState(false);
+  const [loginLogoUrl, setLoginLogoUrl] = useState("");
+  const [loginBrandName, setLoginBrandName] = useState("");
+  const [loginAccentColor, setLoginAccentColor] = useState("");
   
   // Email Signature State
   const [signatureName, setSignatureName] = useState("");
@@ -193,11 +200,17 @@ const Settings = () => {
         setSenderEmail(orgSettings.sender_email || "");
       }
 
-      // Use organization from context for picklists
+      // Use organization from context for picklists and branding
       if (!organization?.id) {
         console.error("Organization not found");
         return;
       }
+
+      // Load login branding from organization
+      setLoginBrandingEnabled((organization as any).login_branding_enabled || false);
+      setLoginLogoUrl((organization as any).login_logo_url || "");
+      setLoginBrandName((organization as any).login_brand_name || "");
+      setLoginAccentColor((organization as any).login_accent_color || "");
 
       // Load picklists
       const { data: picklistsRaw, error: picklistError } = await supabase
@@ -547,7 +560,7 @@ const Settings = () => {
               />
             </TabsContent>
 
-            <TabsContent value="organization">
+            <TabsContent value="organization" className="space-y-6">
               <OrganizationTab
                 currentUserId={currentUserId}
                 organizationId={organization?.id || null}
@@ -589,6 +602,46 @@ const Settings = () => {
                 signatureEmail={signatureEmail}
                 senderEmail={senderEmail}
               />
+              
+              {/* Login Branding Section - Admin/Owner only */}
+              {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+                <LoginBrandingSection
+                  organizationId={organization?.id || null}
+                  currentUserId={currentUserId}
+                  brandingEnabled={loginBrandingEnabled}
+                  setBrandingEnabled={setLoginBrandingEnabled}
+                  loginLogoUrl={loginLogoUrl}
+                  setLoginLogoUrl={setLoginLogoUrl}
+                  brandName={loginBrandName}
+                  setBrandName={setLoginBrandName}
+                  accentColor={loginAccentColor}
+                  setAccentColor={setLoginAccentColor}
+                  onSave={async () => {
+                    // Save branding to organizations table
+                    if (!organization?.id) return;
+                    setSaving(true);
+                    try {
+                      const { error } = await supabase
+                        .from('organizations')
+                        .update({
+                          login_branding_enabled: loginBrandingEnabled,
+                          login_logo_url: loginLogoUrl || null,
+                          login_brand_name: loginBrandName || null,
+                          login_accent_color: loginAccentColor || null,
+                        })
+                        .eq('id', organization.id);
+                      if (error) throw error;
+                      toast.success('Branding settings saved');
+                    } catch (error: any) {
+                      console.error('Error saving branding:', error);
+                      toast.error('Failed to save branding settings');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  saving={saving}
+                />
+              )}
             </TabsContent>
 
             {/* Permissions Tab */}
