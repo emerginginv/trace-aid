@@ -80,8 +80,10 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
       if (!user) throw new Error("Not authenticated");
 
       for (const file of fileArray) {
-        const sanitizedName = sanitizeFileName(file.name);
-        const filePath = `${organizationId}/${caseId}/${Date.now()}_${sanitizedName}`;
+        // Extract file extension
+        const fileExt = file.name.split('.').pop() || 'bin';
+        // Use user.id as first path segment to match RLS policy requirements
+        const filePath = `${user.id}/${caseId}/${crypto.randomUUID()}.${fileExt}`;
 
         // Upload to storage
         const { error: uploadError } = await supabase.storage
