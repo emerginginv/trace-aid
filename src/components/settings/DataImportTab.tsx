@@ -15,6 +15,7 @@ import { DryRunResults } from "@/components/import/DryRunResults";
 import { ImportConfirmation } from "@/components/import/ImportConfirmation";
 import { ImportProgress, EntityProgress } from "@/components/import/ImportProgress";
 import { ImportResults } from "@/components/import/ImportResults";
+import { AIImportWizard } from "@/components/import/ai";
 import { ParsedCSV, ParseError, sortByImportOrder } from "@/lib/csvParser";
 import { MappingConfig, DEFAULT_MAPPING_CONFIG, NormalizationLog, EMPTY_NORMALIZATION_LOG, DryRunResult, ImportExecutionResult } from "@/types/import";
 import { performDryRun } from "@/lib/importService";
@@ -22,7 +23,7 @@ import { ImportExecutionEngine } from "@/lib/importExecutionEngine";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LayoutDashboard, Upload, RefreshCw } from "lucide-react";
+import { LayoutDashboard, Upload, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type ImportStep = 'welcome' | 'prepare' | 'type' | 'upload' | 'column-mapping' | 'validation' | 'mapping' | 'dry-run' | 'dry-run-results' | 'confirmation' | 'processing' | 'results';
@@ -308,14 +309,18 @@ export function DataImportTab() {
       {/* Dashboard / Wizard Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex items-center justify-between">
-          <TabsList className="grid max-w-md grid-cols-2">
+          <TabsList className="grid max-w-md grid-cols-3">
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
             </TabsTrigger>
             <TabsTrigger value="wizard" className="gap-2">
               <Upload className="h-4 w-4" />
-              New Import
+              Manual Import
+            </TabsTrigger>
+            <TabsTrigger value="ai-import" className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              AI Import
             </TabsTrigger>
           </TabsList>
           {activeTab === 'dashboard' && (
@@ -328,6 +333,13 @@ export function DataImportTab() {
 
         <TabsContent value="dashboard" className="mt-6">
           <MigrationDashboard key={refreshKey} onStartNew={handleStartNewFromDashboard} />
+        </TabsContent>
+
+        <TabsContent value="ai-import" className="mt-6">
+          <AIImportWizard onComplete={() => {
+            setActiveTab('dashboard');
+            handleRefreshDashboard();
+          }} />
         </TabsContent>
 
         <TabsContent value="wizard" className="mt-6 space-y-6">
