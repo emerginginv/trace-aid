@@ -7,7 +7,8 @@ import { Loader2, CreditCard, Check, AlertTriangle, HardDrive, Users as UsersIco
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { getPlanLimits, isTrialActive, getTrialDaysRemaining, PRICING_TIERS, STORAGE_ADDON_TIERS } from "@/lib/planLimits";
+import { getPlanLimits, isTrialActive, getTrialDaysRemaining, PRICING_TIERS, STORAGE_ADDON_TIERS, getPlanKeyFromProductId } from "@/lib/planLimits";
+import { PlanFeatureMatrix } from "@/components/billing/PlanFeatureMatrix";
 import { Organization, SubscriptionStatus } from "@/contexts/OrganizationContext";
 import { BillingStatusSection } from "@/components/billing/BillingStatusSection";
 import { BillingHistorySection } from "@/components/billing/BillingHistorySection";
@@ -75,6 +76,10 @@ export const BillingTab = ({
     const tier = PRICING_TIERS.find(t => t.productId === subscriptionStatus.product_id);
     return tier?.name || null;
   };
+
+  const currentPlanKey = subscriptionStatus?.product_id 
+    ? getPlanKeyFromProductId(subscriptionStatus.product_id) 
+    : null;
 
   return (
     <div className="space-y-6">
@@ -255,9 +260,23 @@ export const BillingTab = ({
         </div>
       </div>
 
+      {/* Plan Feature Comparison Matrix */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Plan Comparison</CardTitle>
+          <CardDescription>
+            See all features included in each plan. Higher tiers include everything from lower tiers.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PlanFeatureMatrix currentPlanKey={currentPlanKey} />
+        </CardContent>
+      </Card>
+
       {/* Storage Add-ons */}
       <div>
         <h3 className="text-lg font-semibold mb-2">Additional Storage</h3>
+        <p className="text-muted-foreground text-sm mb-4">Need more space? Add extra storage to your plan.</p>
         <p className="text-muted-foreground text-sm mb-4">Need more space? Add extra storage to your plan.</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {STORAGE_ADDON_TIERS.map((addon) => {
