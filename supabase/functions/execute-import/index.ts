@@ -19,22 +19,44 @@ const ENTITY_ORDER = [
   'contact',
   'case',
   'subject',
+  'case_subject',
   'update',
   'activity',
   'time_entry',
   'expense',
+  'budget',
   'budget_adjustment',
 ];
+
+// Normalize entity types from parser (plural) to edge function (singular)
+const normalizeEntityType = (type: string): string => {
+  const mappings: Record<string, string> = {
+    'clients': 'client',
+    'contacts': 'contact',
+    'cases': 'case',
+    'subjects': 'subject',
+    'case_subjects': 'case_subject',
+    'updates': 'update',
+    'events': 'activity',
+    'time_entries': 'time_entry',
+    'expenses': 'expense',
+    'budgets': 'budget',
+    'budget_adjustments': 'budget_adjustment',
+  };
+  return mappings[type] || type;
+};
 
 const TABLE_MAP: Record<string, string> = {
   client: 'accounts',
   contact: 'contacts',
   case: 'cases',
   subject: 'case_subjects',
+  case_subject: 'case_subjects',
   update: 'case_updates',
   activity: 'case_activities',
   time_entry: 'case_finances',
   expense: 'case_finances',
+  budget: 'cases', // Budget data updates case directly
   budget_adjustment: 'case_budget_adjustments',
 };
 
@@ -122,32 +144,74 @@ Deno.serve(async (req: Request) => {
     const insertedRecords: { entityType: string; id: string; table: string }[] = [];
 
     try {
-      // Process entities in dependency order
+    // Process entities in dependency order
       for (const entityType of ENTITY_ORDER) {
-        const entityData = request.entities.find(e => e.entityType === entityType);
+        // Find entity data, checking both normalized and original names
+        const entityData = request.entities.find(e => 
+          normalizeEntityType(e.entityType) === entityType || e.entityType === entityType
+        );
         if (!entityData || entityData.records.length === 0) continue;
+        
+        // Use normalized entity type for processing
+        const normalizedType = normalizeEntityType(entityData.entityType);
 
-        const tableName = TABLE_MAP[entityType];
-        console.log(`[execute-import] Processing ${entityData.records.length} ${entityType} records`);
+        const tableName = TABLE_MAP[normalizedType];
+        console.log(`[execute-import] Processing ${entityData.records.length} ${normalizedType} records (from ${entityData.entityType})`);
 
         // Log entity start
         await supabase.from('import_logs').insert({
           batch_id: request.batchId,
           event_type: 'entity_started',
-          entity_type: entityType,
-          message: `Processing ${entityData.records.length} ${entityType} records`,
+          entity_type: normalizedType,
+          message: `Processing ${entityData.records.length} ${normalizedType} records`,
         });
 
         for (const record of entityData.records) {
           try {
             // Resolve references based on entity type
             const resolvedData = resolveReferences(
-              entityType,
+              normalizedType,
               record.data,
               referenceMap,
               userMap,
-              request.userId
+              request.userId,
+              request.organizationId
             );
+
+            // Handle budget entity specially - it updates cases table
+            if (normalizedType === 'budget') {
+              const caseId = resolvedData.case_id;
+              if (!caseId) {
+                throw new Error('Budget record missing case_id');
+              }
+              
+              const updateData: Record<string, unknown> = {};
+              if (resolvedData.budget_hours !== undefined) updateData.budget_hours = resolvedData.budget_hours;
+              if (resolvedData.budget_dollars !== undefined) updateData.budget_dollars = resolvedData.budget_dollars;
+              if (resolvedData.budget_notes !== undefined) updateData.budget_notes = resolvedData.budget_notes;
+              
+              const { error: updateError } = await supabase
+                .from('cases')
+                .update(updateData)
+                .eq('id', caseId);
+              
+              if (updateError) {
+                throw new Error(updateError.message);
+              }
+              
+              // Record success but no new ID created
+              await supabase.from('import_records').insert({
+                batch_id: request.batchId,
+                entity_type: normalizedType,
+                external_record_id: record.externalRecordId,
+                source_data: record.sourceData,
+                casewyze_id: caseId,
+                status: 'imported',
+              });
+              
+              successCount++;
+              continue; // Skip normal insert flow
+            }
 
             // Insert the record
             const { data: inserted, error: insertError } = await supabase
@@ -162,18 +226,18 @@ Deno.serve(async (req: Request) => {
 
             // Track for potential rollback
             insertedRecords.push({
-              entityType,
+              entityType: normalizedType,
               id: inserted.id,
               table: tableName,
             });
 
             // Update reference map
-            updateReferenceMap(entityType, record.externalRecordId, inserted.id, referenceMap);
+            updateReferenceMap(normalizedType, record.externalRecordId, inserted.id, referenceMap);
 
             // Record success in import_records
             await supabase.from('import_records').insert({
               batch_id: request.batchId,
-              entity_type: entityType,
+              entity_type: normalizedType,
               external_record_id: record.externalRecordId,
               source_data: record.sourceData,
               casewyze_id: inserted.id,
@@ -183,10 +247,10 @@ Deno.serve(async (req: Request) => {
             successCount++;
           } catch (recordError) {
             const errorMessage = recordError instanceof Error ? recordError.message : String(recordError);
-            console.error(`[execute-import] Failed to import ${entityType} ${record.externalRecordId}: ${errorMessage}`);
+            console.error(`[execute-import] Failed to import ${normalizedType} ${record.externalRecordId}: ${errorMessage}`);
 
             errors.push({
-              entityType,
+              entityType: normalizedType,
               externalRecordId: record.externalRecordId,
               errorCode: categorizeError(errorMessage),
               errorMessage,
@@ -195,7 +259,7 @@ Deno.serve(async (req: Request) => {
             // Record failure in import_records
             await supabase.from('import_records').insert({
               batch_id: request.batchId,
-              entity_type: entityType,
+              entity_type: normalizedType,
               external_record_id: record.externalRecordId,
               source_data: record.sourceData,
               status: 'failed',
@@ -203,7 +267,7 @@ Deno.serve(async (req: Request) => {
             });
 
             // If any record fails, rollback all
-            throw new Error(`Import failed for ${entityType} record ${record.externalRecordId}: ${errorMessage}`);
+            throw new Error(`Import failed for ${normalizedType} record ${record.externalRecordId}: ${errorMessage}`);
           }
         }
 
@@ -211,8 +275,8 @@ Deno.serve(async (req: Request) => {
         await supabase.from('import_logs').insert({
           batch_id: request.batchId,
           event_type: 'entity_completed',
-          entity_type: entityType,
-          message: `Completed processing ${entityData.records.length} ${entityType} records`,
+          entity_type: normalizedType,
+          message: `Completed processing ${entityData.records.length} ${normalizedType} records`,
         });
       }
 
@@ -301,17 +365,29 @@ function resolveReferences(
   data: Record<string, unknown>,
   referenceMap: Record<string, Record<string, string>>,
   userMap: Record<string, string>,
-  defaultUserId: string
+  defaultUserId: string,
+  organizationId?: string
 ): Record<string, unknown> {
   const resolved = { ...data };
 
+  // Remove start_date if present (not in cases schema)
+  delete resolved.start_date;
+
   // Remove external reference fields and resolve to actual IDs
   switch (entityType) {
+    case 'client':
+      // Ensure required fields for accounts table
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
+      break;
+
     case 'contact':
       if (resolved.external_account_id) {
         resolved.account_id = referenceMap.clients[resolved.external_account_id as string] || null;
       }
       delete resolved.external_account_id;
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
       break;
 
     case 'case':
@@ -328,8 +404,15 @@ function resolveReferences(
         const normalizedEmail = (resolved.case_manager_email as string).toLowerCase().trim();
         resolved.case_manager_id = userMap[normalizedEmail] || null;
       }
-      if (resolved.investigator_emails && Array.isArray(resolved.investigator_emails)) {
-        resolved.investigator_ids = (resolved.investigator_emails as string[])
+      // Handle investigator_emails as comma-separated string or array
+      if (resolved.investigator_emails) {
+        let emails: string[] = [];
+        if (typeof resolved.investigator_emails === 'string') {
+          emails = (resolved.investigator_emails as string).split(',').map(e => e.trim()).filter(Boolean);
+        } else if (Array.isArray(resolved.investigator_emails)) {
+          emails = resolved.investigator_emails as string[];
+        }
+        resolved.investigator_ids = emails
           .map(email => userMap[email.toLowerCase().trim()])
           .filter(Boolean);
       }
@@ -338,13 +421,197 @@ function resolveReferences(
       delete resolved.external_parent_case_id;
       delete resolved.case_manager_email;
       delete resolved.investigator_emails;
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
       break;
 
     case 'subject':
+      // Standalone subject import - requires case_id from the CSV
+      if (resolved.external_case_id) {
+        const caseId = referenceMap.cases[resolved.external_case_id as string];
+        if (!caseId) {
+          throw new Error(`Case not found for external ID: ${resolved.external_case_id}`);
+        }
+        resolved.case_id = caseId;
+      }
+      delete resolved.external_case_id;
+      
+      // Build details JSON from subject-specific fields
+      const subjectDetails: Record<string, unknown> = {};
+      const subjectDetailFields = ['date_of_birth', 'ssn_last4', 'address', 'phone', 'email', 
+        'employer', 'occupation', 'make', 'model', 'year', 'color', 'license_plate', 'vin',
+        'business_name', 'ein', 'website'];
+      for (const field of subjectDetailFields) {
+        if (resolved[field] !== undefined && resolved[field] !== '') {
+          subjectDetails[field] = resolved[field];
+          delete resolved[field];
+        }
+      }
+      if (Object.keys(subjectDetails).length > 0) {
+        resolved.details = subjectDetails;
+      }
+      
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
+      if (!resolved.status) resolved.status = 'active';
+      break;
+
+    case 'case_subject':
+      // Link record between case and subject
+      if (resolved.external_case_id) {
+        const caseId = referenceMap.cases[resolved.external_case_id as string];
+        if (!caseId) {
+          throw new Error(`Case not found for external ID: ${resolved.external_case_id}`);
+        }
+        resolved.case_id = caseId;
+      }
+      delete resolved.external_case_id;
+      
+      if (resolved.external_subject_id) {
+        const subjectId = referenceMap.subjects[resolved.external_subject_id as string];
+        if (!subjectId) {
+          throw new Error(`Subject not found for external ID: ${resolved.external_subject_id}`);
+        }
+        // For case_subjects linking, we need to copy subject data
+        // This is handled differently - we retrieve the subject and create a case-linked copy
+      }
+      delete resolved.external_subject_id;
+      
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
+      break;
+
     case 'update':
+      if (resolved.external_case_id) {
+        const caseId = referenceMap.cases[resolved.external_case_id as string];
+        if (!caseId) {
+          throw new Error(`Case not found for external ID: ${resolved.external_case_id}`);
+        }
+        resolved.case_id = caseId;
+      }
+      delete resolved.external_case_id;
+      
+      if (resolved.author_email) {
+        const normalizedEmail = (resolved.author_email as string).toLowerCase().trim();
+        resolved.user_id = userMap[normalizedEmail] || defaultUserId;
+      }
+      delete resolved.author_email;
+      
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
+      if (!resolved.update_type) resolved.update_type = 'general';
+      break;
+
     case 'activity':
+      if (resolved.external_case_id) {
+        const caseId = referenceMap.cases[resolved.external_case_id as string];
+        if (!caseId) {
+          throw new Error(`Case not found for external ID: ${resolved.external_case_id}`);
+        }
+        resolved.case_id = caseId;
+      }
+      delete resolved.external_case_id;
+
+      if (resolved.assigned_to_email) {
+        const normalizedEmail = (resolved.assigned_to_email as string).toLowerCase().trim();
+        resolved.assigned_user_id = userMap[normalizedEmail] || null;
+      }
+      delete resolved.assigned_to_email;
+      
+      if (resolved.author_email) {
+        const normalizedEmail = (resolved.author_email as string).toLowerCase().trim();
+        resolved.user_id = userMap[normalizedEmail] || defaultUserId;
+      }
+      delete resolved.author_email;
+      
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
+      if (!resolved.status) resolved.status = 'to_do';
+      break;
+
     case 'time_entry':
+      if (resolved.external_case_id) {
+        const caseId = referenceMap.cases[resolved.external_case_id as string];
+        if (!caseId) {
+          throw new Error(`Case not found for external ID: ${resolved.external_case_id}`);
+        }
+        resolved.case_id = caseId;
+      }
+      delete resolved.external_case_id;
+
+      // Handle subject reference
+      if (resolved.external_subject_id) {
+        resolved.subject_id = referenceMap.subjects[resolved.external_subject_id as string] || null;
+      }
+      delete resolved.external_subject_id;
+
+      // Handle activity reference
+      if (resolved.external_activity_id) {
+        resolved.activity_id = referenceMap.activities[resolved.external_activity_id as string] || null;
+      }
+      delete resolved.external_activity_id;
+
+      if (resolved.author_email) {
+        const normalizedEmail = (resolved.author_email as string).toLowerCase().trim();
+        resolved.user_id = userMap[normalizedEmail] || defaultUserId;
+      }
+      delete resolved.author_email;
+      
+      // Auto-set finance_type for time entries
+      resolved.finance_type = 'time';
+      
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
+      break;
+
     case 'expense':
+      if (resolved.external_case_id) {
+        const caseId = referenceMap.cases[resolved.external_case_id as string];
+        if (!caseId) {
+          throw new Error(`Case not found for external ID: ${resolved.external_case_id}`);
+        }
+        resolved.case_id = caseId;
+      }
+      delete resolved.external_case_id;
+
+      // Handle subject reference
+      if (resolved.external_subject_id) {
+        resolved.subject_id = referenceMap.subjects[resolved.external_subject_id as string] || null;
+      }
+      delete resolved.external_subject_id;
+
+      // Handle activity reference
+      if (resolved.external_activity_id) {
+        resolved.activity_id = referenceMap.activities[resolved.external_activity_id as string] || null;
+      }
+      delete resolved.external_activity_id;
+
+      if (resolved.author_email) {
+        const normalizedEmail = (resolved.author_email as string).toLowerCase().trim();
+        resolved.user_id = userMap[normalizedEmail] || defaultUserId;
+      }
+      delete resolved.author_email;
+      
+      // Auto-set finance_type for expenses
+      resolved.finance_type = 'expense';
+      
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
+      break;
+
+    case 'budget':
+      // Budget updates go to cases table - handle case reference
+      if (resolved.external_case_id) {
+        const caseId = referenceMap.cases[resolved.external_case_id as string];
+        if (!caseId) {
+          throw new Error(`Case not found for external ID: ${resolved.external_case_id}`);
+        }
+        resolved.case_id = caseId;
+      }
+      delete resolved.external_case_id;
+      delete resolved.external_record_id; // Not needed for update
+      break;
+
     case 'budget_adjustment':
       if (resolved.external_case_id) {
         const caseId = referenceMap.cases[resolved.external_case_id as string];
@@ -355,31 +622,14 @@ function resolveReferences(
       }
       delete resolved.external_case_id;
 
-      // Handle subject reference for time entries and expenses
-      if (resolved.external_subject_id) {
-        resolved.subject_id = referenceMap.subjects[resolved.external_subject_id as string] || null;
-      }
-      delete resolved.external_subject_id;
-
-      // Handle activity reference for time entries and expenses
-      if (resolved.external_activity_id) {
-        resolved.activity_id = referenceMap.activities[resolved.external_activity_id as string] || null;
-      }
-      delete resolved.external_activity_id;
-
-      // Handle author email
       if (resolved.author_email) {
         const normalizedEmail = (resolved.author_email as string).toLowerCase().trim();
         resolved.user_id = userMap[normalizedEmail] || defaultUserId;
       }
       delete resolved.author_email;
-
-      // Handle assigned to email for activities
-      if (resolved.assigned_to_email) {
-        const normalizedEmail = (resolved.assigned_to_email as string).toLowerCase().trim();
-        resolved.assigned_user_id = userMap[normalizedEmail] || null;
-      }
-      delete resolved.assigned_to_email;
+      
+      if (!resolved.user_id) resolved.user_id = defaultUserId;
+      if (!resolved.organization_id && organizationId) resolved.organization_id = organizationId;
       break;
   }
 
@@ -403,6 +653,7 @@ function updateReferenceMap(
       referenceMap.cases[externalId] = casewyzeId;
       break;
     case 'subject':
+    case 'case_subject':
       referenceMap.subjects[externalId] = casewyzeId;
       break;
     case 'activity':
@@ -434,7 +685,7 @@ async function performRollback(
 ): Promise<boolean> {
   try {
     // Delete in reverse order to respect foreign key constraints
-    const reverseOrder = ['budget_adjustment', 'expense', 'time_entry', 'activity', 'update', 'subject', 'case', 'contact', 'client'];
+    const reverseOrder = ['budget_adjustment', 'expense', 'time_entry', 'activity', 'update', 'case_subject', 'subject', 'case', 'contact', 'client'];
     
     for (const entityType of reverseOrder) {
       const recordsToDelete = insertedRecords
