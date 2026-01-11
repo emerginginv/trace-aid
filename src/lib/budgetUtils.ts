@@ -14,7 +14,7 @@ export interface BudgetStatusStyles {
 export function getBudgetStatus(utilizationPct: number): BudgetStatus {
   if (utilizationPct >= 100) return "over";
   if (utilizationPct >= 90) return "critical";
-  if (utilizationPct >= 80) return "warning";
+  if (utilizationPct >= 75) return "warning";
   return "normal";
 }
 
@@ -25,37 +25,37 @@ export function getBudgetStatusStyles(utilizationPct: number): BudgetStatusStyle
     case "over":
       return {
         status,
-        bgClass: "bg-destructive/10",
-        textClass: "text-destructive",
-        borderClass: "border-destructive/50",
-        progressClass: "bg-destructive",
+        bgClass: "bg-red-500/10",
+        textClass: "text-red-600 dark:text-red-400",
+        borderClass: "border-red-500/50",
+        progressClass: "bg-gradient-to-r from-red-600 to-red-500",
         label: "Over Budget",
       };
     case "critical":
       return {
         status,
-        bgClass: "bg-orange-500/10",
-        textClass: "text-orange-600 dark:text-orange-400",
-        borderClass: "border-orange-500/50",
-        progressClass: "bg-orange-500",
+        bgClass: "bg-red-500/10",
+        textClass: "text-red-600 dark:text-red-400",
+        borderClass: "border-red-500/50",
+        progressClass: "bg-gradient-to-r from-red-600 to-red-500",
         label: "Critical",
       };
     case "warning":
       return {
         status,
-        bgClass: "bg-yellow-500/10",
-        textClass: "text-yellow-600 dark:text-yellow-400",
-        borderClass: "border-yellow-500/50",
-        progressClass: "bg-yellow-500",
+        bgClass: "bg-amber-500/10",
+        textClass: "text-amber-600 dark:text-amber-400",
+        borderClass: "border-amber-500/50",
+        progressClass: "bg-gradient-to-r from-amber-500 to-amber-400",
         label: "Approaching Limit",
       };
     default:
       return {
         status,
         bgClass: "",
-        textClass: "text-foreground",
+        textClass: "text-emerald-600 dark:text-emerald-400",
         borderClass: "border-border",
-        progressClass: "bg-primary",
+        progressClass: "bg-gradient-to-r from-emerald-500 to-emerald-400",
         label: "On Track",
       };
   }
