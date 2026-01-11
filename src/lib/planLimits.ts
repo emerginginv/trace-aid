@@ -23,9 +23,9 @@ export interface StorageAddon {
 
 // Map Stripe product IDs to plan keys (LIVE)
 export const PLAN_KEY_MAP: Record<string, PlanKey> = {
-  "prod_Tm0HQ5XmPP0DwX": "solo",      // The Investigator
-  "prod_Tm0HJQsiIJHUMu": "team",      // The Agency
-  "prod_Tm0HLrO2c5CJS0": "enterprise", // The Enterprise
+  "prod_Tm0ev0X9L9DbJi": "solo",      // The Investigator
+  "prod_Tm0em6GqFzUGEt": "team",      // The Agency
+  "prod_Tm0eUMnuJ4978P": "enterprise", // The Enterprise
 };
 
 /**
@@ -40,7 +40,7 @@ export function getPlanKeyFromProductId(productId: string | null): PlanKey {
 // Main subscription plans (LIVE)
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   // The Investigator - $12/month
-  "prod_Tm0HQ5XmPP0DwX": {
+  "prod_Tm0ev0X9L9DbJi": {
     max_admin_users: 2,
     storage_gb: 50,
     name: "The Investigator",
@@ -51,7 +51,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     plan_key: "solo",
   },
   // The Agency - $39/month
-  "prod_Tm0HJQsiIJHUMu": {
+  "prod_Tm0em6GqFzUGEt": {
     max_admin_users: 5,
     storage_gb: 250,
     name: "The Agency",
@@ -62,7 +62,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     plan_key: "team",
   },
   // The Enterprise - $69/month
-  "prod_Tm0HLrO2c5CJS0": {
+  "prod_Tm0eUMnuJ4978P": {
     max_admin_users: 16,
     storage_gb: 500,
     name: "The Enterprise",
@@ -85,22 +85,9 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
   },
 };
 
-// Storage add-ons (LIVE)
+// Storage add-ons (LIVE) - TODO: Create these products in Stripe
 export const STORAGE_ADDONS: Record<string, StorageAddon> = {
-  "prod_Tm0HyA08LN2tww": {
-    storage_gb: 500,
-    name: "500GB Storage Add-on",
-    price: 29,
-    price_id: "price_1SoSHFRWPtpjyF4hS7aIZ1Sz",
-    product_id: "prod_Tm0HyA08LN2tww",
-  },
-  "prod_Tm0IoM7iMpXsZz": {
-    storage_gb: 1000,
-    name: "1TB Storage Add-on",
-    price: 49,
-    price_id: "price_1SoSHSRWPtpjyF4hPA9BPkCV",
-    product_id: "prod_Tm0IoM7iMpXsZz",
-  },
+  // Placeholder - will need new product IDs when created
 };
 
 // Pricing tiers for the billing page (LIVE)
@@ -108,8 +95,8 @@ export const PRICING_TIERS = [
   {
     name: "The Investigator",
     price: "$12",
-    priceId: "price_1SoSGhRWPtpjyF4hTusfPPiG",
-    productId: "prod_Tm0HQ5XmPP0DwX",
+    priceId: "price_1SoSdKDvYSpsz5yYaeU3W7wj",
+    productId: "prod_Tm0ev0X9L9DbJi",
     features: [
       "2 Admin Users",
       "50GB Storage",
@@ -123,8 +110,8 @@ export const PRICING_TIERS = [
   {
     name: "The Agency",
     price: "$39",
-    priceId: "price_1SoSGsRWPtpjyF4hwra8HTaV",
-    productId: "prod_Tm0HJQsiIJHUMu",
+    priceId: "price_1SoSdUDvYSpsz5yYFENeTeUu",
+    productId: "prod_Tm0em6GqFzUGEt",
     features: [
       "5 Admin Users",
       "250GB Storage",
@@ -139,8 +126,8 @@ export const PRICING_TIERS = [
   {
     name: "The Enterprise",
     price: "$69",
-    priceId: "price_1SoSH5RWPtpjyF4hXd6atI6G",
-    productId: "prod_Tm0HLrO2c5CJS0",
+    priceId: "price_1SoSddDvYSpsz5yYeR7qFUQf",
+    productId: "prod_Tm0eUMnuJ4978P",
     features: [
       "16 Admin Users",
       "500GB Storage",
@@ -153,23 +140,14 @@ export const PRICING_TIERS = [
   },
 ];
 
-// Storage add-on tiers for billing page (LIVE)
-export const STORAGE_ADDON_TIERS = [
-  {
-    name: "500GB Storage",
-    price: "$29",
-    priceId: "price_1SoSHFRWPtpjyF4hS7aIZ1Sz",
-    productId: "prod_Tm0HyA08LN2tww",
-    storageGb: 500,
-  },
-  {
-    name: "1TB Storage",
-    price: "$49",
-    priceId: "price_1SoSHSRWPtpjyF4hPA9BPkCV",
-    productId: "prod_Tm0IoM7iMpXsZz",
-    storageGb: 1000,
-  },
-];
+// Storage add-on tiers for billing page (LIVE) - TODO: Create these products
+export const STORAGE_ADDON_TIERS: Array<{
+  name: string;
+  price: string;
+  priceId: string;
+  productId: string;
+  storageGb: number;
+}> = [];
 
 export function getPlanLimits(productId: string | null): PlanLimits {
   if (!productId) return PLAN_LIMITS.free;

@@ -9,9 +9,9 @@ const corsHeaders = {
 
 // Map plan_key to Stripe price IDs (LIVE)
 const PLAN_PRICE_MAP: Record<string, string> = {
-  solo: "price_1SoSGhRWPtpjyF4hTusfPPiG",      // The Investigator - $12/month
-  team: "price_1SoSGsRWPtpjyF4hwra8HTaV",      // The Agency - $39/month
-  enterprise: "price_1SoSH5RWPtpjyF4hXd6atI6G", // The Enterprise - $69/month
+  solo: "price_1SoSdKDvYSpsz5yYaeU3W7wj",      // The Investigator - $12/month
+  team: "price_1SoSdUDvYSpsz5yYFENeTeUu",      // The Agency - $39/month
+  enterprise: "price_1SoSddDvYSpsz5yYeR7qFUQf", // The Enterprise - $69/month
 };
 
 const logStep = (step: string, details?: Record<string, unknown>) => {
