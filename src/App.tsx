@@ -18,6 +18,8 @@ import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import { CaseWizard } from "./components/case-wizard";
+import Subjects from "./pages/Subjects";
+import Tasks from "./pages/Tasks";
 import SubjectDetail from "./pages/SubjectDetail";
 import Calendar from "./pages/Calendar";
 import Finance from "./pages/Finance";
@@ -163,6 +165,26 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <SubjectDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/subjects"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <Subjects />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tasks"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <Tasks />
               </DashboardLayout>
             </ProtectedRoute>
           }
