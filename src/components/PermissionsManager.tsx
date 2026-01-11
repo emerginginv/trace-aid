@@ -74,6 +74,7 @@ const featureGroups: FeatureGroup[] = [
     name: "Contacts",
     features: [
       { key: "view_contacts", label: "View Contacts" },
+      { key: "add_contacts", label: "Add Contacts" },
       { key: "edit_contacts", label: "Edit Contacts" },
       { key: "delete_contacts", label: "Delete Contacts" },
     ],
@@ -82,6 +83,7 @@ const featureGroups: FeatureGroup[] = [
     name: "Accounts",
     features: [
       { key: "view_accounts", label: "View Accounts" },
+      { key: "add_accounts", label: "Add Accounts" },
       { key: "edit_accounts", label: "Edit Accounts" },
       { key: "delete_accounts", label: "Delete Accounts" },
     ],

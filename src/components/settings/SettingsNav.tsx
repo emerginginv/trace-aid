@@ -35,7 +35,7 @@ interface SettingsNavItem {
 const navItems: SettingsNavItem[] = [
   { value: "preferences", label: "Preferences", icon: User, roles: ['admin', 'manager', 'investigator', 'vendor'] },
   { value: "organization", label: "Organization", icon: Building2, roles: ['admin', 'manager'] },
-  { value: "permissions", label: "Permissions", icon: Shield, roles: ['admin', 'manager'] },
+  { value: "permissions", label: "Permissions", icon: Shield, roles: ['admin'] },
   { value: "users", label: "Users", icon: Users, roles: ['admin', 'manager'] },
   { value: "authentication", label: "Authentication", icon: KeyRound, roles: ['admin'] },
   { value: "picklists", label: "Picklists", icon: List, roles: ['admin', 'manager'] },
