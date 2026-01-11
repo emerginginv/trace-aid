@@ -4822,6 +4822,60 @@ export type Database = {
           },
         ]
       }
+      subject_audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string
+          case_id: string
+          changes: Json | null
+          created_at: string
+          id: string
+          new_values: Json | null
+          organization_id: string
+          previous_values: Json | null
+          subject_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          case_id: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          new_values?: Json | null
+          organization_id: string
+          previous_values?: Json | null
+          subject_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          case_id?: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          new_values?: Json | null
+          organization_id?: string
+          previous_values?: Json | null
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_audit_logs_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subject_links: {
         Row: {
           case_id: string
@@ -4939,6 +4993,50 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subject_social_link_audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          new_values: Json | null
+          organization_id: string
+          previous_values: Json | null
+          social_link_id: string
+          subject_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          new_values?: Json | null
+          organization_id: string
+          previous_values?: Json | null
+          social_link_id: string
+          subject_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          new_values?: Json | null
+          organization_id?: string
+          previous_values?: Json | null
+          social_link_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_social_link_audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

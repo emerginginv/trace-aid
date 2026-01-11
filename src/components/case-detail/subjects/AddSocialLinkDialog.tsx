@@ -19,6 +19,7 @@ import {
 import { SOCIAL_PLATFORMS, SocialPlatform } from "./SocialPlatformIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logSocialLinkAudit } from "@/lib/subjectAuditLogger";
 
 export interface SocialLink {
   id: string;
@@ -99,32 +100,66 @@ export const AddSocialLinkDialog = ({
       const { data: { user } } = await supabase.auth.getUser();
       
       if (editingLink) {
+        // Store previous values for audit
+        const previousValues = {
+          platform: editingLink.platform,
+          url: editingLink.url,
+          label: editingLink.label,
+        };
+
+        const newValues = {
+          platform,
+          url: url.trim(),
+          label: label.trim() || null,
+        };
+
         // Update existing link
         const { error } = await supabase
           .from("subject_social_links")
-          .update({
-            platform,
-            url: url.trim(),
-            label: label.trim() || null,
-          })
+          .update(newValues)
           .eq("id", editingLink.id);
 
         if (error) throw error;
+
+        // Log audit for update
+        await logSocialLinkAudit({
+          social_link_id: editingLink.id,
+          subject_id: subjectId,
+          organization_id: organizationId,
+          action: 'updated',
+          previous_values: previousValues,
+          new_values: newValues,
+        });
+
         toast.success("Link updated");
       } else {
         // Create new link
-        const { error } = await supabase
+        const newValues = {
+          subject_id: subjectId,
+          organization_id: organizationId,
+          platform,
+          url: url.trim(),
+          label: label.trim() || null,
+          created_by: user?.id,
+        };
+
+        const { data: insertedData, error } = await supabase
           .from("subject_social_links")
-          .insert({
-            subject_id: subjectId,
-            organization_id: organizationId,
-            platform,
-            url: url.trim(),
-            label: label.trim() || null,
-            created_by: user?.id,
-          });
+          .insert(newValues)
+          .select('id')
+          .single();
 
         if (error) throw error;
+
+        // Log audit for creation
+        await logSocialLinkAudit({
+          social_link_id: insertedData.id,
+          subject_id: subjectId,
+          organization_id: organizationId,
+          action: 'created',
+          new_values: newValues,
+        });
+
         toast.success("Link added");
       }
 

@@ -76,6 +76,42 @@ export const SOCIAL_PLATFORMS: PlatformConfig[] = [
   { value: 'other', label: 'Other Link', icon: LinkIcon },
 ];
 
+/**
+ * Fixed domain rules for deterministic URL-to-icon mapping
+ * Domain matching is case-insensitive and strips 'www.' prefix
+ */
+const DOMAIN_RULES: Record<Exclude<SocialPlatform, 'other'>, string[]> = {
+  facebook: ['facebook.com'],
+  instagram: ['instagram.com'],
+  x: ['x.com', 'twitter.com'],
+  linkedin: ['linkedin.com'],
+  tiktok: ['tiktok.com'],
+  snapchat: ['snapchat.com'],
+  youtube: ['youtube.com', 'youtu.be'],
+  reddit: ['reddit.com'],
+  whatsapp: ['wa.me', 'whatsapp.com'],
+  telegram: ['t.me', 'telegram.me'],
+};
+
+/**
+ * Parse a URL and return the matching social platform based on domain rules.
+ * Returns 'other' if no match is found.
+ * Does NOT guess from usernames or scrape metadata - strict domain matching only.
+ */
+export const getPlatformFromUrl = (url: string): SocialPlatform => {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    for (const [platform, domains] of Object.entries(DOMAIN_RULES)) {
+      if (domains.some(d => hostname === d || hostname.endsWith('.' + d))) {
+        return platform as SocialPlatform;
+      }
+    }
+  } catch {
+    // Invalid URL - return 'other'
+  }
+  return 'other';
+};
+
 export const getPlatformConfig = (platform: SocialPlatform): PlatformConfig => {
   return SOCIAL_PLATFORMS.find(p => p.value === platform) || SOCIAL_PLATFORMS[SOCIAL_PLATFORMS.length - 1];
 };
@@ -110,12 +146,15 @@ export const SocialLinkIcon = ({
     lg: "p-2.5"
   };
 
+  // Build tooltip text: Platform name or custom label, plus full URL
+  const tooltipText = `${label || config.label}\n${url}`;
+
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      title={label || config.label}
+      title={tooltipText}
       className={cn(
         "inline-flex items-center justify-center rounded-lg border border-border bg-card text-muted-foreground",
         "hover:bg-accent hover:text-accent-foreground hover:border-accent transition-colors",
