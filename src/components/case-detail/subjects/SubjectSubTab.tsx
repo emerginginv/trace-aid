@@ -4,8 +4,9 @@ import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Subject, SubjectCategory, SubjectStatus, SUBJECT_CATEGORY_SINGULAR } from "./types";
-import { SubjectFilters } from "./SubjectFilters";
+import { SubjectFilters, ViewMode } from "./SubjectFilters";
 import { SubjectListView } from "./SubjectListView";
+import { SubjectCardView } from "./SubjectCardView";
 import { SubjectDrawer } from "./SubjectDrawer";
 import { CaseTabSkeleton } from "../CaseTabSkeleton";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -17,11 +18,17 @@ interface SubjectSubTabProps {
   isClosedCase: boolean;
 }
 
+const getStoredViewMode = (): ViewMode => {
+  const stored = localStorage.getItem('subjects-view-mode');
+  return (stored === 'list' || stored === 'cards') ? stored : 'cards';
+};
+
 export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }: SubjectSubTabProps) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<SubjectStatus | 'all'>('active');
+  const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
 
@@ -33,6 +40,11 @@ export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }
   useEffect(() => {
     fetchSubjects();
   }, [caseId, category]);
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('subjects-view-mode', mode);
+  };
 
   const fetchSubjects = async () => {
     try {
@@ -153,26 +165,42 @@ export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }
           onSearchChange={setSearchQuery}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
         />
         <Button
           onClick={handleAddClick}
           disabled={!canAddSubjects || isClosedCase}
+          className="shrink-0"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add {SUBJECT_CATEGORY_SINGULAR[category]}
         </Button>
       </div>
 
-      <SubjectListView
-        subjects={filteredSubjects}
-        category={category}
-        onViewEdit={handleViewEdit}
-        onArchive={handleArchive}
-        onUnarchive={handleUnarchive}
-        canEdit={canEditSubjects}
-        canArchive={canDeleteSubjects}
-        isClosedCase={isClosedCase}
-      />
+      {viewMode === 'list' ? (
+        <SubjectListView
+          subjects={filteredSubjects}
+          category={category}
+          onViewEdit={handleViewEdit}
+          onArchive={handleArchive}
+          onUnarchive={handleUnarchive}
+          canEdit={canEditSubjects}
+          canArchive={canDeleteSubjects}
+          isClosedCase={isClosedCase}
+        />
+      ) : (
+        <SubjectCardView
+          subjects={filteredSubjects}
+          category={category}
+          onViewEdit={handleViewEdit}
+          onArchive={handleArchive}
+          onUnarchive={handleUnarchive}
+          canEdit={canEditSubjects}
+          canArchive={canDeleteSubjects}
+          isClosedCase={isClosedCase}
+        />
+      )}
 
       <SubjectDrawer
         open={drawerOpen}
