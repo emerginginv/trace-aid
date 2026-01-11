@@ -445,6 +445,44 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_events: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          organization_id: string
+          payload: Json
+          processed_at: string | null
+          stripe_event_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          organization_id: string
+          payload?: Json
+          processed_at?: string | null
+          stripe_event_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          organization_id?: string
+          payload?: Json
+          processed_at?: string | null
+          stripe_event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_activities: {
         Row: {
           activity_type: string
@@ -3727,6 +3765,8 @@ export type Database = {
           logo_url: string | null
           max_users: number | null
           name: string
+          plan_features: Json | null
+          plan_key: string | null
           region_locked: boolean | null
           region_selected_at: string | null
           retention_days: number
@@ -3769,6 +3809,8 @@ export type Database = {
           logo_url?: string | null
           max_users?: number | null
           name: string
+          plan_features?: Json | null
+          plan_key?: string | null
           region_locked?: boolean | null
           region_selected_at?: string | null
           retention_days?: number
@@ -3811,6 +3853,8 @@ export type Database = {
           logo_url?: string | null
           max_users?: number | null
           name?: string
+          plan_features?: Json | null
+          plan_key?: string | null
           region_locked?: boolean | null
           region_selected_at?: string | null
           retention_days?: number
@@ -6170,6 +6214,10 @@ export type Database = {
         }[]
       }
       get_plan_entitlements: { Args: { p_product_id: string }; Returns: Json }
+      get_plan_key_from_product: {
+        Args: { product_id: string }
+        Returns: string
+      }
       get_platform_role: { Args: { p_user_id: string }; Returns: string }
       get_recent_backups: {
         Args: { p_limit?: number }
