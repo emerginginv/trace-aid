@@ -30,17 +30,17 @@ export default function ReportsHub() {
           return (
             <Card key={category.id} className="group hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
                       <Icon className="h-5 w-5" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <CardTitle className="text-lg">{category.name}</CardTitle>
                       <CardDescription>{category.description}</CardDescription>
                     </div>
                   </div>
-                  <Badge variant="secondary">{reports.length} {reports.length === 1 ? 'report' : 'reports'}</Badge>
+                  <Badge variant="secondary" className="shrink-0 whitespace-nowrap">{reports.length} {reports.length === 1 ? 'report' : 'reports'}</Badge>
                 </div>
               </CardHeader>
               <CardContent>
