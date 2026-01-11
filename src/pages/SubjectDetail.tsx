@@ -43,6 +43,7 @@ import {
   SocialMediaLinksWidget,
   LinkedEntitiesPanel,
 } from "@/components/case-detail/subjects";
+import { CoverImageUpload } from "@/components/case-detail/subjects/CoverImageUpload";
 
 const getCategoryIcon = (category: SubjectCategory) => {
   switch (category) {
@@ -102,6 +103,7 @@ const SubjectDetail = () => {
   const [subject, setSubject] = useState<Subject | null>(null);
   const [caseInfo, setCaseInfo] = useState<{ title: string; case_number: string } | null>(null);
   const [signedImageUrl, setSignedImageUrl] = useState<string | null>(null);
+  const [signedCoverUrl, setSignedCoverUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -123,14 +125,21 @@ const SubjectDetail = () => {
 
   useEffect(() => {
     if (subject?.profile_image_url) {
-      generateSignedUrl(subject.profile_image_url);
+      generateSignedUrl(subject.profile_image_url, 'profile');
     }
-  }, [subject?.profile_image_url]);
+    if (subject?.cover_image_url) {
+      generateSignedUrl(subject.cover_image_url, 'cover');
+    }
+  }, [subject?.profile_image_url, subject?.cover_image_url]);
 
-  const generateSignedUrl = async (filePath: string) => {
+  const generateSignedUrl = async (filePath: string, type: 'profile' | 'cover') => {
     try {
       if (filePath.includes('?token=')) {
-        setSignedImageUrl(filePath);
+        if (type === 'profile') {
+          setSignedImageUrl(filePath);
+        } else {
+          setSignedCoverUrl(filePath);
+        }
         return;
       }
       
@@ -149,9 +158,14 @@ const SubjectDetail = () => {
         .createSignedUrl(path, 3600);
       
       if (error) throw error;
-      setSignedImageUrl(data.signedUrl);
+      
+      if (type === 'profile') {
+        setSignedImageUrl(data.signedUrl);
+      } else {
+        setSignedCoverUrl(data.signedUrl);
+      }
     } catch (error) {
-      console.error('Error generating signed URL:', error);
+      console.error(`Error generating signed URL for ${type}:`, error);
     }
   };
 
@@ -295,8 +309,21 @@ const SubjectDetail = () => {
       {/* Hero Section */}
       <Card className="overflow-hidden">
         <div className="relative">
-          <div className="h-48 bg-gradient-to-br from-primary/20 via-primary/10 to-background relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1vcGFjaXR5PSIwLjAzIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIwOS0xLjc5MS00LTQtNHMtNCAxLjc5MS00IDQgMS43OTEgNCA0IDQgNC0xLjc5MSA0LTRNNjAgMzRjMC0yLjIwOS0xLjc5MS00LTQtNHMtNCAxLjc5MS00IDQgMS43OTEgNCA0IDQgNC0xLjc5MSA0LTRNMTIgMzRjMC0yLjIwOS0xLjc5MS00LTQtNHMtNCAxLjc5MS00IDQgMS43OTEgNCA0IDQgNC0xLjc5MSA0LTQiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50" />
+          <div className="h-48 relative overflow-hidden">
+            <CoverImageUpload
+              subjectId={subject.id}
+              currentCoverUrl={subject.cover_image_url}
+              signedCoverUrl={signedCoverUrl}
+              onCoverChange={(url) => {
+                setSubject(prev => prev ? { ...prev, cover_image_url: url } : null);
+                if (url) {
+                  generateSignedUrl(url, 'cover');
+                } else {
+                  setSignedCoverUrl(null);
+                }
+              }}
+              readOnly={isArchived}
+            />
           </div>
           
           <div className="absolute -bottom-16 left-8">
