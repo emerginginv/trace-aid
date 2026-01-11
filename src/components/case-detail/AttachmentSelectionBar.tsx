@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { X, Share2, Mail, ShieldOff, FolderInput } from "lucide-react";
+import { X, Share2, Mail, ShieldOff, FolderInput, Sparkles } from "lucide-react";
+import { AIBadge } from "@/components/ui/ai-badge";
 
 interface AttachmentSelectionBarProps {
   selectedCount: number;
@@ -10,6 +11,7 @@ interface AttachmentSelectionBarProps {
   onRevokeAccess: () => void;
   onClearSelection: () => void;
   onMoveToFolder?: () => void;
+  onAIAnalyze?: () => void;
 }
 
 export function AttachmentSelectionBar({
@@ -21,6 +23,7 @@ export function AttachmentSelectionBar({
   onRevokeAccess,
   onClearSelection,
   onMoveToFolder,
+  onAIAnalyze,
 }: AttachmentSelectionBarProps) {
   if (selectedCount === 0) return null;
 
@@ -36,6 +39,20 @@ export function AttachmentSelectionBar({
         <div className="flex flex-wrap items-center gap-2">
           {canEditAttachments && (
             <>
+              {onAIAnalyze && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onAIAnalyze}
+                  className="gap-1.5"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span className="hidden sm:inline">AI Describe</span>
+                  <span className="sm:hidden">AI</span>
+                  <AIBadge className="ml-1" />
+                </Button>
+              )}
+              
               {onMoveToFolder && (
                 <Button
                   variant="secondary"

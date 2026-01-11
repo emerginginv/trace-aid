@@ -50,6 +50,7 @@ import { FolderPanel, AttachmentFolder } from "./FolderPanel";
 import { CreateFolderDialog } from "./CreateFolderDialog";
 import { EditFolderDialog } from "./EditFolderDialog";
 import { MoveToFolderDialog } from "./MoveToFolderDialog";
+import { AIAttachmentAnalysisDialog } from "./AIAttachmentAnalysisDialog";
 
 interface Attachment {
   id: string;
@@ -138,6 +139,9 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const [moveToFolderOpen, setMoveToFolderOpen] = useState(false);
   const [folderPanelCollapsed, setFolderPanelCollapsed] = useState(false);
   const [singleMoveAttachment, setSingleMoveAttachment] = useState<Attachment | null>(null);
+  
+  // AI Analysis dialog state
+  const [aiAnalysisDialogOpen, setAiAnalysisDialogOpen] = useState(false);
   
   // File Blob state (to bypass blocked signed URLs for all file types)
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
@@ -1113,6 +1117,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
           onRevokeAccess={handleBulkRevoke}
           onClearSelection={clearSelection}
           onMoveToFolder={() => setMoveToFolderOpen(true)}
+          onAIAnalyze={() => setAiAnalysisDialogOpen(true)}
         />
         
         {/* Confirmation dialog for single revoke */}
@@ -1964,6 +1969,16 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
             setSingleMoveAttachment(null);
           }}
           onCreateFolder={() => setCreateFolderOpen(true)}
+        />
+
+        <AIAttachmentAnalysisDialog
+          open={aiAnalysisDialogOpen}
+          onOpenChange={setAiAnalysisDialogOpen}
+          selectedAttachments={filteredAttachments.filter(a => selectedIds.has(a.id))}
+          onSuccess={() => {
+            fetchAttachments();
+            clearSelection();
+          }}
         />
 
         {/* Access Audit Panel - collapsible at bottom */}
