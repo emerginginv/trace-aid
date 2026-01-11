@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ContactDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { Subject, SubjectCategory, PERSON_ROLES, VEHICLE_TYPES, LOCATION_TYPES, ITEM_TYPES, US_STATES, SUBJECT_CATEGORY_SINGULAR } from "@/components/case-detail/subjects/types";
+import { ProfileImageModal } from "@/components/case-detail/subjects/ProfileImageModal";
 
 const getCategoryIcon = (category: SubjectCategory) => {
   switch (category) {
@@ -118,6 +119,7 @@ const SubjectDetail = () => {
   const [caseInfo, setCaseInfo] = useState<{ title: string; case_number: string } | null>(null);
   const [signedImageUrl, setSignedImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   useSetBreadcrumbs(
     subject && caseInfo
@@ -320,7 +322,10 @@ const SubjectDetail = () => {
           {/* Profile Image/Icon */}
           <div className="absolute -bottom-16 left-8">
             {subject.subject_type === 'person' && signedImageUrl ? (
-              <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-card shadow-xl bg-card">
+              <div 
+                className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-card shadow-xl bg-card cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
+                onClick={() => setImageModalOpen(true)}
+              >
                 <img
                   src={signedImageUrl}
                   alt={subject.display_name || subject.name}
@@ -506,6 +511,14 @@ const SubjectDetail = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Image Modal */}
+      <ProfileImageModal
+        isOpen={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        imageUrl={signedImageUrl}
+        alt={subject?.display_name || subject?.name || "Profile image"}
+      />
     </div>
   );
 };

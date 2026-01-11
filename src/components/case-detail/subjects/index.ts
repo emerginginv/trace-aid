@@ -4,6 +4,7 @@ export { SubjectDrawer } from './SubjectDrawer';
 export { SubjectListView } from './SubjectListView';
 export { SubjectCardView } from './SubjectCardView';
 export { SubjectFilters } from './SubjectFilters';
+export { ProfileImageModal } from './ProfileImageModal';
 export * from './types';
 export * from './forms/PersonForm';
 export * from './forms/VehicleForm';

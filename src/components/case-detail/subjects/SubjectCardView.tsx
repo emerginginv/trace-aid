@@ -13,6 +13,7 @@ import { MoreVertical, Archive, ArchiveRestore, Eye, Edit, User, Car, MapPin, Pa
 import { Subject, SubjectCategory, SUBJECT_CATEGORY_SINGULAR } from "./types";
 import { useSubjectProfileImages } from "@/hooks/use-subject-profile-images";
 import { cn } from "@/lib/utils";
+import { ProfileImageModal } from "./ProfileImageModal";
 
 interface SubjectCardViewProps {
   subjects: Subject[];
@@ -86,6 +87,16 @@ export const SubjectCardView = ({
   const { signedUrls } = useSubjectProfileImages(subjectsForImages);
   const Icon = getCategoryIcon(category);
 
+  // Image modal state
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null);
+
+  const handleImageClick = (e: React.MouseEvent, imageUrl: string, alt: string) => {
+    e.stopPropagation();
+    setSelectedImage({ url: imageUrl, alt });
+    setImageModalOpen(true);
+  };
+
   if (subjects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -138,7 +149,13 @@ export const SubjectCardView = ({
             {/* Overlapping Avatar/Icon */}
             <div className="absolute -top-10 left-1/2 -translate-x-1/2">
               {category === 'person' ? (
-                <Avatar className="h-24 w-24 border-4 border-card shadow-md">
+                <Avatar 
+                  className={cn(
+                    "h-24 w-24 border-4 border-card shadow-md",
+                    imageUrl && "cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
+                  )}
+                  onClick={imageUrl ? (e) => handleImageClick(e, imageUrl, subject.display_name || subject.name) : undefined}
+                >
                   <AvatarImage src={imageUrl || undefined} alt={subject.display_name || subject.name} />
                   <AvatarFallback className="text-xl bg-muted">
                     {getInitials(subject.display_name || subject.name)}
@@ -217,6 +234,14 @@ export const SubjectCardView = ({
           </Card>
         );
       })}
+
+      {/* Image Modal */}
+      <ProfileImageModal
+        isOpen={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        imageUrl={selectedImage?.url || null}
+        alt={selectedImage?.alt || "Profile image"}
+      />
     </div>
   );
 };

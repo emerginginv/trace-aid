@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ import { MoreVertical, Eye, Pencil, Archive, ArchiveRestore, User, Car, MapPin, 
 import { Subject, SubjectCategory, PERSON_ROLES, VEHICLE_TYPES, LOCATION_TYPES, ITEM_TYPES } from "./types";
 import { format } from "date-fns";
 import { useSubjectProfileImages } from "@/hooks/use-subject-profile-images";
+import { ProfileImageModal } from "./ProfileImageModal";
+import { cn } from "@/lib/utils";
 
 interface SubjectListViewProps {
   subjects: Subject[];
@@ -34,6 +37,16 @@ export const SubjectListView = ({
   isClosedCase,
 }: SubjectListViewProps) => {
   const { getSignedUrl } = useSubjectProfileImages(subjects);
+
+  // Image modal state
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null);
+
+  const handleImageClick = (e: React.MouseEvent, imageUrl: string, alt: string) => {
+    e.stopPropagation();
+    setSelectedImage({ url: imageUrl, alt });
+    setImageModalOpen(true);
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -138,7 +151,13 @@ export const SubjectListView = ({
                 <TableCell>
                   <div className="flex items-center gap-3">
                     {category === 'person' ? (
-                      <Avatar className="h-9 w-9">
+                      <Avatar 
+                        className={cn(
+                          "h-9 w-9",
+                          signedUrl && "cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
+                        )}
+                        onClick={signedUrl ? (e) => handleImageClick(e, signedUrl, subject.name) : undefined}
+                      >
                         <AvatarImage src={signedUrl || undefined} alt={subject.name} />
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
                           {getInitials(subject.name)}
@@ -219,6 +238,14 @@ export const SubjectListView = ({
           })}
         </TableBody>
       </Table>
+
+      {/* Image Modal */}
+      <ProfileImageModal
+        isOpen={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        imageUrl={selectedImage?.url || null}
+        alt={selectedImage?.alt || "Profile image"}
+      />
     </div>
   );
 };
