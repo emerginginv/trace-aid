@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ export default function Subjects() {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const { navigateWithSource } = useNavigationSource();
 
   const [subjects, setSubjects] = useState<SubjectWithCase[]>([]);
   const [loading, setLoading] = useState(true);
@@ -230,7 +232,7 @@ export default function Subjects() {
   };
 
   const navigateToSubject = (subject: SubjectWithCase) => {
-    navigate(`/cases/${subject.cases.id}/subjects/${subject.id}`);
+    navigateWithSource(navigate, `/cases/${subject.cases.id}/subjects/${subject.id}`, 'subjects_list');
   };
 
   return (
