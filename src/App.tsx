@@ -39,6 +39,7 @@ import ContactDetail from "./pages/ContactDetail";
 import ContactEdit from "./pages/ContactEdit";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import Billing from "./pages/Billing";
 import ImportReview from "./pages/ImportReview";
 
 import UserProfile from "./pages/UserProfile";
@@ -115,8 +116,19 @@ const App = () => {
             <Route
               path="/onboarding"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute skipBillingGate>
                   <Onboarding />
+                </ProtectedRoute>
+              }
+            />
+            {/* Billing Route - Accessible even with pending payment */}
+            <Route
+              path="/billing"
+              element={
+                <ProtectedRoute skipBillingGate>
+                  <DashboardLayout>
+                    <Billing />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />

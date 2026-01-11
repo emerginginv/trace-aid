@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { BillingGate } from "@/components/billing/BillingGate";
 import type { User } from "@supabase/supabase-js";
 
 interface ProtectedRouteProps {
@@ -9,9 +10,10 @@ interface ProtectedRouteProps {
   requiredRole?: 'admin' | 'manager' | 'investigator' | 'vendor';
   requiresAnyRole?: ('admin' | 'manager' | 'investigator' | 'vendor')[];
   blockVendors?: boolean;
+  skipBillingGate?: boolean; // Allow bypassing billing gate for specific routes
 }
 
-const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors = false }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors = false, skipBillingGate = false }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   const { organization, loading: orgLoading } = useOrganization();
   const [user, setUser] = useState<User | null>(null);
@@ -126,6 +128,11 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
 
   if (!authorized) {
     return null;
+  }
+
+  // Wrap with BillingGate unless explicitly skipped
+  if (!skipBillingGate) {
+    return user ? <BillingGate>{children}</BillingGate> : null;
   }
 
   return user ? <>{children}</> : null;
