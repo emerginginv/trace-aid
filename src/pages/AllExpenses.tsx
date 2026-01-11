@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Pencil, Trash2, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, LayoutGrid, List, Receipt } from "lucide-react";
-import { FinanceNavTabs } from "@/components/FinanceNavTabs";
+
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { Button } from "@/components/ui/button";
@@ -396,18 +396,15 @@ const AllExpenses = () => {
             Manage expenses across all cases
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <FinanceNavTabs />
-          <div className="flex items-center gap-2">
-            <Button onClick={openAddExpense}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Expense
-            </Button>
-            <Button variant="outline" onClick={openAddTime}>
-              <Clock className="h-4 w-4 mr-2" />
-              Add Time
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={openAddExpense}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Expense
+          </Button>
+          <Button variant="outline" onClick={openAddTime}>
+            <Clock className="h-4 w-4 mr-2" />
+            Add Time
+          </Button>
         </div>
       </div>
 

@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
 import { Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck } from "lucide-react";
-import { FinanceNavTabs } from "@/components/FinanceNavTabs";
+
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
 import { EditInvoiceDialog } from "@/components/case-detail/EditInvoiceDialog";
@@ -374,13 +374,10 @@ const AllInvoices = () => {
             System-wide invoice overview
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <FinanceNavTabs />
-          <Button onClick={() => setShowCreateInvoiceDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Invoice
-          </Button>
-        </div>
+        <Button onClick={() => setShowCreateInvoiceDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Invoice
+        </Button>
       </div>
 
       {/* Search and Filters - Outside Card */}

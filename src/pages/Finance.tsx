@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { Search, Download, FileSpreadsheet, FileText, LayoutGrid, List, DollarSign, Pencil, Trash2, Loader2, History } from "lucide-react";
-import { FinanceNavTabs } from "@/components/FinanceNavTabs";
+
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -334,7 +334,6 @@ const Finance = () => {
             Manage retainer funds across all cases
           </p>
         </div>
-        <FinanceNavTabs />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
