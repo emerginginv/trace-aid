@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AccountDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { RelatedCasesWidget } from "@/components/shared/RelatedCasesWidget";
 
 interface Account {
   id: string;
@@ -228,6 +229,8 @@ const AccountDetail = () => {
           )}
         </CardContent>
       </Card>
+
+      <RelatedCasesWidget entityType="account" entityId={account.id} />
     </div>
   );
 };

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, User, Mail, Phone, MapPin, Edit, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { ContactDetailSkeleton } from "@/components/ui/detail-page-skeleton";
+import { RelatedCasesWidget } from "@/components/shared/RelatedCasesWidget";
 
 interface Contact {
   id: string;
@@ -188,6 +189,8 @@ const ContactDetail = () => {
           )}
         </CardContent>
       </Card>
+
+      <RelatedCasesWidget entityType="contact" entityId={contact.id} />
     </div>
   );
 };
