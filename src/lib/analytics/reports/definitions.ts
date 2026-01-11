@@ -46,6 +46,19 @@ export const incomeDistributionReport: ReportDefinition = {
   relatedMetrics: ["financial.total_revenue"],
 };
 
+export const transactionSummaryReport: ReportDefinition = {
+  id: "transaction-summary",
+  name: "Transaction Summary",
+  description: "Client transaction totals including retainers, payments, and invoicing",
+  category: "sales",
+  sourceTable: "invoices",
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
+  defaultSort: { field: "name", direction: "asc" },
+  totals: [],
+  relatedMetrics: ["financial.total_revenue"],
+};
+
 // ============================================
 // REPORT REGISTRY
 // ============================================
@@ -54,6 +67,7 @@ export const reportRegistry: Record<string, ReportDefinition> = {
   "profit-trends": profitTrendsReport,
   "profit-by-invoice": profitByInvoiceReport,
   "income-distribution": incomeDistributionReport,
+  "transaction-summary": transactionSummaryReport,
 };
 
 // ============================================
@@ -66,7 +80,7 @@ export const reportCategories: ReportCategoryInfo[] = [
     name: "Sales Reports",
     description: "Revenue, profit trends, and sales analytics",
     icon: "TrendingUp",
-    reports: ["profit-trends", "profit-by-invoice", "income-distribution"],
+    reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary"],
   },
 ];
 

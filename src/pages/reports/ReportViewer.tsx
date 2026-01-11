@@ -8,12 +8,14 @@ import { ArrowLeft } from "lucide-react";
 import ProfitTrendsReport from "./ProfitTrendsReport";
 import ProfitByInvoiceReport from "./ProfitByInvoiceReport";
 import IncomeDistributionReport from "./IncomeDistributionReport";
+import TransactionSummaryReport from "./TransactionSummaryReport";
 
 // Custom reports that have their own components (not using AnalyticsReportViewer)
 const CUSTOM_REPORTS: Record<string, React.ComponentType> = {
   "profit-trends": ProfitTrendsReport,
   "profit-by-invoice": ProfitByInvoiceReport,
   "income-distribution": IncomeDistributionReport,
+  "transaction-summary": TransactionSummaryReport,
 };
 
 export default function ReportViewer() {
