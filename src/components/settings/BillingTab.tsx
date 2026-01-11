@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CreditCard, Check, AlertTriangle, HardDrive, Users as UsersIcon } from "lucide-react";
+import { Loader2, CreditCard, Check, AlertTriangle, HardDrive, Users as UsersIcon, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -261,17 +262,28 @@ export const BillingTab = ({
       </div>
 
       {/* Plan Feature Comparison Matrix */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Plan Comparison</CardTitle>
-          <CardDescription>
-            See all features included in each plan. Higher tiers include everything from lower tiers.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PlanFeatureMatrix currentPlanKey={currentPlanKey} />
-        </CardContent>
-      </Card>
+      <Collapsible defaultOpen={false}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Plan Comparison</CardTitle>
+                  <CardDescription>
+                    See all features included in each plan. Higher tiers include everything from lower tiers.
+                  </CardDescription>
+                </div>
+                <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              <PlanFeatureMatrix currentPlanKey={currentPlanKey} />
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Storage Add-ons */}
       <div>
