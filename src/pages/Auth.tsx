@@ -6,12 +6,13 @@ import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Shield, Eye, EyeOff } from "lucide-react";
+import { useTenant } from "@/contexts/TenantContext";
+import { useTenantBranding, isValidHexColor } from "@/hooks/use-tenant-branding";
 const signInSchema = z.object({
   email: z.string().trim().min(1, "Email or username is required").max(255, "Input must be less than 255 characters"),
   password: z.string().min(1, "Password is required")
@@ -41,6 +42,17 @@ const Auth = () => {
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Tenant branding
+  const { tenantSubdomain } = useTenant();
+  const { data: branding, isError: brandingError } = useTenantBranding(tenantSubdomain);
+
+  // Determine if we should show tenant branding
+  const showTenantBranding = !brandingError && branding?.found && branding?.branding_enabled;
+  const accentColor = showTenantBranding && branding?.accent_color && isValidHexColor(branding.accent_color)
+    ? branding.accent_color
+    : null;
+
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
@@ -228,13 +240,41 @@ const Auth = () => {
       setLoading(false);
     }
   };
-  return <div className="min-h-screen flex items-center justify-center bg-background p-4">
+  // Custom CSS properties for accent color
+  const accentStyles = accentColor
+    ? ({
+        "--auth-accent": accentColor,
+        "--auth-accent-hover": `${accentColor}dd`,
+      } as React.CSSProperties)
+    : {};
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4" style={accentStyles}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4">
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold">Case Manager</h1>
+          {/* Tenant Logo or Default */}
+          {showTenantBranding && branding?.logo_url ? (
+            <div className="mb-4 flex justify-center">
+              <img
+                src={branding.logo_url}
+                alt={branding.brand_name || "Login"}
+                className="h-16 max-w-[200px] object-contain"
+                onError={(e) => {
+                  // Fallback to default on error
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            </div>
+          ) : (
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4">
+              <Shield className="w-8 h-8 text-white" />
+            </div>
+          )}
+          
+          {/* Brand Name or Default */}
+          <h1 className="text-3xl font-bold">
+            {showTenantBranding && branding?.brand_name ? branding.brand_name : "Case Manager"}
+          </h1>
           <p className="text-muted-foreground mt-2">Professional case management</p>
         </div>
 
@@ -374,6 +414,8 @@ const Auth = () => {
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Auth;

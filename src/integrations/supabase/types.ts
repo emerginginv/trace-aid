@@ -3539,6 +3539,10 @@ export type Database = {
           legal_hold_reason: string | null
           legal_hold_set_at: string | null
           legal_hold_set_by: string | null
+          login_accent_color: string | null
+          login_brand_name: string | null
+          login_branding_enabled: boolean | null
+          login_logo_url: string | null
           logo_url: string | null
           max_users: number | null
           name: string
@@ -3574,6 +3578,10 @@ export type Database = {
           legal_hold_reason?: string | null
           legal_hold_set_at?: string | null
           legal_hold_set_by?: string | null
+          login_accent_color?: string | null
+          login_brand_name?: string | null
+          login_branding_enabled?: boolean | null
+          login_logo_url?: string | null
           logo_url?: string | null
           max_users?: number | null
           name: string
@@ -3609,6 +3617,10 @@ export type Database = {
           legal_hold_reason?: string | null
           legal_hold_set_at?: string | null
           legal_hold_set_by?: string | null
+          login_accent_color?: string | null
+          login_brand_name?: string | null
+          login_branding_enabled?: boolean | null
+          login_logo_url?: string | null
           logo_url?: string | null
           max_users?: number | null
           name?: string
@@ -6015,6 +6027,10 @@ export type Database = {
       get_soc2_dashboard: { Args: never; Returns: Json }
       get_sso_config: { Args: { p_org_id: string }; Returns: Json }
       get_status_page_data: { Args: never; Returns: Json }
+      get_tenant_login_branding: {
+        Args: { p_subdomain: string }
+        Returns: Json
+      }
       get_trust_center_admin: {
         Args: never
         Returns: {
