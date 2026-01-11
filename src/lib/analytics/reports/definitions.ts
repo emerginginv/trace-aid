@@ -125,6 +125,23 @@ export const revenueTrendsComparisonReport: ReportDefinition = {
 };
 
 // ============================================
+// EXPENSE REPORTS
+// ============================================
+
+export const expenseDetailReport: ReportDefinition = {
+  id: "expense-detail",
+  name: "Expense Detail",
+  description: "Detailed line-by-line view of expense entries with staff and invoice information",
+  category: "expense",
+  sourceTable: "case_finances",
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
+  defaultSort: { field: "date", direction: "desc" },
+  totals: [],
+  relatedMetrics: ["financial.total_expenses"],
+};
+
+// ============================================
 // REPORT REGISTRY
 // ============================================
 
@@ -138,6 +155,7 @@ export const reportRegistry: Record<string, ReportDefinition> = {
   "aging-by-client": agingByClientReport,
   "aging-detail": agingDetailReport,
   "revenue-trends-comparison": revenueTrendsComparisonReport,
+  "expense-detail": expenseDetailReport,
 };
 
 // ============================================
@@ -151,6 +169,13 @@ export const reportCategories: ReportCategoryInfo[] = [
     description: "Revenue, profit trends, and sales analytics",
     icon: "TrendingUp",
     reports: ["profit-trends", "profit-by-invoice", "income-distribution", "transaction-summary", "sales-trend-detail", "profit-distribution", "aging-by-client", "aging-detail", "revenue-trends-comparison"],
+  },
+  {
+    id: "expense",
+    name: "Expense Reports",
+    description: "Expense tracking, detail, and analysis reports",
+    icon: "Receipt",
+    reports: ["expense-detail"],
   },
 ];
 

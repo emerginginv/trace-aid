@@ -78,7 +78,7 @@ export interface ReportResult<T> {
   metadata: ReportMetadata;
 }
 
-export type ReportCategory = "sales";
+export type ReportCategory = "sales" | "expense";
 
 export interface ReportCategoryInfo {
   id: ReportCategory;

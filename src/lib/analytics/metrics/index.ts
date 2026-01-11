@@ -64,6 +64,7 @@ export function getMetricsGroupedByCategory(): Record<MetricCategory, MetricDefi
     productivity: getMetricsByCategory("productivity"),
     storage: getMetricsByCategory("storage"),
     sales: getMetricsByCategory("sales"),
+    expense: getMetricsByCategory("expense"),
   };
 }
 
