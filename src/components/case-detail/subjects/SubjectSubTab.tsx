@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +25,7 @@ const getStoredViewMode = (): ViewMode => {
 };
 
 export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }: SubjectSubTabProps) => {
+  const navigate = useNavigate();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,7 +89,11 @@ export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }
     setDrawerOpen(true);
   };
 
-  const handleViewEdit = (subject: Subject) => {
+  const handleNavigateToDetail = (subject: Subject) => {
+    navigate(`/cases/${caseId}/subjects/${subject.id}`);
+  };
+
+  const handleEditInDrawer = (subject: Subject) => {
     setSelectedSubject(subject);
     setDrawerOpen(true);
   };
@@ -182,7 +188,9 @@ export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }
         <SubjectListView
           subjects={filteredSubjects}
           category={category}
-          onViewEdit={handleViewEdit}
+          caseId={caseId}
+          onNavigate={handleNavigateToDetail}
+          onEdit={handleEditInDrawer}
           onArchive={handleArchive}
           onUnarchive={handleUnarchive}
           canEdit={canEditSubjects}
@@ -193,7 +201,9 @@ export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }
         <SubjectCardView
           subjects={filteredSubjects}
           category={category}
-          onViewEdit={handleViewEdit}
+          caseId={caseId}
+          onNavigate={handleNavigateToDetail}
+          onEdit={handleEditInDrawer}
           onArchive={handleArchive}
           onUnarchive={handleUnarchive}
           canEdit={canEditSubjects}

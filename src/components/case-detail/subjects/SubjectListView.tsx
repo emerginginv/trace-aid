@@ -11,7 +11,9 @@ import { useSubjectProfileImages } from "@/hooks/use-subject-profile-images";
 interface SubjectListViewProps {
   subjects: Subject[];
   category: SubjectCategory;
-  onViewEdit: (subject: Subject) => void;
+  caseId: string;
+  onNavigate: (subject: Subject) => void;
+  onEdit: (subject: Subject) => void;
   onArchive: (subject: Subject) => void;
   onUnarchive: (subject: Subject) => void;
   canEdit: boolean;
@@ -22,7 +24,9 @@ interface SubjectListViewProps {
 export const SubjectListView = ({
   subjects,
   category,
-  onViewEdit,
+  caseId,
+  onNavigate,
+  onEdit,
   onArchive,
   onUnarchive,
   canEdit,
@@ -129,7 +133,7 @@ export const SubjectListView = ({
               <TableRow 
                 key={subject.id} 
                 className="cursor-pointer hover:bg-muted/50"
-                onClick={() => onViewEdit(subject)}
+                onClick={() => onNavigate(subject)}
               >
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -179,7 +183,7 @@ export const SubjectListView = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onViewEdit(subject)}>
+                      <DropdownMenuItem onClick={() => onEdit(subject)}>
                         {canEdit && subject.status === 'active' && !isClosedCase ? (
                           <>
                             <Pencil className="h-4 w-4 mr-2" />

@@ -17,7 +17,9 @@ import { cn } from "@/lib/utils";
 interface SubjectCardViewProps {
   subjects: Subject[];
   category: SubjectCategory;
-  onViewEdit: (subject: Subject) => void;
+  caseId: string;
+  onNavigate: (subject: Subject) => void;
+  onEdit: (subject: Subject) => void;
   onArchive: (subject: Subject) => void;
   onUnarchive: (subject: Subject) => void;
   canEdit: boolean;
@@ -68,7 +70,9 @@ const getInitials = (name: string): string => {
 export const SubjectCardView = ({
   subjects,
   category,
-  onViewEdit,
+  caseId,
+  onNavigate,
+  onEdit,
   onArchive,
   onUnarchive,
   canEdit,
@@ -110,7 +114,7 @@ export const SubjectCardView = ({
               "relative pt-14 transition-shadow hover:shadow-md cursor-pointer group",
               isArchived && "opacity-70"
             )}
-            onClick={() => onViewEdit(subject)}
+            onClick={() => onNavigate(subject)}
           >
             {/* Status Badge */}
             {isArchived && (
@@ -159,7 +163,7 @@ export const SubjectCardView = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem onClick={() => onViewEdit(subject)}>
+                <DropdownMenuItem onClick={() => onEdit(subject)}>
                   {canEdit && !isClosedCase && !isArchived ? (
                     <>
                       <Edit className="h-4 w-4 mr-2" />
