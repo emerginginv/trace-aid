@@ -39,10 +39,9 @@ interface DashboardStats {
 
 interface MigrationDashboardProps {
   onStartNew?: () => void;
-  onRefresh?: () => void;
 }
 
-export function MigrationDashboard({ onStartNew, onRefresh }: MigrationDashboardProps) {
+export function MigrationDashboard({ onStartNew }: MigrationDashboardProps) {
   const { organization } = useOrganization();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -56,9 +55,7 @@ export function MigrationDashboard({ onStartNew, onRefresh }: MigrationDashboard
     }
   }, [organization?.id]);
 
-  // Expose refresh function via prop callback
   const loadDashboardData = async () => {
-    onRefresh?.();
     setLoading(true);
     try {
       // Fetch all import batches

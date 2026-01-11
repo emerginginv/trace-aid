@@ -327,7 +327,7 @@ export function DataImportTab() {
         </div>
 
         <TabsContent value="dashboard" className="mt-6">
-          <MigrationDashboard key={refreshKey} onStartNew={handleStartNewFromDashboard} onRefresh={handleRefreshDashboard} />
+          <MigrationDashboard key={refreshKey} onStartNew={handleStartNewFromDashboard} />
         </TabsContent>
 
         <TabsContent value="wizard" className="mt-6 space-y-6">
