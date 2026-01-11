@@ -24,8 +24,7 @@ interface Account {
 
 interface Salesperson {
   id: string;
-  first_name: string | null;
-  last_name: string | null;
+  full_name: string | null;
 }
 
 interface InvoiceRow {
@@ -120,7 +119,7 @@ export default function ProfitByInvoiceReport() {
     const fetchSalespeople = async () => {
       const { data, error } = await supabase
         .from("organization_members")
-        .select("user_id, profiles(id, first_name, last_name)")
+        .select("user_id, profiles(id, full_name)")
         .eq("organization_id", organizationId);
 
       if (!error && data) {
@@ -128,8 +127,7 @@ export default function ProfitByInvoiceReport() {
           .filter((m) => m.profiles)
           .map((m) => ({
             id: (m.profiles as any).id,
-            first_name: (m.profiles as any).first_name,
-            last_name: (m.profiles as any).last_name,
+            full_name: (m.profiles as any).full_name,
           }));
         setSalespeople(people);
       }
@@ -307,8 +305,7 @@ export default function ProfitByInvoiceReport() {
   };
 
   const getSalespersonName = (person: Salesperson) => {
-    const name = [person.first_name, person.last_name].filter(Boolean).join(" ");
-    return name || "Unknown";
+    return person.full_name || "Unknown";
   };
 
   return (
