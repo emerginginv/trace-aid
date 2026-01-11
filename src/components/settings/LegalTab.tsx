@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useEntitlements } from "@/hooks/use-entitlements";
+import { isEnterprisePlan } from "@/lib/planDetection";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,7 +97,11 @@ export function LegalTab() {
   const [signerEmail, setSignerEmail] = useState("");
   const [signerTitle, setSignerTitle] = useState("");
 
-  const isEnterprise = entitlements?.subscription_tier === 'enterprise';
+  // Check enterprise status via entitlements (includes trial awareness) or fallback to org tier
+  const isEnterprise = isEnterprisePlan(
+    entitlements?.subscription_tier,
+    entitlements?.subscription_product_id
+  ) || isEnterprisePlan(organization?.subscription_tier, organization?.subscription_product_id);
 
   // Fetch contracts
   const { data: contracts, isLoading } = useQuery({

@@ -12,17 +12,18 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-// Main plan product IDs
+// Main plan product IDs (LIVE)
 const MAIN_PLAN_PRODUCT_IDS = [
-  "prod_TagUwxglXyq7Ls", // The Investigator
-  "prod_TagbsPhNweUFpe", // The Agency
-  "prod_Tagc0lPxc1XjVC", // The Enterprise
+  "prod_Tm0ev0X9L9DbJi", // The Investigator (Solo)
+  "prod_Tm0em6GqFzUGEt", // The Agency (Team)
+  "prod_Tm0eUMnuJ4978P", // The Enterprise
 ];
 
-// Storage add-on product IDs with their storage values
+// Storage add-on product IDs with their storage values (LIVE)
 const STORAGE_ADDON_PRODUCT_IDS: Record<string, number> = {
-  "prod_TagpgL61tfiDeS": 500,  // 500GB Storage Add-on
-  "prod_TagqN9os8BWfbU": 1000, // 1TB Storage Add-on
+  "prod_Tm0iJWv16Bm9jt": 500,  // 500GB Storage Add-on
+  "prod_Tm0i3vt8F2ogpH": 1000, // 1TB Storage Add-on
+  "prod_Tm0kAH1O6WKVnl": 5000, // 5TB Storage Add-on
 };
 
 serve(async (req) => {
