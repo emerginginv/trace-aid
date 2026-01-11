@@ -16,41 +16,53 @@ import {
 import { cn } from "@/lib/utils";
 import { SlaList } from "./SlaList";
 
+// Updated interface to match the corrected RPC function response
 interface SlaSummary {
   slas: Array<{
     id: string;
+    name: string;
     metric: string;
     target_value: number;
-    measurement_window: string;
-    enabled: boolean;
+    measurement_period: string;
+    is_active: boolean;
     latest_measurement: {
-      value: number;
-      status: string;
-      period_start: string;
-      period_end: string;
-      calculated_at: string;
+      measured_value: number;
+      is_met: boolean;
+      measured_at: string;
     } | null;
-    breaches_count: number;
   }>;
   recent_breaches: Array<{
     id: string;
+    sla_id: string;
     metric: string;
-    period_start: string;
-    period_end: string;
-    measured_value: number;
     target_value: number;
-    impact_summary: string | null;
-    resolved_at: string | null;
+    actual_value: number;
+    breach_start: string;
+    breach_end: string | null;
+    resolved: boolean;
+    created_at: string;
   }>;
-  health: {
+  account_health: {
     risk_level: string;
-    active_users: number;
+    active_users_count: number;
     cases_created: number;
-    adoption_score: number;
-    period_start: string;
-    period_end: string;
+    feature_adoption_score: number;
   } | null;
 }
+
+// Helper to format target values with correct units
+const formatTargetValue = (metric: string, value: number): string => {
+  switch (metric) {
+    case "availability":
+      return `${value}%`;
+    case "response_time":
+      return `${value}ms`;
+    case "support_response":
+      return `${value}hrs`;
+    default:
+      return `${value}`;
+  }
+};
 
 const metricLabels: Record<string, string> = {
   availability: "System Availability",
@@ -144,7 +156,7 @@ export function SlaSuccessTab() {
       {canManageSlas && <SlaList />}
       
       {/* Health Overview */}
-      {summary?.health && (
+      {summary?.account_health && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -157,13 +169,10 @@ export function SlaSuccessTab() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 mb-6">
-              <Badge className={cn("text-sm px-3 py-1", riskColors[summary.health.risk_level])}>
-                {riskIcons[summary.health.risk_level]}
-                <span className="ml-1 capitalize">{summary.health.risk_level.replace("_", " ")}</span>
+              <Badge className={cn("text-sm px-3 py-1", riskColors[summary.account_health.risk_level] || riskColors.healthy)}>
+                {riskIcons[summary.account_health.risk_level] || riskIcons.healthy}
+                <span className="ml-1 capitalize">{(summary.account_health.risk_level || "healthy").replace("_", " ")}</span>
               </Badge>
-              <span className="text-sm text-muted-foreground">
-                Period: {format(new Date(summary.health.period_start), "MMM d")} - {format(new Date(summary.health.period_end), "MMM d, yyyy")}
-              </span>
             </div>
             
             <div className="grid gap-4 md:grid-cols-3">
@@ -172,7 +181,7 @@ export function SlaSuccessTab() {
                   <Users className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{summary.health.active_users}</p>
+                  <p className="text-2xl font-bold">{summary.account_health.active_users_count}</p>
                   <p className="text-xs text-muted-foreground">Active Users</p>
                 </div>
               </div>
@@ -182,7 +191,7 @@ export function SlaSuccessTab() {
                   <FolderOpen className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{summary.health.cases_created}</p>
+                  <p className="text-2xl font-bold">{summary.account_health.cases_created}</p>
                   <p className="text-xs text-muted-foreground">Cases Created</p>
                 </div>
               </div>
@@ -192,7 +201,7 @@ export function SlaSuccessTab() {
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{Math.round(summary.health.adoption_score)}%</p>
+                  <p className="text-2xl font-bold">{Math.round(summary.account_health.feature_adoption_score || 0)}%</p>
                   <p className="text-xs text-muted-foreground">Feature Adoption</p>
                 </div>
               </div>
@@ -201,21 +210,23 @@ export function SlaSuccessTab() {
         </Card>
       )}
 
-      {/* Active SLAs */}
+      {/* SLA Performance & Status */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Service Level Agreements
+            SLA Performance & Status
           </CardTitle>
           <CardDescription>
-            Your active SLAs and their current status
+            Current performance against your configured SLAs
           </CardDescription>
         </CardHeader>
         <CardContent>
           {!summary?.slas || summary.slas.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
-              No SLAs configured. Contact your account manager for enterprise SLA setup.
+              {canManageSlas 
+                ? "Configure SLAs above to start tracking performance."
+                : "No SLAs configured yet. Contact your administrator to set up SLA monitoring."}
             </p>
           ) : (
             <div className="space-y-4">
@@ -226,23 +237,23 @@ export function SlaSuccessTab() {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{metricLabels[sla.metric] || sla.metric}</span>
+                      <span className="font-medium">{sla.name || metricLabels[sla.metric] || sla.metric}</span>
                       {sla.latest_measurement && (
                         <Badge
-                          variant={sla.latest_measurement.status === "met" ? "default" : "destructive"}
+                          variant={sla.latest_measurement.is_met ? "default" : "destructive"}
                           className="text-xs"
                         >
-                          {sla.latest_measurement.status === "met" ? (
+                          {sla.latest_measurement.is_met ? (
                             <CheckCircle className="h-3 w-3 mr-1" />
                           ) : (
                             <XCircle className="h-3 w-3 mr-1" />
                           )}
-                          {sla.latest_measurement.status}
+                          {sla.latest_measurement.is_met ? "Met" : "Breached"}
                         </Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Target: {sla.target_value}% • {sla.measurement_window}
+                      Target: {formatTargetValue(sla.metric, sla.target_value)} • {sla.measurement_period}
                     </p>
                   </div>
                   
@@ -250,10 +261,10 @@ export function SlaSuccessTab() {
                     {sla.latest_measurement ? (
                       <>
                         <p className="text-2xl font-bold">
-                          {sla.latest_measurement.value.toFixed(2)}%
+                          {formatTargetValue(sla.metric, sla.latest_measurement.measured_value)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Last measured {format(new Date(sla.latest_measurement.calculated_at), "MMM d")}
+                          Last measured {format(new Date(sla.latest_measurement.measured_at), "MMM d")}
                         </p>
                       </>
                     ) : (
@@ -290,19 +301,17 @@ export function SlaSuccessTab() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">{metricLabels[breach.metric] || breach.metric}</span>
-                      <Badge variant={breach.resolved_at ? "secondary" : "destructive"}>
-                        {breach.resolved_at ? "Resolved" : "Open"}
+                      <Badge variant={breach.resolved ? "secondary" : "destructive"}>
+                        {breach.resolved ? "Resolved" : "Open"}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Measured: {breach.measured_value}% (Target: {breach.target_value}%)
+                      Measured: {formatTargetValue(breach.metric, breach.actual_value)} (Target: {formatTargetValue(breach.metric, breach.target_value)})
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Period: {format(new Date(breach.period_start), "MMM d")} - {format(new Date(breach.period_end), "MMM d, yyyy")}
+                      Started: {format(new Date(breach.breach_start), "MMM d, yyyy")}
+                      {breach.breach_end && ` - Ended: ${format(new Date(breach.breach_end), "MMM d, yyyy")}`}
                     </p>
-                    {breach.impact_summary && (
-                      <p className="text-sm mt-2">{breach.impact_summary}</p>
-                    )}
                   </div>
                 ))}
               </div>
