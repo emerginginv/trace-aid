@@ -9,6 +9,7 @@ import ProfitTrendsReport from "./ProfitTrendsReport";
 import ProfitByInvoiceReport from "./ProfitByInvoiceReport";
 import IncomeDistributionReport from "./IncomeDistributionReport";
 import TransactionSummaryReport from "./TransactionSummaryReport";
+import SalesTrendDetailReport from "./SalesTrendDetailReport";
 
 // Custom reports that have their own components (not using AnalyticsReportViewer)
 const CUSTOM_REPORTS: Record<string, React.ComponentType> = {
@@ -16,6 +17,7 @@ const CUSTOM_REPORTS: Record<string, React.ComponentType> = {
   "profit-by-invoice": ProfitByInvoiceReport,
   "income-distribution": IncomeDistributionReport,
   "transaction-summary": TransactionSummaryReport,
+  "sales-trend-detail": SalesTrendDetailReport,
 };
 
 export default function ReportViewer() {
