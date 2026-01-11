@@ -50,6 +50,8 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
   const [isUploading, setIsUploading] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
     fetchAttachments();
@@ -70,49 +72,86 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
     }
   };
 
-  const handleFileUpload = async (files: FileList | File[]) => {
+  const handleFilesSelected = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
+    setPendingFiles(prev => [...prev, ...fileArray]);
+    setHasStarted(true);
+  };
+
+  const handleClearPending = () => {
+    setPendingFiles([]);
+  };
+
+  const handleRemovePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUploadPending = async () => {
+    if (pendingFiles.length === 0) return;
 
     setIsUploading(true);
+    setUploadProgress({ current: 0, total: pendingFiles.length });
+
+    const results = { succeeded: 0, failed: [] as string[] };
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      for (const file of fileArray) {
-        // Extract file extension
-        const fileExt = file.name.split('.').pop() || 'bin';
-        // Use user.id as first path segment to match RLS policy requirements
-        const filePath = `${user.id}/${caseId}/${crypto.randomUUID()}.${fileExt}`;
+      for (const file of pendingFiles) {
+        try {
+          // Extract file extension
+          const fileExt = file.name.split('.').pop() || 'bin';
+          // Use user.id as first path segment to match RLS policy requirements
+          const filePath = `${user.id}/${caseId}/${crypto.randomUUID()}.${fileExt}`;
 
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from("case-attachments")
-          .upload(filePath, file);
+          // Upload to storage
+          const { error: uploadError } = await supabase.storage
+            .from("case-attachments")
+            .upload(filePath, file);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        // Create attachment record
-        const { error: insertError } = await supabase.from("case_attachments").insert({
-          case_id: caseId,
-          organization_id: organizationId,
-          user_id: user.id,
-          file_name: file.name,
-          file_path: filePath,
-          file_type: file.type,
-          file_size: file.size,
-        });
+          // Create attachment record
+          const { error: insertError } = await supabase.from("case_attachments").insert({
+            case_id: caseId,
+            organization_id: organizationId,
+            user_id: user.id,
+            file_name: file.name,
+            file_path: filePath,
+            file_type: file.type,
+            file_size: file.size,
+          });
 
-        if (insertError) throw insertError;
+          if (insertError) throw insertError;
+
+          results.succeeded++;
+          setUploadProgress(prev => ({ ...prev, current: prev.current + 1 }));
+        } catch (error) {
+          console.error(`Error uploading ${file.name}:`, error);
+          results.failed.push(file.name);
+          setUploadProgress(prev => ({ ...prev, current: prev.current + 1 }));
+        }
       }
 
-      toast.success(`${fileArray.length} file${fileArray.length !== 1 ? "s" : ""} uploaded`);
+      // Show appropriate toast based on results
+      if (results.failed.length === 0) {
+        toast.success(`${results.succeeded} file${results.succeeded !== 1 ? "s" : ""} uploaded successfully`);
+      } else if (results.succeeded > 0) {
+        toast.warning(`${results.succeeded} uploaded, ${results.failed.length} failed: ${results.failed.join(", ")}`);
+      } else {
+        toast.error(`All uploads failed: ${results.failed.join(", ")}`);
+      }
+
+      setPendingFiles([]);
       fetchAttachments();
     } catch (error) {
-      console.error("Error uploading files:", error);
-      toast.error("Failed to upload files");
+      console.error("Error during upload:", error);
+      toast.error("Upload failed - not authenticated");
     } finally {
       setIsUploading(false);
+      setUploadProgress({ current: 0, total: 0 });
     }
   };
 
@@ -162,7 +201,7 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files.length > 0) {
-      handleFileUpload(e.dataTransfer.files);
+      handleFilesSelected(e.dataTransfer.files);
     }
   }, []);
 
@@ -231,16 +270,64 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
             type="file"
             multiple
             className="hidden"
-            onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+            onChange={(e) => e.target.files && handleFilesSelected(e.target.files)}
             disabled={isUploading}
           />
           <Button variant="outline" size="sm" disabled={isUploading} asChild>
-            <span className="cursor-pointer">
-              {isUploading ? "Uploading..." : "Browse Files"}
-            </span>
+            <span className="cursor-pointer">Browse Files</span>
           </Button>
         </label>
       </div>
+
+      {/* Pending files */}
+      {pendingFiles.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">
+              {isUploading 
+                ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}...`
+                : `${pendingFiles.length} file${pendingFiles.length !== 1 ? "s" : ""} ready to upload`
+              }
+            </p>
+            {!isUploading && (
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleUploadPending} className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload {pendingFiles.length} File{pendingFiles.length !== 1 ? "s" : ""}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleClearPending}>
+                  Clear
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="space-y-1">
+            {pendingFiles.map((file, index) => (
+              <div key={`${file.name}-${index}`} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <div className="text-muted-foreground shrink-0">
+                    {getFileIcon(file.type)}
+                  </div>
+                  <span className="text-sm truncate">{file.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    ({formatFileSize(file.size)})
+                  </span>
+                </div>
+                {!isUploading && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemovePendingFile(index)}
+                    className="h-6 w-6 shrink-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Uploaded files */}
       {attachments.length > 0 && (
