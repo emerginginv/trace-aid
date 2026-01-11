@@ -5,7 +5,7 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil } from "lucide-react";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
@@ -100,6 +100,7 @@ const Cases = () => {
   }>>([]);
   const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
   const { sortColumn, sortDirection, handleSort } = useSortPreference("cases", "case_number", "desc");
+  const [editingCase, setEditingCase] = useState<Case | null>(null);
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("cases-columns", COLUMNS);
 
@@ -509,18 +510,52 @@ const Cases = () => {
               className="hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => navigate(`/cases/${caseItem.id}`)}
             >
-              <CardHeader className="pb-3">
+            <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-xl">{caseItem.title}</CardTitle>
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <CardTitle className="text-xl truncate">{caseItem.title}</CardTitle>
                     <p className="text-sm text-muted-foreground">
                       Case #{caseItem.case_number}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Badge className="border" style={getStatusStyle(caseItem.status)}>
                       {caseItem.status}
                     </Badge>
+                    {(hasPermission('edit_cases') || hasPermission('delete_cases')) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          {hasPermission('edit_cases') && (
+                            <DropdownMenuItem onClick={() => {
+                              setEditingCase(caseItem);
+                              setFormOpen(true);
+                            }}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission('delete_cases') && (
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteClick(caseItem.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
                 <div className="pt-2">
@@ -556,16 +591,6 @@ const Cases = () => {
                     )}
                   </>
                 )}
-                
-                <div className="flex justify-end gap-2 mt-4">
-                  {hasPermission('delete_cases') && <Button variant="ghost" size="icon" onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleDeleteClick(caseItem.id);
-                    }}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>}
-                </div>
               </CardContent>
             </Card>)}
         </div> : <>
@@ -585,14 +610,50 @@ const Cases = () => {
                   }}
                 >
                 <div className="space-y-3">
-                  <div>
-                    <div className="font-semibold text-sm">{caseItem.case_number}</div>
-                    <div className={`font-medium mt-1 flex items-center gap-2 ${isClosed ? 'text-muted-foreground' : 'text-foreground'}`}>
-                      {caseItem.title}
-                      {isClosed && <Badge variant="secondary" className="text-xs">
-                          Closed
-                        </Badge>}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm">{caseItem.case_number}</div>
+                      <div className={`font-medium mt-1 flex items-center gap-2 ${isClosed ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        <span className="truncate">{caseItem.title}</span>
+                        {isClosed && <Badge variant="secondary" className="text-xs shrink-0">
+                            Closed
+                          </Badge>}
+                      </div>
                     </div>
+                    {(hasPermission('edit_cases') || hasPermission('delete_cases')) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          {hasPermission('edit_cases') && (
+                            <DropdownMenuItem onClick={() => {
+                              setEditingCase(caseItem);
+                              setFormOpen(true);
+                            }}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission('delete_cases') && (
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteClick(caseItem.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                   
                   <div className="flex gap-2">
@@ -605,18 +666,6 @@ const Cases = () => {
                     <div>Created: {new Date(caseItem.created_at).toLocaleDateString()}</div>
                     {caseItem.due_date && <div>Due: {new Date(caseItem.due_date).toLocaleDateString()}</div>}
                   </div>
-
-                  {hasPermission('delete_cases') && (
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(caseItem.id);
-                      }} className="flex-1">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </Card>;
         })}
@@ -768,8 +817,25 @@ const Cases = () => {
 
       <CaseForm 
         open={formOpen} 
-        onOpenChange={setFormOpen} 
-        onSuccess={fetchCases} 
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditingCase(null);
+        }} 
+        onSuccess={() => {
+          fetchCases();
+          setEditingCase(null);
+        }}
+        editingCase={editingCase ? {
+          id: editingCase.id,
+          title: editingCase.title,
+          case_number: editingCase.case_number,
+          description: editingCase.description,
+          status: editingCase.status,
+          account_id: null,
+          contact_id: null,
+          due_date: editingCase.due_date,
+          budget_dollars: editingCase.budget_dollars,
+        } : undefined}
       />
 
       <ConfirmationDialog
