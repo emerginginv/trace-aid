@@ -12,7 +12,7 @@ export interface Organization {
   is_active: boolean;
   logo_url: string | null;
   subscription_tier: "free" | "standard" | "pro";
-  subscription_status: "active" | "inactive" | "past_due" | "canceled";
+  subscription_status: "active" | "inactive" | "past_due" | "canceled" | "pending_payment";
   max_users: number;
   billing_email: string | null;
   stripe_subscription_id: string | null;
@@ -20,6 +20,8 @@ export interface Organization {
   subscription_product_id: string | null;
   current_users_count: number;
   storage_used_gb: number;
+  plan_key: "solo" | "team" | "enterprise";
+  plan_features: Record<string, boolean>;
 }
 
 export interface SubscriptionStatus {

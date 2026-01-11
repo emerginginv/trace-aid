@@ -1,6 +1,8 @@
 // Plan limits configuration
 // Replace the product/price IDs with your actual Stripe IDs
 
+export type PlanKey = "solo" | "team" | "enterprise";
+
 export interface PlanLimits {
   max_admin_users: number;
   storage_gb: number;
@@ -9,6 +11,7 @@ export interface PlanLimits {
   unlimited_cases: boolean;
   unlimited_investigators: boolean;
   unlimited_vendors: boolean;
+  plan_key: PlanKey;
 }
 
 export interface StorageAddon {
@@ -17,6 +20,22 @@ export interface StorageAddon {
   price: number;
   price_id: string;
   product_id: string;
+}
+
+// Map Stripe product IDs to plan keys
+export const PLAN_KEY_MAP: Record<string, PlanKey> = {
+  "prod_TagUwxglXyq7Ls": "solo",
+  "prod_TagbsPhNweUFpe": "team",
+  "prod_Tagc0lPxc1XjVC": "enterprise",
+};
+
+/**
+ * Get the plan key from a Stripe product ID
+ * Returns 'solo' as default for unknown or null product IDs
+ */
+export function getPlanKeyFromProductId(productId: string | null): PlanKey {
+  if (!productId) return "solo";
+  return PLAN_KEY_MAP[productId] || "solo";
 }
 
 // Main subscription plans
@@ -30,6 +49,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     unlimited_cases: true,
     unlimited_investigators: true,
     unlimited_vendors: true,
+    plan_key: "solo",
   },
   // The Agency - $39/month
   "prod_TagbsPhNweUFpe": {
@@ -40,6 +60,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     unlimited_cases: true,
     unlimited_investigators: true,
     unlimited_vendors: true,
+    plan_key: "team",
   },
   // The Enterprise - $69/month
   "prod_Tagc0lPxc1XjVC": {
@@ -50,6 +71,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     unlimited_cases: true,
     unlimited_investigators: true,
     unlimited_vendors: true,
+    plan_key: "enterprise",
   },
   // Free/No subscription fallback
   "free": {
@@ -60,6 +82,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     unlimited_cases: false,
     unlimited_investigators: false,
     unlimited_vendors: false,
+    plan_key: "solo",
   },
 };
 
