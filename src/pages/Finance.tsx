@@ -5,12 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, FileSpreadsheet, FileText, LayoutGrid, List, DollarSign, Pencil, Trash2, Loader2, History } from "lucide-react";
+import { Search, Download, FileSpreadsheet, FileText, LayoutGrid, List, DollarSign, Pencil, Trash2, Loader2, History, Plus } from "lucide-react";
 
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -23,7 +24,6 @@ import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { FinancePageSkeleton } from "@/components/ui/list-page-skeleton";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-
 interface RetainerBalance {
   case_id: string;
   case_title: string;
@@ -39,6 +39,12 @@ interface RetainerFund {
   created_at: string;
   invoice_id: string | null;
   case_id: string;
+}
+
+interface CaseOption {
+  id: string;
+  title: string;
+  case_number: string;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -79,6 +85,13 @@ const Finance = () => {
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Add retainer dialog states
+  const [cases, setCases] = useState<CaseOption[]>([]);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState("");
+  const [showRetainerForm, setShowRetainerForm] = useState(false);
+  const [newAmount, setNewAmount] = useState("");
+  const [newNote, setNewNote] = useState("");
   // Refetch when organization changes
   useEffect(() => {
     if (organization?.id) {
@@ -136,6 +149,9 @@ const Finance = () => {
 
       const balances = Array.from(balanceMap.values());
       setRetainerBalances(balances);
+      
+      // Store cases for the add retainer dropdown
+      setCases(casesData || []);
     } catch (error: any) {
       console.error("Error fetching retainer data:", error);
       toast.error("Failed to load retainer data");
@@ -253,6 +269,58 @@ const Finance = () => {
     }
   };
 
+  const handleCaseSelected = () => {
+    setShowAddDialog(false);
+    setShowRetainerForm(true);
+  };
+
+  const handleAddRetainer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const amountNum = parseFloat(newAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast.error("Please enter a valid positive amount");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        toast.error("You must be logged in");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("retainer_funds")
+        .insert({
+          case_id: selectedCaseId,
+          amount: amountNum,
+          note: newNote.trim() || null,
+          organization_id: organization?.id,
+          user_id: userData.user.id,
+        });
+
+      if (error) throw error;
+
+      toast.success("Retainer fund added successfully");
+      
+      // Reset form
+      setNewAmount("");
+      setNewNote("");
+      setSelectedCaseId("");
+      setShowRetainerForm(false);
+      
+      // Refresh data
+      await fetchRetainerData();
+    } catch (error) {
+      console.error("Error adding retainer:", error);
+      toast.error("Failed to add retainer fund");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Filter functions
   const filteredRetainerBalances = retainerBalances.filter((balance) => {
     const searchLower = retainerSearch.toLowerCase();
@@ -334,6 +402,10 @@ const Finance = () => {
             Manage retainer funds across all cases
           </p>
         </div>
+        <Button onClick={() => setShowAddDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Retainer
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -745,6 +817,79 @@ const Finance = () => {
         variant="destructive"
         loading={submitting}
       />
+
+      {/* Add Retainer - Case Selection Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Retainer Funds</DialogTitle>
+            <DialogDescription>
+              Select a case to add retainer funds to
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a case..." />
+            </SelectTrigger>
+            <SelectContent>
+              {cases.map(c => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.case_number} - {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
+            <Button disabled={!selectedCaseId} onClick={handleCaseSelected}>Continue</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Retainer - Amount Form Dialog */}
+      <Dialog open={showRetainerForm} onOpenChange={setShowRetainerForm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Retainer Funds</DialogTitle>
+            <DialogDescription>
+              {selectedCaseId && cases.find(c => c.id === selectedCaseId)?.case_number} - {selectedCaseId && cases.find(c => c.id === selectedCaseId)?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddRetainer} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-retainer-amount">Amount ($)</Label>
+              <Input
+                id="new-retainer-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={newAmount}
+                onChange={(e) => setNewAmount(e.target.value)}
+                placeholder="Enter amount..."
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-retainer-note">Note (optional)</Label>
+              <Textarea
+                id="new-retainer-note"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Enter a note..."
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setShowRetainerForm(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Add Funds
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
