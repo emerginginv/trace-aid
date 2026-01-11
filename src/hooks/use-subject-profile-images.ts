@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Hook to manage signed URLs for subject profile images.
+ * Hook to manage signed URLs for subject profile and cover images.
  * Caches signed URLs to avoid regenerating them on every render.
  */
-export function useSubjectProfileImages(subjects: { id: string; profile_image_url: string | null }[]) {
+export function useSubjectProfileImages(subjects: { id: string; profile_image_url: string | null; cover_image_url?: string | null }[]) {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [signedCoverUrls, setSignedCoverUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const generateSignedUrl = useCallback(async (filePath: string): Promise<string | null> => {
@@ -48,26 +49,38 @@ export function useSubjectProfileImages(subjects: { id: string; profile_image_ur
 
   useEffect(() => {
     const loadSignedUrls = async () => {
-      const subjectsWithImages = subjects.filter(s => s.profile_image_url);
+      const subjectsWithImages = subjects.filter(s => s.profile_image_url || s.cover_image_url);
       if (subjectsWithImages.length === 0) return;
 
       setLoading(true);
-      const newUrls: Record<string, string> = {};
+      const newProfileUrls: Record<string, string> = {};
+      const newCoverUrls: Record<string, string> = {};
 
       await Promise.all(
         subjectsWithImages.map(async (subject) => {
-          // Skip if we already have a valid URL for this subject
-          if (signedUrls[subject.id]) return;
-
-          const signedUrl = await generateSignedUrl(subject.profile_image_url!);
-          if (signedUrl) {
-            newUrls[subject.id] = signedUrl;
+          // Generate profile image URL
+          if (subject.profile_image_url && !signedUrls[subject.id]) {
+            const signedUrl = await generateSignedUrl(subject.profile_image_url);
+            if (signedUrl) {
+              newProfileUrls[subject.id] = signedUrl;
+            }
+          }
+          
+          // Generate cover image URL
+          if (subject.cover_image_url && !signedCoverUrls[subject.id]) {
+            const signedUrl = await generateSignedUrl(subject.cover_image_url);
+            if (signedUrl) {
+              newCoverUrls[subject.id] = signedUrl;
+            }
           }
         })
       );
 
-      if (Object.keys(newUrls).length > 0) {
-        setSignedUrls(prev => ({ ...prev, ...newUrls }));
+      if (Object.keys(newProfileUrls).length > 0) {
+        setSignedUrls(prev => ({ ...prev, ...newProfileUrls }));
+      }
+      if (Object.keys(newCoverUrls).length > 0) {
+        setSignedCoverUrls(prev => ({ ...prev, ...newCoverUrls }));
       }
       setLoading(false);
     };
@@ -79,6 +92,10 @@ export function useSubjectProfileImages(subjects: { id: string; profile_image_ur
     return signedUrls[subjectId];
   }, [signedUrls]);
 
+  const getCoverUrl = useCallback((subjectId: string): string | undefined => {
+    return signedCoverUrls[subjectId];
+  }, [signedCoverUrls]);
+
   const refreshUrl = useCallback(async (subjectId: string, filePath: string) => {
     const signedUrl = await generateSignedUrl(filePath);
     if (signedUrl) {
@@ -86,5 +103,12 @@ export function useSubjectProfileImages(subjects: { id: string; profile_image_ur
     }
   }, [generateSignedUrl]);
 
-  return { signedUrls, getSignedUrl, refreshUrl, loading };
+  const refreshCoverUrl = useCallback(async (subjectId: string, filePath: string) => {
+    const signedUrl = await generateSignedUrl(filePath);
+    if (signedUrl) {
+      setSignedCoverUrls(prev => ({ ...prev, [subjectId]: signedUrl }));
+    }
+  }, [generateSignedUrl]);
+
+  return { signedUrls, signedCoverUrls, getSignedUrl, getCoverUrl, refreshUrl, refreshCoverUrl, loading };
 }

@@ -198,18 +198,20 @@ export const SubjectSubTab = ({ caseId, organizationId, category, isClosedCase }
           isClosedCase={isClosedCase}
         />
       ) : (
-        <SubjectCardView
-          subjects={filteredSubjects}
-          category={category}
-          caseId={caseId}
-          onNavigate={handleNavigateToDetail}
-          onEdit={handleEditInDrawer}
-          onArchive={handleArchive}
-          onUnarchive={handleUnarchive}
-          canEdit={canEditSubjects}
-          canArchive={canDeleteSubjects}
-          isClosedCase={isClosedCase}
-        />
+        <div className="mt-14">
+          <SubjectCardView
+            subjects={filteredSubjects}
+            category={category}
+            caseId={caseId}
+            onNavigate={handleNavigateToDetail}
+            onEdit={handleEditInDrawer}
+            onArchive={handleArchive}
+            onUnarchive={handleUnarchive}
+            canEdit={canEditSubjects}
+            canArchive={canDeleteSubjects}
+            isClosedCase={isClosedCase}
+          />
+        </div>
       )}
 
       <SubjectDrawer
