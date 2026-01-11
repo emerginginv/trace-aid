@@ -84,7 +84,11 @@ export default function Subjects() {
   });
 
   useEffect(() => {
-    if (!organization?.id) return;
+    if (!organization?.id) {
+      console.log("Subjects: No organization ID available yet");
+      return;
+    }
+    console.log("Subjects: Fetching for org", organization.id);
     fetchSubjects();
   }, [organization?.id]);
 
@@ -97,6 +101,7 @@ export default function Subjects() {
     setLoading(true);
 
     try {
+      console.log("Subjects: Starting query...");
       const { data, error } = await supabase
         .from("case_subjects")
         .select(`
@@ -106,12 +111,17 @@ export default function Subjects() {
         .eq("organization_id", organization.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Subjects: Query error:", error);
+        throw error;
+      }
+
+      console.log("Subjects: Query returned", data?.length || 0, "results");
 
       // Transform the data to handle the single case object
       const subjectsData: SubjectWithCase[] = (data || []).map((item: any) => ({
         ...item,
-        cases: item.cases || { id: '', case_number: '', title: '' }
+        cases: item.cases || { id: '', case_number: '', title: 'Unknown Case' }
       }));
       setSubjects(subjectsData);
 
@@ -125,6 +135,7 @@ export default function Subjects() {
       setCounts(newCounts);
     } catch (error) {
       console.error("Error fetching subjects:", error);
+      setSubjects([]);
     } finally {
       setLoading(false);
     }
