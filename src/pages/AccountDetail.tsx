@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AccountDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { RelatedCasesWidget } from "@/components/shared/RelatedCasesWidget";
+import { EntityActivityWidget } from "@/components/shared/EntityActivityWidget";
 
 interface Account {
   id: string;
@@ -229,6 +230,8 @@ const AccountDetail = () => {
           )}
         </CardContent>
       </Card>
+
+      <EntityActivityWidget entityType="account" entityId={account.id} />
 
       <RelatedCasesWidget entityType="account" entityId={account.id} />
     </div>
