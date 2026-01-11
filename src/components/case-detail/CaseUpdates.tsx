@@ -5,7 +5,7 @@ import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, ShieldAlert, Download, Paperclip, Link2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, ShieldAlert, Download, Paperclip, Link2, X, Sparkles } from "lucide-react";
 import { AttachmentPreviewThumbnail } from "./AttachmentPreviewThumbnail";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
@@ -23,6 +23,10 @@ import { useSortPreference } from "@/hooks/use-sort-preference";
 import { AttachmentPickerDialog } from "./AttachmentPicker";
 import { ActivityTimelineDisplay } from "./ActivityTimelineDisplay";
 import { ContextualHelp } from "@/components/help-center";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { AISummaryDialog } from "./AISummaryDialog";
+
 interface TimelineEntry {
   time: string;
   description: string;
@@ -36,6 +40,7 @@ interface Update {
   update_type: string;
   user_id: string;
   activity_timeline: TimelineEntry[] | null;
+  is_ai_summary?: boolean;
 }
 
 interface UserProfile {
@@ -55,6 +60,7 @@ interface LinkedAttachment {
 }
 
 const COLUMNS: ColumnDefinition[] = [
+  { key: "select", label: "", hideable: false },
   { key: "expand", label: "", hideable: false },
   { key: "title", label: "Title" },
   { key: "update_type", label: "Type" },
@@ -76,6 +82,10 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const [linkedAttachments, setLinkedAttachments] = useState<Record<string, LinkedAttachment[]>>({});
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkingUpdateId, setLinkingUpdateId] = useState<string | null>(null);
+  
+  // AI Summary selection state
+  const [selectedUpdateIds, setSelectedUpdateIds] = useState<Set<string>>(new Set());
+  const [showAISummaryDialog, setShowAISummaryDialog] = useState(false);
 
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("case-updates", "created_at", "desc");
@@ -256,6 +266,28 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
     });
   }, [expandedRows]);
 
+  // Selection handlers for AI Summary
+  const toggleUpdateSelection = (updateId: string) => {
+    setSelectedUpdateIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(updateId)) {
+        newSet.delete(updateId);
+      } else {
+        newSet.add(updateId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUpdateIds.size === sortedUpdates.length) {
+      setSelectedUpdateIds(new Set());
+    } else {
+      setSelectedUpdateIds(new Set(sortedUpdates.map(u => u.id)));
+    }
+  };
+
+  const selectedUpdatesForDialog = updates.filter(u => selectedUpdateIds.has(u.id));
 
   const filteredUpdates = updates.filter(update => {
     return searchQuery === '' || 
@@ -337,6 +369,23 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
           <ContextualHelp feature="activity_timelines" />
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          {selectedUpdateIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedUpdateIds.size} selected
+              </span>
+              <Button
+                variant="outline"
+                onClick={() => setShowAISummaryDialog(true)}
+                disabled={!canAddUpdates}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Generate Summary
+                <Badge variant="secondary" className="text-xs">AI</Badge>
+              </Button>
+            </div>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full sm:w-auto">
@@ -422,6 +471,14 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
           <Table>
             <TableHeader>
               <TableRow>
+                {isVisible("select") && (
+                  <th className="w-10 p-2">
+                    <Checkbox
+                      checked={selectedUpdateIds.size === sortedUpdates.length && sortedUpdates.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </th>
+                )}
                 {isVisible("expand") && (
                   <th className="w-12 p-2"></th>
                 )}

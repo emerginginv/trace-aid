@@ -388,14 +388,14 @@ export async function resolveVariables(
     // Fetch case updates (including activity_timeline if option enabled)
     const { data: updates } = await supabase
       .from("case_updates")
-      .select("*, profiles:user_id(full_name)")
+      .select("*, created_by_profile:profiles!case_updates_user_id_fkey(full_name)")
       .eq("case_id", caseId)
       .order("created_at", { ascending: false });
 
     if (updates && updates.length > 0) {
       const plainList = updates.map(u => `${u.title}: ${u.description || ""}`).join("\n");
       const listWithAuthor = updates.map(u => {
-        const profile = u.profiles as { full_name: string } | null;
+        const profile = u.created_by_profile as { full_name: string } | null;
         const author = profile?.full_name || "Unknown";
         return `${u.title} (by ${author}): ${u.description || ""}`;
       }).join("\n");
