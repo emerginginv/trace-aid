@@ -22,6 +22,14 @@ interface Step5Props {
   onContinue: (count: number) => void;
 }
 
+function sanitizeFileName(fileName: string): string {
+  // Replace spaces and special characters with underscores for storage path
+  return fileName
+    .replace(/\s+/g, '_')           // Replace spaces with underscores
+    .replace(/[^a-zA-Z0-9._-]/g, '') // Remove other special characters
+    .replace(/_+/g, '_');            // Collapse multiple underscores
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -72,7 +80,8 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
       if (!user) throw new Error("Not authenticated");
 
       for (const file of fileArray) {
-        const filePath = `${organizationId}/${caseId}/${Date.now()}_${file.name}`;
+        const sanitizedName = sanitizeFileName(file.name);
+        const filePath = `${organizationId}/${caseId}/${Date.now()}_${sanitizedName}`;
 
         // Upload to storage
         const { error: uploadError } = await supabase.storage
