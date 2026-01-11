@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -7,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Subject, LOCATION_TYPES, US_STATES } from "../types";
+import { ProfileImageUpload } from "../../ProfileImageUpload";
 
 const locationSchema = z.object({
   name: z.string().min(1, "Location name is required"),
@@ -22,12 +24,13 @@ export type LocationFormValues = z.infer<typeof locationSchema>;
 
 interface LocationFormProps {
   subject?: Subject;
-  onSubmit: (values: LocationFormValues) => void;
+  onSubmit: (values: LocationFormValues, profileImageUrl: string | null) => void;
   isSubmitting: boolean;
   readOnly?: boolean;
 }
 
 export const LocationForm = ({ subject, onSubmit, isSubmitting, readOnly = false }: LocationFormProps) => {
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(subject?.profile_image_url || null);
   const details = subject?.details || {};
 
   // Parse existing address if stored as single field
@@ -65,9 +68,29 @@ export const LocationForm = ({ subject, onSubmit, isSubmitting, readOnly = false
     },
   });
 
+  const handleSubmit = (values: LocationFormValues) => {
+    onSubmit(values, profileImageUrl);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <div className="flex items-start gap-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Photo</label>
+            {!readOnly && (
+              <ProfileImageUpload
+                currentImageUrl={profileImageUrl || undefined}
+                onImageChange={setProfileImageUrl}
+                subjectId={subject?.id}
+              />
+            )}
+            {readOnly && profileImageUrl && (
+              <img src={profileImageUrl} alt="Location" className="w-20 h-20 rounded-lg object-cover" />
+            )}
+          </div>
+        </div>
+
         <FormField
           control={form.control}
           name="name"

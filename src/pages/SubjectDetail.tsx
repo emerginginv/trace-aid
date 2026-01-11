@@ -300,7 +300,7 @@ const SubjectDetail = () => {
           </div>
           
           <div className="absolute -bottom-16 left-8">
-            {subject.subject_type === 'person' && signedImageUrl ? (
+            {signedImageUrl ? (
               <div 
                 className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-card shadow-xl bg-card cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
                 onClick={() => setImageModalOpen(true)}

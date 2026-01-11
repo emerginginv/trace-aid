@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -7,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Subject, VEHICLE_TYPES, US_STATES } from "../types";
+import { ProfileImageUpload } from "../../ProfileImageUpload";
 
 const vehicleSchema = z.object({
   name: z.string().optional(),
@@ -26,12 +28,13 @@ export type VehicleFormValues = z.infer<typeof vehicleSchema>;
 
 interface VehicleFormProps {
   subject?: Subject;
-  onSubmit: (values: VehicleFormValues) => void;
+  onSubmit: (values: VehicleFormValues, profileImageUrl: string | null) => void;
   isSubmitting: boolean;
   readOnly?: boolean;
 }
 
 export const VehicleForm = ({ subject, onSubmit, isSubmitting, readOnly = false }: VehicleFormProps) => {
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(subject?.profile_image_url || null);
   const details = subject?.details || {};
 
   const form = useForm<VehicleFormValues>({
@@ -67,15 +70,30 @@ export const VehicleForm = ({ subject, onSubmit, isSubmitting, readOnly = false 
   const handleSubmit = (values: VehicleFormValues) => {
     // Set the name based on vehicle details
     values.name = getDisplayName();
-    onSubmit(values);
+    onSubmit(values, profileImageUrl);
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <div className="p-3 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Display Name</p>
-          <p className="font-medium">{getDisplayName()}</p>
+        <div className="flex items-start gap-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Photo</label>
+            {!readOnly && (
+              <ProfileImageUpload
+                currentImageUrl={profileImageUrl || undefined}
+                onImageChange={setProfileImageUrl}
+                subjectId={subject?.id}
+              />
+            )}
+            {readOnly && profileImageUrl && (
+              <img src={profileImageUrl} alt="Vehicle" className="w-20 h-20 rounded-lg object-cover" />
+            )}
+          </div>
+          <div className="flex-1 p-3 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">Display Name</p>
+            <p className="font-medium">{getDisplayName()}</p>
+          </div>
         </div>
 
         <FormField

@@ -88,7 +88,7 @@ export const SubjectDrawer = ({
     }
   };
 
-  const handleVehicleSubmit = async (values: VehicleFormValues) => {
+  const handleVehicleSubmit = async (values: VehicleFormValues, profileImageUrl: string | null) => {
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -120,6 +120,7 @@ export const SubjectDrawer = ({
         display_name: values.name || "Unknown Vehicle",
         notes: values.notes || null,
         details,
+        profile_image_url: profileImageUrl,
         status: 'active' as const,
       };
 
@@ -131,6 +132,7 @@ export const SubjectDrawer = ({
             display_name: subjectData.display_name,
             notes: subjectData.notes,
             details: subjectData.details,
+            profile_image_url: subjectData.profile_image_url,
           })
           .eq("id", subject.id);
         if (error) throw error;
@@ -150,7 +152,7 @@ export const SubjectDrawer = ({
     }
   };
 
-  const handleLocationSubmit = async (values: LocationFormValues) => {
+  const handleLocationSubmit = async (values: LocationFormValues, profileImageUrl: string | null) => {
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -178,6 +180,7 @@ export const SubjectDrawer = ({
         display_name: values.name,
         notes: values.notes || null,
         details,
+        profile_image_url: profileImageUrl,
         status: 'active' as const,
       };
 
@@ -189,6 +192,7 @@ export const SubjectDrawer = ({
             display_name: subjectData.display_name,
             notes: subjectData.notes,
             details: subjectData.details,
+            profile_image_url: subjectData.profile_image_url,
           })
           .eq("id", subject.id);
         if (error) throw error;
@@ -208,7 +212,7 @@ export const SubjectDrawer = ({
     }
   };
 
-  const handleItemSubmit = async (values: ItemFormValues) => {
+  const handleItemSubmit = async (values: ItemFormValues, profileImageUrl: string | null) => {
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -235,6 +239,7 @@ export const SubjectDrawer = ({
         display_name: values.name,
         notes: values.notes || null,
         details,
+        profile_image_url: profileImageUrl,
         status: 'active' as const,
       };
 
@@ -246,6 +251,7 @@ export const SubjectDrawer = ({
             display_name: subjectData.display_name,
             notes: subjectData.notes,
             details: subjectData.details,
+            profile_image_url: subjectData.profile_image_url,
           })
           .eq("id", subject.id);
         if (error) throw error;

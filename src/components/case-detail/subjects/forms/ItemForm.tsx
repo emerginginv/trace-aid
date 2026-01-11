@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -7,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Subject, ITEM_TYPES } from "../types";
+import { ProfileImageUpload } from "../../ProfileImageUpload";
 
 const itemSchema = z.object({
   name: z.string().min(1, "Item name is required"),
@@ -21,12 +23,13 @@ export type ItemFormValues = z.infer<typeof itemSchema>;
 
 interface ItemFormProps {
   subject?: Subject;
-  onSubmit: (values: ItemFormValues) => void;
+  onSubmit: (values: ItemFormValues, profileImageUrl: string | null) => void;
   isSubmitting: boolean;
   readOnly?: boolean;
 }
 
 export const ItemForm = ({ subject, onSubmit, isSubmitting, readOnly = false }: ItemFormProps) => {
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(subject?.profile_image_url || null);
   const details = subject?.details || {};
 
   const form = useForm<ItemFormValues>({
@@ -41,9 +44,29 @@ export const ItemForm = ({ subject, onSubmit, isSubmitting, readOnly = false }: 
     },
   });
 
+  const handleSubmit = (values: ItemFormValues) => {
+    onSubmit(values, profileImageUrl);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <div className="flex items-start gap-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Photo</label>
+            {!readOnly && (
+              <ProfileImageUpload
+                currentImageUrl={profileImageUrl || undefined}
+                onImageChange={setProfileImageUrl}
+                subjectId={subject?.id}
+              />
+            )}
+            {readOnly && profileImageUrl && (
+              <img src={profileImageUrl} alt="Item" className="w-20 h-20 rounded-lg object-cover" />
+            )}
+          </div>
+        </div>
+
         <FormField
           control={form.control}
           name="name"
