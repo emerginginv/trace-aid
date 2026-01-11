@@ -233,6 +233,7 @@ export function AppSidebar() {
                               <SidebarMenuSubButton 
                                 onClick={() => navigate('/cases')}
                                 isActive={location.pathname === '/cases'}
+                                className="cursor-pointer"
                               >
                                 <Briefcase className="w-4 h-4" />
                                 <span>All Cases</span>
@@ -242,6 +243,7 @@ export function AppSidebar() {
                               <SidebarMenuSubButton 
                                 onClick={() => navigate('/subjects')}
                                 isActive={location.pathname === '/subjects'}
+                                className="cursor-pointer"
                               >
                                 <UserSearch className="w-4 h-4" />
                                 <span>Subjects</span>
@@ -251,6 +253,7 @@ export function AppSidebar() {
                               <SidebarMenuSubButton 
                                 onClick={() => navigate('/tasks')}
                                 isActive={location.pathname === '/tasks'}
+                                className="cursor-pointer"
                               >
                                 <ListTodo className="w-4 h-4" />
                                 <span>Tasks & Events</span>
