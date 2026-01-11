@@ -1014,6 +1014,9 @@ export type Database = {
           contact_id: string | null
           created_at: string | null
           description: string | null
+          draft_approved_at: string | null
+          draft_approved_by: string | null
+          draft_created_by: string | null
           due_date: string | null
           expedited: boolean | null
           expedited_justification: string | null
@@ -1026,6 +1029,7 @@ export type Database = {
           import_timestamp: string | null
           instance_number: number
           investigator_ids: string[] | null
+          is_draft: boolean | null
           organization_id: string | null
           parent_case_id: string | null
           purpose_of_request: string | null
@@ -1051,6 +1055,9 @@ export type Database = {
           contact_id?: string | null
           created_at?: string | null
           description?: string | null
+          draft_approved_at?: string | null
+          draft_approved_by?: string | null
+          draft_created_by?: string | null
           due_date?: string | null
           expedited?: boolean | null
           expedited_justification?: string | null
@@ -1063,6 +1070,7 @@ export type Database = {
           import_timestamp?: string | null
           instance_number?: number
           investigator_ids?: string[] | null
+          is_draft?: boolean | null
           organization_id?: string | null
           parent_case_id?: string | null
           purpose_of_request?: string | null
@@ -1088,6 +1096,9 @@ export type Database = {
           contact_id?: string | null
           created_at?: string | null
           description?: string | null
+          draft_approved_at?: string | null
+          draft_approved_by?: string | null
+          draft_created_by?: string | null
           due_date?: string | null
           expedited?: boolean | null
           expedited_justification?: string | null
@@ -1100,6 +1111,7 @@ export type Database = {
           import_timestamp?: string | null
           instance_number?: number
           investigator_ids?: string[] | null
+          is_draft?: boolean | null
           organization_id?: string | null
           parent_case_id?: string | null
           purpose_of_request?: string | null
