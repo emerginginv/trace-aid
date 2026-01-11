@@ -122,6 +122,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         update_type: item.update_type,
         user_id: item.user_id,
         activity_timeline: item.activity_timeline as unknown as TimelineEntry[] | null,
+        is_ai_summary: item.is_ai_summary || false,
       }));
 
       setUpdates(mappedUpdates);
@@ -527,48 +528,79 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
               {sortedUpdates.map((update) => {
                 const isExpanded = expandedRows.has(update.id);
                 const userProfile = userProfiles[update.user_id];
+                const isSelected = selectedUpdateIds.has(update.id);
                 
                 return (
                   <React.Fragment key={update.id}>
-                    <TableRow>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          onClick={() => toggleRow(update.id)}
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TableCell>
-                      <TableCell className="font-medium">{update.title}</TableCell>
-                      <TableCell>{update.update_type}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {userProfile?.full_name || userProfile?.email || "Unknown"}
-                      </TableCell>
-                      <TableCell>{format(new Date(update.created_at), "MMM dd, yyyy")}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {canEditUpdates && (
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(update)} disabled={isClosedCase}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canDeleteUpdates && (
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(update.id)} disabled={isClosedCase}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                    <TableRow className={isSelected ? "bg-muted/50" : ""}>
+                      {isVisible("select") && (
+                        <TableCell className="w-10">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleUpdateSelection(update.id)}
+                          />
+                        </TableCell>
+                      )}
+                      {isVisible("expand") && (
+                        <TableCell className="w-12">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6"
+                            onClick={() => toggleRow(update.id)}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      )}
+                      {isVisible("title") && (
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {update.title}
+                            {update.is_ai_summary && (
+                              <Badge variant="secondary" className="text-xs gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                AI
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
+                      {isVisible("update_type") && (
+                        <TableCell>{update.update_type}</TableCell>
+                      )}
+                      {isVisible("user_id") && (
+                        <TableCell className="text-muted-foreground">
+                          {userProfile?.full_name || userProfile?.email || "Unknown"}
+                        </TableCell>
+                      )}
+                      {isVisible("created_at") && (
+                        <TableCell>{format(new Date(update.created_at), "MMM dd, yyyy")}</TableCell>
+                      )}
+                      {isVisible("actions") && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {canEditUpdates && (
+                              <Button variant="ghost" size="icon" onClick={() => handleEdit(update)} disabled={isClosedCase}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canDeleteUpdates && (
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(update.id)} disabled={isClosedCase}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                     {isExpanded && (
                       <TableRow key={`${update.id}-expanded`}>
-                        <TableCell colSpan={6} className="py-3 bg-muted/30 border-0">
+                        <TableCell colSpan={COLUMNS.length} className="py-3 bg-muted/30 border-0">
                           <div className="pl-10 space-y-4">
                             {update.description && (
                               <RichTextDisplay html={update.description} />
@@ -671,10 +703,21 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
           existingLinkIds={linkedAttachments[linkingUpdateId]?.map((a) => a.attachment_id) || []}
           onSuccess={() => {
             fetchLinkedAttachments(linkingUpdateId);
-            toast({ title: "Success", description: "Attachments linked" });
+          toast({ title: "Success", description: "Attachments linked" });
           }}
         />
       )}
+
+      <AISummaryDialog
+        open={showAISummaryDialog}
+        onOpenChange={setShowAISummaryDialog}
+        caseId={caseId}
+        selectedUpdates={selectedUpdatesForDialog}
+        onSuccess={() => {
+          fetchUpdates();
+          setSelectedUpdateIds(new Set());
+        }}
+      />
     </>
   );
 };
