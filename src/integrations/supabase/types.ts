@@ -824,6 +824,7 @@ export type Database = {
           archived_at: string | null
           archived_by: string | null
           case_id: string
+          cover_image_url: string | null
           created_at: string
           details: Json | null
           display_name: string | null
@@ -847,6 +848,7 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           case_id: string
+          cover_image_url?: string | null
           created_at?: string
           details?: Json | null
           display_name?: string | null
@@ -870,6 +872,7 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           case_id?: string
+          cover_image_url?: string | null
           created_at?: string
           details?: Json | null
           display_name?: string | null

@@ -50,6 +50,7 @@ export interface Subject {
   status: SubjectStatus;
   role: string | null;
   profile_image_url: string | null;
+  cover_image_url: string | null;
   is_primary: boolean | null;
   created_at: string;
   updated_at: string;
