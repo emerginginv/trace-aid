@@ -350,7 +350,7 @@ export function AIAttachmentAnalysisDialog({
 
         {step === "review" && (
           <div className="flex-1 overflow-hidden flex flex-col space-y-4 py-4">
-            <ScrollArea className="flex-1 border rounded-lg">
+            <ScrollArea className="flex-1 max-h-[calc(90vh-280px)] border rounded-lg">
               <div className="p-4 space-y-4">
                 {results.map((result) => {
                   const attachment = selectedAttachments.find(a => a.id === result.attachment_id);
