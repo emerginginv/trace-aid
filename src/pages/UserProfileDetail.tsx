@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { 
   ArrowLeft, Mail, Shield, User, Calendar, Phone, Building2, MapPin, 
   Edit, UserX, Trash2, KeyRound, Eye, Loader2, CheckCircle2, XCircle,
-  AlertTriangle
+  AlertTriangle, Camera, X
 } from "lucide-react";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import { format } from "date-fns";
@@ -65,6 +65,10 @@ const UserProfileDetail = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [references, setReferences] = useState<UserReferences | null>(null);
   const [checkingReferences, setCheckingReferences] = useState(false);
+  
+  // Avatar state
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -147,6 +151,7 @@ const UserProfileDetail = () => {
 
         setUserProfile(profile as UserProfile);
         setUserRole(membership?.role || "investigator");
+        setAvatarUrl(profile.avatar_url || "");
         
         // Initialize edit form
         setEditForm({
@@ -229,6 +234,83 @@ const UserProfileDetail = () => {
     }
   };
 
+  // Avatar upload handler
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!e.target.files || e.target.files.length === 0) return;
+      if (!id) {
+        toast.error("User not found");
+        return;
+      }
+
+      const file = e.target.files[0];
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please upload an image file");
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image must be less than 5MB");
+        return;
+      }
+
+      setUploadingAvatar(true);
+
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${id}/avatar.${fileExt}`;
+
+      // Delete old avatar if exists
+      if (avatarUrl) {
+        const oldPath = avatarUrl.split("/").slice(-2).join("/");
+        await supabase.storage.from("profile-images").remove([oldPath]);
+      }
+
+      // Upload new avatar
+      const { error: uploadError } = await supabase.storage
+        .from("profile-images")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from("profile-images")
+        .getPublicUrl(fileName);
+
+      setAvatarUrl(data.publicUrl);
+      toast.success("Avatar uploaded successfully");
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      toast.error("Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  // Avatar remove handler
+  const handleRemoveAvatar = async () => {
+    try {
+      if (!avatarUrl || !id) return;
+
+      const filePath = avatarUrl.split("/").slice(-2).join("/");
+
+      const { error } = await supabase.storage
+        .from("profile-images")
+        .remove([filePath]);
+
+      if (error) throw error;
+
+      setAvatarUrl("");
+      toast.success("Avatar removed");
+    } catch (error: any) {
+      console.error("Error removing avatar:", error);
+      toast.error("Failed to remove avatar");
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!id) return;
     
@@ -239,6 +321,7 @@ const UserProfileDetail = () => {
         .from("profiles")
         .update({
           full_name: editForm.full_name || null,
+          avatar_url: avatarUrl || null,
           mobile_phone: editForm.mobile_phone || null,
           office_phone: editForm.office_phone || null,
           department: editForm.department || null,
@@ -469,6 +552,59 @@ const UserProfileDetail = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                  {/* Avatar Upload Section */}
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="relative">
+                      <Avatar className="h-32 w-32 border-4 border-primary/10">
+                        <AvatarImage src={avatarUrl} alt={editForm.full_name || userProfile?.email} />
+                        <AvatarFallback 
+                          className="text-3xl"
+                          style={{ backgroundColor: userProfile?.color || "#6366f1", color: "white" }}
+                        >
+                          {getInitials(editForm.full_name || userProfile?.full_name || null, userProfile?.email || "")}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      {avatarUrl && (
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-8 w-8 rounded-full"
+                          onClick={handleRemoveAvatar}
+                          disabled={uploadingAvatar}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      <label
+                        htmlFor="avatar-upload-edit"
+                        className="absolute bottom-0 right-0 cursor-pointer"
+                      >
+                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors">
+                          {uploadingAvatar ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <Camera className="h-5 w-5" />
+                          )}
+                        </div>
+                        <input
+                          id="avatar-upload-edit"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleAvatarUpload}
+                          disabled={uploadingAvatar}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Click the camera icon to upload a new avatar (max 5MB)
+                    </p>
+                  </div>
+
+                  <Separator />
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="full_name">Full Name</Label>
