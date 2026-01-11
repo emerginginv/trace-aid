@@ -6157,7 +6157,28 @@ export type Database = {
       }
       get_organization_contracts: {
         Args: { p_organization_id: string }
-        Returns: Json
+        Returns: {
+          account_id: string
+          account_name: string
+          auto_renews: boolean
+          contact_id: string
+          contact_name: string
+          contract_type: Database["public"]["Enums"]["contract_type"]
+          created_at: string
+          days_until_expiration: number
+          description: string
+          effective_date: string
+          expiration_date: string
+          file_path: string
+          id: string
+          renewal_term_days: number
+          signed_at: string
+          signed_by: string
+          signer_email: string
+          status: Database["public"]["Enums"]["contract_status"]
+          title: string
+          version: string
+        }[]
       }
       get_organization_entitlements: {
         Args: { p_organization_id: string }
