@@ -6,7 +6,8 @@ export type MetricCategory =
   | "finances" 
   | "activities"
   | "productivity"
-  | "storage";
+  | "storage"
+  | "sales";
 
 /** Units of measurement */
 export type MetricUnit = 

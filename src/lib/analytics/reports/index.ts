@@ -16,33 +16,12 @@ export type {
 // Query Builder
 export { executeReportQuery, fetchAllReportData } from "./queryBuilder";
 
-// Columns
-export {
-  caseColumns,
-  financeColumns,
-  activityColumns,
-  updateColumns,
-  invoiceColumns,
-  budgetColumns,
-  budgetAdjustmentColumns,
-} from "./columns";
-
 // Totals
 export { calculateReportTotals, formatTotalValue } from "./totals";
 
 // Definitions
 export {
-  allCasesReport,
-  openCasesReport,
-  closedCasesReport,
-  timeEntriesReport,
-  expenseEntriesReport,
-  invoicesReport,
-  caseUpdatesReport,
-  tasksReport,
-  eventsReport,
-  budgetStatusReport,
-  budgetAdjustmentsReport,
+  profitTrendsReport,
   reportRegistry,
   reportCategories,
   getReport,
