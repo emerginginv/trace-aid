@@ -179,7 +179,7 @@ export default function SecurityReport() {
               {submitMutation.isError && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    Failed to submit report. Please try again or email security@casewyze.com directly.
+                    Failed to submit report. Please try again or email security@unifiedcases.com directly.
                   </AlertDescription>
                 </Alert>
               )}
@@ -189,8 +189,8 @@ export default function SecurityReport() {
 
         <p className="text-center text-sm text-muted-foreground">
           For urgent security matters, contact us directly at{' '}
-          <a href="mailto:security@casewyze.com" className="text-primary hover:underline">
-            security@casewyze.com
+          <a href="mailto:security@unifiedcases.com" className="text-primary hover:underline">
+            security@unifiedcases.com
           </a>
         </p>
       </main>

@@ -134,8 +134,8 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const baseUrl = org?.subdomain 
-      ? `https://${org.subdomain}.casewyze.com`
-      : Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '') || 'https://app.casewyze.com';
+      ? `https://${org.subdomain}.unifiedcases.com`
+      : Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '') || 'https://app.unifiedcases.com';
     
     const inviteLink = `${baseUrl}/accept-invite?token=${invite.token}`;
     

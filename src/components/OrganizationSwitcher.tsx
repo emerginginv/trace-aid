@@ -98,7 +98,7 @@ export function OrganizationSwitcher() {
     } else if (confirmSwitch.subdomain) {
       // Fallback to subdomain construction
       const protocol = window.location.protocol;
-      targetUrl = `${protocol}//${confirmSwitch.subdomain}.casewyze.com/dashboard`;
+      targetUrl = `${protocol}//${confirmSwitch.subdomain}.unifiedcases.com/dashboard`;
     } else {
       toast.error("Unable to switch - organization has no configured domain");
       setConfirmSwitch(null);
@@ -179,7 +179,7 @@ export function OrganizationSwitcher() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{org.name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {org.subdomain ? `${org.subdomain}.casewyze.com` : "No subdomain"}
+                      {org.subdomain ? `${org.subdomain}.unifiedcases.com` : "No subdomain"}
                     </p>
                   </div>
                   {isCurrent ? (
@@ -202,7 +202,7 @@ export function OrganizationSwitcher() {
             <AlertDialogDescription>
               You will be redirected to <strong>{confirmSwitch?.name}</strong> at{" "}
               <span className="font-mono text-xs bg-muted px-1 py-0.5 rounded">
-                {confirmSwitch?.primary_domain || confirmSwitch?.subdomain + ".casewyze.com"}
+                {confirmSwitch?.primary_domain || confirmSwitch?.subdomain + ".unifiedcases.com"}
               </span>
               . Any unsaved changes will be lost.
             </AlertDialogDescription>

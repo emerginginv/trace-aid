@@ -185,7 +185,7 @@ serve(async (req) => {
     }
 
     // Build success and cancel URLs
-    const origin = req.headers.get("origin") || "https://app.casewyze.com";
+    const origin = req.headers.get("origin") || "https://app.unifiedcases.com";
     const successUrl = `${origin}/settings?tab=billing&success=true`;
     const cancelUrl = `${origin}/settings?tab=billing`;
 
