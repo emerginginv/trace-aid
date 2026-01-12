@@ -1,0 +1,4 @@
+external_record_id,external_case_id,amount,note,created_at
+RET-001,CASE-001,5000.00,Initial retainer deposit,2024-01-15T10:00:00Z
+RET-002,CASE-001,2500.00,Additional funds for surveillance,2024-02-01T14:30:00Z
+RET-003,CASE-002,3000.00,Background check retainer,2024-01-20T09:00:00Z

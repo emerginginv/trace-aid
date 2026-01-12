@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { Search, Download, FileSpreadsheet, FileText, LayoutGrid, List, DollarSign, Pencil, Trash2, Loader2, History, Plus } from "lucide-react";
+import { ImportTemplateButton } from "@/components/ui/import-template-button";
 
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -442,6 +443,7 @@ const Finance = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ImportTemplateButton templateFileName="13_Retainers.csv" entityDisplayName="Retainers" />
         <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}

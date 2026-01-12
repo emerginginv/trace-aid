@@ -1,0 +1,4 @@
+external_record_id,external_case_id,invoice_number,date,due_date,total,notes,status
+INV-001,CASE-001,INV-2024-001,2024-01-31,2024-02-28,1250.00,Surveillance services January,sent
+INV-002,CASE-001,INV-2024-002,2024-02-28,2024-03-28,875.50,Background check and report,draft
+INV-003,CASE-002,INV-2024-003,2024-02-15,2024-03-15,2100.00,Investigation services,paid
