@@ -48,6 +48,7 @@ export function BillingGate({ children }: BillingGateProps) {
       <PaymentPending
         organizationId={organization.id}
         organizationName={organization.name}
+        organizationSubdomain={organization.subdomain}
         onRefresh={refreshOrganization}
       />
     );
