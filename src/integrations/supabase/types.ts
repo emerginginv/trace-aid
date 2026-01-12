@@ -6456,6 +6456,10 @@ export type Database = {
         Returns: string
       }
       is_admin_of_any_org: { Args: { _user_id: string }; Returns: boolean }
+      is_case_assigned_to_user: {
+        Args: { p_case_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_enterprise_org: { Args: { p_org_id: string }; Returns: boolean }
       is_org_active: { Args: { p_organization_id: string }; Returns: boolean }
       is_org_member: {
