@@ -25,6 +25,7 @@ import { ActivityTimelineDisplay } from "./ActivityTimelineDisplay";
 import { ContextualHelp } from "@/components/help-center";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { AIBadge } from "@/components/ui/ai-badge";
 import { AISummaryDialog } from "./AISummaryDialog";
 
 interface TimelineEntry {
@@ -560,12 +561,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             {update.title}
-                            {update.is_ai_summary && (
-                              <Badge variant="secondary" className="text-xs gap-1">
-                                <Sparkles className="h-3 w-3" />
-                                AI
-                              </Badge>
-                            )}
+                            {update.is_ai_summary && <AIBadge size="sm" />}
                           </div>
                         </TableCell>
                       )}
