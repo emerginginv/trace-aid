@@ -754,6 +754,44 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
     setAccessLogDialogOpen(true);
   };
 
+  // Handle deleting a single tag from an attachment
+  const handleDeleteTag = async (attachmentId: string, tagToDelete: string, isAiTag: boolean, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    
+    try {
+      const attachment = attachments.find(a => a.id === attachmentId);
+      if (!attachment) return;
+
+      const currentTags = isAiTag ? (attachment.ai_tags || []) : (attachment.tags || []);
+      const updatedTags = currentTags.filter(tag => tag !== tagToDelete);
+
+      const updateData = isAiTag 
+        ? { ai_tags: updatedTags.length > 0 ? updatedTags : null }
+        : { tags: updatedTags.length > 0 ? updatedTags : null };
+
+      const { error } = await supabase
+        .from("case_attachments")
+        .update(updateData)
+        .eq("id", attachmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Tag removed",
+        description: `Tag "${tagToDelete}" has been removed`,
+      });
+
+      fetchAttachments();
+    } catch (error) {
+      console.error("Error deleting tag:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove tag",
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderPreviewContent = () => {
     if (!previewAttachment) return null;
 
@@ -1456,8 +1494,17 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                       {attachment.tags && attachment.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {attachment.tags.map((tag, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
+                            <Badge key={idx} variant="secondary" className="text-xs flex items-center gap-1 pr-1">
                               {tag}
+                              {!isClosedCase && (
+                                <button
+                                  onClick={(e) => handleDeleteTag(attachment.id, tag, false, e)}
+                                  className="ml-0.5 hover:bg-muted-foreground/20 rounded-full p-0.5"
+                                  aria-label={`Remove tag ${tag}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              )}
                             </Badge>
                           ))}
                         </div>
@@ -1465,8 +1512,19 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                       {attachment.ai_tags && attachment.ai_tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {attachment.ai_tags.map((tag, idx) => (
-                            <AIBadge key={`ai-${idx}`} size="sm" showIcon={idx === 0}>
-                              {tag}
+                            <AIBadge key={`ai-${idx}`} size="sm" showIcon={idx === 0} className="pr-1">
+                              <span className="flex items-center gap-1">
+                                {tag}
+                                {!isClosedCase && (
+                                  <button
+                                    onClick={(e) => handleDeleteTag(attachment.id, tag, true, e)}
+                                    className="ml-0.5 hover:bg-white/20 rounded-full p-0.5"
+                                    aria-label={`Remove AI tag ${tag}`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </span>
                             </AIBadge>
                           ))}
                         </div>
@@ -1630,8 +1688,17 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                         {attachment.tags && attachment.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {attachment.tags.map((tag, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
+                              <Badge key={idx} variant="secondary" className="text-xs flex items-center gap-1 pr-1">
                                 {tag}
+                                {!isClosedCase && (
+                                  <button
+                                    onClick={(e) => handleDeleteTag(attachment.id, tag, false, e)}
+                                    className="ml-0.5 hover:bg-muted-foreground/20 rounded-full p-0.5"
+                                    aria-label={`Remove tag ${tag}`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
                               </Badge>
                             ))}
                           </div>
@@ -1639,8 +1706,19 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                         {attachment.ai_tags && attachment.ai_tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {attachment.ai_tags.map((tag, idx) => (
-                              <AIBadge key={`ai-${idx}`} size="sm" showIcon={idx === 0}>
-                                {tag}
+                              <AIBadge key={`ai-${idx}`} size="sm" showIcon={idx === 0} className="pr-1">
+                                <span className="flex items-center gap-1">
+                                  {tag}
+                                  {!isClosedCase && (
+                                    <button
+                                      onClick={(e) => handleDeleteTag(attachment.id, tag, true, e)}
+                                      className="ml-0.5 hover:bg-white/20 rounded-full p-0.5"
+                                      aria-label={`Remove AI tag ${tag}`}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                </span>
                               </AIBadge>
                             ))}
                           </div>
