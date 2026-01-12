@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, User, Search, LayoutGrid, List, Edit, Trash2, Mail, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { toast } from "sonner";
 import { ContactForm } from "@/components/ContactForm";
@@ -257,6 +258,7 @@ const Contacts = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ImportTemplateButton templateFileName="03_Contacts.csv" entityDisplayName="Contacts" />
         <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}

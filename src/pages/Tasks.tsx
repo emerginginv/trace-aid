@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { CheckSquare, Calendar, Clock, CheckCircle, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, MapPin, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format, isAfter, isBefore, addDays } from "date-fns";
@@ -381,6 +382,7 @@ export default function Tasks() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ImportTemplateButton templateFileName="08_Events.csv" entityDisplayName="Tasks & Events" />
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}

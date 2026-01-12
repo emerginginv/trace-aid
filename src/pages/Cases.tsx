@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil } from "lucide-react";
+import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
@@ -471,6 +472,7 @@ const Cases = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ImportTemplateButton templateFileName="04_Cases.csv" entityDisplayName="Cases" />
         <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-7 w-7 p-0">
             <LayoutGrid className="h-3.5 w-3.5" />

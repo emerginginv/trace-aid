@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Pencil, Trash2, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, LayoutGrid, List, Receipt } from "lucide-react";
+import { ImportTemplateDropdown } from "@/components/ui/import-template-button";
 
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { FinanceForm } from "@/components/case-detail/FinanceForm";
@@ -546,6 +547,12 @@ const AllExpenses = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ImportTemplateDropdown 
+          options={[
+            { fileName: "09_TimeEntries.csv", label: "Time Entries Template" },
+            { fileName: "10_Expenses.csv", label: "Expenses Template" },
+          ]} 
+        />
         <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}

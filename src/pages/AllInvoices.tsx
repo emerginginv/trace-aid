@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
 import { Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck } from "lucide-react";
+import { ImportTemplateButton } from "@/components/ui/import-template-button";
 
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
@@ -478,6 +479,7 @@ const AllInvoices = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ImportTemplateButton templateFileName="14_Invoices.csv" entityDisplayName="Invoices" />
         <div className="flex gap-1 border rounded-md p-1 h-10">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
