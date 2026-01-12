@@ -6173,6 +6173,7 @@ export type Database = {
         Args: { p_organization_id: string; p_parent_case_id?: string }
         Returns: Json
       }
+      generate_org_subdomain: { Args: { p_org_name: string }; Returns: string }
       generate_report_content: { Args: { p_report_id: string }; Returns: Json }
       generate_scim_token: { Args: { p_org_id: string }; Returns: Json }
       get_active_impersonation: { Args: never; Returns: Json }

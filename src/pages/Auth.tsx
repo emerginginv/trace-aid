@@ -20,6 +20,7 @@ const signInSchema = z.object({
 });
 const signUpSchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required").max(100, "Full name must be less than 100 characters"),
+  organizationName: z.string().trim().min(2, "Organization name must be at least 2 characters").max(100, "Organization name must be less than 100 characters"),
   email: z.string().trim().email("Invalid email format").max(255, "Email must be less than 255 characters"),
   password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be less than 128 characters").regex(/[A-Z]/, "Password must contain at least one uppercase letter").regex(/[a-z]/, "Password must contain at least one lowercase letter").regex(/[0-9]/, "Password must contain at least one number")
 });
@@ -68,6 +69,7 @@ const Auth = () => {
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       fullName: "",
+      organizationName: "",
       email: "",
       password: ""
     }
@@ -128,7 +130,8 @@ const Auth = () => {
         options: {
           emailRedirectTo: `${window.location.origin}/billing`,
           data: {
-            full_name: data.fullName
+            full_name: data.fullName,
+            organization_name: data.organizationName
           }
         }
       });
@@ -415,6 +418,15 @@ const Auth = () => {
                           <FormLabel>Full Name</FormLabel>
                           <FormControl>
                             <Input type="text" placeholder="John Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>} />
+                    <FormField control={signUpForm.control} name="organizationName" render={({
+                    field
+                  }) => <FormItem>
+                          <FormLabel>Organization Name</FormLabel>
+                          <FormControl>
+                            <Input type="text" placeholder="Acme Law Firm" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>} />
