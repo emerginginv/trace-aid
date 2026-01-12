@@ -11,12 +11,14 @@ import type { PlanKey } from "@/lib/planLimits";
 interface PaymentPendingProps {
   organizationId: string;
   organizationName: string;
+  organizationSubdomain?: string | null;
   onRefresh?: () => void;
 }
 
 export function PaymentPending({ 
   organizationId, 
   organizationName,
+  organizationSubdomain,
   onRefresh 
 }: PaymentPendingProps) {
   const [loading, setLoading] = useState<string | null>(null);
@@ -64,6 +66,18 @@ export function PaymentPending({
             Choose a plan to activate your organization: <strong>{organizationName}</strong>
           </p>
         </div>
+
+        {/* Portal URL Info */}
+        {organizationSubdomain && (
+          <Card className="mb-6 border-primary/30 bg-primary/5">
+            <CardContent className="py-4">
+              <p className="text-sm text-muted-foreground mb-1">Your case management portal will be at:</p>
+              <p className="font-mono text-lg font-semibold text-primary break-all">
+                https://{organizationSubdomain}.unifiedcases.com
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Status Banner */}
         <Card className="mb-8 border-amber-500/50 bg-amber-50/50 dark:bg-amber-900/10">

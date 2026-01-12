@@ -140,6 +140,26 @@ const Auth = () => {
         // Wait a moment for the organization trigger to complete
         await new Promise(resolve => setTimeout(resolve, 1500));
 
+        // Get the user's organization to send welcome email
+        const { data: memberData } = await supabase
+          .from("organization_members")
+          .select("organization_id")
+          .eq("user_id", authData.user.id)
+          .single();
+
+        // Send welcome email with portal URL (fire and forget)
+        if (memberData?.organization_id) {
+          supabase.functions.invoke("send-welcome-email", {
+            body: {
+              userId: authData.user.id,
+              organizationId: memberData.organization_id,
+            },
+          }).catch(err => {
+            console.error("Failed to send welcome email:", err);
+            // Don't block the user flow for email errors
+          });
+        }
+
         // Check if user has vendor role - vendors skip payment
         const {
           data: roleData
