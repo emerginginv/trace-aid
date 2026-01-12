@@ -1,0 +1,5 @@
+external_record_id,external_case_id,title,description,status,due_date,event_subtype,address,assigned_to_email,created_at
+EVT-001,CASE-001,Client status call,Weekly status update with adjuster,completed,2024-01-22,Client Meeting,,manager@ourcompany.com,2024-01-20T08:00:00Z
+EVT-002,CASE-001,Site inspection,Inspect property at claim location,to_do,2024-02-15,Site Visit,123 Main St City ST 12345,inv1@company.com,2024-01-15T09:00:00Z
+EVT-003,CASE-002,Interview reference,Call employment reference,in_progress,2024-02-05,Phone Call,,inv2@company.com,2024-02-01T09:00:00Z
+EVT-004,CASE-002,Surveillance day 1,Conduct field surveillance,pending,2024-02-10,Surveillance,456 Oak Ave City ST 67890,inv2@company.com,2024-02-05T10:00:00Z
