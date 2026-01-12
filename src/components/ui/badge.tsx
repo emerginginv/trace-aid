@@ -15,6 +15,7 @@ const badgeVariants = cva(
         warning: "border-transparent bg-warning text-warning-foreground hover:bg-warning/80",
         outline: "text-foreground border-border",
         muted: "border-transparent bg-muted text-muted-foreground",
+        ai: "border-transparent bg-gradient-to-r from-[hsl(280,85%,55%)] to-[hsl(260,85%,50%)] text-white shadow-sm",
       },
       size: {
         sm: "px-2 py-0 text-2xs",

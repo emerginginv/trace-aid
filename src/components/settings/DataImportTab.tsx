@@ -318,7 +318,7 @@ export function DataImportTab() {
               <Upload className="h-4 w-4" />
               Manual Import
             </TabsTrigger>
-            <TabsTrigger value="ai-import" className="gap-2">
+            <TabsTrigger value="ai-import" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[hsl(280,85%,55%)] data-[state=active]:to-[hsl(260,85%,50%)] data-[state=active]:text-white">
               <Sparkles className="h-4 w-4" />
               AI Import
             </TabsTrigger>

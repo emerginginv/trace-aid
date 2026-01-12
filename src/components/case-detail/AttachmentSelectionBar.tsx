@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { X, Share2, Mail, ShieldOff, FolderInput, Sparkles } from "lucide-react";
-import { AIBadge } from "@/components/ui/ai-badge";
 
 interface AttachmentSelectionBarProps {
   selectedCount: number;
@@ -41,7 +40,7 @@ export function AttachmentSelectionBar({
             <>
               {onAIAnalyze && (
                 <Button
-                  variant="secondary"
+                  variant="ai"
                   size="sm"
                   onClick={onAIAnalyze}
                   className="gap-1.5"
@@ -49,7 +48,6 @@ export function AttachmentSelectionBar({
                   <Sparkles className="h-4 w-4" />
                   <span className="hidden sm:inline">AI Describe</span>
                   <span className="sm:hidden">AI</span>
-                  <AIBadge className="ml-1" />
                 </Button>
               )}
               
