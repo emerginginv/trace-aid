@@ -92,7 +92,7 @@ export function OrganizationSwitcher() {
     let targetUrl: string;
     
     if (confirmSwitch.primary_domain) {
-      // Use the primary domain (either custom domain or subdomain.casewyze.com)
+      // Use the primary domain (either custom domain or subdomain.unifiedcases.com)
       const protocol = window.location.protocol;
       targetUrl = `${protocol}//${confirmSwitch.primary_domain}/dashboard`;
     } else if (confirmSwitch.subdomain) {

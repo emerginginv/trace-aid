@@ -6612,6 +6612,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      signup_with_organization: {
+        Args: {
+          p_org_name: string
+          p_plan_key?: string
+          p_subdomain: string
+          p_user_email: string
+        }
+        Returns: Json
+      }
       start_access_review: {
         Args: { p_org_id?: string; p_type?: string }
         Returns: Json

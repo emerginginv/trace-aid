@@ -15,7 +15,7 @@ export interface TenantBranding {
  * This hook is used on the login page BEFORE authentication,
  * so it uses a public RPC function.
  * 
- * @param subdomain - The tenant subdomain (e.g., "emerging" from emerging.casewyze.com)
+ * @param subdomain - The tenant subdomain (e.g., "emerging" from emerging.unifiedcases.com)
  * @returns Query result with tenant branding data
  */
 export function useTenantBranding(subdomain: string | null) {
