@@ -32,6 +32,7 @@ import { CaseBudgetWidget } from "@/components/case-detail/CaseBudgetWidget";
 import { GenerateReportDialog } from "@/components/templates/GenerateReportDialog";
 import { CaseSummaryPdfDialog } from "@/components/case-detail/CaseSummaryPdfDialog";
 import { CaseReports } from "@/components/case-detail/CaseReports";
+import { CaseTimeline } from "@/components/case-detail/CaseTimeline";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -104,7 +105,7 @@ const CaseDetail = () => {
   const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
   const [reportsRefreshKey, setReportsRefreshKey] = useState(0);
   
-  const validTabs = ['info', 'budget', 'subjects', 'updates', 'activities', 'calendar', 'finances', 'attachments', 'reports'];
+  const validTabs = ['info', 'budget', 'subjects', 'updates', 'activities', 'calendar', 'finances', 'attachments', 'timeline', 'reports'];
   const getInitialTab = () => {
     const tabFromUrl = searchParams.get('tab');
     if (tabFromUrl && validTabs.includes(tabFromUrl)) {
@@ -853,6 +854,13 @@ const CaseDetail = () => {
             <TabsContent value="attachments" className="mt-0">
               <CaseAttachments caseId={id!} isClosedCase={isClosed} />
             </TabsContent>
+
+            {/* Timeline Tab */}
+            {!isVendor && (
+              <TabsContent value="timeline" className="mt-0">
+                <CaseTimeline caseId={id!} />
+              </TabsContent>
+            )}
 
             {/* Reports Tab */}
             {!isVendor && hasPermission('view_reports') && (
