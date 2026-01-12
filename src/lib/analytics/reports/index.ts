@@ -32,6 +32,7 @@ export {
   revenueTrendsComparisonReport,
   expenseDetailReport,
   expenseDetailByStaffReport,
+  expenseDistributionReport,
   reportRegistry,
   reportCategories,
   getReport,
