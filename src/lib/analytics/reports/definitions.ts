@@ -167,6 +167,19 @@ export const expenseDistributionReport: ReportDefinition = {
   relatedMetrics: ["financial.total_expenses"],
 };
 
+export const expensesByDayReport: ReportDefinition = {
+  id: "expenses-by-day",
+  name: "Expenses by Day",
+  description: "Weekly calendar view of expenses by staff with day-by-day breakdown",
+  category: "expense",
+  sourceTable: "case_finances",
+  columns: [],
+  filters: [],
+  defaultSort: { field: "staffName", direction: "asc" },
+  totals: [],
+  relatedMetrics: ["financial.total_expenses"],
+};
+
 // ============================================
 // REPORT REGISTRY
 // ============================================
@@ -184,6 +197,7 @@ export const reportRegistry: Record<string, ReportDefinition> = {
   "expense-detail": expenseDetailReport,
   "expense-detail-by-staff": expenseDetailByStaffReport,
   "expense-distribution": expenseDistributionReport,
+  "expenses-by-day": expensesByDayReport,
 };
 
 // ============================================
@@ -203,7 +217,7 @@ export const reportCategories: ReportCategoryInfo[] = [
     name: "Expense Reports",
     description: "Expense tracking, detail, and analysis reports",
     icon: "Receipt",
-    reports: ["expense-detail", "expense-detail-by-staff", "expense-distribution"],
+    reports: ["expense-detail", "expense-detail-by-staff", "expense-distribution", "expenses-by-day"],
   },
 ];
 

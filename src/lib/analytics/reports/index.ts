@@ -33,6 +33,7 @@ export {
   expenseDetailReport,
   expenseDetailByStaffReport,
   expenseDistributionReport,
+  expensesByDayReport,
   reportRegistry,
   reportCategories,
   getReport,
