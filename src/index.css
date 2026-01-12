@@ -15,11 +15,11 @@
     --font-size-xs: 0.8125rem;    /* 13px - Captions, helper text */
     --font-size-sm: 0.9375rem;    /* 15px - Secondary text, UI labels */
     --font-size-base: 1rem;       /* 16px - Body text (browser default) */
-    --font-size-lg: 1.125rem;     /* 18px - H5, emphasized text */
-    --font-size-xl: 1.5rem;       /* 24px - H4, section headers */
-    --font-size-2xl: 1.875rem;    /* 30px - H3, card titles */
-    --font-size-3xl: 2.3125rem;   /* 37px - H2, page sections */
-    --font-size-4xl: 2.875rem;    /* 46px - H1, page titles */
+--font-size-lg: 1rem;         /* 16px - H5, emphasized text */
+--font-size-xl: 1.25rem;      /* 20px - H4, section headers */
+--font-size-2xl: 1.375rem;    /* 22px - H3, card titles */
+--font-size-3xl: 1.625rem;    /* 26px - H2, page sections */
+--font-size-4xl: 2rem;        /* 32px - H1, page titles */
 
     /* Font Weights with Clear Purpose */
     --font-weight-light: 300;     /* Decorative, large display text */
