@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CheckSquare, Calendar, Clock, CheckCircle, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, MapPin } from "lucide-react";
+import { CheckSquare, Calendar, Clock, CheckCircle, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, MapPin, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,6 +78,20 @@ const getStatusBadgeStyles = (status: string) => {
       return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
   }
 };
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { key: "title", label: "Title" },
+  { key: "activity_type", label: "Type", format: (v, row) => {
+    const type = v === 'task' ? 'Task' : 'Event';
+    return row.event_subtype ? `${type} - ${row.event_subtype}` : type;
+  }},
+  { key: "case_number", label: "Case #", format: (_, row) => row.cases?.case_number || "-" },
+  { key: "case_title", label: "Case Title", format: (_, row) => row.cases?.title || "-" },
+  { key: "status", label: "Status", format: (v) => STATUS_OPTIONS.find(s => s.value === v)?.label || v },
+  { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+  { key: "assigned_to", label: "Assigned To", format: (_, row) => row.assigned_user?.full_name || "-" },
+  { key: "created_at", label: "Created", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+];
 
 export default function Tasks() {
   const navigate = useNavigate();
@@ -272,6 +287,14 @@ export default function Tasks() {
     return isBefore(new Date(dueDate), new Date());
   };
 
+  const handleExportCSV = () => {
+    exportToCSV(filteredActivities, EXPORT_COLUMNS, "tasks-events");
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(filteredActivities, EXPORT_COLUMNS, "Tasks & Events", "tasks-events");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -340,6 +363,24 @@ export default function Tasks() {
             ))}
           </SelectContent>
         </Select>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}
