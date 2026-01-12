@@ -17,6 +17,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline p-0 h-auto",
         success: "bg-success text-success-foreground hover:bg-success/90 shadow-sm hover:shadow-md rounded-md",
         warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm hover:shadow-md rounded-md",
+        ai: "bg-gradient-to-br from-[hsl(280,85%,55%)] to-[hsl(260,85%,50%)] text-white shadow-lg shadow-[hsl(270,85%,55%)/0.25] hover:from-[hsl(280,88%,60%)] hover:to-[hsl(260,88%,55%)] hover:shadow-[hsl(270,85%,55%)/0.4] hover:-translate-y-0.5 rounded-lg",
       },
       size: {
         xs: "h-7 px-2 text-xs gap-1 [&_svg]:size-3",      // 28px - Compact

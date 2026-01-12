@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AIBadge } from "@/components/ui/ai-badge";
+import { AIButton } from "@/components/ui/ai-button";
+import { AILabel } from "@/components/ui/ai-label";
 import { Loader2, Sparkles, CheckCircle, AlertTriangle, Pencil, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -183,13 +185,13 @@ export function AISummaryDialog({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
+            <Sparkles className="h-5 w-5 text-[hsl(270,85%,55%)]" />
             {step === "configure" && "Generate AI Summary"}
             {step === "generating" && "Generating Summary..."}
             {step === "review" && (
               <>
                 AI-Generated Summary (Draft)
-                <AIBadge />
+                <AIBadge size="sm" />
               </>
             )}
           </DialogTitle>
@@ -245,10 +247,9 @@ export function AISummaryDialog({
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button onClick={handleGenerate} disabled={!title.trim()}>
-                <Sparkles className="h-4 w-4 mr-2" />
+              <AIButton onClick={handleGenerate} disabled={!title.trim()}>
                 Generate Summary
-              </Button>
+              </AIButton>
             </div>
           </div>
         )}
@@ -287,7 +288,9 @@ export function AISummaryDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Generated Summary</Label>
+              <Label className="flex items-center gap-2">
+                Generated Summary <AILabel showIcon={false}>AI-Generated</AILabel>
+              </Label>
               {isEditing ? (
                 <RichTextEditor
                   value={generatedSummary}

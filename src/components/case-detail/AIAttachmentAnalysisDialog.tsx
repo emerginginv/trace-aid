@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AIBadge } from "@/components/ui/ai-badge";
+import { AIButton } from "@/components/ui/ai-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Loader2, 
@@ -255,13 +256,13 @@ export function AIAttachmentAnalysisDialog({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
+            <Sparkles className="h-5 w-5 text-[hsl(270,85%,55%)]" />
             {step === "preview" && "AI Attachment Analysis"}
             {step === "analyzing" && "Analyzing Attachments..."}
             {step === "review" && (
               <>
                 AI Analysis Results (Draft)
-                <AIBadge />
+                <AIBadge size="sm" />
               </>
             )}
           </DialogTitle>
@@ -328,10 +329,9 @@ export function AIAttachmentAnalysisDialog({
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button onClick={handleAnalyze}>
-                <Sparkles className="h-4 w-4 mr-2" />
+              <AIButton onClick={handleAnalyze}>
                 Analyze Attachments
-              </Button>
+              </AIButton>
             </div>
           </div>
         )}

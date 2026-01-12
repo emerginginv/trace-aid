@@ -376,14 +376,13 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                 {selectedUpdateIds.size} selected
               </span>
               <Button
-                variant="outline"
+                variant="ai"
                 onClick={() => setShowAISummaryDialog(true)}
                 disabled={!canAddUpdates}
                 className="gap-2"
               >
                 <Sparkles className="h-4 w-4" />
                 Generate Summary
-                <Badge variant="secondary" className="text-xs">AI</Badge>
               </Button>
             </div>
           )}

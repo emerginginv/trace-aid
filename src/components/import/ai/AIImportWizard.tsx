@@ -75,7 +75,7 @@ export function AIImportWizard({ onBack, onComplete }: AIImportWizardProps) {
           </Button>
           <div>
             <h2 className="text-2xl font-semibold flex items-center gap-2">
-              <Sparkles className="h-6 w-6 text-primary" />
+              <Sparkles className="h-6 w-6 text-[hsl(270,85%,55%)]" />
               AI-Guided Import
             </h2>
             <p className="text-muted-foreground text-sm">

@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AIBadge } from "@/components/ui/ai-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -398,7 +399,7 @@ export default function Updates() {
                       <div>
                         <div className="font-medium line-clamp-1">{update.title}</div>
                         {update.is_ai_summary && (
-                          <div className="flex items-center gap-1 text-xs text-purple-600">
+                          <div className="flex items-center gap-1 text-xs text-[hsl(270,85%,55%)] dark:text-[hsl(270,85%,65%)]">
                             <Bot className="h-3 w-3" />
                             AI Summary
                           </div>
@@ -460,10 +461,10 @@ export default function Updates() {
 
               {/* AI Badge */}
               {update.is_ai_summary && (
-                <Badge variant="secondary" className="absolute top-2 right-2 text-xs z-10 bg-purple-500/20 text-purple-600">
-                  <Bot className="h-3 w-3 mr-1" />
-                  AI
-                </Badge>
+                <AIBadge 
+                  size="sm" 
+                  className="absolute top-2 right-2 z-10"
+                />
               )}
 
               {/* Avatar positioned at cover/content boundary */}
