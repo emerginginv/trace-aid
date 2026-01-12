@@ -402,10 +402,6 @@ const AllExpenses = () => {
             <Plus className="h-4 w-4 mr-2" />
             Add Expense
           </Button>
-          <Button variant="outline" onClick={openAddTime}>
-            <Clock className="h-4 w-4 mr-2" />
-            Add Time
-          </Button>
         </div>
       </div>
 
