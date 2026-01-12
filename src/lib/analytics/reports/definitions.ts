@@ -173,8 +173,8 @@ export const expensesByDayReport: ReportDefinition = {
   description: "Weekly calendar view of expenses by staff with day-by-day breakdown",
   category: "expense",
   sourceTable: "case_finances",
-  columns: [],
-  filters: [],
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
   defaultSort: { field: "staffName", direction: "asc" },
   totals: [],
   relatedMetrics: ["financial.total_expenses"],
