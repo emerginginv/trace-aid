@@ -8,6 +8,7 @@ import { ArrowLeft, User, Mail, Phone, MapPin, Edit, Building2 } from "lucide-re
 import { toast } from "sonner";
 import { ContactDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { RelatedCasesWidget } from "@/components/shared/RelatedCasesWidget";
+import { RelatedInvoicesWidget } from "@/components/shared/RelatedInvoicesWidget";
 import { EntityActivityWidget } from "@/components/shared/EntityActivityWidget";
 
 interface Contact {
@@ -193,7 +194,10 @@ const ContactDetail = () => {
 
       <EntityActivityWidget entityType="contact" entityId={contact.id} />
 
-      <RelatedCasesWidget entityType="contact" entityId={contact.id} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RelatedCasesWidget entityType="contact" entityId={contact.id} />
+        <RelatedInvoicesWidget entityType="contact" entityId={contact.id} />
+      </div>
     </div>
   );
 };

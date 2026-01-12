@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AccountDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { RelatedCasesWidget } from "@/components/shared/RelatedCasesWidget";
+import { RelatedInvoicesWidget } from "@/components/shared/RelatedInvoicesWidget";
 import { EntityActivityWidget } from "@/components/shared/EntityActivityWidget";
 
 interface Account {
@@ -233,7 +234,10 @@ const AccountDetail = () => {
 
       <EntityActivityWidget entityType="account" entityId={account.id} />
 
-      <RelatedCasesWidget entityType="account" entityId={account.id} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RelatedCasesWidget entityType="account" entityId={account.id} />
+        <RelatedInvoicesWidget entityType="account" entityId={account.id} />
+      </div>
     </div>
   );
 };
