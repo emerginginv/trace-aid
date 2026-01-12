@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
     // For now, we'll simulate verification by checking if a manual verification was done
     // In production, you would use a DNS library to check for TXT record
     
-    const expectedTxtValue = `casewyze-verify=${domainRecord.verification_token}`;
+    const expectedTxtValue = `unifiedcases-verify=${domainRecord.verification_token}`;
     
     // Since we can't do actual DNS lookups in edge functions easily,
     // we'll provide manual verification option
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
         message: "Please add the following DNS record to verify your domain",
         verification_instructions: {
           type: "TXT",
-          name: `_casewyze-verification.${domainRecord.domain}`,
+          name: `_unifiedcases-verification.${domainRecord.domain}`,
           value: expectedTxtValue,
           alternative: {
             type: "TXT", 
