@@ -114,7 +114,7 @@ export default function AcceptInvite() {
     if (org?.subdomain) {
       // Redirect to the organization's subdomain
       const protocol = window.location.protocol;
-      window.location.href = `${protocol}//${org.subdomain}.casewyze.com/dashboard`;
+      window.location.href = `${protocol}//${org.subdomain}.unifiedcases.com/dashboard`;
     } else {
       navigate('/dashboard');
     }

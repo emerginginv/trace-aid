@@ -81,7 +81,7 @@ export function SubscriptionCanceled({
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 rounded-full bg-muted-foreground mt-2 shrink-0" />
                 <p className="text-sm text-muted-foreground">
-                  Need help? Contact support@casewyze.com
+                  Need help? Contact support@unifiedcases.com
                 </p>
               </div>
             </div>

@@ -2,7 +2,7 @@ import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Production domains where subdomain-based tenancy applies
-const TENANT_ENABLED_DOMAINS = ["casewyze.com"];
+const TENANT_ENABLED_DOMAINS = ["unifiedcases.com"];
 
 // Reserved subdomains that should never be treated as tenants
 const RESERVED_SUBDOMAINS = ["app", "www", "localhost"];
@@ -42,7 +42,7 @@ function detectTenantSubdomain(): string | null {
 }
 
 /**
- * Check if this is a custom domain (not casewyze.com)
+ * Check if this is a custom domain (not unifiedcases.com)
  */
 function isCustomDomainHostname(): boolean {
   const hostname = window.location.hostname;

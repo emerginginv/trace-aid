@@ -290,7 +290,7 @@ export default function TrustCenter() {
             <span>•</span>
             <a href="#" className="hover:text-foreground">Terms of Service</a>
             <span>•</span>
-            <a href="mailto:security@casewyze.com" className="hover:text-foreground">security@casewyze.com</a>
+            <a href="mailto:security@unifiedcases.com" className="hover:text-foreground">security@unifiedcases.com</a>
           </div>
           <p>
             We communicate service disruptions transparently via our{' '}
