@@ -40,8 +40,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'state', label: 'State', key: 'state', required: false, type: 'text', description: 'State/Province', example: 'NY' },
       { name: 'zip_code', label: 'Zip Code', key: 'zip_code', required: false, type: 'text', description: 'Postal code', example: '10001' },
       { name: 'phone', label: 'Phone', key: 'phone', required: false, type: 'text', description: 'Main phone number', example: '555-123-4567' },
-      { name: 'email', label: 'Email', key: 'email', required: false, type: 'text', description: 'Main email address', example: 'info@acme.com' },
-    ],
+      { name: 'email', label: 'Email', key: 'email', required: false, type: 'text', description: 'Main email address', example: 'info@acme.com' }
+    ]
   },
   accounts: {
     entityType: 'accounts',
@@ -60,8 +60,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'state', label: 'State', key: 'state', required: false, type: 'text', description: 'State/Province', example: 'CA' },
       { name: 'zip_code', label: 'Zip Code', key: 'zip_code', required: false, type: 'text', description: 'Postal code', example: '90001' },
       { name: 'industry', label: 'Industry', key: 'industry', required: false, type: 'text', description: 'Industry type', example: 'Insurance' },
-      { name: 'notes', label: 'Notes', key: 'notes', required: false, type: 'text', description: 'Additional notes', example: 'VIP client' },
-    ],
+      { name: 'notes', label: 'Notes', key: 'notes', required: false, type: 'text', description: 'Additional notes', example: 'VIP client' }
+    ]
   },
   contacts: {
     entityType: 'contacts',
@@ -81,8 +81,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'city', label: 'City', key: 'city', required: false, type: 'text', description: 'City', example: 'Chicago' },
       { name: 'state', label: 'State', key: 'state', required: false, type: 'text', description: 'State/Province', example: 'IL' },
       { name: 'zip_code', label: 'Zip Code', key: 'zip_code', required: false, type: 'text', description: 'Postal code', example: '60601' },
-      { name: 'notes', label: 'Notes', key: 'notes', required: false, type: 'text', description: 'Additional notes', example: 'Primary point of contact' },
-    ],
+      { name: 'notes', label: 'Notes', key: 'notes', required: false, type: 'text', description: 'Additional notes', example: 'Primary point of contact' }
+    ]
   },
   cases: {
     entityType: 'cases',
@@ -106,8 +106,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'investigator_emails', label: 'Investigator Emails', key: 'investigator_emails', required: false, type: 'text', description: 'Comma-separated investigator emails', example: 'inv1@company.com,inv2@company.com' },
       { name: 'budget_hours', label: 'Budget Hours', key: 'budget_hours', required: false, type: 'number', description: 'Authorized hours', example: '40' },
       { name: 'budget_dollars', label: 'Budget Dollars', key: 'budget_dollars', required: false, type: 'number', description: 'Authorized budget', example: '5000' },
-      { name: 'budget_notes', label: 'Budget Notes', key: 'budget_notes', required: false, type: 'text', description: 'Budget authorization notes', example: 'Initial authorization' },
-    ],
+      { name: 'budget_notes', label: 'Budget Notes', key: 'budget_notes', required: false, type: 'text', description: 'Budget authorization notes', example: 'Initial authorization' }
+    ]
   },
   subjects: {
     entityType: 'subjects',
@@ -138,8 +138,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'vin', label: 'VIN', key: 'vin', required: false, type: 'text', description: 'For vehicle subjects', example: '1HGBH41JXMN109186' },
       { name: 'business_name', label: 'Business Name', key: 'business_name', required: false, type: 'text', description: 'For business subjects', example: 'Smith LLC' },
       { name: 'ein', label: 'EIN', key: 'ein', required: false, type: 'text', description: 'For business subjects', example: '12-3456789' },
-      { name: 'website', label: 'Website', key: 'website', required: false, type: 'text', description: 'For business subjects', example: 'www.example.com' },
-    ],
+      { name: 'website', label: 'Website', key: 'website', required: false, type: 'text', description: 'For business subjects', example: 'www.example.com' }
+    ]
   },
   case_subjects: {
     entityType: 'case_subjects',
@@ -151,8 +151,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
     columns: [
       { name: 'external_case_id', label: 'Case External ID', key: 'external_case_id', required: true, type: 'reference', description: 'Links to case', example: 'CASE-001' },
       { name: 'external_subject_id', label: 'Subject External ID', key: 'external_subject_id', required: true, type: 'reference', description: 'Links to subject', example: 'SUBJ-001' },
-      { name: 'is_primary', label: 'Is Primary', key: 'is_primary', required: false, type: 'boolean', description: 'Primary subject?', example: 'true' },
-    ],
+      { name: 'is_primary', label: 'Is Primary', key: 'is_primary', required: false, type: 'boolean', description: 'Primary subject?', example: 'true' }
+    ]
   },
   case_updates: {
     entityType: 'case_updates',
@@ -168,8 +168,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'description', label: 'Description', key: 'description', required: false, type: 'text', description: 'Update content', example: 'Spoke with claimant by phone...' },
       { name: 'update_type', label: 'Type', key: 'update_type', required: false, type: 'text', description: 'Update type', example: 'general' },
       { name: 'author_email', label: 'Author Email', key: 'author_email', required: false, type: 'text', description: 'Author email (must be a user)', example: 'inv1@company.com' },
-      { name: 'created_at', label: 'Created Date', key: 'created_at', required: false, type: 'date', description: 'When update was created', example: '2024-01-15T14:30:00Z' },
-    ],
+      { name: 'created_at', label: 'Created Date', key: 'created_at', required: false, type: 'date', description: 'When update was created', example: '2024-01-15T14:30:00Z' }
+    ]
   },
   case_activities: {
     entityType: 'case_activities',
@@ -190,8 +190,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'completed_at', label: 'Completed At', key: 'completed_at', required: false, type: 'date', description: 'Completion timestamp', example: '2024-02-01T16:00:00Z' },
       { name: 'event_subtype', label: 'Subtype', key: 'event_subtype', required: false, type: 'text', description: 'Event subtype', example: 'Client Meeting' },
       { name: 'assigned_to_email', label: 'Assigned To Email', key: 'assigned_to_email', required: false, type: 'text', description: 'Assignee email (must be a user)', example: 'inv1@company.com' },
-      { name: 'created_at', label: 'Created At', key: 'created_at', required: false, type: 'date', description: 'Creation timestamp', example: '2024-01-15T09:00:00Z' },
-    ],
+      { name: 'created_at', label: 'Created At', key: 'created_at', required: false, type: 'date', description: 'Creation timestamp', example: '2024-01-15T09:00:00Z' }
+    ]
   },
   time_entries: {
     entityType: 'time_entries',
@@ -215,8 +215,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'category', label: 'Category', key: 'category', required: false, type: 'text', description: 'Time category', example: 'Surveillance' },
       { name: 'notes', label: 'Notes', key: 'notes', required: false, type: 'text', description: 'Additional notes', example: '' },
       { name: 'author_email', label: 'Author Email', key: 'author_email', required: false, type: 'text', description: 'Author email (must be a user)', example: 'inv1@company.com' },
-      { name: 'created_at', label: 'Created At', key: 'created_at', required: false, type: 'date', description: 'Creation timestamp', example: '2024-01-20T18:00:00Z' },
-    ],
+      { name: 'created_at', label: 'Created At', key: 'created_at', required: false, type: 'date', description: 'Creation timestamp', example: '2024-01-20T18:00:00Z' }
+    ]
   },
   expenses: {
     entityType: 'expenses',
@@ -238,8 +238,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'external_activity_id', label: 'Activity External ID', key: 'external_activity_id', required: false, type: 'reference', description: 'Links to event/activity', example: 'EVT-001' },
       { name: 'notes', label: 'Notes', key: 'notes', required: false, type: 'text', description: 'Additional notes', example: '' },
       { name: 'author_email', label: 'Author Email', key: 'author_email', required: false, type: 'text', description: 'Author email (must be a user)', example: 'inv1@company.com' },
-      { name: 'created_at', label: 'Created At', key: 'created_at', required: false, type: 'date', description: 'Creation timestamp', example: '2024-01-20T18:00:00Z' },
-    ],
+      { name: 'created_at', label: 'Created At', key: 'created_at', required: false, type: 'date', description: 'Creation timestamp', example: '2024-01-20T18:00:00Z' }
+    ]
   },
   budgets: {
     entityType: 'budgets',
@@ -253,8 +253,8 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'external_case_id', label: 'Case External ID', key: 'external_case_id', required: true, type: 'reference', description: 'Links to case', example: 'CASE-001' },
       { name: 'budget_hours', label: 'Budget Hours', key: 'budget_hours', required: false, type: 'number', description: 'Authorized hours', example: '40' },
       { name: 'budget_dollars', label: 'Budget Dollars', key: 'budget_dollars', required: false, type: 'number', description: 'Authorized budget', example: '5000' },
-      { name: 'budget_notes', label: 'Budget Notes', key: 'budget_notes', required: false, type: 'text', description: 'Budget notes', example: 'Initial authorization per client agreement' },
-    ],
+      { name: 'budget_notes', label: 'Budget Notes', key: 'budget_notes', required: false, type: 'text', description: 'Budget notes', example: 'Initial authorization per client agreement' }
+    ]
   },
   budget_adjustments: {
     entityType: 'budget_adjustments',
@@ -272,9 +272,9 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
       { name: 'previous_value', label: 'Previous Value', key: 'previous_value', required: false, type: 'number', description: 'Previous budget value', example: '40' },
       { name: 'adjustment_amount', label: 'Adjustment Amount', key: 'adjustment_amount', required: false, type: 'number', description: 'Amount changed', example: '20' },
       { name: 'author_email', label: 'Author Email', key: 'author_email', required: false, type: 'text', description: 'Author email (must be a user)', example: 'manager@company.com' },
-      { name: 'created_at', label: 'Created At', key: 'created_at', required: false, type: 'date', description: 'Adjustment timestamp', example: '2024-01-25T10:00:00Z' },
-    ],
-  },
+      { name: 'created_at', label: 'Created At', key: 'created_at', required: false, type: 'date', description: 'Adjustment timestamp', example: '2024-01-25T10:00:00Z' }
+    ]
+  }
 };
 
 // Helper functions
@@ -303,6 +303,6 @@ export const IMPORT_COLUMN_DEFINITIONS = Object.entries(TEMPLATE_COLUMNS).map(([
     key: c.key,
     label: c.label,
     required: c.required,
-    description: c.description,
-  })),
+    description: c.description
+  }))
 }));
