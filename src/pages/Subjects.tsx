@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, Car, MapPin, Package, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink } from "lucide-react";
+import { User, Car, MapPin, Package, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useSubjectProfileImages } from "@/hooks/use-subject-profile-images";
@@ -61,6 +62,16 @@ const STAT_CARDS = [
   { key: 'vehicle' as const, label: 'Vehicles', icon: Car, color: 'text-green-500', bgColor: 'bg-green-500/10' },
   { key: 'location' as const, label: 'Locations', icon: MapPin, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
   { key: 'item' as const, label: 'Items', icon: Package, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+];
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { key: "name", label: "Name", format: (_, row) => row.display_name || row.name },
+  { key: "subject_type", label: "Category", format: (v) => SUBJECT_CATEGORY_LABELS[v as SubjectCategory] || v },
+  { key: "role", label: "Role" },
+  { key: "case_number", label: "Case #", format: (_, row) => row.cases?.case_number || "-" },
+  { key: "case_title", label: "Case Title", format: (_, row) => row.cases?.title || "-" },
+  { key: "status", label: "Status", format: (v) => v === 'active' ? 'Active' : 'Archived' },
+  { key: "created_at", label: "Created", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
 ];
 
 export default function Subjects() {
@@ -235,6 +246,14 @@ export default function Subjects() {
     navigateWithSource(navigate, `/cases/${subject.cases.id}/subjects/${subject.id}`, 'subjects_list');
   };
 
+  const handleExportCSV = () => {
+    exportToCSV(filteredSubjects, EXPORT_COLUMNS, "subjects");
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(filteredSubjects, EXPORT_COLUMNS, "All Subjects", "subjects");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -296,6 +315,24 @@ export default function Subjects() {
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}

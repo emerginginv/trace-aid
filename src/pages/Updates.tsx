@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FileText, Users, Bot, Clock, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink } from "lucide-react";
+import { FileText, Users, Bot, Clock, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, Download, FileSpreadsheet } from "lucide-react";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { HelpfulHeader } from "@/components/help-center/ContextualHelp";
 import { format, subDays, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,16 @@ const STAT_CARDS = [
   { key: 'clientContacts' as const, label: 'Client Contacts', icon: Users, color: 'text-green-500', bgColor: 'bg-green-500/10', filterValue: 'Client Contact' },
   { key: 'aiSummaries' as const, label: 'AI Summaries', icon: Bot, color: 'text-purple-500', bgColor: 'bg-purple-500/10', filterValue: 'ai' },
   { key: 'thisWeek' as const, label: 'This Week', icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-500/10', filterValue: 'week' },
+];
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { key: "title", label: "Title" },
+  { key: "update_type", label: "Type" },
+  { key: "case_number", label: "Case #", format: (_, row) => row.cases?.case_number || "-" },
+  { key: "case_title", label: "Case Title", format: (_, row) => row.cases?.title || "-" },
+  { key: "author", label: "Author", format: (_, row) => row.author?.full_name || "Unknown" },
+  { key: "is_ai_summary", label: "AI Summary", format: (v) => v ? "Yes" : "No" },
+  { key: "created_at", label: "Created", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
 ];
 
 export default function Updates() {
@@ -274,6 +285,14 @@ export default function Updates() {
     navigateWithSource(navigate, `/updates/${update.id}`, 'updates_list');
   };
 
+  const handleExportCSV = () => {
+    exportToCSV(filteredUpdates, EXPORT_COLUMNS, "updates");
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(filteredUpdates, EXPORT_COLUMNS, "All Updates", "updates");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -335,6 +354,24 @@ export default function Updates() {
             ))}
           </SelectContent>
         </Select>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}
