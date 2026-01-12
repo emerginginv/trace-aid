@@ -635,6 +635,7 @@ export type Database = {
       }
       case_attachments: {
         Row: {
+          ai_tags: string[] | null
           case_id: string
           created_at: string
           description: string | null
@@ -654,6 +655,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_tags?: string[] | null
           case_id: string
           created_at?: string
           description?: string | null
@@ -673,6 +675,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_tags?: string[] | null
           case_id?: string
           created_at?: string
           description?: string | null
