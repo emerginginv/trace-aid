@@ -1,0 +1,5 @@
+external_record_id,external_case_id,title,description,status,due_date,assigned_to_email,created_at
+TASK-001,CASE-001,Review surveillance footage,Review and annotate video from Day 1,completed,2024-01-21,inv1@company.com,2024-01-20T17:00:00Z
+TASK-002,CASE-001,Prepare final report,Compile all findings into final report,to_do,2024-02-15,manager@ourcompany.com,2024-01-15T09:00:00Z
+TASK-003,CASE-002,Background check,Complete background verification on subject,in_progress,2024-02-05,inv2@company.com,2024-02-01T09:00:00Z
+TASK-004,CASE-002,Submit evidence,Package and submit all collected evidence,pending,2024-02-12,inv2@company.com,2024-02-05T10:00:00Z

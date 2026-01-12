@@ -13,13 +13,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
-import { CheckSquare, Calendar, Clock, CheckCircle, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, MapPin, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Calendar, Clock, CheckCircle, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, MapPin, Download, FileSpreadsheet, FileText, Phone, Users, Car } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface ActivityWithCase {
+interface EventWithCase {
   id: string;
   case_id: string;
   activity_type: string;
@@ -46,18 +46,19 @@ interface ActivityWithCase {
   } | null;
 }
 
-interface TaskCounts {
+interface EventCounts {
   total: number;
-  dueSoon: number;
-  inProgress: number;
+  meetings: number;
+  calls: number;
+  fieldWork: number;
   completed: number;
 }
 
 const STAT_CARDS = [
-  { key: 'total' as const, label: 'Total Tasks', icon: CheckSquare, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-  { key: 'dueSoon' as const, label: 'Due Soon', icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
-  { key: 'inProgress' as const, label: 'In Progress', icon: Clock, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
-  { key: 'completed' as const, label: 'Completed', icon: CheckCircle, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
+  { key: 'total' as const, label: 'Total Events', icon: Calendar, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+  { key: 'meetings' as const, label: 'Meetings', icon: Users, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+  { key: 'calls' as const, label: 'Calls', icon: Phone, color: 'text-green-500', bgColor: 'bg-green-500/10' },
+  { key: 'fieldWork' as const, label: 'Field Work', icon: Car, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
 ];
 
 const STATUS_OPTIONS = [
@@ -65,6 +66,20 @@ const STATUS_OPTIONS = [
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
+];
+
+const EVENT_SUBTYPE_OPTIONS = [
+  { value: 'all', label: 'All Subtypes' },
+  { value: 'Client Meeting', label: 'Client Meeting' },
+  { value: 'Team Meeting', label: 'Team Meeting' },
+  { value: 'Phone Call', label: 'Phone Call' },
+  { value: 'Video Call', label: 'Video Call' },
+  { value: 'Field Work', label: 'Field Work' },
+  { value: 'Site Visit', label: 'Site Visit' },
+  { value: 'Interview', label: 'Interview' },
+  { value: 'Surveillance', label: 'Surveillance' },
+  { value: 'Court Appearance', label: 'Court Appearance' },
+  { value: 'Other', label: 'Other' },
 ];
 
 const getStatusBadgeStyles = (status: string) => {
@@ -82,61 +97,65 @@ const getStatusBadgeStyles = (status: string) => {
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { key: "title", label: "Title" },
+  { key: "event_subtype", label: "Subtype", format: (v) => v || "-" },
   { key: "case_number", label: "Case #", format: (_, row) => row.cases?.case_number || "-" },
   { key: "case_title", label: "Case Title", format: (_, row) => row.cases?.title || "-" },
   { key: "status", label: "Status", format: (v) => STATUS_OPTIONS.find(s => s.value === v)?.label || v },
   { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+  { key: "address", label: "Location", format: (v) => v || "-" },
   { key: "assigned_to", label: "Assigned To", format: (_, row) => row.assigned_user?.full_name || "-" },
   { key: "created_at", label: "Created", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
 ];
 
-export default function Tasks() {
+export default function Events() {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const { navigateWithSource } = useNavigationSource();
 
-  const [tasks, setTasks] = useState<ActivityWithCase[]>([]);
+  const [events, setEvents] = useState<EventWithCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [subtypeFilter, setSubtypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
-    return (localStorage.getItem('tasks-view-mode') as 'list' | 'cards') || 'cards';
+    return (localStorage.getItem('events-view-mode') as 'list' | 'cards') || 'cards';
   });
 
-  const [counts, setCounts] = useState<TaskCounts>({
+  const [counts, setCounts] = useState<EventCounts>({
     total: 0,
-    dueSoon: 0,
-    inProgress: 0,
+    meetings: 0,
+    calls: 0,
+    fieldWork: 0,
     completed: 0,
   });
 
   useEffect(() => {
     if (!organization?.id) return;
-    fetchTasks();
+    fetchEvents();
   }, [organization?.id]);
 
   useEffect(() => {
-    localStorage.setItem('tasks-view-mode', viewMode);
+    localStorage.setItem('events-view-mode', viewMode);
   }, [viewMode]);
 
-  const fetchTasks = async () => {
+  const fetchEvents = async () => {
     if (!organization?.id) return;
     setLoading(true);
 
     try {
-      // Fetch only tasks (activity_type = 'task')
-      const { data: tasksData, error: tasksError } = await supabase
+      // Fetch only events (activity_type = 'event')
+      const { data: eventsData, error: eventsError } = await supabase
         .from("case_activities")
         .select("*")
         .eq("organization_id", organization.id)
-        .eq("activity_type", "task")
+        .eq("activity_type", "event")
         .order("due_date", { ascending: true, nullsFirst: false });
 
-      if (tasksError) throw tasksError;
+      if (eventsError) throw eventsError;
 
-      // Fetch cases for the tasks
-      const caseIds = [...new Set((tasksData || []).map(a => a.case_id))];
+      // Fetch cases for the events
+      const caseIds = [...new Set((eventsData || []).map(a => a.case_id))];
       let casesMap: Record<string, { id: string; case_number: string; title: string }> = {};
       
       if (caseIds.length > 0) {
@@ -154,7 +173,7 @@ export default function Tasks() {
       }
 
       // Fetch assigned users separately
-      const assignedUserIds = [...new Set((tasksData || []).filter(a => a.assigned_user_id).map(a => a.assigned_user_id))];
+      const assignedUserIds = [...new Set((eventsData || []).filter(a => a.assigned_user_id).map(a => a.assigned_user_id))];
       
       let usersMap: Record<string, { id: string; full_name: string | null; avatar_url: string | null }> = {};
       if (assignedUserIds.length > 0) {
@@ -171,7 +190,7 @@ export default function Tasks() {
         }
       }
 
-      const enrichedTasks: ActivityWithCase[] = (tasksData || [])
+      const enrichedEvents: EventWithCase[] = (eventsData || [])
         .filter(a => casesMap[a.case_id])
         .map((a) => ({
           ...a,
@@ -179,61 +198,62 @@ export default function Tasks() {
           assigned_user: a.assigned_user_id ? usersMap[a.assigned_user_id] || null : null,
         }));
 
-      setTasks(enrichedTasks);
+      setEvents(enrichedEvents);
 
       // Calculate counts
-      const now = new Date();
-      const inThreeDays = addDays(now, 3);
-      
-      const newCounts: TaskCounts = {
-        total: enrichedTasks.length,
-        dueSoon: 0,
-        inProgress: 0,
+      const newCounts: EventCounts = {
+        total: enrichedEvents.length,
+        meetings: 0,
+        calls: 0,
+        fieldWork: 0,
         completed: 0,
       };
 
-      enrichedTasks.forEach((t) => {
-        if (t.status === 'completed') newCounts.completed++;
-        if (t.status === 'in_progress') newCounts.inProgress++;
-        if (t.due_date && t.status !== 'completed' && t.status !== 'cancelled') {
-          const dueDate = new Date(t.due_date);
-          if (isAfter(dueDate, now) && isBefore(dueDate, inThreeDays)) {
-            newCounts.dueSoon++;
-          }
-        }
+      enrichedEvents.forEach((e) => {
+        if (e.status === 'completed') newCounts.completed++;
+        const subtype = e.event_subtype?.toLowerCase() || '';
+        if (subtype.includes('meeting')) newCounts.meetings++;
+        if (subtype.includes('call')) newCounts.calls++;
+        if (subtype.includes('field') || subtype.includes('surveillance') || subtype.includes('site')) newCounts.fieldWork++;
       });
 
       setCounts(newCounts);
     } catch (error) {
-      console.error("Error fetching tasks:", error);
+      console.error("Error fetching events:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      // Subtype filter
+      if (subtypeFilter !== "all" && event.event_subtype !== subtypeFilter) {
+        return false;
+      }
+
       // Status filter
-      if (statusFilter !== "all" && task.status !== statusFilter) {
+      if (statusFilter !== "all" && event.status !== statusFilter) {
         return false;
       }
 
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchesTitle = task.title.toLowerCase().includes(query);
-        const matchesDescription = task.description?.toLowerCase().includes(query);
-        const matchesCaseNumber = task.cases.case_number.toLowerCase().includes(query);
-        const matchesCaseTitle = task.cases.title.toLowerCase().includes(query);
+        const matchesTitle = event.title.toLowerCase().includes(query);
+        const matchesDescription = event.description?.toLowerCase().includes(query);
+        const matchesCaseNumber = event.cases.case_number.toLowerCase().includes(query);
+        const matchesCaseTitle = event.cases.title.toLowerCase().includes(query);
+        const matchesAddress = event.address?.toLowerCase().includes(query);
         
-        if (!matchesTitle && !matchesDescription && !matchesCaseNumber && !matchesCaseTitle) {
+        if (!matchesTitle && !matchesDescription && !matchesCaseNumber && !matchesCaseTitle && !matchesAddress) {
           return false;
         }
       }
 
       return true;
     });
-  }, [tasks, statusFilter, searchQuery]);
+  }, [events, subtypeFilter, statusFilter, searchQuery]);
 
   if (permissionsLoading) {
     return (
@@ -254,7 +274,7 @@ export default function Tasks() {
       <div className="flex items-center justify-center h-64">
         <Card className="p-6 text-center">
           <h3 className="text-lg font-medium">Access Restricted</h3>
-          <p className="text-muted-foreground mt-2">You don't have permission to view tasks.</p>
+          <p className="text-muted-foreground mt-2">You don't have permission to view events.</p>
         </Card>
       </div>
     );
@@ -270,7 +290,7 @@ export default function Tasks() {
   };
 
   const navigateToCase = (caseId: string) => {
-    navigateWithSource(navigate, `/cases/${caseId}`, 'tasks_list');
+    navigateWithSource(navigate, `/cases/${caseId}`, 'events_list');
   };
 
   const isOverdue = (dueDate: string | null, status: string) => {
@@ -279,19 +299,19 @@ export default function Tasks() {
   };
 
   const handleExportCSV = () => {
-    exportToCSV(filteredTasks, EXPORT_COLUMNS, "tasks");
+    exportToCSV(filteredEvents, EXPORT_COLUMNS, "events");
   };
 
   const handleExportPDF = () => {
-    exportToPDF(filteredTasks, EXPORT_COLUMNS, "Tasks", "tasks");
+    exportToPDF(filteredEvents, EXPORT_COLUMNS, "Events", "events");
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
-        <p className="text-muted-foreground">View and manage tasks across all cases</p>
+        <h1 className="text-2xl font-bold tracking-tight">Events</h1>
+        <p className="text-muted-foreground">View and manage events across all cases</p>
       </div>
 
       {/* Stat Cards */}
@@ -303,8 +323,9 @@ export default function Tasks() {
               key={stat.key} 
               className="cursor-pointer hover:shadow-md transition-shadow" 
               onClick={() => {
-                if (stat.key === 'completed') setStatusFilter(statusFilter === 'completed' ? 'all' : 'completed');
-                else if (stat.key === 'inProgress') setStatusFilter(statusFilter === 'in_progress' ? 'all' : 'in_progress');
+                if (stat.key === 'meetings') setSubtypeFilter(subtypeFilter === 'Client Meeting' ? 'all' : 'Client Meeting');
+                else if (stat.key === 'calls') setSubtypeFilter(subtypeFilter === 'Phone Call' ? 'all' : 'Phone Call');
+                else if (stat.key === 'fieldWork') setSubtypeFilter(subtypeFilter === 'Field Work' ? 'all' : 'Field Work');
               }}
             >
               <CardContent className="p-4 flex items-center gap-4">
@@ -326,12 +347,22 @@ export default function Tasks() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search tasks, events, or cases..."
+            placeholder="Search events or cases..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
           />
         </div>
+        <Select value={subtypeFilter} onValueChange={setSubtypeFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Subtype" />
+          </SelectTrigger>
+          <SelectContent>
+            {EVENT_SUBTYPE_OPTIONS.map((s) => (
+              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Status" />
@@ -361,7 +392,7 @@ export default function Tasks() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <ImportTemplateButton templateFileName="16_Tasks.csv" entityDisplayName="Tasks" />
+        <ImportTemplateButton templateFileName="15_Events.csv" entityDisplayName="Events" />
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}
@@ -389,10 +420,10 @@ export default function Tasks() {
             <Skeleton key={i} className="h-48" />
           ))}
         </div>
-      ) : filteredTasks.length === 0 ? (
+      ) : filteredEvents.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <CheckSquare className="h-12 w-12 text-muted-foreground/40 mb-4" />
-          <h3 className="text-lg font-medium text-muted-foreground">No tasks found</h3>
+          <Calendar className="h-12 w-12 text-muted-foreground/40 mb-4" />
+          <h3 className="text-lg font-medium text-muted-foreground">No events found</h3>
           <p className="text-sm text-muted-foreground/60 mt-1">Try adjusting your filters</p>
         </div>
       ) : viewMode === 'list' ? (
@@ -401,91 +432,108 @@ export default function Tasks() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px]">Title</TableHead>
+                <TableHead>Subtype</TableHead>
                 <TableHead>Case</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Due Date</TableHead>
+                <TableHead>Location</TableHead>
                 <TableHead>Assigned To</TableHead>
                 <TableHead className="w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTasks.map((task) => {
-                const overdue = isOverdue(task.due_date, task.status);
+              {filteredEvents.map((event) => {
+                const overdue = isOverdue(event.due_date, event.status);
 
                 return (
                   <TableRow
-                    key={task.id}
+                    key={event.id}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigateToCase(task.cases.id)}
+                    onClick={() => navigateToCase(event.cases.id)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full flex items-center justify-center bg-blue-500/10">
-                          <CheckSquare className="h-4 w-4 text-blue-500" />
+                        <div className="h-9 w-9 rounded-full flex items-center justify-center bg-green-500/10">
+                          <Calendar className="h-4 w-4 text-green-500" />
                         </div>
                         <div>
-                          <div className="font-medium">{task.title}</div>
-                          {task.description && (
+                          <div className="font-medium">{event.title}</div>
+                          {event.description && (
                             <div className="text-sm text-muted-foreground truncate max-w-[220px]">
-                              {task.description}
+                              {event.description}
                             </div>
                           )}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        <div className="font-medium">{task.cases.case_number}</div>
-                        <div className="text-muted-foreground truncate max-w-[180px]">{task.cases.title}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getStatusBadgeStyles(task.status)}>
-                        {getStatusLabel(task.status)}
+                      <Badge variant="outline" className="text-xs">
+                        {event.event_subtype || "General"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {task.due_date ? (
-                        <div className={cn("text-sm", overdue && "text-red-500 font-medium")}>
-                          {format(new Date(task.due_date), "MMM d, yyyy")}
-                          {overdue && <span className="ml-1">(Overdue)</span>}
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {event.cases.case_number}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn("text-xs", getStatusBadgeStyles(event.status))}>
+                        {getStatusLabel(event.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {event.due_date ? (
+                        <span className={cn(overdue && "text-red-500 font-medium")}>
+                          {format(new Date(event.due_date), "MMM d, yyyy")}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {event.address ? (
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground truncate max-w-[150px]">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          {event.address}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {task.assigned_user ? (
+                      {event.assigned_user ? (
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
-                            <AvatarImage src={task.assigned_user.avatar_url || undefined} />
+                            <AvatarImage src={event.assigned_user.avatar_url || undefined} />
                             <AvatarFallback className="text-xs">
-                              {getInitials(task.assigned_user.full_name || "?")}
+                              {getInitials(event.assigned_user.full_name || "?")}
                             </AvatarFallback>
                           </Avatar>
                           <span className="text-sm truncate max-w-[100px]">
-                            {task.assigned_user.full_name || "Unassigned"}
+                            {event.assigned_user.full_name}
                           </span>
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm">Unassigned</span>
                       )}
                     </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigateToCase(task.cases.id)}>
+                          <DropdownMenuItem onClick={() => navigateToCase(event.cases.id)}>
                             <Eye className="h-4 w-4 mr-2" />
-                            View in Case
+                            View Case
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/cases/${task.cases.id}`)}>
+                          <DropdownMenuItem onClick={() => window.open(`/cases/${event.cases.id}`, '_blank')}>
                             <ExternalLink className="h-4 w-4 mr-2" />
-                            Go to Case
+                            Open in New Tab
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -497,97 +545,99 @@ export default function Tasks() {
           </Table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredTasks.map((task) => {
-            const overdue = isOverdue(task.due_date, task.status);
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredEvents.map((event) => {
+            const overdue = isOverdue(event.due_date, event.status);
 
             return (
               <Card
-                key={task.id}
-                className={cn(
-                  "relative overflow-hidden transition-shadow hover:shadow-md cursor-pointer group",
-                  task.status === 'completed' && "opacity-70"
-                )}
-                onClick={() => navigateToCase(task.cases.id)}
+                key={event.id}
+                className="cursor-pointer hover:shadow-lg transition-all group"
+                onClick={() => navigateToCase(event.cases.id)}
               >
-                {/* Type indicator strip */}
-                <div className="h-1 bg-blue-500" />
-
-                {/* Status Badge */}
-                <Badge 
-                  variant="outline" 
-                  className={cn("absolute top-3 right-3 text-xs z-10", getStatusBadgeStyles(task.status))}
-                >
-                  {getStatusLabel(task.status)}
-                </Badge>
-
-                <CardContent className="pt-4 pb-4">
-                  {/* Icon and Title */}
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-blue-500/10">
-                      <CheckSquare className="h-5 w-5 text-blue-500" />
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center bg-green-500/10 flex-shrink-0">
+                        <Calendar className="h-5 w-5 text-green-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-medium truncate group-hover:text-primary transition-colors">
+                          {event.title}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {event.event_subtype || "General"}
+                          </Badge>
+                          <Badge variant="outline" className={cn("text-xs", getStatusBadgeStyles(event.status))}>
+                            {getStatusLabel(event.status)}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-foreground truncate pr-16">
-                        {task.title}
-                      </h3>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigateToCase(event.cases.id)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Case
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.open(`/cases/${event.cases.id}`, '_blank')}>
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Open in New Tab
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
 
-                  {/* Description */}
-                  {task.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {task.description}
+                  {event.description && (
+                    <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+                      {event.description}
                     </p>
                   )}
 
-                  {/* Due date */}
-                  {task.due_date && (
-                    <div className={cn(
-                      "flex items-center gap-2 text-sm mb-3",
-                      overdue ? "text-red-500" : "text-muted-foreground"
-                    )}>
-                      <Clock className="h-3 w-3" />
-                      <span>
-                        {format(new Date(task.due_date), "MMM d, yyyy")}
-                        {overdue && " (Overdue)"}
-                      </span>
+                  <div className="mt-4 pt-4 border-t space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Case:</span>
+                      <span className="font-mono text-xs">{event.cases.case_number}</span>
                     </div>
-                  )}
-
-                  {/* Case reference */}
-                  <div className="pt-3 border-t">
-                    <p className="text-xs text-muted-foreground">Case</p>
-                    <p className="text-sm font-medium truncate">{task.cases.case_number}</p>
-                    <p className="text-xs text-muted-foreground truncate">{task.cases.title}</p>
+                    {event.due_date && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Due:</span>
+                        <span className={cn(overdue && "text-red-500 font-medium")}>
+                          {format(new Date(event.due_date), "MMM d, yyyy")}
+                        </span>
+                      </div>
+                    )}
+                    {event.address && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span className="truncate">{event.address}</span>
+                      </div>
+                    )}
+                    {event.assigned_user && (
+                      <div className="flex items-center gap-2 pt-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={event.assigned_user.avatar_url || undefined} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(event.assigned_user.full_name || "?")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-muted-foreground">
+                          {event.assigned_user.full_name}
+                        </span>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Assigned user */}
-                  {task.assigned_user && (
-                    <div className="mt-3 pt-3 border-t flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={task.assigned_user.avatar_url || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {getInitials(task.assigned_user.full_name || "?")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm text-muted-foreground truncate">
-                        {task.assigned_user.full_name}
-                      </span>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             );
           })}
         </div>
-      )}
-
-      {/* Results count */}
-      {!loading && filteredTasks.length > 0 && (
-        <p className="text-sm text-muted-foreground text-center">
-          Showing {filteredTasks.length} of {tasks.length} tasks
-        </p>
       )}
     </div>
   );

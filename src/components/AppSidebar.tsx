@@ -216,7 +216,7 @@ export function AppSidebar() {
                   {/* Render Cases collapsible menu for Navigation group */}
                   {showCasesMenu && (
                     <Collapsible 
-                      defaultOpen={location.pathname.startsWith('/cases') || location.pathname === '/subjects' || location.pathname === '/tasks' || location.pathname === '/updates'}
+                      defaultOpen={location.pathname.startsWith('/cases') || location.pathname === '/subjects' || location.pathname === '/tasks' || location.pathname === '/events' || location.pathname === '/updates'}
                       className="group/collapsible"
                     >
                       <SidebarMenuItem>
@@ -256,7 +256,17 @@ export function AppSidebar() {
                                 className="cursor-pointer"
                               >
                                 <ListTodo className="w-4 h-4" />
-                                <span>Tasks & Events</span>
+                                <span>Tasks</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton 
+                                onClick={() => navigate('/events')}
+                                isActive={location.pathname === '/events'}
+                                className="cursor-pointer"
+                              >
+                                <Calendar className="w-4 h-4" />
+                                <span>Events</span>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                             <SidebarMenuSubItem>

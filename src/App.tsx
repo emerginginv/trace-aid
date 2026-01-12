@@ -21,6 +21,7 @@ import CaseDetail from "./pages/CaseDetail";
 import { CaseWizard } from "./components/case-wizard";
 import Subjects from "./pages/Subjects";
 import Tasks from "./pages/Tasks";
+import Events from "./pages/Events";
 import Updates from "./pages/Updates";
 import SubjectDetail from "./pages/SubjectDetail";
 import Calendar from "./pages/Calendar";
@@ -200,6 +201,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Tasks />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <Events />
               </DashboardLayout>
             </ProtectedRoute>
           }
