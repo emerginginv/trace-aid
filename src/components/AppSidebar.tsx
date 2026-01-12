@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Briefcase, Users, Building2, Shield, DollarSign, Calendar, FileText, Info, Wallet, Receipt, BarChart3, ClipboardList, ChevronDown, UserSearch, ListTodo, FileEdit } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Building2, Shield, DollarSign, Calendar, FileText, Info, Wallet, Receipt, BarChart3, ClipboardList, ChevronDown, UserSearch, ListTodo, FileEdit, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton } from "@/components/ui/sidebar";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -43,7 +43,12 @@ const menuGroups = [{
     url: "/my-expenses",
     roles: ['vendor', 'investigator']
   }, {
-    title: "Time & Expenses",
+    title: "Time Entries",
+    icon: Clock,
+    url: "/time-entries",
+    roles: ['admin', 'manager']
+  }, {
+    title: "Expenses",
     icon: Receipt,
     url: "/expenses",
     roles: ['admin', 'manager']

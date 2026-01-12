@@ -27,6 +27,7 @@ import SubjectDetail from "./pages/SubjectDetail";
 import Calendar from "./pages/Calendar";
 import Finance from "./pages/Finance";
 import AllExpenses from "./pages/AllExpenses";
+import TimeEntries from "./pages/TimeEntries";
 import AllInvoices from "./pages/AllInvoices";
 import InvoiceDetail from "./pages/InvoiceDetail";
 import UpdateDetail from "./pages/UpdateDetail";
@@ -241,6 +242,16 @@ const App = () => {
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
                 <Finance />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/time-entries"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <TimeEntries />
               </DashboardLayout>
             </ProtectedRoute>
           }
