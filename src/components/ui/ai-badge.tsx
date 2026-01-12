@@ -40,6 +40,7 @@ export interface AIBadgeProps
     VariantProps<typeof aiBadgeVariants> {
   showTooltip?: boolean;
   showIcon?: boolean;
+  children?: React.ReactNode;
 }
 
 export function AIBadge({
@@ -48,12 +49,13 @@ export function AIBadge({
   size,
   showTooltip = true,
   showIcon = true,
+  children,
   ...props
 }: AIBadgeProps) {
   const badge = (
     <div className={cn(aiBadgeVariants({ variant, size }), className)} {...props}>
       {showIcon && <Sparkles />}
-      AI
+      {children ?? "AI"}
     </div>
   );
 

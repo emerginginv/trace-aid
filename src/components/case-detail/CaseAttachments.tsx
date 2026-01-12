@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { AIBadge } from "@/components/ui/ai-badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -64,6 +65,7 @@ interface Attachment {
   name?: string | null;
   description?: string | null;
   tags?: string[] | null;
+  ai_tags?: string[] | null;
   preview_path?: string | null;
   preview_status?: string | null;
   preview_generated_at?: string | null;
@@ -1460,6 +1462,15 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                           ))}
                         </div>
                       )}
+                      {attachment.ai_tags && attachment.ai_tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {attachment.ai_tags.map((tag, idx) => (
+                            <AIBadge key={`ai-${idx}`} size="sm" showIcon={idx === 0}>
+                              {tag}
+                            </AIBadge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {formatFileSize(attachment.file_size)} • {new Date(attachment.created_at).toLocaleDateString()}
@@ -1622,6 +1633,15 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
                               <Badge key={idx} variant="secondary" className="text-xs">
                                 {tag}
                               </Badge>
+                            ))}
+                          </div>
+                        )}
+                        {attachment.ai_tags && attachment.ai_tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {attachment.ai_tags.map((tag, idx) => (
+                              <AIBadge key={`ai-${idx}`} size="sm" showIcon={idx === 0}>
+                                {tag}
+                              </AIBadge>
                             ))}
                           </div>
                         )}

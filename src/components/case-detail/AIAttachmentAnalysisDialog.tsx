@@ -196,7 +196,7 @@ export function AIAttachmentAnalysisDialog({
           .from("case_attachments")
           .update({
             description: edited.description,
-            tags: tags
+            ai_tags: tags
           })
           .eq("id", attachmentId)
           .eq("organization_id", organization?.id);
