@@ -53,30 +53,31 @@ export function BudgetStatusCard({
 
   const canModifyBudget = hasPermission("modify_case_budget");
 
-  useEffect(() => {
-    const fetchSummary = async () => {
-      setSummaryLoading(true);
-      try {
-        const { data, error } = await supabase.rpc("get_case_budget_summary", {
-          p_case_id: caseId,
-        });
+  const fetchSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("get_case_budget_summary", {
+        p_case_id: caseId,
+      });
 
-        if (error) throw error;
-        if (data && data.length > 0) {
-          setSummary(data[0]);
-        }
-      } catch (err) {
-        console.error("Error fetching budget summary:", err);
-      } finally {
-        setSummaryLoading(false);
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setSummary(data[0]);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching budget summary:", err);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchSummary();
   }, [caseId, refreshKey]);
 
   const handleBudgetSuccess = () => {
     refetch();
+    fetchSummary();
   };
 
   const loading = budgetLoading || summaryLoading;
