@@ -29,6 +29,7 @@ import { BudgetAdjustmentForm } from "@/components/case-detail/BudgetAdjustmentF
 import { BudgetAdjustmentsHistory } from "@/components/case-detail/BudgetAdjustmentsHistory";
 import { BudgetConsumptionSnapshot } from "@/components/case-detail/BudgetConsumptionSnapshot";
 import { CaseBudgetWidget } from "@/components/case-detail/CaseBudgetWidget";
+import { BudgetStatusCard } from "@/components/case-detail/BudgetStatusCard";
 import { GenerateReportDialog } from "@/components/templates/GenerateReportDialog";
 import { CaseSummaryPdfDialog } from "@/components/case-detail/CaseSummaryPdfDialog";
 import { CaseReports } from "@/components/case-detail/CaseReports";
@@ -776,12 +777,14 @@ const CaseDetail = () => {
 
                   {/* Budget + Retainer Column */}
                   <div className="space-y-4 flex flex-col">
-                    <CaseBudgetWidget 
-                      caseId={id!} 
-                      refreshKey={budgetRefreshKey}
-                      onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)}
-                      onViewHistory={handleViewBudgetHistory}
-                    />
+                    {organization?.id && (
+                      <BudgetStatusCard 
+                        caseId={id!} 
+                        organizationId={organization.id}
+                        refreshKey={budgetRefreshKey}
+                        onViewHistory={handleViewBudgetHistory}
+                      />
+                    )}
                     {organization?.id && <RetainerFundsWidget caseId={id!} organizationId={organization.id} />}
                   </div>
 
