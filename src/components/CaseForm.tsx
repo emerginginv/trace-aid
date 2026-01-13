@@ -57,6 +57,7 @@ const caseSchema = z.object({
   budget_dollars: z.coerce.number().min(0).optional().nullable(),
   budget_notes: z.string().max(500).optional().nullable(),
   reference_number: z.string().max(100).optional().nullable(),
+  pricing_profile_id: z.string().optional().nullable(),
 });
 
 type CaseFormData = z.infer<typeof caseSchema>;
@@ -79,7 +80,15 @@ interface CaseFormProps {
     budget_dollars?: number | null;
     budget_notes?: string | null;
     reference_number?: string | null;
+    pricing_profile_id?: string | null;
   };
+}
+
+interface PricingProfile {
+  id: string;
+  name: string;
+  is_default: boolean;
+  is_active: boolean;
 }
 
 interface Account {
@@ -105,6 +114,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const [investigators, setInvestigators] = useState<string[]>([]);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [primarySubjectName, setPrimarySubjectName] = useState<string | null>(null);
+  const [pricingProfiles, setPricingProfiles] = useState<PricingProfile[]>([]);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
@@ -120,6 +130,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       budget_dollars: null,
       budget_notes: null,
       reference_number: null,
+      pricing_profile_id: null,
     },
   });
 
@@ -150,6 +161,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       fetchAccountsAndContacts();
       fetchCaseStatuses();
       fetchProfiles();
+      fetchPricingProfiles();
       if (editingCase) {
         fetchPrimarySubject(editingCase.id);
         form.reset({
@@ -165,6 +177,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_dollars: editingCase.budget_dollars ?? null,
           budget_notes: editingCase.budget_notes ?? null,
           reference_number: editingCase.reference_number ?? null,
+          pricing_profile_id: editingCase.pricing_profile_id ?? null,
         });
         // @ts-ignore - case_manager_id, case_manager_2_id and investigator_ids exist on editingCase
         setCaseManagerId(editingCase.case_manager_id || "");
@@ -187,6 +200,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_dollars: null,
           budget_notes: null,
           reference_number: null,
+          pricing_profile_id: null,
         });
         setCaseManagerId("");
         setCaseManager2Id("");
@@ -303,6 +317,38 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       }
     } catch (error) {
       console.error("Error fetching profiles:", error);
+    }
+  };
+
+  const fetchPricingProfiles = async () => {
+    try {
+      if (!organization?.id) return;
+      
+      const { data, error } = await supabase
+        .from("pricing_profiles")
+        .select("id, name, is_default, is_active")
+        .eq("organization_id", organization.id)
+        .eq("is_active", true)
+        .order("is_default", { ascending: false })
+        .order("name");
+      
+      if (error) {
+        console.error("Error fetching pricing profiles:", error);
+        return;
+      }
+      
+      if (data) {
+        setPricingProfiles(data);
+        // If creating new case and no pricing profile set, use default
+        if (!editingCase && !form.getValues("pricing_profile_id")) {
+          const defaultProfile = data.find(p => p.is_default);
+          if (defaultProfile) {
+            form.setValue("pricing_profile_id", defaultProfile.id);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching pricing profiles:", error);
     }
   };
 
@@ -427,6 +473,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         budget_dollars: data.budget_dollars || null,
         budget_notes: data.budget_notes || null,
         reference_number: data.reference_number || null,
+        pricing_profile_id: data.pricing_profile_id || null,
       };
 
       if (editingCase) {
@@ -641,6 +688,39 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               )}
             />
 
+
+            {/* Pricing Profile */}
+            <FormField
+              control={form.control}
+              name="pricing_profile_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pricing Profile</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select pricing profile" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {pricingProfiles.map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.name}
+                          {profile.is_default && " (Default)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Determines how services are billed for this case
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
