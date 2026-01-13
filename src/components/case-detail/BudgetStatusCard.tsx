@@ -15,9 +15,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useCaseBudget, CaseBudget } from "@/hooks/useCaseBudget";
+import { useCaseBudget } from "@/hooks/useCaseBudget";
 import { BudgetSetupForm } from "./BudgetSetupForm";
-import { BudgetAdjustmentForm } from "./BudgetAdjustmentForm";
 import { BudgetWarningBanner } from "./BudgetWarningBanner";
 import { getBudgetStatusStyles, formatBudgetCurrency, formatBudgetHours } from "@/lib/budgetUtils";
 import { ContextualHelp } from "@/components/help-center";
@@ -93,9 +92,11 @@ export function BudgetStatusCard({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Skeleton className="h-24 w-24 rounded-full mx-auto" />
+          <div className="flex justify-center gap-4">
+            <Skeleton className="h-24 w-24 rounded-full" />
+            <Skeleton className="h-24 w-24 rounded-full" />
+          </div>
           <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
         </CardContent>
       </Card>
     );
@@ -129,16 +130,23 @@ export function BudgetStatusCard({
     );
   }
 
-  // Get utilization info
+  // Use summary data from RPC as source of truth
+  const hasHoursBudget = summary && summary.budget_hours_authorized > 0;
+  const hasDollarsBudget = summary && summary.budget_dollars_authorized > 0;
+
+  // Get utilization info from RPC data
   const hoursUtilization = summary?.hours_utilization_pct || 0;
   const dollarsUtilization = summary?.dollars_utilization_pct || 0;
-  const primaryUtilization = Math.max(hoursUtilization, dollarsUtilization);
+  const primaryUtilization = Math.max(
+    hasHoursBudget ? hoursUtilization : 0,
+    hasDollarsBudget ? dollarsUtilization : 0
+  );
   
   const hoursStyles = getBudgetStatusStyles(hoursUtilization);
   const dollarsStyles = getBudgetStatusStyles(dollarsUtilization);
 
-  const showHoursWarning = budget.total_budget_hours && hoursUtilization >= 80;
-  const showDollarsWarning = budget.total_budget_amount && dollarsUtilization >= 80 && !showHoursWarning;
+  const showHoursWarning = hasHoursBudget && hoursUtilization >= 80;
+  const showDollarsWarning = hasDollarsBudget && dollarsUtilization >= 80 && !showHoursWarning;
 
   // Prepare donut chart data
   const createDonutData = (consumed: number, remaining: number, utilization: number) => {
@@ -154,11 +162,19 @@ export function BudgetStatusCard({
     ];
   };
 
-  const hoursDonutData = budget.total_budget_hours
+  const hoursDonutData = hasHoursBudget && summary
     ? createDonutData(
-        summary?.hours_consumed || 0,
-        summary?.hours_remaining || 0,
+        summary.hours_consumed,
+        summary.hours_remaining,
         hoursUtilization
+      )
+    : [];
+
+  const dollarsDonutData = hasDollarsBudget && summary
+    ? createDonutData(
+        summary.dollars_consumed,
+        summary.dollars_remaining,
+        dollarsUtilization
       )
     : [];
 
@@ -174,6 +190,9 @@ export function BudgetStatusCard({
         return "hsl(var(--primary))";
     }
   };
+
+  // Determine what to show based on what's configured
+  const showBothCircles = hasHoursBudget && hasDollarsBudget;
 
   return (
     <Card className={primaryUtilization >= 100 ? "border-destructive/50" : ""}>
@@ -229,98 +248,127 @@ export function BudgetStatusCard({
           </div>
         )}
 
-        {/* Donut Chart for Hours */}
-        {budget.total_budget_hours && summary && (
-          <div className="flex items-center justify-center gap-4">
-            <div className={`relative w-24 h-24 ${hoursUtilization >= 100 ? "animate-pulse" : ""}`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={hoursDonutData}
-                    dataKey="value"
-                    innerRadius={30}
-                    outerRadius={45}
-                    startAngle={90}
-                    endAngle={-270}
-                    paddingAngle={0}
-                  >
-                    <Cell fill={getDonutColor(hoursStyles.status)} />
-                    <Cell fill="hsl(var(--muted))" />
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-xs font-medium ${hoursStyles.textClass}`}>
-                  {Math.round(hoursUtilization)}%
-                </span>
+        {/* Dual Progress Circles - Side by Side */}
+        <div className={`flex items-center ${showBothCircles ? 'justify-center gap-6' : 'justify-center'}`}>
+          {/* Hours Donut */}
+          {hasHoursBudget && summary && (
+            <div className="flex flex-col items-center">
+              <div className={`relative w-24 h-24 ${hoursUtilization >= 100 ? "animate-pulse" : ""}`}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={hoursDonutData}
+                      dataKey="value"
+                      innerRadius={30}
+                      outerRadius={45}
+                      startAngle={90}
+                      endAngle={-270}
+                      paddingAngle={0}
+                    >
+                      <Cell fill={getDonutColor(hoursStyles.status)} />
+                      <Cell fill="hsl(var(--muted))" />
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <Clock className="h-3 w-3 text-muted-foreground mb-0.5" />
+                  <span className={`text-sm font-semibold ${hoursStyles.textClass}`}>
+                    {Math.round(hoursUtilization)}%
+                  </span>
+                </div>
+              </div>
+              <div className="text-center mt-2">
+                <p className={`text-lg font-semibold ${summary.hours_remaining < 0 ? "text-destructive" : ""}`}>
+                  {summary.hours_remaining < 0 ? "-" : ""}
+                  {formatBudgetHours(Math.abs(summary.hours_remaining)).replace(" hrs", "")}
+                </p>
+                <p className={`text-xs ${summary.hours_remaining < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                  {summary.hours_remaining < 0 ? "hrs over" : "hrs left"}
+                </p>
               </div>
             </div>
-            <div className="text-left">
-              <p className={`text-2xl font-semibold ${summary.hours_remaining < 0 ? "text-destructive" : ""}`}>
-                {summary.hours_remaining < 0 ? "-" : ""}
-                {formatBudgetHours(Math.abs(summary.hours_remaining)).replace(" hrs", "")}
-              </p>
-              <p className={`text-xs ${summary.hours_remaining < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                {summary.hours_remaining < 0 ? "hrs over budget" : "hrs remaining"}
-              </p>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Summary Lines */}
-        <div className="space-y-2 text-sm">
-          {budget.total_budget_hours && summary && (
+          {/* Dollars Donut */}
+          {hasDollarsBudget && summary && (
+            <div className="flex flex-col items-center">
+              <div className={`relative w-24 h-24 ${dollarsUtilization >= 100 ? "animate-pulse" : ""}`}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={dollarsDonutData}
+                      dataKey="value"
+                      innerRadius={30}
+                      outerRadius={45}
+                      startAngle={90}
+                      endAngle={-270}
+                      paddingAngle={0}
+                    >
+                      <Cell fill={getDonutColor(dollarsStyles.status)} />
+                      <Cell fill="hsl(var(--muted))" />
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <DollarSign className="h-3 w-3 text-muted-foreground mb-0.5" />
+                  <span className={`text-sm font-semibold ${dollarsStyles.textClass}`}>
+                    {Math.round(dollarsUtilization)}%
+                  </span>
+                </div>
+              </div>
+              <div className="text-center mt-2">
+                <p className={`text-lg font-semibold ${summary.dollars_remaining < 0 ? "text-destructive" : ""}`}>
+                  {formatBudgetCurrency(Math.abs(summary.dollars_remaining))}
+                </p>
+                <p className={`text-xs ${summary.dollars_remaining < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                  {summary.dollars_remaining < 0 ? "over budget" : "remaining"}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Summary Lines - Compact */}
+        <div className="space-y-1.5 text-sm border-t pt-3">
+          {hasHoursBudget && summary && (
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 Hours
               </span>
               <span className={`font-medium ${hoursStyles.textClass}`}>
-                {formatBudgetHours(summary.hours_consumed).replace(" hrs", "")} / {formatBudgetHours(budget.total_budget_hours).replace(" hrs", "")}
-                <span className={`ml-1 text-xs ${hoursStyles.textClass}`}>
-                  ({Math.round(hoursUtilization)}%)
-                </span>
+                {formatBudgetHours(summary.hours_consumed).replace(" hrs", "")} / {formatBudgetHours(summary.budget_hours_authorized).replace(" hrs", "")}
               </span>
             </div>
           )}
-          {budget.total_budget_amount && summary && (
+          {hasDollarsBudget && summary && (
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
                 Dollars
               </span>
               <span className={`font-medium ${dollarsStyles.textClass}`}>
-                {formatBudgetCurrency(summary.dollars_consumed)} / {formatBudgetCurrency(budget.total_budget_amount)}
-                <span className={`ml-1 text-xs ${dollarsStyles.textClass}`}>
-                  ({Math.round(dollarsUtilization)}%)
-                </span>
+                {formatBudgetCurrency(summary.dollars_consumed)} / {formatBudgetCurrency(summary.budget_dollars_authorized)}
               </span>
             </div>
           )}
         </div>
 
-        {/* Budget type indicator */}
-        <div className="text-xs text-muted-foreground pt-1 border-t">
-          Budget Type: {budget.budget_type === "both" ? "Hours & Dollars" : budget.budget_type === "hours" ? "Hours Only" : "Dollars Only"}
-        </div>
-
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2">
           {canModifyBudget && (
-            <>
-              <BudgetSetupForm
-                caseId={caseId}
-                organizationId={organizationId}
-                onSuccess={handleBudgetSuccess}
-                existingBudget={budget}
-                triggerButton={
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    Adjust
-                  </Button>
-                }
-              />
-            </>
+            <BudgetSetupForm
+              caseId={caseId}
+              organizationId={organizationId}
+              onSuccess={handleBudgetSuccess}
+              existingBudget={budget}
+              triggerButton={
+                <Button variant="outline" size="sm" className="flex-1">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  Adjust
+                </Button>
+              }
+            />
           )}
           <Button
             variant="ghost"
