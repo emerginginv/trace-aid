@@ -116,6 +116,7 @@ const Settings = () => {
   const [updateTypes, setUpdateTypes] = useState<PicklistItem[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<PicklistItem[]>([]);
   const [eventTypes, setEventTypes] = useState<PicklistItem[]>([]);
+  const [caseTypes, setCaseTypes] = useState<PicklistItem[]>([]);
 
   // Organization Context
   const { organization, subscriptionStatus, checkSubscription, refreshOrganization } = useOrganization();
@@ -264,11 +265,15 @@ const Settings = () => {
       const events = picklists
         .filter(p => p.type === 'event_type')
         .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
+      const types = picklists
+        .filter(p => p.type === 'case_type')
+        .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
 
       setCaseStatuses(statuses);
       setUpdateTypes(updates);
       setExpenseCategories(categories);
       setEventTypes(events);
+      setCaseTypes(types);
     } catch (error) {
       console.error("Error loading settings:", error);
       toast.error("Failed to load settings");
@@ -688,6 +693,8 @@ const Settings = () => {
                 setExpenseCategories={setExpenseCategories}
                 eventTypes={eventTypes}
                 setEventTypes={setEventTypes}
+                caseTypes={caseTypes}
+                setCaseTypes={setCaseTypes}
                 loadSettings={loadSettings}
               />
             </TabsContent>

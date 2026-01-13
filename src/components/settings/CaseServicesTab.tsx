@@ -10,15 +10,17 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Pencil, Trash2, GripVertical, Calendar, Briefcase, Loader2, Lock, User, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, Calendar, Briefcase, Loader2, Lock, User, Users, Info } from "lucide-react";
 import { toast } from "sonner";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Link } from "react-router-dom";
 
 const MAX_SERVICE_NAME_LENGTH = 100;
 type ScheduleMode = 'none' | 'primary_investigator' | 'activity_based';
@@ -585,6 +587,54 @@ export const CaseServicesTab = () => {
                         </div>
                       </div>
                     </RadioGroup>
+                  </div>
+
+                  {/* Case Type Availability Section */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-3">Case Type Availability</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Select which case types this service applies to
+                    </p>
+                    
+                    {availableCaseTypes.length === 0 ? (
+                      <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription className="flex items-center gap-2">
+                          No case types configured.
+                          <Button variant="link" size="sm" className="h-auto p-0" asChild>
+                            <Link to="/settings?tab=picklists">Add case types in Picklists</Link>
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <>
+                        <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
+                          {availableCaseTypes.map((type) => (
+                            <div key={type} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`case-type-${type}`}
+                                checked={formCaseTypes.includes(type)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setFormCaseTypes([...formCaseTypes, type]);
+                                  } else {
+                                    setFormCaseTypes(formCaseTypes.filter(t => t !== type));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`case-type-${type}`} className="cursor-pointer text-sm">
+                                {type}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                        {formCaseTypes.length === 0 && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Leave empty to make this service available for all case types
+                          </p>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   {formScheduleMode !== 'none' && (
