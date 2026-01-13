@@ -17,9 +17,12 @@ interface BillableItem {
   notes?: string;
   subject_id?: string;
   activity_id?: string;
-  finance_type: 'expense' | 'time';
+  finance_type: 'expense' | 'time' | 'billing_item';
   hours?: number;
   hourly_rate?: number;
+  quantity?: number;
+  unit_price?: number;
+  pricing_model?: string;
 }
 
 interface Subject {
@@ -69,13 +72,14 @@ export const InvoiceFromExpenses = ({ caseId, onSuccess }: InvoiceFromExpensesPr
         return;
       }
 
-      // Fetch approved, uninvoiced time and expense entries
+      // Fetch approved, uninvoiced time, expense, and billing item entries
+      // SYSTEM PROMPT 11: Invoice line items come ONLY from approved billing items
       const { data: itemsData, error: itemsError } = await supabase
         .from("case_finances")
         .select("*")
         .eq("case_id", caseId)
         .eq("organization_id", orgMember.organization_id)
-        .in("finance_type", ["expense", "time"])
+        .in("finance_type", ["expense", "time", "billing_item"])
         .eq("status", "approved")
         .is("invoice_id", null)
         .order("date", { ascending: false });
@@ -340,6 +344,7 @@ export const InvoiceFromExpenses = ({ caseId, onSuccess }: InvoiceFromExpensesPr
               <TableBody>
                 {billableItems.map((item) => {
                   const isTime = item.finance_type === 'time';
+                  const isBillingItem = item.finance_type === 'billing_item';
                   return (
                     <TableRow 
                       key={item.id}
@@ -353,8 +358,8 @@ export const InvoiceFromExpenses = ({ caseId, onSuccess }: InvoiceFromExpensesPr
                         />
                       </TableCell>
                       <TableCell>
-                        <Badge variant={isTime ? "default" : "secondary"}>
-                          {isTime ? 'Time' : 'Expense'}
+                        <Badge variant={isBillingItem ? "default" : isTime ? "secondary" : "outline"}>
+                          {isBillingItem ? 'Billing Item' : isTime ? 'Time' : 'Expense'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -372,6 +377,12 @@ export const InvoiceFromExpenses = ({ caseId, onSuccess }: InvoiceFromExpensesPr
                         <div className="space-y-1 text-sm">
                           {isTime && item.hours && item.hourly_rate && (
                             <div>{item.hours} hrs @ ${item.hourly_rate}/hr</div>
+                          )}
+                          {isBillingItem && item.quantity && item.unit_price && (
+                            <div>{item.quantity} × ${item.unit_price}</div>
+                          )}
+                          {isBillingItem && item.pricing_model && (
+                            <Badge variant="outline" className="text-xs">{item.pricing_model}</Badge>
                           )}
                           {item.subject_id && subjects[item.subject_id] && (
                             <div className="text-muted-foreground">
