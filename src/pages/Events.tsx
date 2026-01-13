@@ -28,12 +28,12 @@ interface EventWithCase {
   status: string;
   due_date: string | null;
   address: string | null;
-  event_subtype: string | null;
   completed: boolean | null;
   completed_at: string | null;
   assigned_user_id: string | null;
   created_at: string;
   updated_at: string;
+  service_name?: string | null;
   cases: {
     id: string;
     case_number: string;
@@ -68,18 +68,8 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
-const EVENT_SUBTYPE_OPTIONS = [
-  { value: 'all', label: 'All Subtypes' },
-  { value: 'Client Meeting', label: 'Client Meeting' },
-  { value: 'Team Meeting', label: 'Team Meeting' },
-  { value: 'Phone Call', label: 'Phone Call' },
-  { value: 'Video Call', label: 'Video Call' },
-  { value: 'Field Work', label: 'Field Work' },
-  { value: 'Site Visit', label: 'Site Visit' },
-  { value: 'Interview', label: 'Interview' },
-  { value: 'Surveillance', label: 'Surveillance' },
-  { value: 'Court Appearance', label: 'Court Appearance' },
-  { value: 'Other', label: 'Other' },
+const EVENT_SERVICE_OPTIONS = [
+  { value: 'all', label: 'All Services' },
 ];
 
 const getStatusBadgeStyles = (status: string) => {
@@ -97,8 +87,8 @@ const getStatusBadgeStyles = (status: string) => {
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { key: "title", label: "Title" },
-  { key: "event_subtype", label: "Subtype", format: (v) => v || "-" },
-  { key: "case_number", label: "Case #", format: (_, row) => row.cases?.case_number || "-" },
+  { key: "service_name", label: "Service", format: (v: any) => v || "-" },
+  { key: "case_number", label: "Case #", format: (_: any, row: any) => row.cases?.case_number || "-" },
   { key: "case_title", label: "Case Title", format: (_, row) => row.cases?.title || "-" },
   { key: "status", label: "Status", format: (v) => STATUS_OPTIONS.find(s => s.value === v)?.label || v },
   { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
@@ -116,7 +106,7 @@ export default function Events() {
   const [events, setEvents] = useState<EventWithCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [subtypeFilter, setSubtypeFilter] = useState<string>("all");
+  const [serviceFilter, setServiceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
     return (localStorage.getItem('events-view-mode') as 'list' | 'cards') || 'cards';
@@ -144,10 +134,17 @@ export default function Events() {
     setLoading(true);
 
     try {
-      // Fetch only events (activity_type = 'event')
+      // Fetch events with linked service info
       const { data: eventsData, error: eventsError } = await supabase
         .from("case_activities")
-        .select("*")
+        .select(`
+          *,
+          case_service_instances (
+            case_services (
+              name
+            )
+          )
+        `)
         .eq("organization_id", organization.id)
         .eq("activity_type", "event")
         .order("due_date", { ascending: true, nullsFirst: false });
@@ -190,10 +187,11 @@ export default function Events() {
         }
       }
 
-      const enrichedEvents: EventWithCase[] = (eventsData || [])
+      const enrichedEvents: EventWithCase[] = ((eventsData || []) as any[])
         .filter(a => casesMap[a.case_id])
         .map((a) => ({
           ...a,
+          service_name: a.case_service_instances?.case_services?.name || null,
           cases: casesMap[a.case_id],
           assigned_user: a.assigned_user_id ? usersMap[a.assigned_user_id] || null : null,
         }));
@@ -211,10 +209,10 @@ export default function Events() {
 
       enrichedEvents.forEach((e) => {
         if (e.status === 'completed') newCounts.completed++;
-        const subtype = e.event_subtype?.toLowerCase() || '';
-        if (subtype.includes('meeting')) newCounts.meetings++;
-        if (subtype.includes('call')) newCounts.calls++;
-        if (subtype.includes('field') || subtype.includes('surveillance') || subtype.includes('site')) newCounts.fieldWork++;
+        const serviceName = (e.service_name || '').toLowerCase();
+        if (serviceName.includes('meeting')) newCounts.meetings++;
+        if (serviceName.includes('call')) newCounts.calls++;
+        if (serviceName.includes('field') || serviceName.includes('surveillance') || serviceName.includes('site')) newCounts.fieldWork++;
       });
 
       setCounts(newCounts);
@@ -227,8 +225,8 @@ export default function Events() {
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
-      // Subtype filter
-      if (subtypeFilter !== "all" && event.event_subtype !== subtypeFilter) {
+      // Service filter
+      if (serviceFilter !== "all" && event.service_name !== serviceFilter) {
         return false;
       }
 
@@ -253,7 +251,7 @@ export default function Events() {
 
       return true;
     });
-  }, [events, subtypeFilter, statusFilter, searchQuery]);
+  }, [events, serviceFilter, statusFilter, searchQuery]);
 
   if (permissionsLoading) {
     return (
@@ -323,9 +321,7 @@ export default function Events() {
               key={stat.key} 
               className="cursor-pointer hover:shadow-md transition-shadow" 
               onClick={() => {
-                if (stat.key === 'meetings') setSubtypeFilter(subtypeFilter === 'Client Meeting' ? 'all' : 'Client Meeting');
-                else if (stat.key === 'calls') setSubtypeFilter(subtypeFilter === 'Phone Call' ? 'all' : 'Phone Call');
-                else if (stat.key === 'fieldWork') setSubtypeFilter(subtypeFilter === 'Field Work' ? 'all' : 'Field Work');
+                // Stats filter removed since we no longer have event subtypes
               }}
             >
               <CardContent className="p-4 flex items-center gap-4">
@@ -353,12 +349,12 @@ export default function Events() {
             className="pl-9"
           />
         </div>
-        <Select value={subtypeFilter} onValueChange={setSubtypeFilter}>
+        <Select value={serviceFilter} onValueChange={setServiceFilter}>
           <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Subtype" />
+            <SelectValue placeholder="Service" />
           </SelectTrigger>
           <SelectContent>
-            {EVENT_SUBTYPE_OPTIONS.map((s) => (
+            {EVENT_SERVICE_OPTIONS.map((s) => (
               <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
             ))}
           </SelectContent>
@@ -432,7 +428,7 @@ export default function Events() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px]">Title</TableHead>
-                <TableHead>Subtype</TableHead>
+                <TableHead>Service</TableHead>
                 <TableHead>Case</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Due Date</TableHead>

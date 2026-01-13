@@ -661,7 +661,6 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
-          event_subtype: string | null
           external_record_id: string | null
           external_system_name: string | null
           id: string
@@ -686,7 +685,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
-          event_subtype?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           id?: string
@@ -711,7 +709,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
-          event_subtype?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           id?: string
