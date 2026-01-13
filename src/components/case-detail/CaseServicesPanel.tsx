@@ -38,10 +38,11 @@ interface CaseServiceInstance {
 
 interface CaseServicesPanelProps {
   caseId: string;
+  caseTypeTag?: string | null;
   isClosedCase?: boolean;
 }
 
-export const CaseServicesPanel = ({ caseId, isClosedCase = false }: CaseServicesPanelProps) => {
+export const CaseServicesPanel = ({ caseId, caseTypeTag = null, isClosedCase = false }: CaseServicesPanelProps) => {
   const { organization } = useOrganization();
   const { isManager, isAdmin } = useUserRole();
   const canManage = (isManager || isAdmin) && !isClosedCase;
@@ -216,7 +217,11 @@ export const CaseServicesPanel = ({ caseId, isClosedCase = false }: CaseServices
                           </span>
                         )}
                       </div>
-                      {instance.status === 'scheduled' && instance.scheduled_at ? (
+                      {instance.case_service?.schedule_mode === 'none' ? (
+                        <p className="text-xs text-muted-foreground">
+                          No scheduling required
+                        </p>
+                      ) : instance.status === 'scheduled' && instance.scheduled_at ? (
                         <p className="text-xs text-muted-foreground">
                           Scheduled {new Date(instance.scheduled_at).toLocaleDateString()}
                         </p>
@@ -227,22 +232,31 @@ export const CaseServicesPanel = ({ caseId, isClosedCase = false }: CaseServices
                       )}
                     </div>
                     
-                    {/* Status badge */}
-                    <Badge
-                      variant={instance.status === 'scheduled' ? 'secondary' : 'outline'}
-                      className={cn(
-                        "shrink-0 text-xs",
-                        instance.status === 'scheduled' 
-                          ? "bg-green-100 text-green-700 border-green-200" 
-                          : "border-amber-500 text-amber-600"
-                      )}
-                    >
-                      {instance.status === 'scheduled' ? (
-                        <><CheckCircle2 className="h-3 w-3 mr-1" /> Scheduled</>
-                      ) : (
-                        <><Clock className="h-3 w-3 mr-1" /> Unscheduled</>
-                      )}
-                    </Badge>
+                    {/* Status badge - show different for schedule_mode = 'none' */}
+                    {instance.case_service?.schedule_mode === 'none' ? (
+                      <Badge
+                        variant="secondary"
+                        className="shrink-0 text-xs bg-muted text-muted-foreground"
+                      >
+                        No Scheduling
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant={instance.status === 'scheduled' ? 'secondary' : 'outline'}
+                        className={cn(
+                          "shrink-0 text-xs",
+                          instance.status === 'scheduled' 
+                            ? "bg-green-100 text-green-700 border-green-200" 
+                            : "border-amber-500 text-amber-600"
+                        )}
+                      >
+                        {instance.status === 'scheduled' ? (
+                          <><CheckCircle2 className="h-3 w-3 mr-1" /> Scheduled</>
+                        ) : (
+                          <><Clock className="h-3 w-3 mr-1" /> Unscheduled</>
+                        )}
+                      </Badge>
+                    )}
                   </button>
                 ))}
               </div>
@@ -269,6 +283,7 @@ export const CaseServicesPanel = ({ caseId, isClosedCase = false }: CaseServices
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         caseId={caseId}
+        caseTypeTag={caseTypeTag}
         existingServiceIds={serviceInstances.map(s => s.case_service_id)}
         onSuccess={handleAddSuccess}
       />

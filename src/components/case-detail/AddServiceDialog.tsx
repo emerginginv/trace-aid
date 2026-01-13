@@ -24,12 +24,14 @@ interface CaseService {
   description: string | null;
   schedule_mode: string;
   is_active: boolean;
+  case_types: string[];
 }
 
 interface AddServiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   caseId: string;
+  caseTypeTag: string | null;
   existingServiceIds: string[];
   onSuccess: () => void;
 }
@@ -38,6 +40,7 @@ export const AddServiceDialog = ({
   open,
   onOpenChange,
   caseId,
+  caseTypeTag,
   existingServiceIds,
   onSuccess,
 }: AddServiceDialogProps) => {
@@ -59,7 +62,7 @@ export const AddServiceDialog = ({
     try {
       const { data, error } = await supabase
         .from("case_services")
-        .select("id, name, code, color, description, schedule_mode, is_active")
+        .select("id, name, code, color, description, schedule_mode, is_active, case_types")
         .eq("organization_id", organization.id)
         .eq("is_active", true)
         .order("display_order", { ascending: true });
@@ -121,6 +124,20 @@ export const AddServiceDialog = ({
     }
   };
 
+  // Helper to check if service is available for case type
+  const isServiceAvailableForCaseType = (service: CaseService) => {
+    // If service has no case type restrictions, it's available for all
+    if (!service.case_types || service.case_types.length === 0) {
+      return true;
+    }
+    // If case has no type tag, only unrestricted services are available
+    if (!caseTypeTag) {
+      return true;
+    }
+    // Check if the case type is in the service's allowed types
+    return service.case_types.includes(caseTypeTag);
+  };
+
   const filteredServices = services.filter(service => {
     const query = searchQuery.toLowerCase();
     return (
@@ -130,8 +147,14 @@ export const AddServiceDialog = ({
     );
   });
 
+  // Services available for this case type and not already added
   const availableServices = filteredServices.filter(
-    service => !existingServiceIds.includes(service.id)
+    service => !existingServiceIds.includes(service.id) && isServiceAvailableForCaseType(service)
+  );
+  
+  // Services not available for this case type
+  const unavailableServices = filteredServices.filter(
+    service => !existingServiceIds.includes(service.id) && !isServiceAvailableForCaseType(service)
   );
   
   const alreadyAddedServices = filteredServices.filter(
@@ -224,16 +247,47 @@ export const AddServiceDialog = ({
                   </button>
                 ))}
 
+                {/* Unavailable services (wrong case type) */}
+                {unavailableServices.length > 0 && (
+                  <>
+                    <div className="py-2">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                        Not Available for This Case Type
+                      </p>
+                    </div>
+                    {unavailableServices.map((service) => (
+                      <div
+                        key={service.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 opacity-50"
+                        title={`This service is only available for: ${service.case_types.join(', ')}`}
+                      >
+                        <div
+                          className="w-2 h-8 rounded-full shrink-0"
+                          style={{ backgroundColor: service.color || '#6366f1' }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate">
+                              {service.name}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Only for: {service.case_types.join(', ')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
                 {/* Already added services */}
                 {alreadyAddedServices.length > 0 && (
                   <>
-                    {availableServices.length > 0 && (
-                      <div className="py-2">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                          Already Added
-                        </p>
-                      </div>
-                    )}
+                    <div className="py-2">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                        Already Added
+                      </p>
+                    </div>
                     {alreadyAddedServices.map((service) => (
                       <div
                         key={service.id}

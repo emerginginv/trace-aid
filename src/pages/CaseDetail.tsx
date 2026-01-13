@@ -60,6 +60,7 @@ interface Case {
   parent_case_id: string | null;
   instance_number: number;
   reference_number?: string | null;
+  case_type_tag?: string | null;
 }
 
 interface Account {
@@ -797,6 +798,7 @@ const CaseDetail = () => {
                     />
                     <CaseServicesPanel 
                       caseId={id!} 
+                      caseTypeTag={caseData.case_type_tag}
                       isClosedCase={isClosed} 
                     />
                     <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
