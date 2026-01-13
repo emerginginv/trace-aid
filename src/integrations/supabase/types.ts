@@ -6955,6 +6955,14 @@ export type Database = {
         }
         Returns: Json
       }
+      approve_billing_item: {
+        Args: { p_approver_id: string; p_billing_item_id: string }
+        Returns: {
+          budget_blocked: boolean
+          error_message: string
+          success: boolean
+        }[]
+      }
       calculate_customer_health: {
         Args: {
           p_organization_id: string
@@ -7767,6 +7775,17 @@ export type Database = {
       }
       purge_case_by_retention: { Args: { p_case_id: string }; Returns: Json }
       purge_organization: { Args: { p_organization_id: string }; Returns: Json }
+      reject_billing_item: {
+        Args: {
+          p_billing_item_id: string
+          p_reason?: string
+          p_rejector_id: string
+        }
+        Returns: {
+          error_message: string
+          success: boolean
+        }[]
+      }
       request_custom_domain: {
         Args: {
           p_domain: string
