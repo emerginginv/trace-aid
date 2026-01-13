@@ -108,3 +108,70 @@ export function getConsumptionColor(utilizationPct: number): string {
   if (utilizationPct >= 75) return "text-amber-500";
   return "text-emerald-500";
 }
+
+/**
+ * SYSTEM PROMPT 9: Get forecast status styles
+ * Separate styling for forecast consumption vs actual consumption
+ */
+export type ForecastStatus = "normal" | "warning" | "exceeded";
+
+export interface ForecastStatusStyles {
+  status: ForecastStatus;
+  bgClass: string;
+  textClass: string;
+  borderClass: string;
+  label: string;
+}
+
+export function getForecastStatus(forecastUtilizationPct: number): ForecastStatus {
+  if (forecastUtilizationPct >= 100) return "exceeded";
+  if (forecastUtilizationPct >= 80) return "warning";
+  return "normal";
+}
+
+export function getForecastStatusStyles(forecastUtilizationPct: number): ForecastStatusStyles {
+  const status = getForecastStatus(forecastUtilizationPct);
+
+  switch (status) {
+    case "exceeded":
+      return {
+        status,
+        bgClass: "bg-red-500/10",
+        textClass: "text-red-600 dark:text-red-400",
+        borderClass: "border-red-500/50",
+        label: "Forecast Exceeds Budget",
+      };
+    case "warning":
+      return {
+        status,
+        bgClass: "bg-amber-500/10",
+        textClass: "text-amber-600 dark:text-amber-400",
+        borderClass: "border-amber-500/50",
+        label: "Forecast Warning",
+      };
+    default:
+      return {
+        status,
+        bgClass: "",
+        textClass: "text-muted-foreground",
+        borderClass: "border-border",
+        label: "On Track",
+      };
+  }
+}
+
+/**
+ * Get a human-readable message for budget forecast warning
+ */
+export function getBudgetForecastWarningMessage(
+  isForecastExceeded: boolean,
+  hardCap: boolean
+): string {
+  if (isForecastExceeded && hardCap) {
+    return "This pending billing item would exceed the budget. Approval may be blocked due to hard cap.";
+  }
+  if (isForecastExceeded) {
+    return "This pending billing item would put the case over budget.";
+  }
+  return "This pending billing item brings the case close to the budget limit.";
+}

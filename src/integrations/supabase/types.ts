@@ -7293,6 +7293,30 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
+      get_budget_forecast: {
+        Args: { p_case_id: string }
+        Returns: {
+          amount_authorized: number
+          amount_consumed: number
+          amount_forecast: number
+          amount_forecast_utilization_pct: number
+          amount_utilization_pct: number
+          hard_cap: boolean
+          has_budget: boolean
+          hours_authorized: number
+          hours_consumed: number
+          hours_forecast: number
+          hours_forecast_utilization_pct: number
+          hours_utilization_pct: number
+          is_exceeded: boolean
+          is_forecast_exceeded: boolean
+          is_forecast_warning: boolean
+          is_warning: boolean
+          pending_amount: number
+          pending_count: number
+          pending_hours: number
+        }[]
+      }
       get_case_budget_summary: {
         Args: { p_case_id: string }
         Returns: {
