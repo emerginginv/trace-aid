@@ -35,7 +35,6 @@ interface CalendarEvent {
   date: string;
   time: string;
   type: string;
-  eventSubtype: string | null;
   eventStatus: string;
   assignedUserId: string | null;
   assignedUserName: string | null;
@@ -249,7 +248,6 @@ const Dashboard = () => {
             date: event.due_date,
             time: "All Day",
             type: event.activity_type || "event",
-            eventSubtype: event.event_subtype,
             eventStatus: event.status || "to_do",
             assignedUserId: event.assigned_user_id,
             assignedUserName: assignedUser?.full_name || assignedUser?.email || null,

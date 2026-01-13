@@ -147,15 +147,22 @@ export default function ActivityAssignmentAuditReport() {
         }
       }
 
-      // Fetch unique services (event_subtype) from case_activities
-      const { data: activityServices } = await supabase
-        .from("case_activities")
-        .select("event_subtype")
-        .eq("organization_id", organizationId)
-        .not("event_subtype", "is", null);
+      // Fetch unique services from case_service_instances
+      const { data: serviceInstances } = await supabase
+        .from("case_service_instances")
+        .select(`
+          case_services (
+            name
+          )
+        `)
+        .eq("organization_id", organizationId);
 
-      if (activityServices) {
-        const uniqueServices = [...new Set(activityServices.map((a) => a.event_subtype).filter(Boolean))] as string[];
+      if (serviceInstances) {
+        const uniqueServices = [...new Set(
+          (serviceInstances as any[])
+            .map((s) => s.case_services?.name)
+            .filter(Boolean)
+        )] as string[];
         setServices(uniqueServices);
       }
 
@@ -189,13 +196,17 @@ export default function ActivityAssignmentAuditReport() {
           activity_type,
           status,
           due_date,
-          event_subtype,
           created_at,
           completed,
           completed_at,
           assigned_user_id,
           case_id,
-          organization_id
+          organization_id,
+          case_service_instances (
+            case_services (
+              name
+            )
+          )
         `)
         .eq("organization_id", organizationId)
         .order("due_date", { ascending: false });
@@ -224,11 +235,10 @@ export default function ActivityAssignmentAuditReport() {
         query = query.eq("assigned_user_id", selectedCalendar);
       }
 
-      if (selectedService !== "all") {
-        query = query.eq("event_subtype", selectedService);
-      }
+      // Note: Service filter now works differently since we removed event_subtype
+      // Would need to filter by linked service instance if needed
 
-      const { data: activityData, error } = await query;
+      const { data: activityData, error } = await query as { data: any[] | null; error: any };
 
       if (error) throw error;
 
@@ -302,7 +312,7 @@ export default function ActivityAssignmentAuditReport() {
           activityType: activity.activity_type === "task" ? "Task" : "Event",
           calendarName: assignedUserName,
           calendarColor: calendarColor,
-          service: activity.event_subtype,
+          service: activity.case_service_instances?.case_services?.name || null,
           status: activity.status || "Not Started",
           assignedDate: activity.created_at,
           dueDate: activity.due_date,

@@ -28,7 +28,6 @@ interface ActivityWithCase {
   status: string;
   due_date: string | null;
   address: string | null;
-  event_subtype: string | null;
   completed: boolean | null;
   completed_at: string | null;
   assigned_user_id: string | null;
@@ -171,7 +170,7 @@ export default function Tasks() {
         }
       }
 
-      const enrichedTasks: ActivityWithCase[] = (tasksData || [])
+      const enrichedTasks: ActivityWithCase[] = ((tasksData || []) as any[])
         .filter(a => casesMap[a.case_id])
         .map((a) => ({
           ...a,

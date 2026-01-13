@@ -32,7 +32,6 @@ const eventSchema = z.object({
   activity_type: z.literal("event"),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  event_subtype: z.string().min(1, "Event type is required"),
   start_date: z.date(),
   start_time: z.string().min(1, "Start time is required"),
   end_date: z.date(),
@@ -50,18 +49,6 @@ interface SubjectAddress {
   type: 'person' | 'location';
 }
 
-const DEFAULT_EVENT_TYPES = [
-  'Surveillance Session',
-  'Canvass Attempt',
-  'Records Search',
-  'Field Activity',
-  'Interview Session',
-  'Site Visit',
-  'Background Check',
-  'Database Search',
-  'Court Attendance',
-  'Other'
-];
 
 interface User {
   id: string;
@@ -98,7 +85,6 @@ export function ActivityForm({
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
-  const [eventTypes, setEventTypes] = useState<string[]>(DEFAULT_EVENT_TYPES);
   const [subjectAddresses, setSubjectAddresses] = useState<SubjectAddress[]>([]);
   const navigate = useNavigate();
   
@@ -113,11 +99,10 @@ export function ActivityForm({
       description: "",
       due_date: activityType === "task" ? prefilledDate || undefined : undefined,
       start_date: activityType === "event" ? prefilledDate || new Date() : undefined,
-      start_time: activityType === "event" ? "09:00" : undefined,
-      end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
-      end_time: activityType === "event" ? "10:00" : undefined,
-      event_subtype: activityType === "event" ? "" : undefined,
-      status: activityType === "task" ? "to_do" : "scheduled",
+        start_time: activityType === "event" ? "09:00" : undefined,
+        end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
+        end_time: activityType === "event" ? "10:00" : undefined,
+        status: activityType === "task" ? "to_do" : "scheduled",
       assigned_user_id: undefined,
       case_service_instance_id: undefined,
     } as any,
@@ -127,7 +112,6 @@ export function ActivityForm({
     if (caseId && open) {
       fetchCaseTitle();
       if (activityType === "event") {
-        fetchEventTypes();
         fetchSubjectAddresses();
       }
     }
@@ -168,26 +152,6 @@ export function ActivityForm({
       }
     } catch (error) {
       console.error("Error fetching subject addresses:", error);
-    }
-  };
-
-  const fetchEventTypes = async () => {
-    try {
-      if (!organizationId) return;
-
-      const { data: picklists } = await supabase
-        .from("picklists")
-        .select("value")
-        .eq("type", "event_type")
-        .eq("organization_id", organizationId)
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
-
-      if (picklists && picklists.length > 0) {
-        setEventTypes(picklists.map(p => p.value));
-      }
-    } catch (error) {
-      console.error("Error fetching event types:", error);
     }
   };
 
@@ -235,7 +199,6 @@ export function ActivityForm({
         start_time: editingActivity.activity_type === "event" && dueDate ? format(dueDate, "HH:mm") : "09:00",
         end_date: editingActivity.activity_type === "event" ? dueDate : undefined,
         end_time: editingActivity.activity_type === "event" && dueDate ? format(new Date(dueDate.getTime() + 3600000), "HH:mm") : "10:00",
-        event_subtype: editingActivity.event_subtype || "",
         status: editingActivity.status,
         assigned_user_id: editingActivity.assigned_user_id || undefined,
         address: editingActivity.address || "",
@@ -251,7 +214,6 @@ export function ActivityForm({
         start_time: activityType === "event" ? "09:00" : undefined,
         end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
         end_time: activityType === "event" ? "10:00" : undefined,
-        event_subtype: activityType === "event" ? "" : undefined,
         status: activityType === "task" ? "to_do" : "scheduled",
         assigned_user_id: undefined,
         address: "",
@@ -303,7 +265,6 @@ export function ActivityForm({
 
       // Add event-specific fields
       if (values.activity_type === "event") {
-        activityData.event_subtype = values.event_subtype || null;
         activityData.address = values.address || null;
       }
 
@@ -430,36 +391,6 @@ export function ActivityForm({
                 </FormItem>
               )}
             />
-
-            {activityType === "event" && (
-              <FormField
-                control={form.control}
-                name="event_subtype"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Event Type</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select event type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {eventTypes.map((eventType) => (
-                          <SelectItem key={eventType} value={eventType}>
-                            {eventType}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
 
             <FormField
               control={form.control}

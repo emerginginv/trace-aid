@@ -33,7 +33,6 @@ import { WizardNavigation } from "../WizardNavigation";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  event_subtype: z.string().min(1, "Event type is required"),
   description: z.string().optional(),
   start_date: z.date(),
   start_time: z.string().min(1, "Start time is required"),
@@ -44,7 +43,6 @@ type FormData = z.infer<typeof formSchema>;
 interface Event {
   id: string;
   title: string;
-  event_subtype: string;
   due_date: string;
 }
 
@@ -70,14 +68,12 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
   const [hasStarted, setHasStarted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
-  const [eventTypes, setEventTypes] = useState<string[]>(DEFAULT_EVENT_TYPES);
   const [dateOpen, setDateOpen] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      event_subtype: "",
       description: "",
       start_date: new Date(),
       start_time: "09:00",
@@ -85,33 +81,14 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
   });
 
   useEffect(() => {
-    fetchEventTypes();
     fetchEvents();
   }, [caseId, organizationId]);
-
-  const fetchEventTypes = async () => {
-    try {
-      const { data } = await supabase
-        .from("picklists")
-        .select("value")
-        .eq("type", "event_type")
-        .eq("organization_id", organizationId)
-        .eq("is_active", true)
-        .order("display_order");
-
-      if (data && data.length > 0) {
-        setEventTypes(data.map(p => p.value));
-      }
-    } catch (error) {
-      console.error("Error fetching event types:", error);
-    }
-  };
 
   const fetchEvents = async () => {
     try {
       const { data, error } = await supabase
         .from("case_activities")
-        .select("id, title, event_subtype, due_date")
+        .select("id, title, due_date")
         .eq("case_id", caseId)
         .eq("activity_type", "event")
         .order("due_date", { ascending: true });
@@ -141,7 +118,6 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
         activity_type: "event",
         title: data.title,
         description: data.description || null,
-        event_subtype: data.event_subtype,
         due_date: dateTime.toISOString(),
         status: "scheduled",
       });
@@ -151,7 +127,6 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
       toast.success("Event added");
       form.reset({
         title: "",
-        event_subtype: "",
         description: "",
         start_date: new Date(),
         start_time: "09:00",
@@ -239,7 +214,6 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
                   <div>
                     <p className="font-medium text-sm">{event.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="secondary">{event.event_subtype}</Badge>
                       {event.due_date && (
                         <span>{format(new Date(event.due_date), "MMM d, yyyy h:mm a")}</span>
                       )}

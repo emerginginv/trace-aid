@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import type { ResolvedTimeRange } from "@/lib/analytics/time-ranges";
 
 interface EventActivityChartProps {
@@ -17,21 +17,22 @@ const STATUS_COLORS: Record<string, string> = {
   in_progress: "hsl(var(--chart-3))",
 };
 
-const EVENT_SUBTYPE_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
-
 export function EventActivityChart({ organizationId, timeRange }: EventActivityChartProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ["event-activity-by-type", organizationId, timeRange],
+    queryKey: ["event-activity-by-service", organizationId, timeRange],
     queryFn: async () => {
       const { data: events, error } = await supabase
         .from("case_activities")
-        .select("id, event_subtype, status, created_at")
+        .select(`
+          id, 
+          status, 
+          created_at,
+          case_service_instances (
+            case_services (
+              name
+            )
+          )
+        `)
         .eq("organization_id", organizationId)
         .eq("activity_type", "event")
         .gte("created_at", timeRange.start.toISOString())
@@ -39,28 +40,28 @@ export function EventActivityChart({ organizationId, timeRange }: EventActivityC
 
       if (error) throw error;
 
-      // Group by event subtype
-      const subtypeCounts: Record<string, { subtype: string; count: number; byStatus: Record<string, number> }> = {};
+      // Group by linked service name
+      const serviceCounts: Record<string, { serviceName: string; count: number; byStatus: Record<string, number> }> = {};
       
       for (const event of events || []) {
-        const subtype = event.event_subtype || "General";
+        const serviceName = (event.case_service_instances as any)?.case_services?.name || "Unlinked";
         const status = event.status || "scheduled";
         
-        if (!subtypeCounts[subtype]) {
-          subtypeCounts[subtype] = {
-            subtype,
+        if (!serviceCounts[serviceName]) {
+          serviceCounts[serviceName] = {
+            serviceName,
             count: 0,
             byStatus: {},
           };
         }
-        subtypeCounts[subtype].count++;
-        subtypeCounts[subtype].byStatus[status] = (subtypeCounts[subtype].byStatus[status] || 0) + 1;
+        serviceCounts[serviceName].count++;
+        serviceCounts[serviceName].byStatus[status] = (serviceCounts[serviceName].byStatus[status] || 0) + 1;
       }
 
       // Convert to array for chart
-      const chartData = Object.values(subtypeCounts)
+      const chartData = Object.values(serviceCounts)
         .map(data => ({
-          name: data.subtype,
+          name: data.serviceName,
           total: data.count,
           scheduled: data.byStatus["scheduled"] || 0,
           completed: data.byStatus["completed"] || 0,
@@ -78,7 +79,7 @@ export function EventActivityChart({ organizationId, timeRange }: EventActivityC
       }
 
       return {
-        bySubtype: chartData,
+        byService: chartData,
         byStatus: Object.entries(statusCounts).map(([status, count]) => ({
           name: status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
           value: count,
@@ -94,8 +95,8 @@ export function EventActivityChart({ organizationId, timeRange }: EventActivityC
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Event Activity by Type</CardTitle>
-          <CardDescription>Events grouped by subtype and status</CardDescription>
+          <CardTitle>Event Activity by Service</CardTitle>
+          <CardDescription>Events grouped by linked service and status</CardDescription>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[300px] w-full" />
@@ -104,14 +105,14 @@ export function EventActivityChart({ organizationId, timeRange }: EventActivityC
     );
   }
 
-  const chartData = data?.bySubtype || [];
+  const chartData = data?.byService || [];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Event Activity by Type</CardTitle>
+        <CardTitle>Event Activity by Service</CardTitle>
         <CardDescription>
-          {data?.total || 0} events total &bull; Grouped by event type
+          {data?.total || 0} events total &bull; Grouped by linked service
         </CardDescription>
       </CardHeader>
       <CardContent>
