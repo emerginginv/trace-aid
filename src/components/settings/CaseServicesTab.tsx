@@ -15,7 +15,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Pencil, Trash2, GripVertical, Calendar, Briefcase, Loader2, Lock, User, Users, Info } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, Calendar, Briefcase, Loader2, Lock, User, Users, Info, CheckCircle, Check, X } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -45,9 +47,22 @@ interface SortableRowProps {
   onEdit: (service: CaseService) => void;
   onDelete: (id: string) => void;
   onToggleActive: (id: string, isActive: boolean) => void;
+  onReview: (service: CaseService) => void;
 }
 
-const SortableRow = ({ service, onEdit, onDelete, onToggleActive }: SortableRowProps) => {
+// Helper function to format schedule mode
+const getScheduleModeInfo = (mode: ScheduleMode) => {
+  switch (mode) {
+    case 'none': 
+      return { label: 'None', description: 'Service does not require scheduling' };
+    case 'primary_investigator': 
+      return { label: 'Primary Investigator', description: 'Schedule based on case\'s primary investigator calendar' };
+    case 'activity_based': 
+      return { label: 'Activity Based', description: 'Schedule based on individual activity assignments' };
+  }
+};
+
+const SortableRow = ({ service, onEdit, onDelete, onToggleActive, onReview }: SortableRowProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: service.id });
 
   const style = {
@@ -116,12 +131,25 @@ const SortableRow = ({ service, onEdit, onDelete, onToggleActive }: SortableRowP
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
+          {!service.is_active && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onReview(service)}
+              className="text-primary"
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Review
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={() => onEdit(service)}>
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => onToggleActive(service.id, !service.is_active)}>
-            <Switch checked={service.is_active} className="pointer-events-none" />
-          </Button>
+          {service.is_active && (
+            <Button variant="ghost" size="icon" onClick={() => onToggleActive(service.id, false)}>
+              <Switch checked={service.is_active} className="pointer-events-none" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="text-destructive" onClick={() => onDelete(service.id)}>
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -145,6 +173,9 @@ export const CaseServicesTab = () => {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<CaseService | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewingService, setReviewingService] = useState<CaseService | null>(null);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
 
   // Form state
@@ -390,6 +421,64 @@ export const CaseServicesTab = () => {
     setDialogOpen(true);
   };
 
+  const openReviewDialog = (service: CaseService) => {
+    setReviewingService(service);
+    setReviewDialogOpen(true);
+  };
+
+  const handleActivateService = async () => {
+    if (!reviewingService) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("case_services")
+        .update({ is_active: true })
+        .eq("id", reviewingService.id);
+
+      if (error) throw error;
+      
+      toast.success("Service activated successfully");
+      setReviewDialogOpen(false);
+      setReviewingService(null);
+      loadServices();
+    } catch (error) {
+      console.error("Error activating service:", error);
+      toast.error("Failed to activate service");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditFromReview = () => {
+    if (!reviewingService) return;
+    setReviewDialogOpen(false);
+    openEditDialog(reviewingService);
+    setReviewingService(null);
+  };
+
+  const handleDiscardDraft = async () => {
+    if (!reviewingService) return;
+
+    try {
+      const { error } = await supabase
+        .from("case_services")
+        .delete()
+        .eq("id", reviewingService.id);
+
+      if (error) throw error;
+      
+      toast.success("Draft discarded");
+      setDiscardDialogOpen(false);
+      setReviewDialogOpen(false);
+      setReviewingService(null);
+      loadServices();
+    } catch (error) {
+      console.error("Error discarding draft:", error);
+      toast.error("Failed to discard draft");
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -433,7 +522,8 @@ export const CaseServicesTab = () => {
   }
 
   return (
-    <Card>
+    <>
+      <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Case Services</CardTitle>
@@ -741,6 +831,7 @@ export const CaseServicesTab = () => {
                       onEdit={openEditDialog}
                       onDelete={handleDelete}
                       onToggleActive={handleToggleActive}
+                      onReview={openReviewDialog}
                     />
                   ))}
                 </SortableContext>
@@ -750,5 +841,166 @@ export const CaseServicesTab = () => {
         )}
       </CardContent>
     </Card>
+
+      {/* Review & Activate Dialog */}
+      <Dialog open={reviewDialogOpen} onOpenChange={(open) => {
+        setReviewDialogOpen(open);
+        if (!open) setReviewingService(null);
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Review Case Service</DialogTitle>
+            <DialogDescription>
+              Review the configuration below before activating this service.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {reviewingService && (
+            <div className="space-y-4 py-4">
+              {/* Basic Info */}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Name</p>
+                  <p className="font-medium">{reviewingService.name}</p>
+                </div>
+                
+                {reviewingService.description && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Description</p>
+                    <p className="text-sm">{reviewingService.description}</p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Identifiers */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Code</p>
+                  <p className="text-sm">{reviewingService.code || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Color</p>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-4 h-4 rounded-full border"
+                      style={{ backgroundColor: reviewingService.color }}
+                    />
+                    <span className="text-sm text-muted-foreground">{reviewingService.color}</span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Schedule Mode */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Schedule Mode</p>
+                <div className="mt-1">
+                  <p className="font-medium">{getScheduleModeInfo(reviewingService.schedule_mode).label}</p>
+                  <p className="text-xs text-muted-foreground">{getScheduleModeInfo(reviewingService.schedule_mode).description}</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Case Types */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Available Case Types</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {reviewingService.case_types.length === 0 ? (
+                    <Badge variant="outline">All Case Types</Badge>
+                  ) : (
+                    reviewingService.case_types.map((type) => (
+                      <Badge key={type} variant="secondary">{type}</Badge>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Scheduling Settings - only show if schedule mode is not 'none' */}
+              {reviewingService.schedule_mode !== 'none' && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Scheduling Settings</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        {reviewingService.requires_scheduling ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span>Requires Scheduling</span>
+                      </div>
+                      
+                      {reviewingService.requires_scheduling && (
+                        <>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground">Default Duration:</span>
+                            <span>{reviewingService.default_duration_minutes ? `${reviewingService.default_duration_minutes} minutes` : "Not set"}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            {reviewingService.allow_recurring ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <X className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <span>Allow Recurring</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDiscardDialogOpen(true)}
+              className="text-destructive hover:text-destructive"
+            >
+              Discard Draft
+            </Button>
+            <div className="flex gap-2 sm:ml-auto">
+              <Button variant="outline" onClick={handleEditFromReview}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button onClick={handleActivateService} disabled={saving}>
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Save & Activate
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Discard Draft Confirmation */}
+      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this draft service?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The draft service "{reviewingService?.name}" will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDiscardDraft}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Discard Draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
