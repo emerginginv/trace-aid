@@ -667,6 +667,8 @@ export type Database = {
           id: string
           import_batch_id: string | null
           import_timestamp: string | null
+          locked_at: string | null
+          locked_by_invoice_id: string | null
           organization_id: string | null
           status: string
           title: string
@@ -690,6 +692,8 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
+          locked_at?: string | null
+          locked_by_invoice_id?: string | null
           organization_id?: string | null
           status?: string
           title: string
@@ -713,6 +717,8 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
+          locked_at?: string | null
+          locked_by_invoice_id?: string | null
           organization_id?: string | null
           status?: string
           title?: string
@@ -732,6 +738,13 @@ export type Database = {
             columns: ["import_batch_id"]
             isOneToOne: false
             referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_activities_locked_by_invoice_id_fkey"
+            columns: ["locked_by_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -1235,6 +1248,8 @@ export type Database = {
           created_by: string | null
           id: string
           invoice_line_item_id: string | null
+          locked_at: string | null
+          locked_reason: string | null
           notes: string | null
           organization_id: string
           quantity_actual: number | null
@@ -1259,6 +1274,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           invoice_line_item_id?: string | null
+          locked_at?: string | null
+          locked_reason?: string | null
           notes?: string | null
           organization_id: string
           quantity_actual?: number | null
@@ -1283,6 +1300,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           invoice_line_item_id?: string | null
+          locked_at?: string | null
+          locked_reason?: string | null
           notes?: string | null
           organization_id?: string
           quantity_actual?: number | null
@@ -3497,6 +3516,87 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_audit_log: {
+        Row: {
+          action: string
+          affected_activity_ids: string[] | null
+          affected_service_instance_ids: string[] | null
+          case_id: string
+          created_at: string
+          id: string
+          invoice_id: string
+          metadata: Json | null
+          new_status: string | null
+          organization_id: string
+          previous_status: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          affected_activity_ids?: string[] | null
+          affected_service_instance_ids?: string[] | null
+          case_id: string
+          created_at?: string
+          id?: string
+          invoice_id: string
+          metadata?: Json | null
+          new_status?: string | null
+          organization_id: string
+          previous_status?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          affected_activity_ids?: string[] | null
+          affected_service_instance_ids?: string[] | null
+          case_id?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          organization_id?: string
+          previous_status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_audit_log_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_audit_log_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_audit_log_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_audit_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_line_items: {
         Row: {
           activity_count: number
@@ -3654,6 +3754,8 @@ export type Database = {
           created_at: string
           date: string
           due_date: string | null
+          finalized_at: string | null
+          finalized_by: string | null
           id: string
           invoice_number: string
           notes: string | null
@@ -3664,6 +3766,9 @@ export type Database = {
           total_paid: number | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           balance_due?: number | null
@@ -3671,6 +3776,8 @@ export type Database = {
           created_at?: string
           date?: string
           due_date?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
           invoice_number: string
           notes?: string | null
@@ -3681,6 +3788,9 @@ export type Database = {
           total_paid?: number | null
           updated_at?: string
           user_id: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           balance_due?: number | null
@@ -3688,6 +3798,8 @@ export type Database = {
           created_at?: string
           date?: string
           due_date?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
           invoice_number?: string
           notes?: string | null
@@ -3698,13 +3810,30 @@ export type Database = {
           total_paid?: number | null
           updated_at?: string
           user_id?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_finalized_by_fkey"
+            columns: ["finalized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -6950,6 +7079,10 @@ export type Database = {
         Args: { p_action: string; p_organization_id: string; p_payload?: Json }
         Returns: Json
       }
+      finalize_invoice: {
+        Args: { p_invoice_id: string; p_user_id: string }
+        Returns: Json
+      }
       generate_audit_bundle: {
         Args: {
           p_date_from: string
@@ -7079,6 +7212,7 @@ export type Database = {
       get_dr_dashboard: { Args: never; Returns: Json }
       get_expiring_contracts: { Args: never; Returns: Json }
       get_identity_dashboard: { Args: { p_org_id: string }; Returns: Json }
+      get_invoice_with_status: { Args: { p_invoice_id: string }; Returns: Json }
       get_my_email_change_requests: {
         Args: never
         Returns: {
@@ -7355,6 +7489,7 @@ export type Database = {
         }
         Returns: string
       }
+      is_activity_billed: { Args: { p_activity_id: string }; Returns: boolean }
       is_admin_of_any_org: { Args: { _user_id: string }; Returns: boolean }
       is_case_assigned_to_user: {
         Args: { p_case_id: string; p_user_id: string }
@@ -7371,6 +7506,10 @@ export type Database = {
         | { Args: { p_user_id: string }; Returns: boolean }
       is_service_available_for_case_type: {
         Args: { p_case_type_tag: string; p_service_case_types: string[] }
+        Returns: boolean
+      }
+      is_service_instance_billed: {
+        Args: { p_service_instance_id: string }
         Returns: boolean
       }
       is_username_available: {
@@ -7696,6 +7835,10 @@ export type Database = {
           is_valid: boolean
         }[]
       }
+      validate_invoice_status_transition: {
+        Args: { p_current_status: string; p_new_status: string }
+        Returns: boolean
+      }
       validate_scim_token: {
         Args: { p_org_id: string; p_token: string }
         Returns: boolean
@@ -7705,6 +7848,10 @@ export type Database = {
         Returns: boolean
       }
       verify_tenant_isolation: { Args: never; Returns: Json }
+      void_invoice: {
+        Args: { p_invoice_id: string; p_reason: string; p_user_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "member" | "manager" | "investigator" | "vendor"
