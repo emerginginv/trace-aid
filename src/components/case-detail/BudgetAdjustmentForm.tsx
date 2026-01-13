@@ -167,6 +167,55 @@ export function BudgetAdjustmentForm({ caseId, onSuccess, triggerButton }: Budge
 
       if (error) throw error;
 
+      // Also sync with case_budgets table to keep them aligned
+      // First check if a case_budgets record exists
+      const { data: existingBudget } = await supabase
+        .from("case_budgets")
+        .select("id, budget_type, total_budget_hours, total_budget_amount")
+        .eq("case_id", caseId)
+        .maybeSingle();
+
+      if (existingBudget) {
+        // Update the existing case_budgets record
+        const budgetUpdateData = data.adjustment_type === "hours"
+          ? { 
+              total_budget_hours: data.new_value,
+              budget_type: existingBudget.total_budget_amount ? "both" : "hours"
+            }
+          : { 
+              total_budget_amount: data.new_value,
+              budget_type: existingBudget.total_budget_hours ? "both" : "money"
+            };
+
+        await supabase
+          .from("case_budgets")
+          .update(budgetUpdateData)
+          .eq("id", existingBudget.id);
+      } else {
+        // Create a new case_budgets record if none exists
+        const { data: caseData } = await supabase
+          .from("cases")
+          .select("organization_id")
+          .eq("id", caseId)
+          .single();
+
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (caseData && user) {
+          await supabase
+            .from("case_budgets")
+            .insert({
+              case_id: caseId,
+              organization_id: caseData.organization_id,
+              budget_type: data.adjustment_type === "hours" ? "hours" : "money",
+              total_budget_hours: data.adjustment_type === "hours" ? data.new_value : null,
+              total_budget_amount: data.adjustment_type === "dollars" ? data.new_value : null,
+              hard_cap: false,
+              created_by: user.id,
+            });
+        }
+      }
+
       toast.success("Budget updated successfully");
       
       // Refresh current budget
