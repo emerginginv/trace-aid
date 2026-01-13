@@ -181,6 +181,23 @@ export const expensesByDayReport: ReportDefinition = {
 };
 
 // ============================================
+// CALENDAR REPORTS
+// ============================================
+
+export const activityAssignmentAuditReport: ReportDefinition = {
+  id: "activity-assignment-audit",
+  name: "Activity Assignment Audit",
+  description: "Comprehensive view of tasks and events with assignment tracking and completion metrics",
+  category: "calendar",
+  sourceTable: "case_activities",
+  columns: [], // Custom report - handled by its own component
+  filters: [], // Custom report - handled by its own component
+  defaultSort: { field: "due_date", direction: "desc" },
+  totals: [],
+  relatedMetrics: ["activity.completion_rate"],
+};
+
+// ============================================
 // REPORT REGISTRY
 // ============================================
 
@@ -198,6 +215,7 @@ export const reportRegistry: Record<string, ReportDefinition> = {
   "expense-detail-by-staff": expenseDetailByStaffReport,
   "expense-distribution": expenseDistributionReport,
   "expenses-by-day": expensesByDayReport,
+  "activity-assignment-audit": activityAssignmentAuditReport,
 };
 
 // ============================================
@@ -218,6 +236,13 @@ export const reportCategories: ReportCategoryInfo[] = [
     description: "Expense tracking, detail, and analysis reports",
     icon: "Receipt",
     reports: ["expense-detail", "expense-detail-by-staff", "expense-distribution", "expenses-by-day"],
+  },
+  {
+    id: "calendar",
+    name: "Calendar Reports",
+    description: "Activity tracking, assignments, and scheduling reports",
+    icon: "Calendar",
+    reports: ["activity-assignment-audit"],
   },
 ];
 
