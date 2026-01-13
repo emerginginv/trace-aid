@@ -47,13 +47,18 @@ export function useBillingItemCreation() {
 
       // FLAT-FEE ENFORCEMENT: Check if billing item already exists for this service instance
       if (pricingModel === "flat") {
-        // Check for existing billing record in case_finances
+        // Check for existing billing record linked to this service instance
         const { data: existingBillingItem } = await supabase
           .from("case_finances")
-          .select("id")
+          .select(`
+            id,
+            case_activities!inner (
+              case_service_instance_id
+            )
+          `)
           .eq("case_id", caseId)
           .eq("finance_type", "billing_item")
-          .not("activity_id", "is", null)
+          .eq("case_activities.case_service_instance_id", caseServiceInstanceId)
           .limit(1)
           .maybeSingle();
 
@@ -67,7 +72,7 @@ export function useBillingItemCreation() {
         if (existingBillingItem || serviceInstance?.invoice_line_item_id) {
           return { 
             success: false, 
-            error: "A billing item already exists for this flat-fee service" 
+            error: "This service has already been billed under a flat-fee." 
           };
         }
       }

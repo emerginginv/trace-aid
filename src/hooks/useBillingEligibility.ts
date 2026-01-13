@@ -238,25 +238,31 @@ export function useBillingEligibility() {
           if (instanceData.invoice_line_item_id) {
             const notEligible: BillingEligibilityResult = {
               isEligible: false,
-              reason: "Flat-fee service already has a billing item"
+              reason: "This service has already been billed under a flat-fee."
             };
             setResult(notEligible);
             return notEligible;
           }
           
-          // Also check for existing pending billing items in case_finances
+          // Also check for existing pending billing items linked to this service instance
           const { data: existingBillingItem } = await supabase
             .from("case_finances")
-            .select("id")
+            .select(`
+              id,
+              case_activities!inner (
+                case_service_instance_id
+              )
+            `)
             .eq("case_id", instanceData.case_id)
             .eq("finance_type", "billing_item")
+            .eq("case_activities.case_service_instance_id", caseServiceInstanceId)
             .limit(1)
             .maybeSingle();
             
           if (existingBillingItem) {
             const notEligible: BillingEligibilityResult = {
               isEligible: false,
-              reason: "Flat-fee service already has a pending billing item"
+              reason: "This service has already been billed under a flat-fee."
             };
             setResult(notEligible);
             return notEligible;
