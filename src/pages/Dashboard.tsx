@@ -710,10 +710,6 @@ const Dashboard = () => {
                         <p className="font-medium text-sm truncate">{event.title}</p>
                       </div>
                       
-                      {/* Event Type Badge (if available) */}
-                      {event.eventSubtype && <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary shrink-0">
-                          {event.eventSubtype}
-                        </span>}
                       
                       {/* Status Dot */}
                       <StatusDot status={event.eventStatus} type="event" />

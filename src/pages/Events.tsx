@@ -464,7 +464,7 @@ export default function Events() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
-                        {event.event_subtype || "General"}
+                        {event.service_name || "General"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -563,7 +563,7 @@ export default function Events() {
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline" className="text-xs">
-                            {event.event_subtype || "General"}
+                            {event.service_name || "General"}
                           </Badge>
                           <Badge variant="outline" className={cn("text-xs", getStatusBadgeStyles(event.status))}>
                             {getStatusLabel(event.status)}
