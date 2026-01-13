@@ -20,6 +20,7 @@ import { UserPreferencesTab } from "@/components/settings/UserPreferencesTab";
 import { OrganizationTab } from "@/components/settings/OrganizationTab";
 import { UsersManagementTab } from "@/components/settings/UsersManagementTab";
 import { PicklistsTab } from "@/components/settings/PicklistsTab";
+import { CaseServicesTab } from "@/components/settings/CaseServicesTab";
 import { EmailSettingsTab } from "@/components/settings/EmailSettingsTab";
 import { BillingTab } from "@/components/settings/BillingTab";
 import { HelpCenterAdmin } from "@/components/help-center";
@@ -690,6 +691,13 @@ const Settings = () => {
                 loadSettings={loadSettings}
               />
             </TabsContent>
+
+            {/* Case Services Tab */}
+            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+              <TabsContent value="case-services" className="space-y-6">
+                <CaseServicesTab />
+              </TabsContent>
+            )}
 
             {/* Templates Tab */}
             <TabsContent value="templates" className="space-y-6">

@@ -17,7 +17,8 @@ import {
   KeyRound,
   Scale,
   FileBarChart,
-  Plug
+  Plug,
+  Briefcase
 } from "lucide-react";
 import {
   Collapsible,
@@ -39,6 +40,7 @@ const navItems: SettingsNavItem[] = [
   { value: "users", label: "Users", icon: Users, roles: ['admin', 'manager'] },
   { value: "authentication", label: "Authentication", icon: KeyRound, roles: ['admin'] },
   { value: "picklists", label: "Picklists", icon: List, roles: ['admin', 'manager'] },
+  { value: "case-services", label: "Case Services", icon: Briefcase, roles: ['admin', 'manager'] },
   { value: "templates", label: "Templates", icon: FileText, roles: ['admin', 'manager'] },
   { value: "email", label: "Email", icon: Mail, roles: ['admin', 'manager'] },
   { value: "data-import", label: "Data Import", icon: Upload, roles: ['admin', 'manager'] },

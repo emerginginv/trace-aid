@@ -964,6 +964,68 @@ export type Database = {
           },
         ]
       }
+      case_services: {
+        Row: {
+          allow_recurring: boolean | null
+          case_types: string[] | null
+          code: string | null
+          color: string | null
+          created_at: string
+          created_by: string | null
+          default_duration_minutes: number | null
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          requires_scheduling: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          allow_recurring?: boolean | null
+          case_types?: string[] | null
+          code?: string | null
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_duration_minutes?: number | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          requires_scheduling?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          allow_recurring?: boolean | null
+          case_types?: string[] | null
+          code?: string | null
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_duration_minutes?: number | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          requires_scheduling?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_services_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_subjects: {
         Row: {
           archived_at: string | null
