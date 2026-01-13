@@ -17,6 +17,8 @@ import { format, formatISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useBillingEligibility, BillingEligibilityResult } from "@/hooks/useBillingEligibility";
+import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
 
 const taskSchema = z.object({
   activity_type: z.literal("task"),
@@ -86,7 +88,10 @@ export function ActivityForm({
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [subjectAddresses, setSubjectAddresses] = useState<SubjectAddress[]>([]);
+  const [billingPromptOpen, setBillingPromptOpen] = useState(false);
+  const [billingEligibility, setBillingEligibility] = useState<BillingEligibilityResult | null>(null);
   const navigate = useNavigate();
+  const { evaluate: evaluateBillingEligibility } = useBillingEligibility();
   
   // Fetch available services from the case's pricing profile
   const { data: availableServices = [], isLoading: servicesLoading } = useCaseAvailableServices(caseId);
@@ -380,6 +385,24 @@ export function ActivityForm({
         description: editingActivity ? `${activityType === "task" ? "Task" : "Event"} updated successfully` : `${activityType === "task" ? "Task" : "Event"} added successfully`,
       });
 
+      // Check billing eligibility if activity was completed and has a service instance
+      const isCompleted = values.status === "done" || values.status === "completed";
+      const activityIdToCheck = editingActivity?.id || insertedActivity?.id;
+      
+      if (isCompleted && caseServiceInstanceId && activityIdToCheck) {
+        const eligibility = await evaluateBillingEligibility({
+          activityId: activityIdToCheck,
+          caseServiceInstanceId: caseServiceInstanceId,
+        });
+        
+        if (eligibility.isEligible) {
+          setBillingEligibility(eligibility);
+          setBillingPromptOpen(true);
+          // Don't close the form yet - wait for billing prompt response
+          return;
+        }
+      }
+
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -393,6 +416,7 @@ export function ActivityForm({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -820,5 +844,45 @@ export function ActivityForm({
         </Form>
       </DialogContent>
     </Dialog>
+    
+    {/* Billing Prompt Dialog - shows after completing an activity with billable service */}
+    <BillingPromptDialog
+      open={billingPromptOpen}
+      onOpenChange={(open) => {
+        setBillingPromptOpen(open);
+        if (!open) {
+          // When dialog closes, close the activity form and trigger success
+          onOpenChange(false);
+          onSuccess();
+        }
+      }}
+      eligibility={billingEligibility}
+      onCreateBillingItem={() => {
+        // TODO: Phase 2 - Create actual billing item in database
+        toast({
+          title: "Billing Item Created",
+          description: `A billing item has been created for "${billingEligibility?.serviceName}" and is pending review.`,
+        });
+        setBillingPromptOpen(false);
+        onOpenChange(false);
+        onSuccess();
+      }}
+      onSkip={() => {
+        setBillingPromptOpen(false);
+        onOpenChange(false);
+        onSuccess();
+      }}
+      onNeverAsk={() => {
+        // TODO: Store user preference to not prompt for this activity/service
+        toast({
+          title: "Preference Saved",
+          description: "You won't be prompted for billing items on this service.",
+        });
+        setBillingPromptOpen(false);
+        onOpenChange(false);
+        onSuccess();
+      }}
+    />
+    </>
   );
 }
