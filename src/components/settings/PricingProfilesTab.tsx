@@ -29,8 +29,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Star, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, Star, DollarSign, Settings2 } from "lucide-react";
 import { toast } from "sonner";
+import { ServicePricingRulesEditor } from "./ServicePricingRulesEditor";
 
 interface PricingProfile {
   id: string;
@@ -62,6 +63,7 @@ export function PricingProfilesTab() {
   const [editingProfile, setEditingProfile] = useState<PricingProfile | null>(null);
   const [formData, setFormData] = useState<ProfileFormData>(defaultFormData);
   const [deleteProfileId, setDeleteProfileId] = useState<string | null>(null);
+  const [rulesEditorProfile, setRulesEditorProfile] = useState<PricingProfile | null>(null);
 
   // Fetch pricing profiles
   const { data: profiles, isLoading } = useQuery({
@@ -317,6 +319,14 @@ export function PricingProfilesTab() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRulesEditorProfile(profile)}
+                  >
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    Configure Rules
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => handleEdit(profile)}
@@ -357,6 +367,16 @@ export function PricingProfilesTab() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Service Pricing Rules Editor */}
+        {rulesEditorProfile && (
+          <ServicePricingRulesEditor
+            profileId={rulesEditorProfile.id}
+            profileName={rulesEditorProfile.name}
+            isOpen={!!rulesEditorProfile}
+            onClose={() => setRulesEditorProfile(null)}
+          />
+        )}
       </CardContent>
     </Card>
   );
