@@ -559,6 +559,96 @@ export type Database = {
           },
         ]
       }
+      budget_violation_events: {
+        Row: {
+          action_attempted: string | null
+          action_blocked: boolean
+          amount_at_violation: number | null
+          amount_limit: number | null
+          budget_scope: string
+          case_id: string
+          created_at: string
+          hours_at_violation: number | null
+          hours_limit: number | null
+          id: string
+          metadata: Json | null
+          organization_id: string
+          service_instance_id: string | null
+          user_id: string
+          violation_type: string
+        }
+        Insert: {
+          action_attempted?: string | null
+          action_blocked?: boolean
+          amount_at_violation?: number | null
+          amount_limit?: number | null
+          budget_scope: string
+          case_id: string
+          created_at?: string
+          hours_at_violation?: number | null
+          hours_limit?: number | null
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          service_instance_id?: string | null
+          user_id: string
+          violation_type: string
+        }
+        Update: {
+          action_attempted?: string | null
+          action_blocked?: boolean
+          amount_at_violation?: number | null
+          amount_limit?: number | null
+          budget_scope?: string
+          case_id?: string
+          created_at?: string
+          hours_at_violation?: number | null
+          hours_limit?: number | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          service_instance_id?: string | null
+          user_id?: string
+          violation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_violation_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_violation_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_violation_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_violation_events_service_instance_id_fkey"
+            columns: ["service_instance_id"]
+            isOneToOne: false
+            referencedRelation: "case_service_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_violation_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_activities: {
         Row: {
           activity_type: string
@@ -6535,23 +6625,42 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
-      check_budget_cap: {
-        Args: {
-          p_additional_amount?: number
-          p_additional_hours?: number
-          p_case_id: string
-        }
-        Returns: {
-          amount_remaining: number
-          budget_type: string
-          can_proceed: boolean
-          hard_cap: boolean
-          hours_remaining: number
-          warning_message: string
-          would_exceed_amount: boolean
-          would_exceed_hours: boolean
-        }[]
-      }
+      check_budget_cap:
+        | {
+            Args: {
+              p_additional_amount?: number
+              p_additional_hours?: number
+              p_case_id: string
+            }
+            Returns: {
+              amount_remaining: number
+              budget_type: string
+              can_proceed: boolean
+              hard_cap: boolean
+              hours_remaining: number
+              warning_message: string
+              would_exceed_amount: boolean
+              would_exceed_hours: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_action_type?: string
+              p_additional_amount?: number
+              p_additional_hours?: number
+              p_case_id: string
+            }
+            Returns: {
+              amount_remaining: number
+              budget_type: string
+              can_proceed: boolean
+              hard_cap: boolean
+              hours_remaining: number
+              warning_message: string
+              would_exceed_amount: boolean
+              would_exceed_hours: boolean
+            }[]
+          }
       check_region_access: {
         Args: { p_organization_id: string; p_request_region: string }
         Returns: Json
@@ -6604,6 +6713,17 @@ export type Database = {
       complete_review_item: {
         Args: { p_action: string; p_item_id: string; p_notes?: string }
         Returns: Json
+      }
+      compute_case_budget_consumption: {
+        Args: { p_case_id: string }
+        Returns: {
+          amount_consumed: number
+          amount_from_activities: number
+          amount_from_services: number
+          hours_consumed: number
+          hours_from_activities: number
+          hours_from_services: number
+        }[]
       }
       configure_sso: {
         Args: {
@@ -6959,6 +7079,29 @@ export type Database = {
         Returns: string
       }
       get_platform_role: { Args: { p_user_id: string }; Returns: string }
+      get_realtime_budget_status: {
+        Args: { p_case_id: string }
+        Returns: {
+          amount_authorized: number
+          amount_consumed: number
+          amount_from_activities: number
+          amount_from_services: number
+          amount_remaining: number
+          amount_utilization_pct: number
+          budget_type: string
+          hard_cap: boolean
+          has_budget: boolean
+          hours_authorized: number
+          hours_consumed: number
+          hours_from_activities: number
+          hours_from_services: number
+          hours_remaining: number
+          hours_utilization_pct: number
+          is_blocked: boolean
+          is_exceeded: boolean
+          is_warning: boolean
+        }[]
+      }
       get_recent_backups: {
         Args: { p_limit?: number }
         Returns: {
@@ -7118,6 +7261,21 @@ export type Database = {
           p_retention_days?: number
           p_size_bytes?: number
           p_status?: string
+        }
+        Returns: string
+      }
+      log_budget_violation: {
+        Args: {
+          p_action_attempted?: string
+          p_action_blocked?: boolean
+          p_amount_at_violation?: number
+          p_amount_limit?: number
+          p_budget_scope: string
+          p_case_id: string
+          p_hours_at_violation?: number
+          p_hours_limit?: number
+          p_service_instance_id?: string
+          p_violation_type: string
         }
         Returns: string
       }

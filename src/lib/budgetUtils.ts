@@ -78,3 +78,33 @@ export function formatBudgetHours(value: number): string {
 export function getOverAmount(consumed: number, authorized: number): number {
   return consumed - authorized;
 }
+
+// Calculate projected consumption based on current rate
+export function projectConsumption(
+  consumed: number,
+  daysElapsed: number,
+  totalDays: number
+): number {
+  if (daysElapsed <= 0 || totalDays <= 0) return consumed;
+  const dailyRate = consumed / daysElapsed;
+  return dailyRate * totalDays;
+}
+
+// Check if consumption rate is sustainable
+export function isConsumptionSustainable(
+  consumed: number,
+  authorized: number,
+  daysElapsed: number,
+  totalDays: number
+): boolean {
+  const projected = projectConsumption(consumed, daysElapsed, totalDays);
+  return projected <= authorized;
+}
+
+// Format consumption as percentage with color indication
+export function getConsumptionColor(utilizationPct: number): string {
+  if (utilizationPct >= 100) return "text-destructive";
+  if (utilizationPct >= 90) return "text-red-500";
+  if (utilizationPct >= 75) return "text-amber-500";
+  return "text-emerald-500";
+}
