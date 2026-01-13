@@ -1055,6 +1055,84 @@ export type Database = {
           },
         ]
       }
+      case_service_budget_limits: {
+        Row: {
+          case_id: string
+          case_service_instance_id: string
+          created_at: string
+          created_by: string
+          id: string
+          max_amount: number | null
+          max_hours: number | null
+          notes: string | null
+          organization_id: string
+          updated_at: string
+          warning_threshold: number
+        }
+        Insert: {
+          case_id: string
+          case_service_instance_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          max_amount?: number | null
+          max_hours?: number | null
+          notes?: string | null
+          organization_id: string
+          updated_at?: string
+          warning_threshold?: number
+        }
+        Update: {
+          case_id?: string
+          case_service_instance_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          max_amount?: number | null
+          max_hours?: number | null
+          notes?: string | null
+          organization_id?: string
+          updated_at?: string
+          warning_threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_service_budget_limits_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_service_budget_limits_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_service_budget_limits_case_service_instance_id_fkey"
+            columns: ["case_service_instance_id"]
+            isOneToOne: true
+            referencedRelation: "case_service_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_service_budget_limits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_service_budget_limits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_service_instances: {
         Row: {
           assigned_investigator_id: string | null
@@ -6478,6 +6556,23 @@ export type Database = {
         Args: { p_organization_id: string; p_request_region: string }
         Returns: Json
       }
+      check_service_budget_before_activity: {
+        Args: {
+          p_additional_amount?: number
+          p_additional_hours?: number
+          p_case_service_instance_id: string
+        }
+        Returns: {
+          amount_remaining: number
+          can_proceed: boolean
+          has_case_hard_cap: boolean
+          hours_remaining: number
+          service_name: string
+          warning_message: string
+          would_exceed_amount: boolean
+          would_exceed_hours: boolean
+        }[]
+      }
       check_subdomain_availability: {
         Args: { p_subdomain: string }
         Returns: Json
@@ -6911,6 +7006,26 @@ export type Database = {
         Returns: Json
       }
       get_security_metrics: { Args: never; Returns: Json }
+      get_service_budget_status: {
+        Args: { p_case_service_instance_id: string }
+        Returns: {
+          amount_consumed: number
+          amount_remaining: number
+          amount_utilization_pct: number
+          hours_consumed: number
+          hours_remaining: number
+          hours_utilization_pct: number
+          instance_id: string
+          is_amount_exceeded: boolean
+          is_amount_warning: boolean
+          is_hours_exceeded: boolean
+          is_hours_warning: boolean
+          max_amount: number
+          max_hours: number
+          service_name: string
+          warning_threshold: number
+        }[]
+      }
       get_soc2_dashboard: { Args: never; Returns: Json }
       get_sso_config: { Args: { p_org_id: string }; Returns: Json }
       get_status_page_data: { Args: never; Returns: Json }
