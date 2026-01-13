@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, ExternalLink, Copy, User, MapPin, Link } from "lucide-react";
-import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
+import { useCaseAvailableServices } from "@/hooks/useCaseAvailableServices";
 import { format, formatISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -25,7 +25,7 @@ const taskSchema = z.object({
   due_date: z.date().optional(),
   status: z.enum(["to_do", "in_progress", "blocked", "done", "cancelled"]),
   assigned_user_id: z.string().optional(),
-  case_service_instance_id: z.string().optional(),
+  case_service_id: z.string().optional(), // Service from pricing profile
 });
 
 const eventSchema = z.object({
@@ -39,7 +39,7 @@ const eventSchema = z.object({
   status: z.enum(["scheduled", "cancelled", "completed"]),
   assigned_user_id: z.string().optional(),
   address: z.string().optional(),
-  case_service_instance_id: z.string().optional(),
+  case_service_id: z.string().optional(), // Service from pricing profile
 });
 
 interface SubjectAddress {
@@ -88,8 +88,8 @@ export function ActivityForm({
   const [subjectAddresses, setSubjectAddresses] = useState<SubjectAddress[]>([]);
   const navigate = useNavigate();
   
-  // Fetch available service instances for this case
-  const { data: serviceInstances = [], isLoading: serviceInstancesLoading } = useCaseServiceInstances(caseId);
+  // Fetch available services from the case's pricing profile
+  const { data: availableServices = [], isLoading: servicesLoading } = useCaseAvailableServices(caseId);
   const schema = activityType === "task" ? taskSchema : eventSchema;
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -175,51 +175,67 @@ export function ActivityForm({
   useEffect(() => {
     if (!open) return; // Only reset when dialog is open
     
-    if (editingActivity) {
-      // Parse existing due_date - handle timezone correctly
-      let dueDate: Date | undefined = undefined;
-      if (editingActivity.due_date) {
-        const dateStr = editingActivity.due_date;
-        // If it's just a date string (YYYY-MM-DD), parse as local date
-        if (dateStr.length === 10) {
-          const [year, month, day] = dateStr.split('-').map(Number);
-          dueDate = new Date(year, month - 1, day);
-        } else {
-          // It's a full ISO timestamp (for events)
-          dueDate = new Date(dateStr);
+    const initializeForm = async () => {
+      if (editingActivity) {
+        // Parse existing due_date - handle timezone correctly
+        let dueDate: Date | undefined = undefined;
+        if (editingActivity.due_date) {
+          const dateStr = editingActivity.due_date;
+          // If it's just a date string (YYYY-MM-DD), parse as local date
+          if (dateStr.length === 10) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            dueDate = new Date(year, month - 1, day);
+          } else {
+            // It's a full ISO timestamp (for events)
+            dueDate = new Date(dateStr);
+          }
         }
+        
+        // Get the case_service_id from the linked instance (if any)
+        let caseServiceId: string | undefined = undefined;
+        if (editingActivity.case_service_instance_id) {
+          // Fetch the service instance to get the case_service_id
+          const { data: instanceData } = await supabase
+            .from("case_service_instances")
+            .select("case_service_id")
+            .eq("id", editingActivity.case_service_instance_id)
+            .single();
+          caseServiceId = instanceData?.case_service_id;
+        }
+
+        form.reset({
+          activity_type: editingActivity.activity_type,
+          title: editingActivity.title,
+          description: editingActivity.description || "",
+          due_date: editingActivity.activity_type === "task" ? dueDate : undefined,
+          start_date: editingActivity.activity_type === "event" ? dueDate : undefined,
+          start_time: editingActivity.activity_type === "event" && dueDate ? format(dueDate, "HH:mm") : "09:00",
+          end_date: editingActivity.activity_type === "event" ? dueDate : undefined,
+          end_time: editingActivity.activity_type === "event" && dueDate ? format(new Date(dueDate.getTime() + 3600000), "HH:mm") : "10:00",
+          status: editingActivity.status,
+          assigned_user_id: editingActivity.assigned_user_id || undefined,
+          address: editingActivity.address || "",
+          case_service_id: caseServiceId,
+        } as any);
+      } else {
+        form.reset({
+          activity_type: activityType,
+          title: "",
+          description: "",
+          due_date: activityType === "task" ? prefilledDate || undefined : undefined,
+          start_date: activityType === "event" ? prefilledDate || new Date() : undefined,
+          start_time: activityType === "event" ? "09:00" : undefined,
+          end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
+          end_time: activityType === "event" ? "10:00" : undefined,
+          status: activityType === "task" ? "to_do" : "scheduled",
+          assigned_user_id: undefined,
+          address: "",
+          case_service_id: undefined,
+        } as any);
       }
-      
-      form.reset({
-        activity_type: editingActivity.activity_type,
-        title: editingActivity.title,
-        description: editingActivity.description || "",
-        due_date: editingActivity.activity_type === "task" ? dueDate : undefined,
-        start_date: editingActivity.activity_type === "event" ? dueDate : undefined,
-        start_time: editingActivity.activity_type === "event" && dueDate ? format(dueDate, "HH:mm") : "09:00",
-        end_date: editingActivity.activity_type === "event" ? dueDate : undefined,
-        end_time: editingActivity.activity_type === "event" && dueDate ? format(new Date(dueDate.getTime() + 3600000), "HH:mm") : "10:00",
-        status: editingActivity.status,
-        assigned_user_id: editingActivity.assigned_user_id || undefined,
-        address: editingActivity.address || "",
-        case_service_instance_id: editingActivity.case_service_instance_id || undefined,
-      } as any);
-    } else {
-      form.reset({
-        activity_type: activityType,
-        title: "",
-        description: "",
-        due_date: activityType === "task" ? prefilledDate || undefined : undefined,
-        start_date: activityType === "event" ? prefilledDate || new Date() : undefined,
-        start_time: activityType === "event" ? "09:00" : undefined,
-        end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
-        end_time: activityType === "event" ? "10:00" : undefined,
-        status: activityType === "task" ? "to_do" : "scheduled",
-        assigned_user_id: undefined,
-        address: "",
-        case_service_instance_id: undefined,
-      } as any);
-    }
+    };
+    
+    initializeForm();
   }, [open, editingActivity, activityType, prefilledDate, form]);
 
   const onSubmit = async (values: any) => {
@@ -250,6 +266,43 @@ export function ActivityForm({
         dueDate = `${year}-${month}-${day}`;
       }
 
+      // If a service is selected, create or find a service instance
+      let caseServiceInstanceId: string | null = null;
+      const selectedServiceId = values.case_service_id;
+      
+      if (selectedServiceId && selectedServiceId !== "none") {
+        // Check if a service instance already exists for this case and service
+        const { data: existingInstance } = await supabase
+          .from("case_service_instances")
+          .select("id")
+          .eq("case_id", caseId)
+          .eq("case_service_id", selectedServiceId)
+          .maybeSingle();
+        
+        if (existingInstance) {
+          caseServiceInstanceId = existingInstance.id;
+        } else {
+          // Create a new service instance
+          const { data: newInstance, error: instanceError } = await supabase
+            .from("case_service_instances")
+            .insert({
+              case_id: caseId,
+              case_service_id: selectedServiceId,
+              organization_id: organizationId,
+              status: "pending",
+              created_by: user.id,
+            })
+            .select("id")
+            .single();
+          
+          if (instanceError) {
+            console.error("Error creating service instance:", instanceError);
+            throw instanceError;
+          }
+          caseServiceInstanceId = newInstance.id;
+        }
+      }
+
       const activityData: any = {
         activity_type: values.activity_type,
         title: values.title,
@@ -260,7 +313,7 @@ export function ActivityForm({
         status: values.status,
         assigned_user_id: values.assigned_user_id === "unassigned" ? null : (values.assigned_user_id || null),
         completed: values.status === "done" || values.status === "completed",
-        case_service_instance_id: values.case_service_instance_id === "none" ? null : (values.case_service_instance_id || null),
+        case_service_instance_id: caseServiceInstanceId,
       };
 
       // Add event-specific fields
@@ -459,44 +512,45 @@ export function ActivityForm({
               )}
             />
 
-            {/* Link to Service Instance - for budget tracking and invoicing */}
+            {/* Link to Service - for budget tracking and invoicing */}
             <FormField
               control={form.control}
-              name="case_service_instance_id"
+              name="case_service_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     <Link className="h-4 w-4" />
-                    Link to Service (Optional)
+                    Service (Optional)
                   </FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value || "none"}
-                    disabled={serviceInstancesLoading}
+                    disabled={servicesLoading}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={serviceInstancesLoading ? "Loading services..." : "Select a service to link"} />
+                        <SelectValue placeholder={servicesLoading ? "Loading services..." : "Select a service"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="none">No linked service</SelectItem>
-                      {serviceInstances.map((instance) => (
-                        <SelectItem key={instance.id} value={instance.id}>
+                      <SelectItem value="none">No service</SelectItem>
+                      {availableServices.length === 0 && !servicesLoading && (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                          No services configured in pricing profile
+                        </div>
+                      )}
+                      {availableServices.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{instance.service_name}</span>
-                            {instance.service_code && (
-                              <span className="text-muted-foreground text-xs">({instance.service_code})</span>
+                            <span className="font-medium">{service.name}</span>
+                            {service.code && (
+                              <span className="text-muted-foreground text-xs">({service.code})</span>
                             )}
-                            <span className={`text-xs px-1.5 py-0.5 rounded ${
-                              instance.status === 'completed' 
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                                : instance.status === 'in_progress'
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                : 'bg-muted text-muted-foreground'
-                            }`}>
-                              {instance.status.replace('_', ' ')}
-                            </span>
+                            {service.is_billable && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                Billable
+                              </span>
+                            )}
                           </div>
                         </SelectItem>
                       ))}
