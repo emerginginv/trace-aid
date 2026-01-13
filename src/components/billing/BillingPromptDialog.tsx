@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Clock, Receipt, X } from "lucide-react";
+import { DollarSign, Clock, Receipt, X, Calculator } from "lucide-react";
 import { BillingEligibilityResult } from "@/hooks/useBillingEligibility";
 
 interface BillingPromptDialogProps {
@@ -24,8 +24,44 @@ export function BillingPromptDialog({
 
   const formatRate = (rate?: number, unit?: string) => {
     if (!rate) return "Rate not set";
-    const unitLabel = unit === "hour" ? "/hr" : unit === "day" ? "/day" : unit === "flat" ? " flat" : `/${unit}`;
+    const unitLabel = unit === "hour" ? "/hr" : 
+                      unit === "day" ? "/day" : 
+                      unit === "flat" ? " flat" : 
+                      unit === "activity" ? "/activity" :
+                      `/${unit}`;
     return `$${rate.toFixed(2)}${unitLabel}`;
+  };
+
+  const formatQuantity = (quantity?: number, pricingModel?: string) => {
+    if (!quantity) return null;
+    
+    switch (pricingModel) {
+      case "hourly":
+        return `${quantity.toFixed(2)} hours`;
+      case "daily":
+        return `${quantity} day${quantity !== 1 ? 's' : ''}`;
+      case "per_activity":
+        return "1 activity";
+      case "flat":
+        return "Flat rate";
+      default:
+        return `${quantity} unit${quantity !== 1 ? 's' : ''}`;
+    }
+  };
+
+  const formatEstimate = (amount?: number) => {
+    if (!amount) return null;
+    return `$${amount.toFixed(2)}`;
+  };
+
+  const getPricingModelLabel = (model?: string) => {
+    switch (model) {
+      case "hourly": return "Hourly";
+      case "daily": return "Daily";
+      case "per_activity": return "Per Activity";
+      case "flat": return "Flat Rate";
+      default: return model || "Unknown";
+    }
   };
 
   return (
@@ -51,7 +87,7 @@ export function BillingPromptDialog({
           )}
           
           {/* Service Details */}
-          <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+          <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">{eligibility.serviceName}</span>
               <span className="text-sm text-muted-foreground">
@@ -62,16 +98,30 @@ export function BillingPromptDialog({
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {eligibility.priceUnit === "hour" ? "Hourly" : 
-                 eligibility.priceUnit === "day" ? "Daily" : 
-                 eligibility.priceUnit === "flat" ? "Flat Rate" : 
-                 eligibility.priceUnit}
+                {getPricingModelLabel(eligibility.pricingModel)}
               </span>
               <span className="flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
                 Billable
               </span>
             </div>
+
+            {/* Quantity and Estimate */}
+            {(eligibility.quantity || eligibility.estimatedAmount) && (
+              <div className="pt-2 border-t border-border/50">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Calculator className="h-3 w-3" />
+                    {formatQuantity(eligibility.quantity, eligibility.pricingModel)}
+                  </span>
+                  {eligibility.estimatedAmount && (
+                    <span className="font-semibold text-primary">
+                      Est. {formatEstimate(eligibility.estimatedAmount)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground">
