@@ -818,6 +818,77 @@ export type Database = {
           },
         ]
       }
+      case_budgets: {
+        Row: {
+          budget_type: string
+          case_id: string
+          created_at: string
+          created_by: string
+          hard_cap: boolean
+          id: string
+          notes: string | null
+          organization_id: string
+          total_budget_amount: number | null
+          total_budget_hours: number | null
+          updated_at: string
+        }
+        Insert: {
+          budget_type: string
+          case_id: string
+          created_at?: string
+          created_by: string
+          hard_cap?: boolean
+          id?: string
+          notes?: string | null
+          organization_id: string
+          total_budget_amount?: number | null
+          total_budget_hours?: number | null
+          updated_at?: string
+        }
+        Update: {
+          budget_type?: string
+          case_id?: string
+          created_at?: string
+          created_by?: string
+          hard_cap?: boolean
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          total_budget_amount?: number | null
+          total_budget_hours?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_budgets_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_budgets_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_budgets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_budgets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_finances: {
         Row: {
           activity_id: string | null
@@ -6385,6 +6456,23 @@ export type Database = {
       cancel_org_deletion: {
         Args: { p_organization_id: string }
         Returns: Json
+      }
+      check_budget_cap: {
+        Args: {
+          p_additional_amount?: number
+          p_additional_hours?: number
+          p_case_id: string
+        }
+        Returns: {
+          amount_remaining: number
+          budget_type: string
+          can_proceed: boolean
+          hard_cap: boolean
+          hours_remaining: number
+          warning_message: string
+          would_exceed_amount: boolean
+          would_exceed_hours: boolean
+        }[]
       }
       check_region_access: {
         Args: { p_organization_id: string; p_request_region: string }
