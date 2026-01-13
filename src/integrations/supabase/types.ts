@@ -986,14 +986,22 @@ export type Database = {
       }
       case_service_instances: {
         Row: {
+          assigned_investigator_id: string | null
+          billable: boolean | null
           case_id: string
           case_service_id: string
+          completion_date: string | null
           created_at: string
           created_by: string | null
           id: string
           invoice_line_item_id: string | null
+          notes: string | null
           organization_id: string
+          quantity_actual: number | null
+          quantity_estimated: number | null
           scheduled_at: string | null
+          scheduled_end: string | null
+          scheduled_start: string | null
           status: string
           unscheduled_at: string | null
           unscheduled_by: string | null
@@ -1001,14 +1009,22 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_investigator_id?: string | null
+          billable?: boolean | null
           case_id: string
           case_service_id: string
+          completion_date?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           invoice_line_item_id?: string | null
+          notes?: string | null
           organization_id: string
+          quantity_actual?: number | null
+          quantity_estimated?: number | null
           scheduled_at?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           status?: string
           unscheduled_at?: string | null
           unscheduled_by?: string | null
@@ -1016,14 +1032,22 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_investigator_id?: string | null
+          billable?: boolean | null
           case_id?: string
           case_service_id?: string
+          completion_date?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           invoice_line_item_id?: string | null
+          notes?: string | null
           organization_id?: string
+          quantity_actual?: number | null
+          quantity_estimated?: number | null
           scheduled_at?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           status?: string
           unscheduled_at?: string | null
           unscheduled_by?: string | null
@@ -1031,6 +1055,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "case_service_instances_assigned_investigator_id_fkey"
+            columns: ["assigned_investigator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "case_service_instances_case_id_fkey"
             columns: ["case_id"]
