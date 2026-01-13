@@ -981,6 +981,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          invoice_line_item_id: string | null
           organization_id: string
           scheduled_at: string | null
           status: string
@@ -995,6 +996,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          invoice_line_item_id?: string | null
           organization_id: string
           scheduled_at?: string | null
           status?: string
@@ -1009,6 +1011,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          invoice_line_item_id?: string | null
           organization_id?: string
           scheduled_at?: string | null
           status?: string
@@ -1065,56 +1068,95 @@ export type Database = {
       case_services: {
         Row: {
           allow_recurring: boolean | null
+          analytics_category: string | null
+          billing_code: string | null
+          billing_description_template: string | null
+          budget_category: string | null
+          budget_unit: string | null
           case_types: string[] | null
           code: string | null
           color: string | null
           created_at: string
           created_by: string | null
+          default_budget_amount: number | null
           default_duration_minutes: number | null
+          default_rate: number | null
           description: string | null
           display_order: number
           id: string
           is_active: boolean
+          is_billable: boolean | null
           name: string
           organization_id: string
+          report_section_id: string | null
+          report_section_order: number | null
+          report_template_fields: Json | null
           requires_scheduling: boolean | null
           schedule_mode: string
+          track_duration: boolean | null
+          track_outcomes: boolean | null
           updated_at: string
         }
         Insert: {
           allow_recurring?: boolean | null
+          analytics_category?: string | null
+          billing_code?: string | null
+          billing_description_template?: string | null
+          budget_category?: string | null
+          budget_unit?: string | null
           case_types?: string[] | null
           code?: string | null
           color?: string | null
           created_at?: string
           created_by?: string | null
+          default_budget_amount?: number | null
           default_duration_minutes?: number | null
+          default_rate?: number | null
           description?: string | null
           display_order?: number
           id?: string
           is_active?: boolean
+          is_billable?: boolean | null
           name: string
           organization_id: string
+          report_section_id?: string | null
+          report_section_order?: number | null
+          report_template_fields?: Json | null
           requires_scheduling?: boolean | null
           schedule_mode?: string
+          track_duration?: boolean | null
+          track_outcomes?: boolean | null
           updated_at?: string
         }
         Update: {
           allow_recurring?: boolean | null
+          analytics_category?: string | null
+          billing_code?: string | null
+          billing_description_template?: string | null
+          budget_category?: string | null
+          budget_unit?: string | null
           case_types?: string[] | null
           code?: string | null
           color?: string | null
           created_at?: string
           created_by?: string | null
+          default_budget_amount?: number | null
           default_duration_minutes?: number | null
+          default_rate?: number | null
           description?: string | null
           display_order?: number
           id?: string
           is_active?: boolean
+          is_billable?: boolean | null
           name?: string
           organization_id?: string
+          report_section_id?: string | null
+          report_section_order?: number | null
+          report_template_fields?: Json | null
           requires_scheduling?: boolean | null
           schedule_mode?: string
+          track_duration?: boolean | null
+          track_outcomes?: boolean | null
           updated_at?: string
         }
         Relationships: [
@@ -6344,20 +6386,33 @@ export type Database = {
         Args: { p_case_id: string; p_organization_id: string }
         Returns: {
           allow_recurring: boolean | null
+          analytics_category: string | null
+          billing_code: string | null
+          billing_description_template: string | null
+          budget_category: string | null
+          budget_unit: string | null
           case_types: string[] | null
           code: string | null
           color: string | null
           created_at: string
           created_by: string | null
+          default_budget_amount: number | null
           default_duration_minutes: number | null
+          default_rate: number | null
           description: string | null
           display_order: number
           id: string
           is_active: boolean
+          is_billable: boolean | null
           name: string
           organization_id: string
+          report_section_id: string | null
+          report_section_order: number | null
+          report_template_fields: Json | null
           requires_scheduling: boolean | null
           schedule_mode: string
+          track_duration: boolean | null
+          track_outcomes: boolean | null
           updated_at: string
         }[]
         SetofOptions: {
