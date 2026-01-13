@@ -16,6 +16,8 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+const MAX_SERVICE_NAME_LENGTH = 100;
+
 interface CaseService {
   id: string;
   name: string;
@@ -94,8 +96,11 @@ const SortableRow = ({ service, onEdit, onDelete, onToggleActive }: SortableRowP
         )}
       </TableCell>
       <TableCell>
-        <Badge variant={service.is_active ? "default" : "secondary"}>
-          {service.is_active ? "Active" : "Inactive"}
+        <Badge 
+          variant={service.is_active ? "default" : "outline"} 
+          className={!service.is_active ? "border-orange-500 text-orange-600" : ""}
+        >
+          {service.is_active ? "Active" : "Draft"}
         </Badge>
       </TableCell>
       <TableCell>
@@ -228,9 +233,11 @@ export const CaseServicesTab = () => {
     setDialogOpen(true);
   };
 
+  const isNameValid = formName.trim().length > 0 && formName.length <= MAX_SERVICE_NAME_LENGTH;
+
   const handleSave = async () => {
-    if (!organization?.id || !formName.trim()) {
-      toast.error("Service name is required");
+    if (!organization?.id || !isNameValid) {
+      toast.error("Please enter a valid service name");
       return;
     }
 
@@ -239,37 +246,43 @@ export const CaseServicesTab = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const serviceData = {
-        organization_id: organization.id,
-        name: formName.trim(),
-        description: formDescription.trim() || null,
-        code: formCode.trim() || null,
-        color: formColor,
-        case_types: formCaseTypes,
-        requires_scheduling: formRequiresScheduling,
-        default_duration_minutes: formDefaultDuration || null,
-        allow_recurring: formAllowRecurring,
-        created_by: user.id,
-      };
-
       if (editingService) {
+        // When editing, update all fields
+        const updateData = {
+          name: formName.trim(),
+          description: formDescription.trim() || null,
+          code: formCode.trim() || null,
+          color: formColor,
+          case_types: formCaseTypes,
+          requires_scheduling: formRequiresScheduling,
+          default_duration_minutes: formDefaultDuration || null,
+          allow_recurring: formAllowRecurring,
+        };
+
         const { error } = await supabase
           .from("case_services")
-          .update(serviceData)
+          .update(updateData)
           .eq("id", editingService.id);
 
         if (error) throw error;
         toast.success("Service updated");
       } else {
+        // When creating new, only save core fields and set as draft (inactive)
+        const insertData = {
+          organization_id: organization.id,
+          name: formName.trim(),
+          description: formDescription.trim() || null,
+          is_active: false, // Draft status
+          display_order: services.length,
+          created_by: user.id,
+        };
+
         const { error } = await supabase
           .from("case_services")
-          .insert({
-            ...serviceData,
-            display_order: services.length,
-          });
+          .insert(insertData);
 
         if (error) throw error;
-        toast.success("Service created");
+        toast.success("Service created as draft");
       }
 
       setDialogOpen(false);
@@ -418,32 +431,28 @@ export const CaseServicesTab = () => {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
-                {editingService ? "Edit Service" : "Add Service"}
+                {editingService ? "Edit Service" : "New Case Service"}
               </DialogTitle>
               <DialogDescription>
-                Configure the service details and availability settings.
+                {editingService 
+                  ? "Configure the service details and availability settings."
+                  : "Enter the core details for your new service. You can configure additional settings after creation."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder="Surveillance Session"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="code">Code</Label>
-                  <Input
-                    id="code"
-                    value={formCode}
-                    onChange={(e) => setFormCode(e.target.value)}
-                    placeholder="SRV"
-                  />
-                </div>
+              {/* Core fields - always shown */}
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value.slice(0, MAX_SERVICE_NAME_LENGTH))}
+                  placeholder="Surveillance Session"
+                  maxLength={MAX_SERVICE_NAME_LENGTH}
+                />
+                <p className={`text-xs text-right ${formName.length >= MAX_SERVICE_NAME_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {formName.length}/{MAX_SERVICE_NAME_LENGTH}
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -457,79 +466,95 @@ export const CaseServicesTab = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="color">Color</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    id="color"
-                    value={formColor}
-                    onChange={(e) => setFormColor(e.target.value)}
-                    className="h-10 w-20 rounded border cursor-pointer"
-                  />
-                  <Input
-                    value={formColor}
-                    onChange={(e) => setFormColor(e.target.value)}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-3">Scheduling Settings</h4>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Requires Scheduling</Label>
-                      <p className="text-xs text-muted-foreground">
-                        This service requires a scheduled time slot
-                      </p>
+              {/* Additional fields - only shown when editing */}
+              {editingService && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="code">Code</Label>
+                      <Input
+                        id="code"
+                        value={formCode}
+                        onChange={(e) => setFormCode(e.target.value)}
+                        placeholder="SRV"
+                      />
                     </div>
-                    <Switch
-                      checked={formRequiresScheduling}
-                      onCheckedChange={setFormRequiresScheduling}
-                    />
-                  </div>
-
-                  {formRequiresScheduling && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="duration">Default Duration (minutes)</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="color">Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          id="color"
+                          value={formColor}
+                          onChange={(e) => setFormColor(e.target.value)}
+                          className="h-10 w-14 rounded border cursor-pointer"
+                        />
                         <Input
-                          id="duration"
-                          type="number"
-                          value={formDefaultDuration}
-                          onChange={(e) =>
-                            setFormDefaultDuration(
-                              e.target.value ? parseInt(e.target.value) : ""
-                            )
-                          }
-                          placeholder="60"
+                          value={formColor}
+                          onChange={(e) => setFormColor(e.target.value)}
+                          className="flex-1"
                         />
                       </div>
+                    </div>
+                  </div>
 
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-3">Scheduling Settings</h4>
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <Label>Allow Recurring</Label>
+                          <Label>Requires Scheduling</Label>
                           <p className="text-xs text-muted-foreground">
-                            Enable recurring schedule options
+                            This service requires a scheduled time slot
                           </p>
                         </div>
                         <Switch
-                          checked={formAllowRecurring}
-                          onCheckedChange={setFormAllowRecurring}
+                          checked={formRequiresScheduling}
+                          onCheckedChange={setFormRequiresScheduling}
                         />
                       </div>
-                    </>
-                  )}
-                </div>
-              </div>
+
+                      {formRequiresScheduling && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="duration">Default Duration (minutes)</Label>
+                            <Input
+                              id="duration"
+                              type="number"
+                              value={formDefaultDuration}
+                              onChange={(e) =>
+                                setFormDefaultDuration(
+                                  e.target.value ? parseInt(e.target.value) : ""
+                                )
+                              }
+                              placeholder="60"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Allow Recurring</Label>
+                              <p className="text-xs text-muted-foreground">
+                                Enable recurring schedule options
+                              </p>
+                            </div>
+                            <Switch
+                              checked={formAllowRecurring}
+                              onCheckedChange={setFormAllowRecurring}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} disabled={saving || !isNameValid}>
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {editingService ? "Save Changes" : "Create Service"}
               </Button>
