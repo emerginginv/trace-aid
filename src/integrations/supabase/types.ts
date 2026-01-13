@@ -1018,6 +1018,7 @@ export type Database = {
           notes: string | null
           organization_id: string | null
           pricing_model: string | null
+          pricing_snapshot: Json | null
           quantity: number | null
           start_date: string | null
           status: string | null
@@ -1054,6 +1055,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           pricing_model?: string | null
+          pricing_snapshot?: Json | null
           quantity?: number | null
           start_date?: string | null
           status?: string | null
@@ -1090,6 +1092,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           pricing_model?: string | null
+          pricing_snapshot?: Json | null
           quantity?: number | null
           start_date?: string | null
           status?: string | null
@@ -3693,6 +3696,7 @@ export type Database = {
           activity_count: number
           activity_ids: string[] | null
           amount: number
+          billing_item_id: string | null
           case_id: string
           case_service_instance_id: string
           created_at: string
@@ -3713,6 +3717,7 @@ export type Database = {
           activity_count?: number
           activity_ids?: string[] | null
           amount?: number
+          billing_item_id?: string | null
           case_id: string
           case_service_instance_id: string
           created_at?: string
@@ -3733,6 +3738,7 @@ export type Database = {
           activity_count?: number
           activity_ids?: string[] | null
           amount?: number
+          billing_item_id?: string | null
           case_id?: string
           case_service_instance_id?: string
           created_at?: string
@@ -3750,6 +3756,13 @@ export type Database = {
           unit_label?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_billing_item_id_fkey"
+            columns: ["billing_item_id"]
+            isOneToOne: false
+            referencedRelation: "case_finances"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoice_line_items_case_id_fkey"
             columns: ["case_id"]
@@ -7224,6 +7237,10 @@ export type Database = {
           p_date_to: string
           p_organization_id: string
         }
+        Returns: Json
+      }
+      generate_invoice_from_billing_items: {
+        Args: { p_billing_item_ids: string[]; p_invoice_id: string }
         Returns: Json
       }
       generate_invoice_line_items: {
