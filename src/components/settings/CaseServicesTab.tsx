@@ -677,6 +677,22 @@ export const CaseServicesTab = () => {
                         </div>
                       </div>
                     </RadioGroup>
+
+                    {/* Activity-Based Scheduling Explanation - Conditional */}
+                    {formScheduleMode === 'activity_based' && isEnterprise && (
+                      <Alert className="mt-3 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+                        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <AlertDescription className="text-sm">
+                          <p className="font-medium mb-2">How Activity-Based Scheduling Works</p>
+                          <ul className="space-y-1.5 text-muted-foreground">
+                            <li>• Services without assigned activities are marked <strong>unscheduled</strong></li>
+                            <li>• Unscheduled services appear on the <strong>investigator schedule</strong> and <strong>case calendar</strong></li>
+                            <li>• Drag the service to an investigator and date to create an activity</li>
+                            <li>• Saving the activity marks the service as <strong>scheduled</strong></li>
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
 
                   {/* Case Type Availability Section */}
@@ -901,6 +917,21 @@ export const CaseServicesTab = () => {
                   <p className="font-medium">{getScheduleModeInfo(reviewingService.schedule_mode).label}</p>
                   <p className="text-xs text-muted-foreground">{getScheduleModeInfo(reviewingService.schedule_mode).description}</p>
                 </div>
+
+                {/* Activity-Based Scheduling Explanation - Conditional */}
+                {reviewingService.schedule_mode === 'activity_based' && (
+                  <Alert className="mt-3 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <AlertDescription className="text-sm">
+                      <p className="font-medium mb-2">How This Works</p>
+                      <ul className="space-y-1 text-muted-foreground text-xs">
+                        <li>• Unscheduled services appear on investigator schedules and case calendars</li>
+                        <li>• Drag to an investigator/date to create an activity</li>
+                        <li>• Saving marks the service as scheduled</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
 
               <Separator />
