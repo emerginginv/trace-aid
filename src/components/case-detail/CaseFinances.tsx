@@ -8,6 +8,7 @@ import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, AlertCi
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
+import { InvoiceFromServices } from "./InvoiceFromServices";
 import { InvoiceDetail } from "./InvoiceDetail";
 import { usePermissions } from "@/hooks/usePermissions";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
@@ -462,11 +463,12 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   return (
     <>
       <Tabs defaultValue="expenses" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 gap-1">
+        <TabsList className="grid w-full grid-cols-5 gap-1">
           <TabsTrigger value="expenses" className="text-xs sm:text-sm px-2 sm:px-3">Expenses</TabsTrigger>
           <TabsTrigger value="time" className="text-xs sm:text-sm px-2 sm:px-3">Time</TabsTrigger>
           <TabsTrigger value="invoices" className="text-xs sm:text-sm px-2 sm:px-3">Invoices</TabsTrigger>
-          <TabsTrigger value="create-invoice" className="text-xs sm:text-sm px-2 sm:px-3">Create Invoice</TabsTrigger>
+          <TabsTrigger value="create-invoice" className="text-xs sm:text-sm px-2 sm:px-3">Invoice (Services)</TabsTrigger>
+          <TabsTrigger value="create-invoice-legacy" className="text-xs sm:text-sm px-2 sm:px-3">Invoice (Items)</TabsTrigger>
         </TabsList>
 
         <TabsContent value="expenses" className="space-y-6 animate-fade-in">
@@ -1227,6 +1229,14 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
         </TabsContent>
 
         <TabsContent value="create-invoice" className="animate-fade-in">
+          {isLoading ? (
+            <CreateInvoiceTabSkeleton />
+          ) : (
+            <InvoiceFromServices caseId={caseId} onSuccess={fetchFinances} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="create-invoice-legacy" className="animate-fade-in">
           {isLoading ? (
             <CreateInvoiceTabSkeleton />
           ) : (
