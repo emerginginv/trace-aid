@@ -980,6 +980,7 @@ export type Database = {
           name: string
           organization_id: string
           requires_scheduling: boolean | null
+          schedule_mode: string
           updated_at: string
         }
         Insert: {
@@ -997,6 +998,7 @@ export type Database = {
           name: string
           organization_id: string
           requires_scheduling?: boolean | null
+          schedule_mode?: string
           updated_at?: string
         }
         Update: {
@@ -1014,6 +1016,7 @@ export type Database = {
           name?: string
           organization_id?: string
           requires_scheduling?: boolean | null
+          schedule_mode?: string
           updated_at?: string
         }
         Relationships: [
