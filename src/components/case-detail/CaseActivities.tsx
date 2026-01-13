@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays } from "lucide-react";
+import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays, Link } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,6 +32,8 @@ interface Activity {
   assigned_user_id: string | null;
   status: string;
   event_subtype: string | null;
+  case_service_instance_id: string | null;
+  service_name?: string;
 }
 
 interface User {
@@ -111,12 +113,26 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
       setLoading(true);
       const { data, error } = await supabase
         .from('case_activities')
-        .select('*')
+        .select(`
+          *,
+          case_service_instances (
+            case_services (
+              name
+            )
+          )
+        `)
         .eq('case_id', caseId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setActivities(data || []);
+      
+      // Map the joined data to include service_name
+      const activitiesWithService = (data || []).map((activity: any) => ({
+        ...activity,
+        service_name: activity.case_service_instances?.case_services?.name || null,
+      }));
+      
+      setActivities(activitiesWithService);
     } catch (error) {
       console.error('Error fetching activities:', error);
       toast({
@@ -314,6 +330,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
     const data = type === "task" ? filteredTasks : filteredEvents;
     const exportColumns: ExportColumn[] = [
       { key: "title", label: "Title" },
+      { key: "service_name", label: "Linked Service", format: (v) => v || "-" },
       ...(type === "event" ? [{ key: "event_subtype", label: "Event Type", format: (v: any) => v || "-" }] : []),
       { key: "status", label: "Status", format: (v) => v?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '-' },
       { key: "assigned_user_id", label: "Assigned To", format: (v) => getUserName(v) },
@@ -491,7 +508,13 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                               >
                                 {task.title}
                               </span>
-                              {task.description && (
+                              {task.service_name && (
+                                <span className="text-xs text-primary flex items-center gap-1" title={`Linked to: ${task.service_name}`}>
+                                  <Link className="h-3 w-3" />
+                                  {task.service_name}
+                                </span>
+                              )}
+                              {task.description && !task.service_name && (
                                 <span className="text-xs text-muted-foreground line-clamp-1" title={task.description}>
                                   {task.description}
                                 </span>
@@ -660,7 +683,13 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                               >
                                 {event.title}
                               </span>
-                              {event.description && (
+                              {event.service_name && (
+                                <span className="text-xs text-primary flex items-center gap-1" title={`Linked to: ${event.service_name}`}>
+                                  <Link className="h-3 w-3" />
+                                  {event.service_name}
+                                </span>
+                              )}
+                              {event.description && !event.service_name && (
                                 <span className="text-xs text-muted-foreground line-clamp-1" title={event.description}>
                                   {event.description}
                                 </span>
