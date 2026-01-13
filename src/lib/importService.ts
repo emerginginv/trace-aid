@@ -1083,7 +1083,7 @@ async function loadDryRunPicklistValues(organizationId: string): Promise<{ updat
   
   for (const pl of picklists || []) {
     if (pl.type === 'update_type') updateTypes.push(pl.value);
-    else if (pl.type === 'event_type') eventTypes.push(pl.value);
+    else if (pl.type === 'case_type') eventTypes.push(pl.value);
   }
   
   return { updateTypes, eventTypes };
