@@ -1227,6 +1227,7 @@ export type Database = {
         Row: {
           assigned_investigator_id: string | null
           billable: boolean | null
+          billed_at: string | null
           case_id: string
           case_service_id: string
           completion_date: string | null
@@ -1250,6 +1251,7 @@ export type Database = {
         Insert: {
           assigned_investigator_id?: string | null
           billable?: boolean | null
+          billed_at?: string | null
           case_id: string
           case_service_id: string
           completion_date?: string | null
@@ -1273,6 +1275,7 @@ export type Database = {
         Update: {
           assigned_investigator_id?: string | null
           billable?: boolean | null
+          billed_at?: string | null
           case_id?: string
           case_service_id?: string
           completion_date?: string | null
@@ -3493,6 +3496,105 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      invoice_line_items: {
+        Row: {
+          activity_count: number
+          activity_ids: string[] | null
+          amount: number
+          case_id: string
+          case_service_instance_id: string
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          organization_id: string
+          pricing_model: string
+          pricing_profile_id: string | null
+          pricing_rule_snapshot: Json | null
+          quantity: number
+          rate: number
+          service_code: string | null
+          service_name: string
+          unit_label: string | null
+        }
+        Insert: {
+          activity_count?: number
+          activity_ids?: string[] | null
+          amount?: number
+          case_id: string
+          case_service_instance_id: string
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          organization_id: string
+          pricing_model: string
+          pricing_profile_id?: string | null
+          pricing_rule_snapshot?: Json | null
+          quantity?: number
+          rate?: number
+          service_code?: string | null
+          service_name: string
+          unit_label?: string | null
+        }
+        Update: {
+          activity_count?: number
+          activity_ids?: string[] | null
+          amount?: number
+          case_id?: string
+          case_service_instance_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          organization_id?: string
+          pricing_model?: string
+          pricing_profile_id?: string | null
+          pricing_rule_snapshot?: Json | null
+          quantity?: number
+          rate?: number
+          service_code?: string | null
+          service_name?: string
+          unit_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_case_service_instance_id_fkey"
+            columns: ["case_service_instance_id"]
+            isOneToOne: true
+            referencedRelation: "case_service_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoice_payments: {
         Row: {
@@ -6856,6 +6958,10 @@ export type Database = {
         }
         Returns: Json
       }
+      generate_invoice_line_items: {
+        Args: { p_invoice_id: string; p_service_instance_ids: string[] }
+        Returns: Json
+      }
       generate_next_case_number: {
         Args: { p_organization_id: string; p_parent_case_id?: string }
         Returns: Json
@@ -6903,6 +7009,25 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_billable_service_instances: {
+        Args: { p_case_id: string }
+        Returns: {
+          activity_count: number
+          billed_at: string
+          completion_date: string
+          estimated_amount: number
+          id: string
+          is_billable: boolean
+          notes: string
+          pricing_model: string
+          quantity_actual: number
+          quantity_estimated: number
+          rate: number
+          service_code: string
+          service_name: string
+          status: string
+        }[]
       }
       get_blocking_contracts: {
         Args: { p_organization_id: string }
@@ -7168,6 +7293,10 @@ export type Database = {
           service_name: string
           warning_threshold: number
         }[]
+      }
+      get_service_instance_pricing: {
+        Args: { p_case_service_instance_id: string }
+        Returns: Json
       }
       get_soc2_dashboard: { Args: never; Returns: Json }
       get_sso_config: { Args: { p_org_id: string }; Returns: Json }
