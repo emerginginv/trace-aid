@@ -145,7 +145,17 @@ export const ServiceDetailDialog = ({
     }
   };
 
+  const scheduleMode = serviceInstance.case_service?.schedule_mode || 'primary_investigator';
+  const isNoSchedulingRequired = scheduleMode === 'none';
+
   const getStatusBadge = () => {
+    if (isNoSchedulingRequired) {
+      return (
+        <Badge variant="secondary" className="bg-muted text-muted-foreground">
+          No Scheduling Required
+        </Badge>
+      );
+    }
     if (serviceInstance.status === 'scheduled') {
       return (
         <Badge className="bg-green-100 text-green-700 border-green-200">
@@ -271,8 +281,8 @@ export const ServiceDetailDialog = ({
             )}
           </div>
 
-          {/* Mark as Unscheduled Section */}
-          {canManage && serviceInstance.status === 'scheduled' && (
+          {/* Mark as Unscheduled Section - Hide for schedule_mode = 'none' */}
+          {canManage && serviceInstance.status === 'scheduled' && !isNoSchedulingRequired && (
             <>
               <Separator />
               
@@ -334,13 +344,22 @@ export const ServiceDetailDialog = ({
             </>
           )}
 
-          {/* Info for unscheduled services */}
-          {serviceInstance.status === 'unscheduled' && (
+          {/* Info for unscheduled services - only show if scheduling is required */}
+          {serviceInstance.status === 'unscheduled' && !isNoSchedulingRequired && (
             <Alert className="bg-blue-50 border-blue-200">
               <Clock className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-sm text-blue-800">
                 This service is unscheduled. You can schedule it by creating an activity 
                 from the calendar or activities tab and linking it to this service.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Info for no scheduling required */}
+          {isNoSchedulingRequired && (
+            <Alert className="bg-muted/50 border">
+              <AlertDescription className="text-sm text-muted-foreground">
+                This service does not require scheduling.
               </AlertDescription>
             </Alert>
           )}

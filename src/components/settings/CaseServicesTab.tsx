@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useEntitlements } from "@/hooks/use-entitlements";
+import { useUserRole } from "@/hooks/useUserRole";
 import { isEnterprisePlan } from "@/lib/planDetection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,7 @@ interface SortableRowProps {
   onDelete: (id: string) => void;
   onToggleActive: (id: string, isActive: boolean) => void;
   onReview: (service: CaseService) => void;
+  isAdmin: boolean;
 }
 
 // Helper function to format schedule mode
@@ -62,7 +64,7 @@ const getScheduleModeInfo = (mode: ScheduleMode) => {
   }
 };
 
-const SortableRow = ({ service, onEdit, onDelete, onToggleActive, onReview }: SortableRowProps) => {
+const SortableRow = ({ service, onEdit, onDelete, onToggleActive, onReview, isAdmin }: SortableRowProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: service.id });
 
   const style = {
@@ -130,30 +132,34 @@ const SortableRow = ({ service, onEdit, onDelete, onToggleActive, onReview }: So
         </Badge>
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-2">
-          {!service.is_active && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => onReview(service)}
-              className="text-primary"
-            >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Review
+        {isAdmin ? (
+          <div className="flex items-center gap-2">
+            {!service.is_active && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onReview(service)}
+                className="text-primary"
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Review
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => onEdit(service)}>
+              <Pencil className="h-4 w-4" />
             </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => onEdit(service)}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-          {service.is_active && (
-            <Button variant="ghost" size="icon" onClick={() => onToggleActive(service.id, false)}>
-              <Switch checked={service.is_active} className="pointer-events-none" />
+            {service.is_active && (
+              <Button variant="ghost" size="icon" onClick={() => onToggleActive(service.id, false)}>
+                <Switch checked={service.is_active} className="pointer-events-none" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => onDelete(service.id)}>
+              <Trash2 className="h-4 w-4" />
             </Button>
-          )}
-          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => onDelete(service.id)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">View only</span>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -162,6 +168,7 @@ const SortableRow = ({ service, onEdit, onDelete, onToggleActive, onReview }: So
 export const CaseServicesTab = () => {
   const { organization } = useOrganization();
   const { entitlements } = useEntitlements();
+  const { isAdmin } = useUserRole();
   const [services, setServices] = useState<CaseService[]>([]);
   
   // Check enterprise status
@@ -531,16 +538,17 @@ export const CaseServicesTab = () => {
             Define services that can be performed on cases
           </CardDescription>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Service
-            </Button>
-          </DialogTrigger>
+        {isAdmin ? (
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Service
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
@@ -808,6 +816,12 @@ export const CaseServicesTab = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        ) : (
+          <Badge variant="outline" className="text-xs">
+            <Lock className="h-3 w-3 mr-1" />
+            Admin Only
+          </Badge>
+        )}
       </CardHeader>
       <CardContent>
         {services.length === 0 ? (
@@ -848,6 +862,7 @@ export const CaseServicesTab = () => {
                       onDelete={handleDelete}
                       onToggleActive={handleToggleActive}
                       onReview={openReviewDialog}
+                      isAdmin={isAdmin}
                     />
                   ))}
                 </SortableContext>

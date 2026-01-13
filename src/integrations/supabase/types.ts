@@ -6340,6 +6340,33 @@ export type Database = {
       generate_report_content: { Args: { p_report_id: string }; Returns: Json }
       generate_scim_token: { Args: { p_org_id: string }; Returns: Json }
       get_active_impersonation: { Args: never; Returns: Json }
+      get_available_services_for_case: {
+        Args: { p_case_id: string; p_organization_id: string }
+        Returns: {
+          allow_recurring: boolean | null
+          case_types: string[] | null
+          code: string | null
+          color: string | null
+          created_at: string
+          created_by: string | null
+          default_duration_minutes: number | null
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          requires_scheduling: boolean | null
+          schedule_mode: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "case_services"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_blocking_contracts: {
         Args: { p_organization_id: string }
         Returns: Json
@@ -6633,6 +6660,10 @@ export type Database = {
       is_platform_staff:
         | { Args: never; Returns: boolean }
         | { Args: { p_user_id: string }; Returns: boolean }
+      is_service_available_for_case_type: {
+        Args: { p_case_type_tag: string; p_service_case_types: string[] }
+        Returns: boolean
+      }
       is_username_available: {
         Args: { check_username: string }
         Returns: boolean
