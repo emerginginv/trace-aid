@@ -81,18 +81,16 @@ const SortableRow = ({ service, onEdit, onDelete, onToggleActive, onReview, isAd
         </button>
       </TableCell>
       <TableCell className="font-medium">{service.name}</TableCell>
-      <TableCell>{service.code || "-"}</TableCell>
+      <TableCell className="hidden md:table-cell">{service.code || "-"}</TableCell>
       <TableCell>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-4 h-4 rounded-full border"
-            style={{ backgroundColor: service.color }}
-          />
-        </div>
+        <div
+          className="w-4 h-4 rounded-full border"
+          style={{ backgroundColor: service.color }}
+        />
       </TableCell>
-      <TableCell>
+      <TableCell className="hidden lg:table-cell">
         {service.case_types.length === 0 ? (
-          <Badge variant="outline">All Types</Badge>
+          <Badge variant="outline" className="text-xs">All Types</Badge>
         ) : (
           <div className="flex flex-wrap gap-1">
             {service.case_types.slice(0, 2).map((type) => (
@@ -113,47 +111,47 @@ const SortableRow = ({ service, onEdit, onDelete, onToggleActive, onReview, isAd
           <span className="text-muted-foreground text-xs">None</span>
         ) : service.schedule_mode === 'activity_based' ? (
           <div className="flex items-center gap-1 text-primary">
-            <Users className="h-4 w-4" />
+            <Users className="h-3 w-3" />
             <span className="text-xs">Activity</span>
           </div>
         ) : (
           <div className="flex items-center gap-1 text-primary">
-            <User className="h-4 w-4" />
-            <span className="text-xs">Primary Inv.</span>
+            <User className="h-3 w-3" />
+            <span className="text-xs">PI</span>
           </div>
         )}
       </TableCell>
       <TableCell>
         <Badge 
           variant={service.is_active ? "default" : "outline"} 
-          className={!service.is_active ? "border-orange-500 text-orange-600" : ""}
+          className={`text-xs ${!service.is_active ? "border-orange-500 text-orange-600" : ""}`}
         >
           {service.is_active ? "Active" : "Draft"}
         </Badge>
       </TableCell>
-      <TableCell>
+      <TableCell className="text-right">
         {isAdmin ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-1">
             {!service.is_active && (
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => onReview(service)}
-                className="text-primary"
+                className="text-primary h-8 text-xs"
               >
-                <CheckCircle className="h-4 w-4 mr-1" />
+                <CheckCircle className="h-3 w-3 mr-1" />
                 Review
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => onEdit(service)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(service)}>
               <Pencil className="h-4 w-4" />
             </Button>
             {service.is_active && (
-              <Button variant="ghost" size="icon" onClick={() => onToggleActive(service.id, false)}>
-                <Switch checked={service.is_active} className="pointer-events-none" />
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onToggleActive(service.id, false)}>
+                <Switch checked={service.is_active} className="pointer-events-none scale-75" />
               </Button>
             )}
-            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => onDelete(service.id)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(service.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -836,38 +834,40 @@ export const CaseServicesTab = () => {
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10"></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Color</TableHead>
-                  <TableHead>Case Types</TableHead>
-                  <TableHead>Scheduling</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <SortableContext
-                  items={services.map((s) => s.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {services.map((service) => (
-                    <SortableRow
-                      key={service.id}
-                      service={service}
-                      onEdit={openEditDialog}
-                      onDelete={handleDelete}
-                      onToggleActive={handleToggleActive}
-                      onReview={openReviewDialog}
-                      isAdmin={isAdmin}
-                    />
-                  ))}
-                </SortableContext>
-              </TableBody>
-            </Table>
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10"></TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="w-[80px] hidden md:table-cell">Code</TableHead>
+                    <TableHead className="w-[60px]">Color</TableHead>
+                    <TableHead className="w-[120px] hidden lg:table-cell">Case Types</TableHead>
+                    <TableHead className="w-[100px]">Scheduling</TableHead>
+                    <TableHead className="w-[80px]">Status</TableHead>
+                    <TableHead className="w-[140px] text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <SortableContext
+                    items={services.map((s) => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {services.map((service) => (
+                      <SortableRow
+                        key={service.id}
+                        service={service}
+                        onEdit={openEditDialog}
+                        onDelete={handleDelete}
+                        onToggleActive={handleToggleActive}
+                        onReview={openReviewDialog}
+                        isAdmin={isAdmin}
+                      />
+                    ))}
+                  </SortableContext>
+                </TableBody>
+              </Table>
+            </div>
           </DndContext>
         )}
       </CardContent>
