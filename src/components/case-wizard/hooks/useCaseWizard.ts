@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SelectedService } from "../steps/Step2Services";
 
-export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface CaseFormData {
   account_id: string;
@@ -25,6 +26,7 @@ export interface WizardState {
   draftCaseNumber: string | null;
   organizationId: string | null;
   caseData: CaseFormData | null;
+  selectedServices: SelectedService[];
   subjectsCount: number;
   updatesCount: number;
   eventsCount: number;
@@ -38,6 +40,7 @@ const initialState: WizardState = {
   draftCaseNumber: null,
   organizationId: null,
   caseData: null,
+  selectedServices: [],
   subjectsCount: 0,
   updatesCount: 0,
   eventsCount: 0,
@@ -58,7 +61,7 @@ export function useCaseWizard(organizationId: string | null) {
   const goNext = useCallback(() => {
     setState(prev => ({
       ...prev,
-      currentStep: Math.min(prev.currentStep + 1, 6) as WizardStep,
+      currentStep: Math.min(prev.currentStep + 1, 7) as WizardStep,
     }));
   }, []);
 
@@ -75,6 +78,13 @@ export function useCaseWizard(organizationId: string | null) {
       draftCaseId: caseId,
       draftCaseNumber: caseNumber,
       caseData,
+    }));
+  }, []);
+
+  const setSelectedServices = useCallback((services: SelectedService[]) => {
+    setState(prev => ({
+      ...prev,
+      selectedServices: services,
     }));
   }, []);
 
@@ -112,6 +122,27 @@ export function useCaseWizard(organizationId: string | null) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Create case_service_instances for selected services
+      if (state.selectedServices.length > 0) {
+        const serviceInstances = state.selectedServices.map(service => ({
+          case_id: state.draftCaseId!,
+          case_service_id: service.serviceId,
+          organization_id: state.organizationId!,
+          status: "pending",
+          quantity_estimated: service.estimatedQuantity || null,
+          created_by: user.id,
+        }));
+
+        const { error: instancesError } = await supabase
+          .from("case_service_instances")
+          .insert(serviceInstances);
+
+        if (instancesError) {
+          console.error("Error creating service instances:", instancesError);
+          // Continue anyway - we don't want to block case creation
+        }
+      }
+
       // Update case to finalize it
       const { error } = await supabase
         .from("cases")
@@ -133,6 +164,7 @@ export function useCaseWizard(organizationId: string | null) {
         metadata: {
           case_id: state.draftCaseId,
           case_number: state.draftCaseNumber,
+          services_count: state.selectedServices.length,
         },
       });
 
@@ -145,7 +177,7 @@ export function useCaseWizard(organizationId: string | null) {
     } finally {
       setSubmitting(false);
     }
-  }, [state.draftCaseId, state.draftCaseNumber, state.organizationId, setSubmitting]);
+  }, [state.draftCaseId, state.draftCaseNumber, state.organizationId, state.selectedServices, setSubmitting]);
 
   const cancelDraft = useCallback(async (): Promise<boolean> => {
     if (!state.draftCaseId) return true;
@@ -181,6 +213,7 @@ export function useCaseWizard(organizationId: string | null) {
     goNext,
     goBack,
     setDraftCase,
+    setSelectedServices,
     updateCounts,
     incrementCount,
     setSubmitting,

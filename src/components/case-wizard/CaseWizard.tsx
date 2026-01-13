@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { WizardProgress } from "./WizardProgress";
 import { useCaseWizard } from "./hooks/useCaseWizard";
 import { Step1NewCase } from "./steps/Step1NewCase";
+import { Step2Services } from "./steps/Step2Services";
 import { Step2Subjects } from "./steps/Step2Subjects";
 import { Step3Updates } from "./steps/Step3Updates";
 import { Step4Events } from "./steps/Step4Events";
@@ -35,6 +36,7 @@ export function CaseWizard() {
     goNext,
     goBack,
     setDraftCase,
+    setSelectedServices,
     updateCounts,
     approveDraft,
     cancelDraft,
@@ -111,6 +113,19 @@ export function CaseWizard() {
         );
       case 2:
         return (
+          <Step2Services
+            caseId={state.draftCaseId!}
+            organizationId={organizationId}
+            pricingProfileId={state.caseData?.pricing_profile_id || null}
+            onBack={goBack}
+            onContinue={(services) => {
+              setSelectedServices(services);
+              goNext();
+            }}
+          />
+        );
+      case 3:
+        return (
           <Step2Subjects
             caseId={state.draftCaseId!}
             organizationId={organizationId}
@@ -121,7 +136,7 @@ export function CaseWizard() {
             }}
           />
         );
-      case 3:
+      case 4:
         return (
           <Step3Updates
             caseId={state.draftCaseId!}
@@ -133,7 +148,7 @@ export function CaseWizard() {
             }}
           />
         );
-      case 4:
+      case 5:
         return (
           <Step4Events
             caseId={state.draftCaseId!}
@@ -145,7 +160,7 @@ export function CaseWizard() {
             }}
           />
         );
-      case 5:
+      case 6:
         return (
           <Step5Attachments
             caseId={state.draftCaseId!}
@@ -157,12 +172,13 @@ export function CaseWizard() {
             }}
           />
         );
-      case 6:
+      case 7:
         return (
           <Step6Summary
             caseId={state.draftCaseId!}
             caseNumber={state.draftCaseNumber!}
             caseData={state.caseData!}
+            selectedServices={state.selectedServices}
             subjectsCount={state.subjectsCount}
             updatesCount={state.updatesCount}
             eventsCount={state.eventsCount}

@@ -11,10 +11,12 @@ import {
   ChevronRight,
   Building2,
   User,
+  Wrench,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WizardNavigation } from "../WizardNavigation";
 import { CaseFormData } from "../hooks/useCaseWizard";
+import { SelectedService } from "./Step2Services";
 import { format } from "date-fns";
 import {
   Collapsible,
@@ -26,6 +28,7 @@ interface Step6Props {
   caseId: string;
   caseNumber: string;
   caseData: CaseFormData;
+  selectedServices: SelectedService[];
   subjectsCount: number;
   updatesCount: number;
   eventsCount: number;
@@ -58,6 +61,7 @@ export function Step6Summary({
   caseId,
   caseNumber,
   caseData,
+  selectedServices,
   subjectsCount,
   updatesCount,
   eventsCount,
@@ -208,6 +212,50 @@ export function Step6Summary({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">
+        {/* Services */}
+        <Collapsible
+          open={expandedSection === "services"}
+          onOpenChange={(open) => setExpandedSection(open ? "services" : null)}
+        >
+          <Card>
+            <CollapsibleTrigger className="w-full">
+              <CardContent className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <Wrench className="h-5 w-5 text-muted-foreground" />
+                  <div className="text-left">
+                    <p className="font-medium">Services</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedServices.length} selected
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight
+                  className={`h-4 w-4 text-muted-foreground transition-transform ${
+                    expandedSection === "services" ? "rotate-90" : ""
+                  }`}
+                />
+              </CardContent>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-4 pb-4">
+                <Separator className="mb-3" />
+                <div className="flex flex-wrap gap-2 text-sm">
+                  {selectedServices.length > 0 ? (
+                    selectedServices.map((service) => (
+                      <Badge key={service.serviceId} variant="secondary">
+                        {service.serviceName}
+                        {service.estimatedQuantity && ` (${service.estimatedQuantity}h)`}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">No services selected</p>
+                  )}
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
         {/* Subjects */}
         <Collapsible
           open={expandedSection === "subjects"}
@@ -284,7 +332,7 @@ export function Step6Summary({
         </Card>
 
         {/* Attachments */}
-        <Card>
+        <Card className="col-span-2 sm:col-span-1">
           <CardContent className="flex items-center gap-3 p-4">
             <Paperclip className="h-5 w-5 text-muted-foreground" />
             <div>
@@ -302,11 +350,14 @@ export function Step6Summary({
         <p className="text-sm text-muted-foreground">
           When you approve this case, it will change from <strong>Draft</strong> to{" "}
           <strong>New</strong> status and become visible across the system.
+          {selectedServices.length > 0 && (
+            <> The {selectedServices.length} selected service{selectedServices.length !== 1 ? "s" : ""} will be added to the case.</>
+          )}
         </p>
       </div>
 
       <WizardNavigation
-        currentStep={6}
+        currentStep={7}
         onBack={onBack}
         onContinue={() => {}}
         onApprove={onApprove}
