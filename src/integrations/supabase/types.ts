@@ -2726,6 +2726,74 @@ export type Database = {
         }
         Relationships: []
       }
+      enforcement_actions: {
+        Row: {
+          action_type: string
+          block_reason: string | null
+          case_id: string | null
+          context: Json | null
+          created_at: string
+          enforcement_type: string
+          id: string
+          organization_id: string
+          user_id: string
+          was_blocked: boolean
+        }
+        Insert: {
+          action_type: string
+          block_reason?: string | null
+          case_id?: string | null
+          context?: Json | null
+          created_at?: string
+          enforcement_type: string
+          id?: string
+          organization_id: string
+          user_id: string
+          was_blocked?: boolean
+        }
+        Update: {
+          action_type?: string
+          block_reason?: string | null
+          case_id?: string | null
+          context?: Json | null
+          created_at?: string
+          enforcement_type?: string
+          id?: string
+          organization_id?: string
+          user_id?: string
+          was_blocked?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enforcement_actions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcement_actions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcement_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcement_actions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_activities: {
         Row: {
           activity_date: string
@@ -6715,6 +6783,42 @@ export type Database = {
       }
     }
     Views: {
+      case_enforcement_summary: {
+        Row: {
+          allowed_actions_count: number | null
+          blocked_actions_count: number | null
+          budget_enforcements: number | null
+          case_id: string | null
+          last_enforcement_at: string | null
+          lock_enforcements: number | null
+          organization_id: string | null
+          pricing_enforcements: number | null
+          tier_enforcements: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enforcement_actions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcement_actions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcement_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases_with_budget_summary: {
         Row: {
           account_id: string | null
@@ -7179,6 +7283,10 @@ export type Database = {
           hours_utilization_pct: number
         }[]
       }
+      get_case_enforcement_status: {
+        Args: { p_case_id: string }
+        Returns: Json
+      }
       get_case_retention_days: { Args: { p_case_id: string }; Returns: number }
       get_cases_due_for_retention_purge: {
         Args: never
@@ -7544,6 +7652,17 @@ export type Database = {
           p_hours_limit?: number
           p_service_instance_id?: string
           p_violation_type: string
+        }
+        Returns: string
+      }
+      log_enforcement_audit: {
+        Args: {
+          p_action_type: string
+          p_block_reason?: string
+          p_case_id: string
+          p_context?: Json
+          p_enforcement_type: string
+          p_was_blocked: boolean
         }
         Returns: string
       }
