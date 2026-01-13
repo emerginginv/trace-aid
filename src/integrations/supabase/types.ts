@@ -991,10 +991,13 @@ export type Database = {
       }
       case_finances: {
         Row: {
+          account_id: string | null
           activity_id: string | null
           amount: number
           billing_frequency: string | null
+          billing_type: string | null
           case_id: string
+          case_service_instance_id: string | null
           category: string | null
           created_at: string
           date: string
@@ -1014,6 +1017,7 @@ export type Database = {
           invoiced: boolean | null
           notes: string | null
           organization_id: string | null
+          pricing_model: string | null
           quantity: number | null
           start_date: string | null
           status: string | null
@@ -1023,10 +1027,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           activity_id?: string | null
           amount: number
           billing_frequency?: string | null
+          billing_type?: string | null
           case_id: string
+          case_service_instance_id?: string | null
           category?: string | null
           created_at?: string
           date?: string
@@ -1046,6 +1053,7 @@ export type Database = {
           invoiced?: boolean | null
           notes?: string | null
           organization_id?: string | null
+          pricing_model?: string | null
           quantity?: number | null
           start_date?: string | null
           status?: string | null
@@ -1055,10 +1063,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_id?: string | null
           activity_id?: string | null
           amount?: number
           billing_frequency?: string | null
+          billing_type?: string | null
           case_id?: string
+          case_service_instance_id?: string | null
           category?: string | null
           created_at?: string
           date?: string
@@ -1078,6 +1089,7 @@ export type Database = {
           invoiced?: boolean | null
           notes?: string | null
           organization_id?: string | null
+          pricing_model?: string | null
           quantity?: number | null
           start_date?: string | null
           status?: string | null
@@ -1088,10 +1100,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "case_finances_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "case_finances_activity_id_fkey"
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "case_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_finances_case_service_instance_id_fkey"
+            columns: ["case_service_instance_id"]
+            isOneToOne: false
+            referencedRelation: "case_service_instances"
             referencedColumns: ["id"]
           },
           {
