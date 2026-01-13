@@ -18,6 +18,8 @@ import { format } from "date-fns";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useSortPreference } from "@/hooks/use-sort-preference";
+import { useBillingEligibility, BillingEligibilityResult } from "@/hooks/useBillingEligibility";
+import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
 
 interface Activity {
   id: string;
@@ -55,6 +57,11 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const [formOpen, setFormOpen] = useState(false);
   const [formType, setFormType] = useState<"task" | "event">("task");
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  
+  // Billing eligibility state
+  const [billingPromptOpen, setBillingPromptOpen] = useState(false);
+  const [billingEligibility, setBillingEligibility] = useState<BillingEligibilityResult | null>(null);
+  const { evaluate: evaluateBillingEligibility } = useBillingEligibility();
 
   // Separate state for tasks panel
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
@@ -189,12 +196,14 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
         ? (activity.status === "done" ? "to_do" : "done")
         : (activity.status === "completed" ? "scheduled" : "completed");
       
+      const isCompleting = newStatus === "done" || newStatus === "completed";
+      
       const { error } = await supabase
         .from('case_activities')
         .update({ 
           status: newStatus,
-          completed: newStatus === "done" || newStatus === "completed",
-          completed_at: (newStatus === "done" || newStatus === "completed") ? new Date().toISOString() : null
+          completed: isCompleting,
+          completed_at: isCompleting ? new Date().toISOString() : null
         })
         .eq('id', activity.id);
 
@@ -205,8 +214,8 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
           ? { 
               ...a, 
               status: newStatus, 
-              completed: newStatus === "done" || newStatus === "completed",
-              completed_at: (newStatus === "done" || newStatus === "completed") ? new Date().toISOString() : null
+              completed: isCompleting,
+              completed_at: isCompleting ? new Date().toISOString() : null
             }
           : a
       ));
@@ -215,6 +224,19 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
         title: "Success",
         description: `${type === "task" ? "Task" : "Event"} updated successfully`,
       });
+
+      // Check billing eligibility if completing and has service instance
+      if (isCompleting && activity.case_service_instance_id) {
+        const eligibility = await evaluateBillingEligibility({
+          activityId: activity.id,
+          caseServiceInstanceId: activity.case_service_instance_id,
+        });
+        
+        if (eligibility.isEligible) {
+          setBillingEligibility(eligibility);
+          setBillingPromptOpen(true);
+        }
+      }
     } catch (error) {
       console.error('Error updating activity:', error);
       toast({
