@@ -5,6 +5,7 @@ import { ACTIVITY_METRICS } from "./activity-metrics";
 import { USER_METRICS } from "./user-metrics";
 import { ATTACHMENT_METRICS } from "./attachment-metrics";
 import { BUDGET_METRICS } from "./budget-metrics";
+import { SERVICE_METRICS } from "./service-metrics";
 
 /**
  * All metric definitions combined
@@ -16,6 +17,7 @@ export const ALL_METRICS: MetricDefinition[] = [
   ...USER_METRICS,
   ...ATTACHMENT_METRICS,
   ...BUDGET_METRICS,
+  ...SERVICE_METRICS,
 ];
 
 /**
@@ -66,6 +68,7 @@ export function getMetricsGroupedByCategory(): Record<MetricCategory, MetricDefi
     sales: getMetricsByCategory("sales"),
     expense: getMetricsByCategory("expense"),
     calendar: getMetricsByCategory("calendar"),
+    services: getMetricsByCategory("services"),  // FUTURE: Service analytics
   };
 }
 
@@ -112,3 +115,4 @@ export { ACTIVITY_METRICS } from "./activity-metrics";
 export { USER_METRICS } from "./user-metrics";
 export { ATTACHMENT_METRICS } from "./attachment-metrics";
 export { BUDGET_METRICS } from "./budget-metrics";
+export { SERVICE_METRICS } from "./service-metrics";

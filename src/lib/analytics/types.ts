@@ -9,7 +9,8 @@ export type MetricCategory =
   | "storage"
   | "sales"
   | "expense"
-  | "calendar";
+  | "calendar"
+  | "services";  // FUTURE: Service analytics
 
 /** Units of measurement */
 export type MetricUnit = 
@@ -29,6 +30,8 @@ export type SourceTable =
   | "case_attachments"
   | "case_subjects"
   | "case_budget_adjustments"
+  | "case_services"           // FUTURE: Service analytics
+  | "case_service_instances"  // FUTURE: Service analytics
   | "invoices"
   | "invoice_payments"
   | "retainer_funds"
