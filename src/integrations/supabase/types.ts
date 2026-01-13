@@ -7153,6 +7153,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_service_instance_stats: {
+        Args: { p_service_instance_id: string }
+        Returns: undefined
+      }
       update_trust_center_section: {
         Args: {
           p_content_markdown?: string
