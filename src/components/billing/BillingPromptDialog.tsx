@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Clock, Receipt, X, Calculator } from "lucide-react";
+import { DollarSign, Clock, Receipt, Calculator } from "lucide-react";
 import { BillingEligibilityResult } from "@/hooks/useBillingEligibility";
 
 interface BillingPromptDialogProps {
@@ -9,7 +9,6 @@ interface BillingPromptDialogProps {
   eligibility: BillingEligibilityResult | null;
   onCreateBillingItem: () => void;
   onSkip: () => void;
-  onNeverAsk?: () => void;
 }
 
 export function BillingPromptDialog({
@@ -18,7 +17,6 @@ export function BillingPromptDialog({
   eligibility,
   onCreateBillingItem,
   onSkip,
-  onNeverAsk,
 }: BillingPromptDialogProps) {
   if (!eligibility || !eligibility.isEligible) return null;
 
@@ -73,7 +71,7 @@ export function BillingPromptDialog({
             Create Billing Item?
           </DialogTitle>
           <DialogDescription>
-            This activity is linked to a billable service. Would you like to create a billing item for review?
+            This activity is associated with a billable service. Would you like to create a billing item?
           </DialogDescription>
         </DialogHeader>
         
@@ -131,21 +129,11 @@ export function BillingPromptDialog({
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={onSkip} className="w-full sm:w-auto">
-            Skip for Now
+            No, Skip for Now
           </Button>
-          {onNeverAsk && (
-            <Button 
-              variant="ghost" 
-              onClick={onNeverAsk}
-              className="w-full sm:w-auto text-muted-foreground"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Don't Ask Again
-            </Button>
-          )}
           <Button onClick={onCreateBillingItem} className="w-full sm:w-auto">
             <Receipt className="h-4 w-4 mr-2" />
-            Create Billing Item
+            Yes, Create Billing Item
           </Button>
         </DialogFooter>
       </DialogContent>

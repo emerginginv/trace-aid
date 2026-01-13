@@ -872,16 +872,6 @@ export function ActivityForm({
         onOpenChange(false);
         onSuccess();
       }}
-      onNeverAsk={() => {
-        // TODO: Store user preference to not prompt for this activity/service
-        toast({
-          title: "Preference Saved",
-          description: "You won't be prompted for billing items on this service.",
-        });
-        setBillingPromptOpen(false);
-        onOpenChange(false);
-        onSuccess();
-      }}
     />
     </>
   );
