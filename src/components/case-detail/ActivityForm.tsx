@@ -402,6 +402,12 @@ export function ActivityForm({
           setBillingPromptOpen(true);
           // Don't close the form yet - wait for billing prompt response
           return;
+        } else if (eligibility.reason?.includes("flat-fee")) {
+          // Show warning toast for flat-fee services that are already billed
+          toast({
+            title: "Flat-Fee Service Already Billed",
+            description: eligibility.reason,
+          });
         }
       }
 
