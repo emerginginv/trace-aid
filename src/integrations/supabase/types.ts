@@ -555,6 +555,7 @@ export type Database = {
           address: string | null
           assigned_user_id: string | null
           case_id: string
+          case_service_instance_id: string | null
           completed: boolean | null
           completed_at: string | null
           created_at: string
@@ -577,6 +578,7 @@ export type Database = {
           address?: string | null
           assigned_user_id?: string | null
           case_id: string
+          case_service_instance_id?: string | null
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string
@@ -599,6 +601,7 @@ export type Database = {
           address?: string | null
           assigned_user_id?: string | null
           case_id?: string
+          case_service_instance_id?: string | null
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string
@@ -617,6 +620,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "case_activities_case_service_instance_id_fkey"
+            columns: ["case_service_instance_id"]
+            isOneToOne: false
+            referencedRelation: "case_service_instances"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "case_activities_import_batch_id_fkey"
             columns: ["import_batch_id"]
@@ -960,6 +970,94 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_service_instances: {
+        Row: {
+          case_id: string
+          case_service_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          scheduled_at: string | null
+          status: string
+          unscheduled_at: string | null
+          unscheduled_by: string | null
+          unscheduled_reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          case_service_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          scheduled_at?: string | null
+          status?: string
+          unscheduled_at?: string | null
+          unscheduled_by?: string | null
+          unscheduled_reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          case_service_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          scheduled_at?: string | null
+          status?: string
+          unscheduled_at?: string | null
+          unscheduled_by?: string | null
+          unscheduled_reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_service_instances_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_service_instances_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_service_instances_case_service_id_fkey"
+            columns: ["case_service_id"]
+            isOneToOne: false
+            referencedRelation: "case_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_service_instances_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_service_instances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_service_instances_unscheduled_by_fkey"
+            columns: ["unscheduled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
