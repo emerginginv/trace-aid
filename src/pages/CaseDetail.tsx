@@ -25,7 +25,6 @@ import { CaseTeamManager } from "@/components/case-detail/CaseTeamManager";
 import { EmailComposer } from "@/components/EmailComposer";
 import { RelatedCases } from "@/components/case-detail/RelatedCases";
 import { BudgetSummary } from "@/components/case-detail/BudgetSummary";
-import { CaseServicesPanel } from "@/components/case-detail/CaseServicesPanel";
 import { BudgetAdjustmentForm } from "@/components/case-detail/BudgetAdjustmentForm";
 import { BudgetAdjustmentsHistory } from "@/components/case-detail/BudgetAdjustmentsHistory";
 import { BudgetConsumptionSnapshot } from "@/components/case-detail/BudgetConsumptionSnapshot";
@@ -60,7 +59,6 @@ interface Case {
   parent_case_id: string | null;
   instance_number: number;
   reference_number?: string | null;
-  case_type_tag?: string | null;
 }
 
 interface Account {
@@ -787,7 +785,7 @@ const CaseDetail = () => {
                     {organization?.id && <RetainerFundsWidget caseId={id!} organizationId={organization.id} />}
                   </div>
 
-                  {/* Team + Services + Related Cases Column */}
+                  {/* Team + Related Cases Column */}
                   <div className="space-y-4">
                     <CaseTeamManager 
                       caseId={id!} 
@@ -795,11 +793,6 @@ const CaseDetail = () => {
                       caseManager2Id={caseData.case_manager_2_id}
                       investigatorIds={caseData.investigator_ids || []} 
                       onUpdate={fetchCaseData} 
-                    />
-                    <CaseServicesPanel 
-                      caseId={id!} 
-                      caseTypeTag={caseData.case_type_tag}
-                      isClosedCase={isClosed} 
                     />
                     <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
                   </div>

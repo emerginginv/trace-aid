@@ -94,7 +94,7 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
       const { data } = await supabase
         .from("picklists")
         .select("value")
-        .eq("type", "case_type")
+        .eq("type", "event_type")
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("display_order");

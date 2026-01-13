@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ExternalLink, Copy, User, MapPin, Briefcase } from "lucide-react";
+import { CalendarIcon, ExternalLink, Copy, User, MapPin } from "lucide-react";
 import { format, formatISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -24,7 +24,6 @@ const taskSchema = z.object({
   due_date: z.date().optional(),
   status: z.enum(["to_do", "in_progress", "blocked", "done", "cancelled"]),
   assigned_user_id: z.string().optional(),
-  case_service_instance_id: z.string().optional(),
 });
 
 const eventSchema = z.object({
@@ -39,7 +38,6 @@ const eventSchema = z.object({
   status: z.enum(["scheduled", "cancelled", "completed"]),
   assigned_user_id: z.string().optional(),
   address: z.string().optional(),
-  case_service_instance_id: z.string().optional(),
 });
 
 interface SubjectAddress {
@@ -47,16 +45,6 @@ interface SubjectAddress {
   name: string;
   address: string;
   type: 'person' | 'location';
-}
-
-interface CaseServiceInstance {
-  id: string;
-  case_service: {
-    id: string;
-    name: string;
-    color: string | null;
-  };
-  status: 'scheduled' | 'unscheduled';
 }
 
 const DEFAULT_EVENT_TYPES = [
@@ -109,7 +97,6 @@ export function ActivityForm({
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [eventTypes, setEventTypes] = useState<string[]>(DEFAULT_EVENT_TYPES);
   const [subjectAddresses, setSubjectAddresses] = useState<SubjectAddress[]>([]);
-  const [serviceInstances, setServiceInstances] = useState<CaseServiceInstance[]>([]);
   const navigate = useNavigate();
   const schema = activityType === "task" ? taskSchema : eventSchema;
   const form = useForm<z.infer<typeof schema>>({
@@ -126,35 +113,18 @@ export function ActivityForm({
       event_subtype: activityType === "event" ? "" : undefined,
       status: activityType === "task" ? "to_do" : "scheduled",
       assigned_user_id: undefined,
-      case_service_instance_id: undefined,
     } as any,
   });
 
   useEffect(() => {
     if (caseId && open) {
       fetchCaseTitle();
-      fetchServiceInstances();
       if (activityType === "event") {
         fetchEventTypes();
         fetchSubjectAddresses();
       }
     }
   }, [caseId, open, activityType]);
-
-  const fetchServiceInstances = async () => {
-    if (!caseId || !organizationId) return;
-    try {
-      const { data, error } = await supabase
-        .from("case_service_instances")
-        .select(`id, status, case_service:case_services(id, name, color)`)
-        .eq("case_id", caseId)
-        .eq("organization_id", organizationId);
-      if (error) throw error;
-      setServiceInstances((data as unknown as CaseServiceInstance[]) || []);
-    } catch (error) {
-      console.error("Error fetching service instances:", error);
-    }
-  };
 
   const fetchSubjectAddresses = async () => {
     try {
@@ -201,7 +171,7 @@ export function ActivityForm({
       const { data: picklists } = await supabase
         .from("picklists")
         .select("value")
-        .eq("type", "case_type")
+        .eq("type", "event_type")
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("display_order", { ascending: true });
@@ -319,9 +289,6 @@ export function ActivityForm({
         status: values.status,
         assigned_user_id: values.assigned_user_id || null,
         completed: values.status === "done" || values.status === "completed",
-        case_service_instance_id: values.case_service_instance_id && values.case_service_instance_id !== 'none' 
-          ? values.case_service_instance_id 
-          : null,
       };
 
       // Add event-specific fields
@@ -350,16 +317,6 @@ export function ActivityForm({
 
       if (error) throw error;
 
-      // Update service instance status to scheduled when linking a new activity
-      if (!editingActivity && insertedActivity && activityData.case_service_instance_id) {
-        await supabase
-          .from("case_service_instances")
-          .update({ 
-            status: 'scheduled', 
-            scheduled_at: new Date().toISOString() 
-          })
-          .eq("id", activityData.case_service_instance_id);
-      }
       // Create notification for assigned user (only for new tasks)
       if (!editingActivity && insertedActivity && values.assigned_user_id && values.assigned_user_id !== 'unassigned') {
         // Get assigned user's organization_id
@@ -560,50 +517,6 @@ export function ActivityForm({
                 </FormItem>
               )}
             />
-
-            {/* Link to Service */}
-            {serviceInstances.length > 0 && (
-              <FormField
-                control={form.control}
-                name="case_service_instance_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4" />
-                      Link to Service (Optional)
-                    </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a service to link" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No Service</SelectItem>
-                        {serviceInstances.map((instance) => (
-                          <SelectItem key={instance.id} value={instance.id}>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-2 h-2 rounded-full" 
-                                style={{ backgroundColor: instance.case_service?.color || '#6366f1' }}
-                              />
-                              {instance.case_service?.name}
-                              {instance.status === 'unscheduled' && (
-                                <span className="text-xs text-amber-600">(unscheduled)</span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
 
             {activityType === "task" ? (
               <FormField

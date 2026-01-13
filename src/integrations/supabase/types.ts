@@ -555,7 +555,6 @@ export type Database = {
           address: string | null
           assigned_user_id: string | null
           case_id: string
-          case_service_instance_id: string | null
           completed: boolean | null
           completed_at: string | null
           created_at: string
@@ -578,7 +577,6 @@ export type Database = {
           address?: string | null
           assigned_user_id?: string | null
           case_id: string
-          case_service_instance_id?: string | null
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string
@@ -601,7 +599,6 @@ export type Database = {
           address?: string | null
           assigned_user_id?: string | null
           case_id?: string
-          case_service_instance_id?: string | null
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string
@@ -620,13 +617,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "case_activities_case_service_instance_id_fkey"
-            columns: ["case_service_instance_id"]
-            isOneToOne: false
-            referencedRelation: "case_service_instances"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "case_activities_import_batch_id_fkey"
             columns: ["import_batch_id"]
@@ -967,201 +957,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "case_number_format_audit_log_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      case_service_instances: {
-        Row: {
-          case_id: string
-          case_service_id: string
-          created_at: string
-          created_by: string | null
-          id: string
-          invoice_line_item_id: string | null
-          organization_id: string
-          scheduled_at: string | null
-          status: string
-          unscheduled_at: string | null
-          unscheduled_by: string | null
-          unscheduled_reason: string | null
-          updated_at: string
-        }
-        Insert: {
-          case_id: string
-          case_service_id: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          invoice_line_item_id?: string | null
-          organization_id: string
-          scheduled_at?: string | null
-          status?: string
-          unscheduled_at?: string | null
-          unscheduled_by?: string | null
-          unscheduled_reason?: string | null
-          updated_at?: string
-        }
-        Update: {
-          case_id?: string
-          case_service_id?: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          invoice_line_item_id?: string | null
-          organization_id?: string
-          scheduled_at?: string | null
-          status?: string
-          unscheduled_at?: string | null
-          unscheduled_by?: string | null
-          unscheduled_reason?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "case_service_instances_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "cases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "case_service_instances_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "cases_with_budget_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "case_service_instances_case_service_id_fkey"
-            columns: ["case_service_id"]
-            isOneToOne: false
-            referencedRelation: "case_services"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "case_service_instances_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "case_service_instances_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "case_service_instances_unscheduled_by_fkey"
-            columns: ["unscheduled_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      case_services: {
-        Row: {
-          allow_recurring: boolean | null
-          analytics_category: string | null
-          billing_code: string | null
-          billing_description_template: string | null
-          budget_category: string | null
-          budget_unit: string | null
-          case_types: string[] | null
-          code: string | null
-          color: string | null
-          created_at: string
-          created_by: string | null
-          default_budget_amount: number | null
-          default_duration_minutes: number | null
-          default_rate: number | null
-          description: string | null
-          display_order: number
-          id: string
-          is_active: boolean
-          is_billable: boolean | null
-          name: string
-          organization_id: string
-          report_section_id: string | null
-          report_section_order: number | null
-          report_template_fields: Json | null
-          requires_scheduling: boolean | null
-          schedule_mode: string
-          track_duration: boolean | null
-          track_outcomes: boolean | null
-          updated_at: string
-        }
-        Insert: {
-          allow_recurring?: boolean | null
-          analytics_category?: string | null
-          billing_code?: string | null
-          billing_description_template?: string | null
-          budget_category?: string | null
-          budget_unit?: string | null
-          case_types?: string[] | null
-          code?: string | null
-          color?: string | null
-          created_at?: string
-          created_by?: string | null
-          default_budget_amount?: number | null
-          default_duration_minutes?: number | null
-          default_rate?: number | null
-          description?: string | null
-          display_order?: number
-          id?: string
-          is_active?: boolean
-          is_billable?: boolean | null
-          name: string
-          organization_id: string
-          report_section_id?: string | null
-          report_section_order?: number | null
-          report_template_fields?: Json | null
-          requires_scheduling?: boolean | null
-          schedule_mode?: string
-          track_duration?: boolean | null
-          track_outcomes?: boolean | null
-          updated_at?: string
-        }
-        Update: {
-          allow_recurring?: boolean | null
-          analytics_category?: string | null
-          billing_code?: string | null
-          billing_description_template?: string | null
-          budget_category?: string | null
-          budget_unit?: string | null
-          case_types?: string[] | null
-          code?: string | null
-          color?: string | null
-          created_at?: string
-          created_by?: string | null
-          default_budget_amount?: number | null
-          default_duration_minutes?: number | null
-          default_rate?: number | null
-          description?: string | null
-          display_order?: number
-          id?: string
-          is_active?: boolean
-          is_billable?: boolean | null
-          name?: string
-          organization_id?: string
-          report_section_id?: string | null
-          report_section_order?: number | null
-          report_template_fields?: Json | null
-          requires_scheduling?: boolean | null
-          schedule_mode?: string
-          track_duration?: boolean | null
-          track_outcomes?: boolean | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "case_services_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -6382,46 +6177,6 @@ export type Database = {
       generate_report_content: { Args: { p_report_id: string }; Returns: Json }
       generate_scim_token: { Args: { p_org_id: string }; Returns: Json }
       get_active_impersonation: { Args: never; Returns: Json }
-      get_available_services_for_case: {
-        Args: { p_case_id: string; p_organization_id: string }
-        Returns: {
-          allow_recurring: boolean | null
-          analytics_category: string | null
-          billing_code: string | null
-          billing_description_template: string | null
-          budget_category: string | null
-          budget_unit: string | null
-          case_types: string[] | null
-          code: string | null
-          color: string | null
-          created_at: string
-          created_by: string | null
-          default_budget_amount: number | null
-          default_duration_minutes: number | null
-          default_rate: number | null
-          description: string | null
-          display_order: number
-          id: string
-          is_active: boolean
-          is_billable: boolean | null
-          name: string
-          organization_id: string
-          report_section_id: string | null
-          report_section_order: number | null
-          report_template_fields: Json | null
-          requires_scheduling: boolean | null
-          schedule_mode: string
-          track_duration: boolean | null
-          track_outcomes: boolean | null
-          updated_at: string
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "case_services"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
       get_blocking_contracts: {
         Args: { p_organization_id: string }
         Returns: Json
@@ -6715,10 +6470,6 @@ export type Database = {
       is_platform_staff:
         | { Args: never; Returns: boolean }
         | { Args: { p_user_id: string }; Returns: boolean }
-      is_service_available_for_case_type: {
-        Args: { p_case_type_tag: string; p_service_case_types: string[] }
-        Returns: boolean
-      }
       is_username_available: {
         Args: { check_username: string }
         Returns: boolean

@@ -43,8 +43,8 @@ interface PicklistsTabProps {
   setUpdateTypes: React.Dispatch<React.SetStateAction<PicklistItem[]>>;
   expenseCategories: PicklistItem[];
   setExpenseCategories: React.Dispatch<React.SetStateAction<PicklistItem[]>>;
-  caseTypes: PicklistItem[];
-  setCaseTypes: React.Dispatch<React.SetStateAction<PicklistItem[]>>;
+  eventTypes: PicklistItem[];
+  setEventTypes: React.Dispatch<React.SetStateAction<PicklistItem[]>>;
   loadSettings: () => Promise<void>;
 }
 
@@ -86,12 +86,12 @@ export const PicklistsTab = ({
   setUpdateTypes,
   expenseCategories,
   setExpenseCategories,
-  caseTypes,
-  setCaseTypes,
+  eventTypes,
+  setEventTypes,
   loadSettings,
 }: PicklistsTabProps) => {
   const [picklistDialogOpen, setPicklistDialogOpen] = useState(false);
-  const [picklistType, setPicklistType] = useState<"status" | "updateType" | "expenseCategory" | "caseType">("status");
+  const [picklistType, setPicklistType] = useState<"status" | "updateType" | "expenseCategory" | "eventType">("status");
   const [editingPicklistItem, setEditingPicklistItem] = useState<{ id: string; value: string; color: string; statusType?: string } | null>(null);
   const [picklistValue, setPicklistValue] = useState("");
   const [picklistColor, setPicklistColor] = useState("#6366f1");
@@ -118,15 +118,15 @@ export const PicklistsTab = ({
         status: "case_status",
         updateType: "update_type",
         expenseCategory: "expense_category",
-        caseType: "case_type",
+        eventType: "event_type",
       };
 
       const currentLength = picklistType === "status" 
         ? caseStatuses.length 
         : picklistType === "updateType" 
         ? updateTypes.length 
-        : picklistType === "caseType"
-        ? caseTypes.length
+        : picklistType === "eventType"
+        ? eventTypes.length
         : expenseCategories.length;
 
       const insertData: any = {
@@ -162,8 +162,8 @@ export const PicklistsTab = ({
         setCaseStatuses([...caseStatuses, newItem]);
       } else if (picklistType === "updateType") {
         setUpdateTypes([...updateTypes, newItem]);
-      } else if (picklistType === "caseType") {
-        setCaseTypes([...caseTypes, newItem]);
+      } else if (picklistType === "eventType") {
+        setEventTypes([...eventTypes, newItem]);
       } else {
         setExpenseCategories([...expenseCategories, newItem]);
       }
@@ -214,9 +214,9 @@ export const PicklistsTab = ({
             item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim(), color: picklistColor } : item
           )
         );
-      } else if (picklistType === "caseType") {
-        setCaseTypes(
-          caseTypes.map((item) =>
+      } else if (picklistType === "eventType") {
+        setEventTypes(
+          eventTypes.map((item) =>
             item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim(), color: picklistColor } : item
           )
         );
@@ -239,7 +239,7 @@ export const PicklistsTab = ({
     }
   };
 
-  const handleTogglePicklistActive = async (id: string, isActive: boolean, type: "status" | "updateType" | "expenseCategory" | "caseType") => {
+  const handleTogglePicklistActive = async (id: string, isActive: boolean, type: "status" | "updateType" | "expenseCategory" | "eventType") => {
     try {
       const { error } = await supabase
         .from("picklists")
@@ -260,9 +260,9 @@ export const PicklistsTab = ({
             item.id === id ? { ...item, isActive: !isActive } : item
           )
         );
-      } else if (type === "caseType") {
-        setCaseTypes(
-          caseTypes.map((item) =>
+      } else if (type === "eventType") {
+        setEventTypes(
+          eventTypes.map((item) =>
             item.id === id ? { ...item, isActive: !isActive } : item
           )
         );
@@ -280,7 +280,7 @@ export const PicklistsTab = ({
     }
   };
 
-  const handleDeletePicklistItem = async (id: string, type: "status" | "updateType" | "expenseCategory" | "caseType") => {
+  const handleDeletePicklistItem = async (id: string, type: "status" | "updateType" | "expenseCategory" | "eventType") => {
     try {
       const { data: picklistData } = await supabase
         .from("picklists")
@@ -320,19 +320,13 @@ export const PicklistsTab = ({
         
         usageCount = count || 0;
         isInUse = usageCount > 0;
-      } else if (type === "caseType") {
-        // Check both case_services and case_activities for case type usage
-        const { count: servicesCount } = await supabase
-          .from("case_services")
-          .select("*", { count: "exact", head: true })
-          .contains("case_types", [picklistData.value]);
-        
-        const { count: activitiesCount } = await supabase
+      } else if (type === "eventType") {
+        const { count } = await supabase
           .from("case_activities")
           .select("*", { count: "exact", head: true })
-          .eq("event_subtype", picklistData.value);
+          .eq("activity_type", picklistData.value);
         
-        usageCount = (servicesCount || 0) + (activitiesCount || 0);
+        usageCount = count || 0;
         isInUse = usageCount > 0;
       }
 
@@ -352,8 +346,8 @@ export const PicklistsTab = ({
         setCaseStatuses(caseStatuses.filter((item) => item.id !== id));
       } else if (type === "updateType") {
         setUpdateTypes(updateTypes.filter((item) => item.id !== id));
-      } else if (type === "caseType") {
-        setCaseTypes(caseTypes.filter((item) => item.id !== id));
+      } else if (type === "eventType") {
+        setEventTypes(eventTypes.filter((item) => item.id !== id));
       } else {
         setExpenseCategories(expenseCategories.filter((item) => item.id !== id));
       }
@@ -364,7 +358,7 @@ export const PicklistsTab = ({
     }
   };
 
-  const openAddPicklistDialog = (type: "status" | "updateType" | "expenseCategory" | "caseType") => {
+  const openAddPicklistDialog = (type: "status" | "updateType" | "expenseCategory" | "eventType") => {
     setPicklistType(type);
     setEditingPicklistItem(null);
     setPicklistValue("");
@@ -373,7 +367,7 @@ export const PicklistsTab = ({
     setPicklistDialogOpen(true);
   };
 
-  const openEditPicklistDialog = (item: { id: string; value: string; color: string; statusType?: string }, type: "status" | "updateType" | "expenseCategory" | "caseType") => {
+  const openEditPicklistDialog = (item: { id: string; value: string; color: string; statusType?: string }, type: "status" | "updateType" | "expenseCategory" | "eventType") => {
     setPicklistType(type);
     setEditingPicklistItem(item);
     setPicklistValue(item.value);
@@ -382,7 +376,7 @@ export const PicklistsTab = ({
     setPicklistDialogOpen(true);
   };
 
-  const handleDragEnd = async (event: DragEndEvent, type: "status" | "updateType" | "expenseCategory" | "caseType") => {
+  const handleDragEnd = async (event: DragEndEvent, type: "status" | "updateType" | "expenseCategory" | "eventType") => {
     const { active, over } = event;
 
     if (!over || active.id === over.id) return;
@@ -391,8 +385,8 @@ export const PicklistsTab = ({
       ? caseStatuses 
       : type === "updateType" 
       ? updateTypes 
-      : type === "caseType"
-      ? caseTypes
+      : type === "eventType"
+      ? eventTypes
       : expenseCategories;
 
     const oldIndex = items.findIndex((item) => item.id === active.id);
@@ -404,8 +398,8 @@ export const PicklistsTab = ({
       setCaseStatuses(newItems);
     } else if (type === "updateType") {
       setUpdateTypes(newItems);
-    } else if (type === "caseType") {
-      setCaseTypes(newItems);
+    } else if (type === "eventType") {
+      setEventTypes(newItems);
     } else {
       setExpenseCategories(newItems);
     }
@@ -433,7 +427,7 @@ export const PicklistsTab = ({
 
   const renderPicklistTable = (
     items: PicklistItem[],
-    type: "status" | "updateType" | "expenseCategory" | "caseType",
+    type: "status" | "updateType" | "expenseCategory" | "eventType",
     title: string,
     description: string,
     addButtonLabel: string,
@@ -541,14 +535,6 @@ export const PicklistsTab = ({
   return (
     <div className="space-y-6">
       {renderPicklistTable(
-        caseTypes,
-        "caseType",
-        "Case Types",
-        "Manage available types for cases and events",
-        "Add Case Type"
-      )}
-
-      {renderPicklistTable(
         caseStatuses,
         "status",
         "Case Status Picklist",
@@ -573,18 +559,26 @@ export const PicklistsTab = ({
         "Add Category"
       )}
 
+      {renderPicklistTable(
+        eventTypes,
+        "eventType",
+        "Event Type Picklist",
+        "Manage available types for case events",
+        "Add Event Type"
+      )}
+
       {/* Add/Edit Dialog */}
       <Dialog open={picklistDialogOpen} onOpenChange={setPicklistDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {editingPicklistItem ? "Edit" : "Add"}{" "}
-              {picklistType === "status" ? "Status" : picklistType === "updateType" ? "Update Type" : picklistType === "caseType" ? "Case Type" : "Expense Category"}
+              {picklistType === "status" ? "Status" : picklistType === "updateType" ? "Update Type" : picklistType === "eventType" ? "Event Type" : "Expense Category"}
             </DialogTitle>
             <DialogDescription>
               {editingPicklistItem
                 ? "Update the value and settings"
-                : `Add a new ${picklistType === "status" ? "status" : picklistType === "updateType" ? "update type" : picklistType === "caseType" ? "case type" : "expense category"}`}
+                : `Add a new ${picklistType === "status" ? "status" : picklistType === "updateType" ? "update type" : picklistType === "eventType" ? "event type" : "expense category"}`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -594,7 +588,7 @@ export const PicklistsTab = ({
                 id="picklistValue"
                 value={picklistValue}
                 onChange={(e) => setPicklistValue(e.target.value)}
-                placeholder={`Enter ${picklistType === "status" ? "status" : picklistType === "updateType" ? "update type" : picklistType === "caseType" ? "case type" : "category"} value`}
+                placeholder={`Enter ${picklistType === "status" ? "status" : picklistType === "updateType" ? "update type" : picklistType === "eventType" ? "event type" : "category"} value`}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     editingPicklistItem ? handleEditPicklistItem() : handleAddPicklistItem();

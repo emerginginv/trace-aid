@@ -20,7 +20,6 @@ import { UserPreferencesTab } from "@/components/settings/UserPreferencesTab";
 import { OrganizationTab } from "@/components/settings/OrganizationTab";
 import { UsersManagementTab } from "@/components/settings/UsersManagementTab";
 import { PicklistsTab } from "@/components/settings/PicklistsTab";
-import { CaseServicesTab } from "@/components/settings/CaseServicesTab";
 import { EmailSettingsTab } from "@/components/settings/EmailSettingsTab";
 import { BillingTab } from "@/components/settings/BillingTab";
 import { HelpCenterAdmin } from "@/components/help-center";
@@ -115,7 +114,7 @@ const Settings = () => {
   const [caseStatuses, setCaseStatuses] = useState<PicklistItem[]>([]);
   const [updateTypes, setUpdateTypes] = useState<PicklistItem[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<PicklistItem[]>([]);
-  const [caseTypes, setCaseTypes] = useState<PicklistItem[]>([]);
+  const [eventTypes, setEventTypes] = useState<PicklistItem[]>([]);
 
   // Organization Context
   const { organization, subscriptionStatus, checkSubscription, refreshOrganization } = useOrganization();
@@ -232,12 +231,14 @@ const Settings = () => {
         const hasCaseStatuses = picklists.some(p => p.type === "case_status");
         const hasUpdateTypes = picklists.some(p => p.type === "update_type");
         const hasExpenseCategories = picklists.some(p => p.type === "expense_category");
+        const hasEventTypes = picklists.some(p => p.type === "event_type");
 
-        if (!hasCaseStatuses || !hasUpdateTypes || !hasExpenseCategories) {
+        if (!hasCaseStatuses || !hasUpdateTypes || !hasExpenseCategories || !hasEventTypes) {
           await initializeDefaultPicklists(user.id, organization.id, {
             hasCaseStatuses,
             hasUpdateTypes,
             hasExpenseCategories,
+            hasEventTypes,
           });
 
           const { data: refreshedPicklists } = await supabase
@@ -259,14 +260,14 @@ const Settings = () => {
       const categories = picklists
         .filter(p => p.type === 'expense_category')
         .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
-      const types = picklists
-        .filter(p => p.type === 'case_type')
+      const events = picklists
+        .filter(p => p.type === 'event_type')
         .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
 
       setCaseStatuses(statuses);
       setUpdateTypes(updates);
       setExpenseCategories(categories);
-      setCaseTypes(types);
+      setEventTypes(events);
     } catch (error) {
       console.error("Error loading settings:", error);
       toast.error("Failed to load settings");
@@ -278,7 +279,7 @@ const Settings = () => {
   const initializeDefaultPicklists = async (
     userId: string,
     organizationId: string,
-    existing: { hasCaseStatuses: boolean; hasUpdateTypes: boolean; hasExpenseCategories: boolean }
+    existing: { hasCaseStatuses: boolean; hasUpdateTypes: boolean; hasExpenseCategories: boolean; hasEventTypes: boolean }
   ) => {
     try {
       const inserts: Array<{
@@ -330,6 +331,20 @@ const Settings = () => {
         );
       }
 
+      if (!existing.hasEventTypes) {
+        inserts.push(
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Surveillance Session', color: '#6366f1', display_order: 0, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Canvass Attempt', color: '#10b981', display_order: 1, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Records Search', color: '#f59e0b', display_order: 2, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Field Activity', color: '#3b82f6', display_order: 3, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Interview Session', color: '#8b5cf6', display_order: 4, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Site Visit', color: '#ec4899', display_order: 5, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Background Check', color: '#0ea5e9', display_order: 6, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Database Search', color: '#14b8a6', display_order: 7, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Court Attendance', color: '#84cc16', display_order: 8, is_active: true },
+          { user_id: userId, organization_id: organizationId, type: 'event_type', value: 'Other', color: '#6b7280', display_order: 9, is_active: true }
+        );
+      }
 
       if (inserts.length > 0) {
         const { error } = await supabase.from("picklists").insert(inserts);
@@ -670,18 +685,11 @@ const Settings = () => {
                 setUpdateTypes={setUpdateTypes}
                 expenseCategories={expenseCategories}
                 setExpenseCategories={setExpenseCategories}
-                caseTypes={caseTypes}
-                setCaseTypes={setCaseTypes}
+                eventTypes={eventTypes}
+                setEventTypes={setEventTypes}
                 loadSettings={loadSettings}
               />
             </TabsContent>
-
-            {/* Case Services Tab */}
-            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
-              <TabsContent value="case-services" className="space-y-6">
-                <CaseServicesTab />
-              </TabsContent>
-            )}
 
             {/* Templates Tab */}
             <TabsContent value="templates" className="space-y-6">
