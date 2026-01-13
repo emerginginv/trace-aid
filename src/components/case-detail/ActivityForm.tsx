@@ -201,7 +201,7 @@ export function ActivityForm({
       const { data: picklists } = await supabase
         .from("picklists")
         .select("value")
-        .eq("type", "event_type")
+        .eq("type", "case_type")
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("display_order", { ascending: true });
