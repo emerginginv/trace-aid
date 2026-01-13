@@ -13,6 +13,12 @@ export interface BillingEligibilityResult {
   estimatedAmount?: number;
   activityId?: string;
   activityTitle?: string;
+  // Audit and creation fields
+  caseId?: string;
+  organizationId?: string;
+  pricingProfileId?: string;
+  pricingRuleId?: string;
+  pricingRuleSnapshot?: Record<string, unknown>;
 }
 
 interface EvaluateParams {
@@ -51,6 +57,8 @@ export function useBillingEligibility() {
           scheduled_end,
           case_id,
           case_service_id,
+          invoice_line_item_id,
+          organization_id,
           case_services (
             id,
             name,
@@ -160,12 +168,12 @@ export function useBillingEligibility() {
       }
 
       // Check if pricing rule exists for this service under any applicable profile
-      let pricingRule: { rate: number; pricing_model: string } | null = null;
+      let pricingRule: { id: string; rate: number; pricing_model: string; pricing_profile_id: string } | null = null;
       
       if (profileIds.length > 0) {
         const { data: ruleData } = await supabase
           .from("service_pricing_rules")
-          .select("rate, pricing_model")
+          .select("id, rate, pricing_model, pricing_profile_id")
           .eq("case_service_id", instanceData.case_service_id)
           .in("pricing_profile_id", profileIds)
           .limit(1)
@@ -224,10 +232,39 @@ export function useBillingEligibility() {
           quantity = 1;
           break;
           
-        case "flat":
-          // Flat rate - always valid, quantity is 1
+        case "flat": {
+          // FLAT-FEE ENFORCEMENT: Check if billing item already exists for this service instance
+          // Check if service instance already has an invoice line item
+          if (instanceData.invoice_line_item_id) {
+            const notEligible: BillingEligibilityResult = {
+              isEligible: false,
+              reason: "Flat-fee service already has a billing item"
+            };
+            setResult(notEligible);
+            return notEligible;
+          }
+          
+          // Also check for existing pending billing items in case_finances
+          const { data: existingBillingItem } = await supabase
+            .from("case_finances")
+            .select("id")
+            .eq("case_id", instanceData.case_id)
+            .eq("finance_type", "billing_item")
+            .limit(1)
+            .maybeSingle();
+            
+          if (existingBillingItem) {
+            const notEligible: BillingEligibilityResult = {
+              isEligible: false,
+              reason: "Flat-fee service already has a pending billing item"
+            };
+            setResult(notEligible);
+            return notEligible;
+          }
+          
           quantity = 1;
           break;
+        }
           
         default:
           // Unknown pricing model - require quantity_actual
@@ -267,7 +304,18 @@ export function useBillingEligibility() {
         quantity,
         estimatedAmount,
         activityId,
-        activityTitle: activityData?.title
+        activityTitle: activityData?.title,
+        // Audit fields for billing item creation
+        caseId: instanceData.case_id,
+        organizationId: instanceData.organization_id,
+        pricingProfileId: pricingRule.pricing_profile_id,
+        pricingRuleId: pricingRule.id,
+        pricingRuleSnapshot: {
+          id: pricingRule.id,
+          rate: pricingRule.rate,
+          pricing_model: pricingRule.pricing_model,
+          captured_at: new Date().toISOString(),
+        },
       };
       
       setResult(eligible);

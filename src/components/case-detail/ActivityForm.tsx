@@ -19,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useBillingEligibility, BillingEligibilityResult } from "@/hooks/useBillingEligibility";
 import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
+import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
 
 const taskSchema = z.object({
   activity_type: z.literal("task"),
@@ -92,6 +93,7 @@ export function ActivityForm({
   const [billingEligibility, setBillingEligibility] = useState<BillingEligibilityResult | null>(null);
   const navigate = useNavigate();
   const { evaluate: evaluateBillingEligibility } = useBillingEligibility();
+  const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
   
   // Fetch available services from the case's pricing profile
   const { data: availableServices = [], isLoading: servicesLoading } = useCaseAvailableServices(caseId);
@@ -857,12 +859,35 @@ export function ActivityForm({
         }
       }}
       eligibility={billingEligibility}
-      onCreateBillingItem={() => {
-        // TODO: Phase 2 - Create actual billing item in database
-        toast({
-          title: "Billing Item Created",
-          description: `A billing item has been created for "${billingEligibility?.serviceName}" and is pending review.`,
+      onCreateBillingItem={async () => {
+        if (!billingEligibility) return;
+        
+        const result = await createBillingItem({
+          activityId: billingEligibility.activityId!,
+          caseServiceInstanceId: billingEligibility.serviceInstanceId!,
+          caseId: billingEligibility.caseId!,
+          organizationId: billingEligibility.organizationId!,
+          serviceName: billingEligibility.serviceName!,
+          pricingModel: billingEligibility.pricingModel!,
+          quantity: billingEligibility.quantity!,
+          rate: billingEligibility.serviceRate!,
+          pricingProfileId: billingEligibility.pricingProfileId,
+          pricingRuleSnapshot: billingEligibility.pricingRuleSnapshot,
         });
+        
+        if (result.success) {
+          toast({
+            title: "Billing Item Created",
+            description: `A billing item for "${billingEligibility.serviceName}" is pending review.`,
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Failed to create billing item",
+            variant: "destructive",
+          });
+        }
+        
         setBillingPromptOpen(false);
         onOpenChange(false);
         onSuccess();
