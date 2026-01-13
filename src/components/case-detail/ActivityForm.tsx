@@ -289,7 +289,7 @@ export function ActivityForm({
               case_id: caseId,
               case_service_id: selectedServiceId,
               organization_id: organizationId,
-              status: "pending",
+              status: "scheduled",
               created_by: user.id,
             })
             .select("id")
