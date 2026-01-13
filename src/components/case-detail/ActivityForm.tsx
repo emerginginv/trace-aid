@@ -873,6 +873,7 @@ export function ActivityForm({
           caseServiceInstanceId: billingEligibility.serviceInstanceId!,
           caseId: billingEligibility.caseId!,
           organizationId: billingEligibility.organizationId!,
+          accountId: billingEligibility.accountId,  // Required per SYSTEM PROMPT 8
           serviceName: billingEligibility.serviceName!,
           pricingModel: billingEligibility.pricingModel!,
           quantity: billingEligibility.quantity!,

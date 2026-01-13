@@ -13,9 +13,10 @@ export interface BillingEligibilityResult {
   estimatedAmount?: number;
   activityId?: string;
   activityTitle?: string;
-  // Audit and creation fields
+  // Audit and creation fields per SYSTEM PROMPT 8
   caseId?: string;
   organizationId?: string;
+  accountId?: string;  // Required per SYSTEM PROMPT 8
   pricingProfileId?: string;
   pricingRuleId?: string;
   pricingRuleSnapshot?: Record<string, unknown>;
@@ -116,12 +117,13 @@ export function useBillingEligibility() {
       }
 
       // GATE 3: Pricing rule must exist for the service
-      // Get case details for pricing profile resolution
+      // Get case details for pricing profile resolution and account_id (per SYSTEM PROMPT 8)
       const { data: caseData, error: caseError } = await supabase
         .from("cases")
         .select(`
           pricing_profile_id,
           organization_id,
+          account_id,
           accounts (
             default_pricing_profile_id
           )
@@ -311,9 +313,10 @@ export function useBillingEligibility() {
         estimatedAmount,
         activityId,
         activityTitle: activityData?.title,
-        // Audit fields for billing item creation
+        // Audit fields for billing item creation per SYSTEM PROMPT 8
         caseId: instanceData.case_id,
         organizationId: instanceData.organization_id,
+        accountId: caseData?.account_id || undefined,  // Required per SYSTEM PROMPT 8
         pricingProfileId: pricingRule.pricing_profile_id,
         pricingRuleId: pricingRule.id,
         pricingRuleSnapshot: {
