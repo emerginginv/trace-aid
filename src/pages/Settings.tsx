@@ -32,6 +32,7 @@ import { CaseNumberingSection } from "@/components/settings/CaseNumberingSection
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
 import { LoginBrandingSection } from "@/components/settings/LoginBrandingSection";
 import { CaseServicesTab } from "@/components/settings/CaseServicesTab";
+import { PricingProfilesTab } from "@/components/settings/PricingProfilesTab";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -681,6 +682,13 @@ const Settings = () => {
             {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
               <TabsContent value="case-services" className="space-y-6">
                 <CaseServicesTab />
+              </TabsContent>
+            )}
+
+            {/* Pricing Profiles Tab - Admin and Manager Only */}
+            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+              <TabsContent value="pricing-profiles" className="space-y-6">
+                <PricingProfilesTab />
               </TabsContent>
             )}
 
