@@ -13,6 +13,7 @@ import { InvoiceDetail } from "./InvoiceDetail";
 import { usePermissions } from "@/hooks/usePermissions";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
+import { useBillingItemApproval } from "@/hooks/useBillingItemApproval";
 
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -368,49 +369,99 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
     setEditingFinance(null);
   };
 
-  const handleApprove = async (id: string) => {
+  const { approveBillingItem, rejectBillingItem } = useBillingItemApproval();
+
+  const handleApprove = async (id: string, financeType?: string) => {
     try {
-      const { error } = await supabase
-        .from("case_finances")
-        .update({ status: "approved" })
-        .eq("id", id);
+      if (financeType === "billing_item") {
+        // Use budget-checked approval for billing items
+        const result = await approveBillingItem(id);
+        
+        if (!result.success) {
+          if (result.budgetBlocked) {
+            toast({
+              title: "Approval Blocked",
+              description: result.error || "Budget hard cap exceeded. Cannot approve this billing item.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Error",
+              description: result.error || "Failed to approve billing item",
+              variant: "destructive",
+            });
+          }
+          return;
+        }
+        
+        toast({
+          title: "Success",
+          description: "Billing item approved. Budget consumption updated.",
+        });
+      } else {
+        // Existing expense approval logic
+        const { error } = await supabase
+          .from("case_finances")
+          .update({ status: "approved" })
+          .eq("id", id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Expense approved successfully",
-      });
+        toast({
+          title: "Success",
+          description: "Expense approved successfully",
+        });
+      }
       fetchFinances();
     } catch (error) {
-      console.error("Error approving expense:", error);
+      console.error("Error approving:", error);
       toast({
         title: "Error",
-        description: "Failed to approve expense",
+        description: "Failed to approve",
         variant: "destructive",
       });
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleReject = async (id: string, financeType?: string) => {
     try {
-      const { error } = await supabase
-        .from("case_finances")
-        .update({ status: "rejected" })
-        .eq("id", id);
+      if (financeType === "billing_item") {
+        // Use rejection function for billing items
+        const result = await rejectBillingItem(id);
+        
+        if (!result.success) {
+          toast({
+            title: "Error",
+            description: result.error || "Failed to reject billing item",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        toast({
+          title: "Success",
+          description: "Billing item rejected. Item remains linked but non-billable.",
+        });
+      } else {
+        // Existing expense rejection logic
+        const { error } = await supabase
+          .from("case_finances")
+          .update({ status: "rejected" })
+          .eq("id", id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Expense rejected",
-      });
+        toast({
+          title: "Success",
+          description: "Expense rejected",
+        });
+      }
       fetchFinances();
     } catch (error) {
-      console.error("Error rejecting expense:", error);
+      console.error("Error rejecting:", error);
       toast({
         title: "Error",
-        description: "Failed to reject expense",
+        description: "Failed to reject",
         variant: "destructive",
       });
     }
@@ -815,13 +866,13 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                                   Edit
                                 </DropdownMenuItem>
                               )}
-                              {canEditFinances && finance.finance_type === "expense" && finance.status === "pending" && (
+                              {canEditFinances && (finance.finance_type === "expense" || finance.finance_type === "billing_item") && finance.status === "pending" && (
                                 <>
-                                  <DropdownMenuItem onClick={() => handleApprove(finance.id)}>
+                                  <DropdownMenuItem onClick={() => handleApprove(finance.id, finance.finance_type)}>
                                     <CheckCircle className="mr-2 h-4 w-4" />
                                     Approve
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleReject(finance.id)}>
+                                  <DropdownMenuItem onClick={() => handleReject(finance.id, finance.finance_type)}>
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Reject
                                   </DropdownMenuItem>
