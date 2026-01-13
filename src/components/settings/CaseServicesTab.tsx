@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useEntitlements } from "@/hooks/use-entitlements";
+import { isEnterprisePlan } from "@/lib/planDetection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,13 +12,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, GripVertical, Calendar, Briefcase, Loader2 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Plus, Pencil, Trash2, GripVertical, Calendar, Briefcase, Loader2, Lock, User, Users } from "lucide-react";
 import { toast } from "sonner";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 const MAX_SERVICE_NAME_LENGTH = 100;
+type ScheduleMode = 'none' | 'primary_investigator' | 'activity_based';
 
 interface CaseService {
   id: string;
@@ -30,6 +35,7 @@ interface CaseService {
   requires_scheduling: boolean;
   default_duration_minutes: number | null;
   allow_recurring: boolean;
+  schedule_mode: ScheduleMode;
 }
 
 interface SortableRowProps {
@@ -84,15 +90,18 @@ const SortableRow = ({ service, onEdit, onDelete, onToggleActive }: SortableRowP
         )}
       </TableCell>
       <TableCell>
-        {service.requires_scheduling ? (
+        {service.schedule_mode === 'none' ? (
+          <span className="text-muted-foreground text-xs">None</span>
+        ) : service.schedule_mode === 'activity_based' ? (
           <div className="flex items-center gap-1 text-primary">
-            <Calendar className="h-4 w-4" />
-            <span className="text-xs">
-              {service.default_duration_minutes ? `${service.default_duration_minutes}m` : "Yes"}
-            </span>
+            <Users className="h-4 w-4" />
+            <span className="text-xs">Activity</span>
           </div>
         ) : (
-          <span className="text-muted-foreground text-xs">-</span>
+          <div className="flex items-center gap-1 text-primary">
+            <User className="h-4 w-4" />
+            <span className="text-xs">Primary Inv.</span>
+          </div>
         )}
       </TableCell>
       <TableCell>
@@ -122,7 +131,14 @@ const SortableRow = ({ service, onEdit, onDelete, onToggleActive }: SortableRowP
 
 export const CaseServicesTab = () => {
   const { organization } = useOrganization();
+  const { entitlements } = useEntitlements();
   const [services, setServices] = useState<CaseService[]>([]);
+  
+  // Check enterprise status
+  const isEnterprise = isEnterprisePlan(
+    entitlements?.subscription_tier,
+    entitlements?.subscription_product_id
+  ) || isEnterprisePlan(organization?.subscription_tier, organization?.subscription_product_id);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -138,6 +154,7 @@ export const CaseServicesTab = () => {
   const [formRequiresScheduling, setFormRequiresScheduling] = useState(false);
   const [formDefaultDuration, setFormDefaultDuration] = useState<number | "">("");
   const [formAllowRecurring, setFormAllowRecurring] = useState(false);
+  const [formScheduleMode, setFormScheduleMode] = useState<ScheduleMode>('primary_investigator');
 
   // Available case types from picklists
   const [availableCaseTypes, setAvailableCaseTypes] = useState<string[]>([]);
@@ -179,6 +196,7 @@ export const CaseServicesTab = () => {
         requires_scheduling: s.requires_scheduling || false,
         default_duration_minutes: s.default_duration_minutes,
         allow_recurring: s.allow_recurring || false,
+        schedule_mode: s.schedule_mode || 'primary_investigator',
       }));
 
       setServices(mappedServices);
@@ -217,6 +235,7 @@ export const CaseServicesTab = () => {
     setFormRequiresScheduling(false);
     setFormDefaultDuration("");
     setFormAllowRecurring(false);
+    setFormScheduleMode('primary_investigator');
     setEditingService(null);
   };
 
@@ -230,6 +249,7 @@ export const CaseServicesTab = () => {
     setFormRequiresScheduling(service.requires_scheduling);
     setFormDefaultDuration(service.default_duration_minutes || "");
     setFormAllowRecurring(service.allow_recurring);
+    setFormScheduleMode(service.schedule_mode || 'primary_investigator');
     setDialogOpen(true);
   };
 
@@ -257,6 +277,7 @@ export const CaseServicesTab = () => {
           requires_scheduling: formRequiresScheduling,
           default_duration_minutes: formDefaultDuration || null,
           allow_recurring: formAllowRecurring,
+          schedule_mode: formScheduleMode,
         };
 
         const { error } = await supabase
@@ -499,54 +520,124 @@ export const CaseServicesTab = () => {
                   </div>
 
                   <div className="border-t pt-4">
-                    <h4 className="font-medium mb-3">Scheduling Settings</h4>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>Requires Scheduling</Label>
+                    <h4 className="font-medium mb-3">Schedule Mode</h4>
+                    <RadioGroup 
+                      value={formScheduleMode} 
+                      onValueChange={(value) => {
+                        if (value === 'activity_based' && !isEnterprise) {
+                          toast.error("Activity-based scheduling requires The Enterprise plan");
+                          return;
+                        }
+                        setFormScheduleMode(value as ScheduleMode);
+                      }}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-start space-x-3">
+                        <RadioGroupItem value="none" id="mode-none" className="mt-1" />
+                        <div className="flex-1">
+                          <Label htmlFor="mode-none" className="cursor-pointer">None</Label>
                           <p className="text-xs text-muted-foreground">
-                            This service requires a scheduled time slot
+                            Service does not require scheduling
                           </p>
                         </div>
-                        <Switch
-                          checked={formRequiresScheduling}
-                          onCheckedChange={setFormRequiresScheduling}
-                        />
                       </div>
-
-                      {formRequiresScheduling && (
-                        <>
-                          <div className="space-y-2">
-                            <Label htmlFor="duration">Default Duration (minutes)</Label>
-                            <Input
-                              id="duration"
-                              type="number"
-                              value={formDefaultDuration}
-                              onChange={(e) =>
-                                setFormDefaultDuration(
-                                  e.target.value ? parseInt(e.target.value) : ""
-                                )
-                              }
-                              placeholder="60"
-                            />
+                      
+                      <div className="flex items-start space-x-3">
+                        <RadioGroupItem value="primary_investigator" id="mode-pi" className="mt-1" />
+                        <div className="flex-1">
+                          <Label htmlFor="mode-pi" className="cursor-pointer">Primary Investigator</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Schedule based on case's primary investigator calendar
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-3">
+                        <RadioGroupItem 
+                          value="activity_based" 
+                          id="mode-activity" 
+                          disabled={!isEnterprise}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Label 
+                              htmlFor="mode-activity" 
+                              className={`cursor-pointer ${!isEnterprise ? "text-muted-foreground" : ""}`}
+                            >
+                              Activity Based
+                            </Label>
+                            {!isEnterprise && (
+                              <Badge variant="outline" className="text-xs">Enterprise</Badge>
+                            )}
                           </div>
-
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <Label>Allow Recurring</Label>
-                              <p className="text-xs text-muted-foreground">
-                                Enable recurring schedule options
-                              </p>
-                            </div>
-                            <Switch
-                              checked={formAllowRecurring}
-                              onCheckedChange={setFormAllowRecurring}
-                            />
-                          </div>
-                        </>
-                      )}
-                    </div>
+                          <p className="text-xs text-muted-foreground">
+                            Schedule based on individual activity assignments
+                          </p>
+                          {!isEnterprise && (
+                            <Alert className="mt-2 py-2">
+                              <Lock className="h-3 w-3" />
+                              <AlertDescription className="text-xs">
+                                This feature requires The Enterprise plan.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
+                      </div>
+                    </RadioGroup>
                   </div>
+
+                  {formScheduleMode !== 'none' && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-medium mb-3">Scheduling Settings</h4>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label>Requires Scheduling</Label>
+                            <p className="text-xs text-muted-foreground">
+                              This service requires a scheduled time slot
+                            </p>
+                          </div>
+                          <Switch
+                            checked={formRequiresScheduling}
+                            onCheckedChange={setFormRequiresScheduling}
+                          />
+                        </div>
+
+                        {formRequiresScheduling && (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="duration">Default Duration (minutes)</Label>
+                              <Input
+                                id="duration"
+                                type="number"
+                                value={formDefaultDuration}
+                                onChange={(e) =>
+                                  setFormDefaultDuration(
+                                    e.target.value ? parseInt(e.target.value) : ""
+                                  )
+                                }
+                                placeholder="60"
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Label>Allow Recurring</Label>
+                                <p className="text-xs text-muted-foreground">
+                                  Enable recurring schedule options
+                                </p>
+                              </div>
+                              <Switch
+                                checked={formAllowRecurring}
+                                onCheckedChange={setFormAllowRecurring}
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
