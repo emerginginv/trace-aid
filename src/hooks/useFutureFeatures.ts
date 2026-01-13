@@ -347,6 +347,330 @@ export function useTriggerRetainerDrawdown() {
 
 
 // ============================================
+// 5. BATCH BILLING APPROVALS
+// ============================================
+
+export interface BatchApprovalItem {
+  billingItemId: string;
+  caseId: string;
+  caseNumber: string;
+  description: string;
+  amount: number;
+  hours?: number;
+  serviceName?: string;
+  investigatorName?: string;
+  createdAt: string;
+}
+
+export interface BatchApprovalResult {
+  totalItems: number;
+  approved: number;
+  rejected: number;
+  budgetBlocked: number;
+  results: Array<{
+    billingItemId: string;
+    success: boolean;
+    error?: string;
+    budgetBlocked?: boolean;
+  }>;
+}
+
+export interface BatchApprovalParams {
+  organizationId: string;
+  billingItemIds: string[];
+  approverNotes?: string;
+}
+
+/**
+ * @future Get pending billing items for batch approval
+ * Returns all pending billing items across cases for bulk review
+ */
+export function usePendingBillingItemsForApproval(_organizationId: string) {
+  console.warn('usePendingBillingItemsForApproval is not yet implemented');
+  
+  return {
+    data: null as BatchApprovalItem[] | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+/**
+ * @future Batch approve multiple billing items
+ * Approves multiple billing items in a single operation with budget checks
+ */
+export function useBatchApproveBillingItems() {
+  console.warn('useBatchApproveBillingItems is not yet implemented');
+  
+  return {
+    mutate: (_params: BatchApprovalParams) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_params: BatchApprovalParams): Promise<BatchApprovalResult> => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+/**
+ * @future Batch reject multiple billing items
+ * Rejects multiple billing items with a common reason
+ */
+export function useBatchRejectBillingItems() {
+  console.warn('useBatchRejectBillingItems is not yet implemented');
+  
+  return {
+    mutate: (_params: BatchApprovalParams & { rejectionReason: string }) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_params: BatchApprovalParams & { rejectionReason: string }): Promise<BatchApprovalResult> => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+
+// ============================================
+// 6. AUTO-APPROVAL THRESHOLDS
+// ============================================
+
+export interface AutoApprovalRule {
+  id: string;
+  organizationId: string;
+  name: string;
+  isActive: boolean;
+  
+  // Threshold conditions (all must be met)
+  maxAmount?: number;           // Auto-approve if amount <= this
+  maxHours?: number;            // Auto-approve if hours <= this
+  serviceCodes?: string[];      // Only for specific services
+  investigatorIds?: string[];   // Only for specific investigators
+  budgetUtilizationMax?: number; // Only if budget utilization <= this %
+  
+  // Behavior
+  requireBudgetCheck: boolean;
+  skipIfHardCap: boolean;
+  
+  priority: number; // Lower = higher priority
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+export interface AutoApprovalEvaluation {
+  billingItemId: string;
+  wouldAutoApprove: boolean;
+  matchedRuleId?: string;
+  matchedRuleName?: string;
+  blockingReason?: string;
+}
+
+/**
+ * @future Get auto-approval rules for organization
+ */
+export function useAutoApprovalRules(_organizationId: string) {
+  console.warn('useAutoApprovalRules is not yet implemented');
+  
+  return {
+    data: null as AutoApprovalRule[] | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+/**
+ * @future Create auto-approval rule
+ */
+export function useCreateAutoApprovalRule() {
+  console.warn('useCreateAutoApprovalRule is not yet implemented');
+  
+  return {
+    mutate: (_rule: Omit<AutoApprovalRule, 'id' | 'createdAt' | 'updatedAt'>) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_rule: Omit<AutoApprovalRule, 'id' | 'createdAt' | 'updatedAt'>) => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+/**
+ * @future Update auto-approval rule
+ */
+export function useUpdateAutoApprovalRule() {
+  console.warn('useUpdateAutoApprovalRule is not yet implemented');
+  
+  return {
+    mutate: (_params: { ruleId: string; updates: Partial<AutoApprovalRule> }) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_params: { ruleId: string; updates: Partial<AutoApprovalRule> }) => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+/**
+ * @future Delete auto-approval rule
+ */
+export function useDeleteAutoApprovalRule() {
+  console.warn('useDeleteAutoApprovalRule is not yet implemented');
+  
+  return {
+    mutate: (_ruleId: string) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_ruleId: string) => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+/**
+ * @future Evaluate if billing items would auto-approve
+ * Preview which items would be auto-approved based on current rules
+ */
+export function useEvaluateAutoApproval(_billingItemIds: string[]) {
+  console.warn('useEvaluateAutoApproval is not yet implemented');
+  
+  return {
+    data: null as AutoApprovalEvaluation[] | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+
+// ============================================
+// 7. CLIENT BILLING SUMMARIES
+// ============================================
+
+export interface ClientBillingSummary {
+  accountId: string;
+  accountName: string;
+  
+  // Date range
+  periodStart: string;
+  periodEnd: string;
+  
+  // Invoice summary
+  invoicesIssued: number;
+  invoicesPaid: number;
+  invoicesOutstanding: number;
+  
+  // Amounts
+  totalBilled: number;
+  totalPaid: number;
+  totalOutstanding: number;
+  totalRetainerApplied: number;
+  
+  // Activity summary
+  casesActive: number;
+  casesClosed: number;
+  totalHoursBilled: number;
+  totalExpenses: number;
+  
+  // Breakdown by case
+  caseBreakdown: Array<{
+    caseId: string;
+    caseNumber: string;
+    caseTitle: string;
+    status: string;
+    amountBilled: number;
+    amountPaid: number;
+    hoursBilled: number;
+  }>;
+  
+  // Breakdown by service
+  serviceBreakdown: Array<{
+    serviceId: string;
+    serviceName: string;
+    instanceCount: number;
+    totalAmount: number;
+    totalHours: number;
+  }>;
+  
+  // Payment history
+  recentPayments: Array<{
+    paymentId: string;
+    invoiceNumber: string;
+    amount: number;
+    date: string;
+    method?: string;
+  }>;
+}
+
+export interface ClientBillingSummaryParams {
+  accountId: string;
+  periodStart?: Date;
+  periodEnd?: Date;
+  includeCaseBreakdown?: boolean;
+  includeServiceBreakdown?: boolean;
+  includePaymentHistory?: boolean;
+}
+
+/**
+ * @future Get billing summary for a client
+ * Aggregates invoices, payments, and activity for a specific account
+ */
+export function useClientBillingSummary(_params: ClientBillingSummaryParams) {
+  console.warn('useClientBillingSummary is not yet implemented');
+  
+  return {
+    data: null as ClientBillingSummary | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+/**
+ * @future Generate PDF billing summary for client
+ */
+export function useGenerateClientBillingSummaryPdf() {
+  console.warn('useGenerateClientBillingSummaryPdf is not yet implemented');
+  
+  return {
+    mutate: (_params: ClientBillingSummaryParams) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_params: ClientBillingSummaryParams): Promise<{ pdfUrl: string }> => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+/**
+ * @future Email billing summary to client
+ */
+export function useEmailClientBillingSummary() {
+  console.warn('useEmailClientBillingSummary is not yet implemented');
+  
+  return {
+    mutate: (_params: ClientBillingSummaryParams & { recipientEmails: string[]; subject?: string; message?: string }) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_params: ClientBillingSummaryParams & { recipientEmails: string[]; subject?: string; message?: string }): Promise<{ sent: boolean }> => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+
+// ============================================
 // FUTURE DATABASE TABLES (Reference Only)
 // ============================================
 
@@ -370,4 +694,14 @@ export function useTriggerRetainerDrawdown() {
  * 5. internal_cost_rates
  *    - Internal cost per hour by role/investigator
  *    - Required for true profitability calculations
+ * 
+ * 6. auto_approval_rules
+ *    - Organization-level rules for automatic billing approval
+ *    - Conditions based on amount, hours, service, investigator
+ * 
+ * 7. auto_approval_logs
+ *    - Audit log of auto-approved items and which rule matched
+ * 
+ * 8. client_billing_summary_cache
+ *    - Cached billing summaries for performance
  */
