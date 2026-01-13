@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { TrendingUp, FileText, ArrowRight } from "lucide-react";
+import { TrendingUp, FileText, ArrowRight, Calendar, Receipt } from "lucide-react";
 import { reportCategories, getReportsByCategory } from "@/lib/analytics/reports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,8 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 
 const iconMap: Record<string, React.ElementType> = {
   TrendingUp,
+  Calendar,
+  Receipt,
 };
 
 export default function ReportsHub() {

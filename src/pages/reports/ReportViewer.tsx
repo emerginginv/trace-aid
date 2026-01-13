@@ -18,6 +18,7 @@ import ExpenseDetailReport from "./ExpenseDetailReport";
 import ExpenseDetailByStaffReport from "./ExpenseDetailByStaffReport";
 import ExpenseDistributionReport from "./ExpenseDistributionReport";
 import ExpensesByDayReport from "./ExpensesByDayReport";
+import ActivityAssignmentAuditReport from "./ActivityAssignmentAuditReport";
 
 // Custom reports that have their own components (not using AnalyticsReportViewer)
 const CUSTOM_REPORTS: Record<string, React.ComponentType> = {
@@ -34,6 +35,7 @@ const CUSTOM_REPORTS: Record<string, React.ComponentType> = {
   "expense-detail-by-staff": ExpenseDetailByStaffReport,
   "expense-distribution": ExpenseDistributionReport,
   "expenses-by-day": ExpensesByDayReport,
+  "activity-assignment-audit": ActivityAssignmentAuditReport,
 };
 
 export default function ReportViewer() {
