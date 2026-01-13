@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ExternalLink, Copy, User, MapPin } from "lucide-react";
+import { CalendarIcon, ExternalLink, Copy, User, MapPin, Link } from "lucide-react";
+import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
 import { format, formatISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -24,6 +25,7 @@ const taskSchema = z.object({
   due_date: z.date().optional(),
   status: z.enum(["to_do", "in_progress", "blocked", "done", "cancelled"]),
   assigned_user_id: z.string().optional(),
+  case_service_instance_id: z.string().optional(),
 });
 
 const eventSchema = z.object({
@@ -38,6 +40,7 @@ const eventSchema = z.object({
   status: z.enum(["scheduled", "cancelled", "completed"]),
   assigned_user_id: z.string().optional(),
   address: z.string().optional(),
+  case_service_instance_id: z.string().optional(),
 });
 
 interface SubjectAddress {
@@ -98,6 +101,9 @@ export function ActivityForm({
   const [eventTypes, setEventTypes] = useState<string[]>(DEFAULT_EVENT_TYPES);
   const [subjectAddresses, setSubjectAddresses] = useState<SubjectAddress[]>([]);
   const navigate = useNavigate();
+  
+  // Fetch available service instances for this case
+  const { data: serviceInstances = [], isLoading: serviceInstancesLoading } = useCaseServiceInstances(caseId);
   const schema = activityType === "task" ? taskSchema : eventSchema;
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -113,6 +119,7 @@ export function ActivityForm({
       event_subtype: activityType === "event" ? "" : undefined,
       status: activityType === "task" ? "to_do" : "scheduled",
       assigned_user_id: undefined,
+      case_service_instance_id: undefined,
     } as any,
   });
 
@@ -232,6 +239,7 @@ export function ActivityForm({
         status: editingActivity.status,
         assigned_user_id: editingActivity.assigned_user_id || undefined,
         address: editingActivity.address || "",
+        case_service_instance_id: editingActivity.case_service_instance_id || undefined,
       } as any);
     } else {
       form.reset({
@@ -247,6 +255,7 @@ export function ActivityForm({
         status: activityType === "task" ? "to_do" : "scheduled",
         assigned_user_id: undefined,
         address: "",
+        case_service_instance_id: undefined,
       } as any);
     }
   }, [open, editingActivity, activityType, prefilledDate, form]);
@@ -287,8 +296,9 @@ export function ActivityForm({
         user_id: user.id,
         due_date: dueDate,
         status: values.status,
-        assigned_user_id: values.assigned_user_id || null,
+        assigned_user_id: values.assigned_user_id === "unassigned" ? null : (values.assigned_user_id || null),
         completed: values.status === "done" || values.status === "completed",
+        case_service_instance_id: values.case_service_instance_id === "none" ? null : (values.case_service_instance_id || null),
       };
 
       // Add event-specific fields
@@ -513,6 +523,57 @@ export function ActivityForm({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Link to Service Instance - for budget tracking and invoicing */}
+            <FormField
+              control={form.control}
+              name="case_service_instance_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Link className="h-4 w-4" />
+                    Link to Service (Optional)
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || "none"}
+                    disabled={serviceInstancesLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={serviceInstancesLoading ? "Loading services..." : "Select a service to link"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">No linked service</SelectItem>
+                      {serviceInstances.map((instance) => (
+                        <SelectItem key={instance.id} value={instance.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{instance.service_name}</span>
+                            {instance.service_code && (
+                              <span className="text-muted-foreground text-xs">({instance.service_code})</span>
+                            )}
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                              instance.status === 'completed' 
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                : instance.status === 'in_progress'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {instance.status.replace('_', ' ')}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Link this {activityType} to a service for budget tracking and invoicing.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
