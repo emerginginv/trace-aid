@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchBudgetForecastOnce, BudgetForecastWarning } from "./useBudgetForecast";
 
 export interface CreateBillingItemParams {
   activityId: string;
@@ -32,10 +33,16 @@ function getBillingType(pricingModel: string): 'time' | 'expense' {
   }
 }
 
+/**
+ * Result from creating a billing item
+ * Per SYSTEM PROMPT 9: Includes budget warning info for pending items
+ */
 export interface CreateBillingItemResult {
   success: boolean;
   error?: string;
   billingItemId?: string;
+  // SYSTEM PROMPT 9: Budget forecast warning info
+  budgetWarning?: BudgetForecastWarning;
 }
 
 export function useBillingItemCreation() {
@@ -157,9 +164,14 @@ export function useBillingItemCreation() {
         // Don't fail the whole operation, billing item was created
       }
 
+      // SYSTEM PROMPT 9: Check budget forecast after creating pending billing item
+      // Pending billing items may trigger warnings but do NOT consume budget definitively
+      const budgetWarning = await fetchBudgetForecastOnce(caseId);
+
       return { 
         success: true, 
-        billingItemId: billingItem.id 
+        billingItemId: billingItem.id,
+        budgetWarning: budgetWarning || undefined,
       };
     } catch (error) {
       console.error("Error in createBillingItem:", error);

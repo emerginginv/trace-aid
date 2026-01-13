@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { useBillingEligibility, BillingEligibilityResult } from "@/hooks/useBillingEligibility";
 import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
 import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
+import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
 
 const taskSchema = z.object({
   activity_type: z.literal("task"),
@@ -883,6 +884,18 @@ export function ActivityForm({
         });
         
         if (result.success) {
+          // SYSTEM PROMPT 9: Show budget forecast warning if pending item triggers it
+          if (result.budgetWarning?.isForecastWarning) {
+            toast({
+              title: result.budgetWarning.isForecastExceeded ? "Budget Warning" : "Budget Notice",
+              description: getBudgetForecastWarningMessage(
+                result.budgetWarning.isForecastExceeded,
+                result.budgetWarning.hardCap
+              ),
+              variant: result.budgetWarning.isForecastExceeded ? "destructive" : "default",
+            });
+          }
+          
           toast({
             title: "Billing Item Created",
             description: `A billing item for "${billingEligibility.serviceName}" is pending review.`,
