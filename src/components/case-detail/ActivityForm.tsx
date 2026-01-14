@@ -381,6 +381,34 @@ export function ActivityForm({
 
       if (error) throw error;
 
+      // Update case_service_instances with scheduled times for proper billing calculation
+      const serviceInstanceId = editingActivity?.case_service_instance_id || values.case_service_instance_id;
+      if (serviceInstanceId && values.activity_type === "event") {
+        const startDateStr = `${values.start_date.getFullYear()}-${String(values.start_date.getMonth() + 1).padStart(2, '0')}-${String(values.start_date.getDate()).padStart(2, '0')}`;
+        const endDateStr = `${values.end_date.getFullYear()}-${String(values.end_date.getMonth() + 1).padStart(2, '0')}-${String(values.end_date.getDate()).padStart(2, '0')}`;
+        
+        const scheduledStart = `${startDateStr}T${values.start_time}:00`;
+        const scheduledEnd = `${endDateStr}T${values.end_time}:00`;
+        
+        const startMs = new Date(scheduledStart).getTime();
+        const endMs = new Date(scheduledEnd).getTime();
+        const durationHours = Math.max(0.25, (endMs - startMs) / (1000 * 60 * 60));
+        
+        const { error: serviceUpdateError } = await supabase
+          .from("case_service_instances")
+          .update({
+            scheduled_start: scheduledStart,
+            scheduled_end: scheduledEnd,
+            quantity_actual: durationHours,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", serviceInstanceId);
+        
+        if (serviceUpdateError) {
+          console.error('Error updating service instance times:', serviceUpdateError);
+        }
+      }
+
       // Create notification for assigned user (only for new tasks)
       if (!editingActivity && insertedActivity && values.assigned_user_id && values.assigned_user_id !== 'unassigned') {
         // Get assigned user's organization_id
