@@ -25,6 +25,8 @@ export interface BillingAuditMetadata {
     endTime: string;
   };
   reason?: string;
+  /** Source of the billing action (e.g., 'update_form', 'create_billing_later') */
+  source?: string;
 }
 
 export interface BillingAuditLogEntry {
