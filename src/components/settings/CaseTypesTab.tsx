@@ -135,7 +135,6 @@ function SortableCaseTypeRow({ caseType, onEdit, onDelete }: {
 
 export function CaseTypesTab() {
   const { organization } = useOrganization();
-  const { subjectTypes: dynamicSubjectTypes, loading: subjectTypesLoading } = useSubjectTypes({ activeOnly: true });
   const [caseTypes, setCaseTypes] = useState<CaseType[]>([]);
   const [services, setServices] = useState<CaseService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -693,42 +692,37 @@ export function CaseTypesTab() {
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Subject Types */}
+              {/* Subject Categories */}
               <AccordionItem value="subjects" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
-                  Subject Types ({formData.allowed_subject_types.length} selected)
+                  Subject Categories ({formData.allowed_subject_types.length} selected)
                 </AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-2">
                   <p className="text-sm text-muted-foreground">
-                    Select which subject types are allowed for this case type. Leave empty to allow all.
+                    Select which subject categories are allowed for this case type. Leave empty to allow all.
                   </p>
-                  {subjectTypesLoading ? (
-                    <div className="text-sm text-muted-foreground">Loading subject types...</div>
-                  ) : dynamicSubjectTypes.length === 0 ? (
-                    <div className="text-sm text-muted-foreground flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4" />
-                      No subject types configured. Add subject types in the Subject Types tab.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      {dynamicSubjectTypes.map(subjectType => (
-                        <div key={subjectType.code} className="flex items-center gap-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SUBJECT_CATEGORIES.map(category => {
+                      const IconComponent = CATEGORY_ICONS[category.value];
+                      return (
+                        <div key={category.value} className="flex items-center gap-2">
                           <Checkbox
-                            id={`subject-${subjectType.code}`}
-                            checked={formData.allowed_subject_types.includes(subjectType.code)}
-                            onCheckedChange={() => toggleSubjectType(subjectType.code)}
+                            id={`category-${category.value}`}
+                            checked={formData.allowed_subject_types.includes(category.value)}
+                            onCheckedChange={() => toggleSubjectType(category.value)}
                           />
-                          <Label htmlFor={`subject-${subjectType.code}`} className="font-normal cursor-pointer">
-                            {subjectType.name}
+                          <Label htmlFor={`category-${category.value}`} className="font-normal cursor-pointer flex items-center gap-2">
+                            <IconComponent className="h-4 w-4 text-muted-foreground" />
+                            {category.label}
                           </Label>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
 
                   {formData.allowed_subject_types.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Default Subject Type</Label>
+                      <Label>Default Subject Category</Label>
                       <Select
                         value={formData.default_subject_type}
                         onValueChange={value => setFormData(prev => ({ ...prev, default_subject_type: value }))}
@@ -737,11 +731,15 @@ export function CaseTypesTab() {
                           <SelectValue placeholder="Select default..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {formData.allowed_subject_types.map(code => {
-                            const st = dynamicSubjectTypes.find(s => s.code === code);
+                          {formData.allowed_subject_types.map(categoryValue => {
+                            const category = SUBJECT_CATEGORIES.find(c => c.value === categoryValue);
+                            const IconComponent = category ? CATEGORY_ICONS[category.value] : null;
                             return (
-                              <SelectItem key={code} value={code}>
-                                {st?.name || code}
+                              <SelectItem key={categoryValue} value={categoryValue}>
+                                <span className="flex items-center gap-2">
+                                  {IconComponent && <IconComponent className="h-4 w-4" />}
+                                  {category?.label || categoryValue}
+                                </span>
                               </SelectItem>
                             );
                           })}
