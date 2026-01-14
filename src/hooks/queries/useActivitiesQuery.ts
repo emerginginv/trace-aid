@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { toast } from 'sonner';
 
 export interface Activity {
   id: string;
@@ -19,6 +20,8 @@ export interface Activity {
   created_at: string;
   updated_at?: string;
 }
+
+export type ActivityInput = Omit<Activity, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 
 interface UseActivitiesQueryOptions {
   caseId?: string;
@@ -100,6 +103,126 @@ export function useEventsQuery(options: Omit<UseActivitiesQueryOptions, 'activit
  */
 export function usePendingTasksQuery(options: Omit<UseActivitiesQueryOptions, 'activityType' | 'completed'> = {}) {
   return useActivitiesQuery({ ...options, activityType: 'task', completed: false });
+}
+
+/**
+ * Mutation hook for creating an activity.
+ */
+export function useCreateActivity() {
+  const queryClient = useQueryClient();
+  const { organization } = useOrganization();
+
+  return useMutation({
+    mutationFn: async (input: ActivityInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !organization?.id) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('case_activities')
+        .insert({
+          ...input,
+          organization_id: organization.id,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Activity;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      toast.success(`${data.activity_type === 'task' ? 'Task' : 'Event'} created successfully`);
+    },
+    onError: (error) => {
+      toast.error(`Failed to create activity: ${error.message}`);
+    },
+  });
+}
+
+/**
+ * Mutation hook for updating an activity.
+ */
+export function useUpdateActivity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...input }: Partial<Activity> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('case_activities')
+        .update(input)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Activity;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      toast.success('Activity updated successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to update activity: ${error.message}`);
+    },
+  });
+}
+
+/**
+ * Mutation hook for completing/uncompleting an activity.
+ */
+export function useToggleActivityComplete() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
+      const { data, error } = await supabase
+        .from('case_activities')
+        .update({
+          completed,
+          completed_at: completed ? new Date().toISOString() : null,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Activity;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      toast.success(data.completed ? 'Activity completed' : 'Activity reopened');
+    },
+    onError: (error) => {
+      toast.error(`Failed to update activity: ${error.message}`);
+    },
+  });
+}
+
+/**
+ * Mutation hook for deleting an activity.
+ */
+export function useDeleteActivity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (activityId: string) => {
+      const { error } = await supabase
+        .from('case_activities')
+        .delete()
+        .eq('id', activityId);
+
+      if (error) throw error;
+      return activityId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      toast.success('Activity deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete activity: ${error.message}`);
+    },
+  });
 }
 
 export default useActivitiesQuery;

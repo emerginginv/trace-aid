@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { toast } from 'sonner';
 
 export interface Expense {
   id: string;
@@ -20,6 +21,8 @@ export interface Expense {
   created_at: string;
   updated_at?: string;
 }
+
+export type ExpenseInput = Omit<Expense, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 
 interface UseExpensesQueryOptions {
   caseId?: string;
@@ -109,6 +112,95 @@ export function useExpenseStats(caseId?: string) {
   };
 
   return { stats, isLoading };
+}
+
+/**
+ * Mutation hook for creating an expense/time entry.
+ */
+export function useCreateExpense() {
+  const queryClient = useQueryClient();
+  const { organization } = useOrganization();
+
+  return useMutation({
+    mutationFn: async (input: ExpenseInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !organization?.id) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('case_finances')
+        .insert({
+          ...input,
+          organization_id: organization.id,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Expense;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success(`${data.finance_type === 'time' ? 'Time entry' : 'Expense'} created successfully`);
+    },
+    onError: (error) => {
+      toast.error(`Failed to create entry: ${error.message}`);
+    },
+  });
+}
+
+/**
+ * Mutation hook for updating an expense/time entry.
+ */
+export function useUpdateExpense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...input }: Partial<Expense> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('case_finances')
+        .update(input)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Expense;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Entry updated successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to update entry: ${error.message}`);
+    },
+  });
+}
+
+/**
+ * Mutation hook for deleting an expense/time entry.
+ */
+export function useDeleteExpense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (expenseId: string) => {
+      const { error } = await supabase
+        .from('case_finances')
+        .delete()
+        .eq('id', expenseId);
+
+      if (error) throw error;
+      return expenseId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Entry deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete entry: ${error.message}`);
+    },
+  });
 }
 
 export default useExpensesQuery;

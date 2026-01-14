@@ -8,7 +8,7 @@
  * - Background refetching
  * 
  * @example
- * import { useCasesQuery, useContactsQuery } from '@/hooks/queries';
+ * import { useCasesQuery, useContactsQuery, useAccountsQuery } from '@/hooks/queries';
  * 
  * function MyComponent() {
  *   const { data: cases, isLoading } = useCasesQuery({ status: 'active' });
@@ -48,8 +48,11 @@ export type { Invoice } from './useInvoicesQuery';
 export {
   useAccountsQuery,
   useAccountQuery,
+  useCreateAccount,
+  useUpdateAccount,
+  useDeleteAccount,
 } from './useAccountsQuery';
-export type { Account } from './useAccountsQuery';
+export type { Account, AccountInput } from './useAccountsQuery';
 
 // Activities (Tasks & Events)
 export {
@@ -57,8 +60,12 @@ export {
   useTasksQuery,
   useEventsQuery,
   usePendingTasksQuery,
+  useCreateActivity,
+  useUpdateActivity,
+  useToggleActivityComplete,
+  useDeleteActivity,
 } from './useActivitiesQuery';
-export type { Activity } from './useActivitiesQuery';
+export type { Activity, ActivityInput } from './useActivitiesQuery';
 
 // Expenses & Time Entries
 export {
@@ -66,5 +73,60 @@ export {
   useOnlyExpensesQuery,
   useTimeEntriesQuery,
   useExpenseStats,
+  useCreateExpense,
+  useUpdateExpense,
+  useDeleteExpense,
 } from './useExpensesQuery';
-export type { Expense } from './useExpensesQuery';
+export type { Expense, ExpenseInput } from './useExpensesQuery';
+
+// Profiles
+export {
+  useOrganizationProfilesQuery,
+  useCurrentProfileQuery,
+  useProfileQuery,
+  useUpdateCurrentProfile,
+} from './useProfilesQuery';
+export type { Profile, ProfileInput } from './useProfilesQuery';
+
+// Case Subjects
+export {
+  useCaseSubjectsQuery,
+  useCaseSubjectQuery,
+  usePrimarySubjectQuery,
+  useCreateCaseSubject,
+  useUpdateCaseSubject,
+  useDeleteCaseSubject,
+} from './useCaseSubjectsQuery';
+export type { CaseSubject, CaseSubjectInput } from './useCaseSubjectsQuery';
+
+// Case Updates
+export {
+  useCaseUpdatesQuery,
+  useCaseUpdatesByCaseId,
+  useCreateCaseUpdate,
+  useUpdateCaseUpdate,
+  useDeleteCaseUpdate,
+} from './useCaseUpdatesQuery';
+export type { CaseUpdate, CaseUpdateInput } from './useCaseUpdatesQuery';
+
+// Notifications
+export {
+  useNotificationsQuery,
+  useUnreadNotificationsCount,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useCreateNotification,
+  useDeleteNotification,
+} from './useNotificationsQuery';
+export type { Notification, NotificationInput } from './useNotificationsQuery';
+
+// Case Services
+export {
+  useCaseServicesQuery,
+  useCaseServiceQuery,
+  useCreateCaseService,
+  useUpdateCaseService,
+  useDeleteCaseService,
+  useReorderCaseServices,
+} from './useCaseServicesQuery';
+export type { CaseService, CaseServiceInput } from './useCaseServicesQuery';
