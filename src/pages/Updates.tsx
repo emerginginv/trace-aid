@@ -14,12 +14,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
-import { FileText, Users, Bot, Clock, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, Download, FileSpreadsheet } from "lucide-react";
+import { FileText, Users, Bot, Clock, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, Download, FileSpreadsheet, Plus } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { HelpfulHeader } from "@/components/help-center/ContextualHelp";
 import { format, subDays, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CaseSelectorDialog } from "@/components/shared/CaseSelectorDialog";
+import { UpdateForm } from "@/components/case-detail/UpdateForm";
 
 interface UpdateWithCase {
   id: string;
@@ -91,6 +93,11 @@ export default function Updates() {
   const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
     return (localStorage.getItem('updates-view-mode') as 'list' | 'cards') || 'list';
   });
+
+  // State for adding new update
+  const [showCaseSelector, setShowCaseSelector] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [showUpdateForm, setShowUpdateForm] = useState(false);
 
   const [counts, setCounts] = useState<UpdateCounts>({
     caseUpdates: 0,
@@ -373,6 +380,12 @@ export default function Updates() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {hasPermission('add_updates') && (
+          <Button size="sm" className="h-10" onClick={() => setShowCaseSelector(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Update
+          </Button>
+        )}
         <ImportTemplateButton templateFileName="07_Updates.csv" entityDisplayName="Updates" />
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
@@ -543,6 +556,36 @@ export default function Updates() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Case Selector Dialog */}
+      <CaseSelectorDialog
+        open={showCaseSelector}
+        onOpenChange={setShowCaseSelector}
+        onSelectCase={(caseId) => {
+          setSelectedCaseId(caseId);
+          setShowUpdateForm(true);
+        }}
+        title="Select a Case"
+        description="Choose a case to add a new update to"
+      />
+
+      {/* Update Form Dialog */}
+      {selectedCaseId && organization?.id && (
+        <UpdateForm
+          caseId={selectedCaseId}
+          open={showUpdateForm}
+          onOpenChange={(open) => {
+            setShowUpdateForm(open);
+            if (!open) setSelectedCaseId(null);
+          }}
+          onSuccess={() => {
+            setShowUpdateForm(false);
+            setSelectedCaseId(null);
+            fetchUpdates();
+          }}
+          organizationId={organization.id}
+        />
       )}
     </div>
   );

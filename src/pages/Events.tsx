@@ -13,11 +13,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
-import { Calendar, Clock, CheckCircle, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, MapPin, Download, FileSpreadsheet, FileText, Phone, Users, Car } from "lucide-react";
+import { Calendar, Clock, CheckCircle, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, MapPin, Download, FileSpreadsheet, FileText, Phone, Users, Car, Plus } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CaseSelectorDialog } from "@/components/shared/CaseSelectorDialog";
+import { ActivityForm } from "@/components/case-detail/ActivityForm";
 
 interface EventWithCase {
   id: string;
@@ -112,6 +114,12 @@ export default function Events() {
     return (localStorage.getItem('events-view-mode') as 'list' | 'cards') || 'cards';
   });
 
+  // State for adding new event
+  const [showCaseSelector, setShowCaseSelector] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [showActivityForm, setShowActivityForm] = useState(false);
+  const [users, setUsers] = useState<{ id: string; email: string; full_name: string | null }[]>([]);
+
   const [counts, setCounts] = useState<EventCounts>({
     total: 0,
     meetings: 0,
@@ -123,11 +131,37 @@ export default function Events() {
   useEffect(() => {
     if (!organization?.id) return;
     fetchEvents();
+    fetchUsers();
   }, [organization?.id]);
 
   useEffect(() => {
     localStorage.setItem('events-view-mode', viewMode);
   }, [viewMode]);
+
+  const fetchUsers = async () => {
+    if (!organization?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from("organization_members")
+        .select("user_id, profiles(id, email, full_name)")
+        .eq("organization_id", organization.id);
+
+      if (error) throw error;
+      
+      const usersList = (data || [])
+        .map((m: any) => m.profiles)
+        .filter(Boolean)
+        .map((p: any) => ({
+          id: p.id,
+          email: p.email || "",
+          full_name: p.full_name,
+        }));
+      
+      setUsers(usersList);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
 
   const fetchEvents = async () => {
     if (!organization?.id) return;
@@ -388,6 +422,12 @@ export default function Events() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {hasPermission('add_activities') && (
+          <Button size="sm" className="h-10" onClick={() => setShowCaseSelector(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Event
+          </Button>
+        )}
         <ImportTemplateButton templateFileName="15_Events.csv" entityDisplayName="Events" />
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
@@ -634,6 +674,38 @@ export default function Events() {
             );
           })}
         </div>
+      )}
+
+      {/* Case Selector Dialog */}
+      <CaseSelectorDialog
+        open={showCaseSelector}
+        onOpenChange={setShowCaseSelector}
+        onSelectCase={(caseId) => {
+          setSelectedCaseId(caseId);
+          setShowActivityForm(true);
+        }}
+        title="Select a Case"
+        description="Choose a case to add a new event to"
+      />
+
+      {/* Activity Form Dialog */}
+      {selectedCaseId && organization?.id && (
+        <ActivityForm
+          caseId={selectedCaseId}
+          activityType="event"
+          users={users}
+          open={showActivityForm}
+          onOpenChange={(open) => {
+            setShowActivityForm(open);
+            if (!open) setSelectedCaseId(null);
+          }}
+          onSuccess={() => {
+            setShowActivityForm(false);
+            setSelectedCaseId(null);
+            fetchEvents();
+          }}
+          organizationId={organization.id}
+        />
       )}
     </div>
   );

@@ -13,12 +13,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
-import { CheckSquare, Calendar, Clock, CheckCircle, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, MapPin, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { CheckSquare, Calendar, Clock, CheckCircle, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, MapPin, Download, FileSpreadsheet, FileText, Plus } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-
+import { CaseSelectorDialog } from "@/components/shared/CaseSelectorDialog";
+import { ActivityForm } from "@/components/case-detail/ActivityForm";
 interface ActivityWithCase {
   id: string;
   case_id: string;
@@ -103,6 +104,12 @@ export default function Tasks() {
     return (localStorage.getItem('tasks-view-mode') as 'list' | 'cards') || 'cards';
   });
 
+  // State for adding new task
+  const [showCaseSelector, setShowCaseSelector] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [showActivityForm, setShowActivityForm] = useState(false);
+  const [users, setUsers] = useState<{ id: string; email: string; full_name: string | null }[]>([]);
+
   const [counts, setCounts] = useState<TaskCounts>({
     total: 0,
     dueSoon: 0,
@@ -113,11 +120,37 @@ export default function Tasks() {
   useEffect(() => {
     if (!organization?.id) return;
     fetchTasks();
+    fetchUsers();
   }, [organization?.id]);
 
   useEffect(() => {
     localStorage.setItem('tasks-view-mode', viewMode);
   }, [viewMode]);
+
+  const fetchUsers = async () => {
+    if (!organization?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from("organization_members")
+        .select("user_id, profiles(id, email, full_name)")
+        .eq("organization_id", organization.id);
+
+      if (error) throw error;
+      
+      const usersList = (data || [])
+        .map((m: any) => m.profiles)
+        .filter(Boolean)
+        .map((p: any) => ({
+          id: p.id,
+          email: p.email || "",
+          full_name: p.full_name,
+        }));
+      
+      setUsers(usersList);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
 
   const fetchTasks = async () => {
     if (!organization?.id) return;
@@ -360,6 +393,12 @@ export default function Tasks() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {hasPermission('add_activities') && (
+          <Button size="sm" className="h-10" onClick={() => setShowCaseSelector(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
+          </Button>
+        )}
         <ImportTemplateButton templateFileName="16_Tasks.csv" entityDisplayName="Tasks" />
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
@@ -587,6 +626,38 @@ export default function Tasks() {
         <p className="text-sm text-muted-foreground text-center">
           Showing {filteredTasks.length} of {tasks.length} tasks
         </p>
+      )}
+
+      {/* Case Selector Dialog */}
+      <CaseSelectorDialog
+        open={showCaseSelector}
+        onOpenChange={setShowCaseSelector}
+        onSelectCase={(caseId) => {
+          setSelectedCaseId(caseId);
+          setShowActivityForm(true);
+        }}
+        title="Select a Case"
+        description="Choose a case to add a new task to"
+      />
+
+      {/* Activity Form Dialog */}
+      {selectedCaseId && organization?.id && (
+        <ActivityForm
+          caseId={selectedCaseId}
+          activityType="task"
+          users={users}
+          open={showActivityForm}
+          onOpenChange={(open) => {
+            setShowActivityForm(open);
+            if (!open) setSelectedCaseId(null);
+          }}
+          onSuccess={() => {
+            setShowActivityForm(false);
+            setSelectedCaseId(null);
+            fetchTasks();
+          }}
+          organizationId={organization.id}
+        />
       )}
     </div>
   );
