@@ -47,6 +47,9 @@ interface ServiceInfo {
   billable: boolean;
 }
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const TimeEntryDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -64,6 +67,16 @@ const TimeEntryDetail = () => {
   ]);
 
   useEffect(() => {
+    // Validate UUID format before attempting to fetch
+    if (!id || !UUID_REGEX.test(id)) {
+      toast({
+        title: "Invalid time entry ID",
+        description: "The time entry ID format is invalid. Redirecting to time entries list.",
+        variant: "destructive",
+      });
+      navigate("/time-entries");
+      return;
+    }
     fetchTimeEntry();
   }, [id]);
 
