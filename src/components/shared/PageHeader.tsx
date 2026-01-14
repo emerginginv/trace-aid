@@ -2,13 +2,19 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { ReactNode } from "react";
 
-interface PageHeaderProps {
+interface AddButtonConfig {
+  label: string;
+  onClick: () => void;
+}
+
+export interface PageHeaderProps {
   title: string;
   description?: string;
   titleComponent?: ReactNode;
   showAddButton?: boolean;
   addButtonLabel?: string;
   onAddClick?: () => void;
+  addButton?: AddButtonConfig;
   actions?: ReactNode;
 }
 
@@ -19,8 +25,13 @@ export function PageHeader({
   showAddButton = false,
   addButtonLabel = "Add",
   onAddClick,
+  addButton,
   actions,
 }: PageHeaderProps) {
+  const shouldShowAddButton = showAddButton || !!addButton;
+  const buttonLabel = addButton?.label || addButtonLabel;
+  const handleAddClick = addButton?.onClick || onAddClick;
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
       <div>
@@ -33,10 +44,10 @@ export function PageHeader({
       </div>
       <div className="flex items-center gap-2">
         {actions}
-        {showAddButton && (
-          <Button onClick={onAddClick}>
+        {shouldShowAddButton && (
+          <Button onClick={handleAddClick}>
             <Plus className="h-4 w-4 mr-2" />
-            {addButtonLabel}
+            {buttonLabel}
           </Button>
         )}
       </div>

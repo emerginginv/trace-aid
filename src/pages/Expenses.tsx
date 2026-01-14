@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,37 +13,16 @@ import { toast } from "sonner";
 import { DollarSign, Plus, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
-
-interface Expense {
-  id: string;
-  case_id: string;
-  description: string;
-  amount: number;
-  date: string;
-  status: string;
-  notes: string | null;
-  category: string | null;
-  cases?: {
-    case_number: string;
-    title: string;
-  };
-}
-
-interface Case {
-  id: string;
-  case_number: string;
-  title: string;
-}
+import { useOnlyExpensesQuery, useCreateExpense } from "@/hooks/queries/useExpensesQuery";
+import { useCasesQuery } from "@/hooks/queries/useCasesQuery";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 export default function Expenses() {
   useSetBreadcrumbs([{ label: "My Expenses" }]);
   
   const { organization } = useOrganization();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [cases, setCases] = useState<Case[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   // Form state
   const [selectedCaseId, setSelectedCaseId] = useState("");
@@ -53,111 +31,36 @@ export default function Expenses() {
   const [category, setCategory] = useState("");
   const [notes, setNotes] = useState("");
 
-  useEffect(() => {
-    if (organization?.id) {
-      console.log("[Expenses] Fetching for organization:", organization.id);
-      setSelectedCaseId("");
-      fetchExpenses();
-      fetchCases();
-    }
-  }, [organization?.id]);
-
-  const fetchExpenses = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // First get expenses
-      const { data: expensesData, error: expensesError } = await supabase
-        .from("case_finances")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("finance_type", "expense")
-        .order("date", { ascending: false });
-
-      if (expensesError) throw expensesError;
-
-      // Then get case details for each expense
-      if (expensesData && expensesData.length > 0) {
-        const caseIds = [...new Set(expensesData.map(e => e.case_id))];
-        const { data: casesData } = await supabase
-          .from("cases")
-          .select("id, case_number, title")
-          .in("id", caseIds);
-
-        // Merge case data with expenses
-        const expensesWithCases = expensesData.map(expense => ({
-          ...expense,
-          cases: casesData?.find(c => c.id === expense.case_id) || null,
-        }));
-
-        setExpenses(expensesWithCases);
-      } else {
-        setExpenses([]);
-      }
-    } catch (error) {
-      console.error("Error fetching expenses:", error);
-      toast.error("Failed to load expenses");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCases = async () => {
-    if (!organization?.id) return;
-
-    try {
-      // Fetch cases for the selected organization.
-      // RLS will automatically restrict what the current user is allowed to see.
-      const { data, error } = await supabase
-        .from("cases")
-        .select("id, case_number, title")
-        .eq("organization_id", organization.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setCases(data || []);
-    } catch (error) {
-      console.error("Error fetching cases:", error);
-      setCases([]);
-    }
-  };
+  // Use React Query hooks
+  const { data: expenses = [], isLoading } = useOnlyExpensesQuery();
+  const { data: cases = [] } = useCasesQuery();
+  const createExpense = useCreateExpense();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    if (!organization?.id) {
+      toast.error("Organization not found");
+      return;
+    }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
-      if (!organization?.id) throw new Error("Organization not found");
-
-      const { error } = await supabase
-        .from("case_finances")
-        .insert({
-          case_id: selectedCaseId,
-          user_id: user.id,
-          organization_id: organization.id,
-          finance_type: "expense",
-          description,
-          amount: parseFloat(amount),
-          category: category || null,
-          notes: notes || null,
-          date: new Date().toISOString().split('T')[0],
-          status: "pending",
-        });
-
-      if (error) throw error;
+      await createExpense.mutateAsync({
+        case_id: selectedCaseId,
+        finance_type: "expense",
+        description,
+        amount: parseFloat(amount),
+        category: category || null,
+        notes: notes || null,
+        date: new Date().toISOString().split('T')[0],
+        status: "pending",
+      });
 
       toast.success("Expense submitted successfully");
       setDialogOpen(false);
       resetForm();
-      fetchExpenses();
     } catch (error: any) {
       console.error("Error submitting expense:", error);
       toast.error(error.message || "Failed to submit expense");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -170,21 +73,21 @@ export default function Expenses() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { bg: string; text: string }> = {
-      pending: { bg: "bg-yellow-100", text: "text-yellow-800" },
-      approved: { bg: "bg-green-100", text: "text-green-800" },
-      rejected: { bg: "bg-red-100", text: "text-red-800" },
+    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      pending: { variant: "secondary" },
+      approved: { variant: "default" },
+      rejected: { variant: "destructive" },
     };
 
     const variant = variants[status] || variants.pending;
     return (
-      <Badge className={`${variant.bg} ${variant.text} border-0`}>
+      <Badge variant={variant.variant}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -194,127 +97,116 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">My Expenses</h1>
-          <p className="text-muted-foreground mt-2">
-            Submit and track your case-related expenses
-          </p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              New Expense
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Submit Expense</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="case">Case *</Label>
-                <Select value={selectedCaseId} onValueChange={setSelectedCaseId} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a case" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cases.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.case_number} - {c.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      <PageHeader
+        title="My Expenses"
+        description="Submit and track your case-related expenses"
+        addButton={{
+          label: "New Expense",
+          onClick: () => setDialogOpen(true),
+        }}
+      />
 
-              <div>
-                <Label htmlFor="description">Description *</Label>
-                <Input
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g., Mileage, Equipment, Meals"
-                  required
-                />
-              </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit Expense</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="case">Case *</Label>
+              <Select value={selectedCaseId} onValueChange={setSelectedCaseId} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a case" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cases.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.case_number} - {c.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div>
-                <Label htmlFor="amount">Amount *</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  required
-                />
-              </div>
+            <div>
+              <Label htmlFor="description">Description *</Label>
+              <Input
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g., Mileage, Equipment, Meals"
+                required
+              />
+            </div>
 
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mileage">Mileage</SelectItem>
-                    <SelectItem value="equipment">Equipment</SelectItem>
-                    <SelectItem value="meals">Meals</SelectItem>
-                    <SelectItem value="lodging">Lodging</SelectItem>
-                    <SelectItem value="supplies">Supplies</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label htmlFor="amount">Amount *</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
 
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Additional details..."
-                  rows={3}
-                />
-              </div>
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mileage">Mileage</SelectItem>
+                  <SelectItem value="equipment">Equipment</SelectItem>
+                  <SelectItem value="meals">Meals</SelectItem>
+                  <SelectItem value="lodging">Lodging</SelectItem>
+                  <SelectItem value="supplies">Supplies</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Additional details..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createExpense.isPending}>
+                {createExpense.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {expenses.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <DollarSign className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">No expenses yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Submit your first expense to get started
-            </p>
-            <Button className="gap-2" onClick={() => setDialogOpen(true)}>
-              <Plus className="w-4 h-4" />
-              Submit Expense
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={DollarSign}
+          title="No expenses yet"
+          description="Submit your first expense to get started"
+          action={{
+            label: "Submit Expense",
+            onClick: () => setDialogOpen(true),
+          }}
+        />
       ) : (
         <Card>
           <CardHeader>
@@ -338,9 +230,9 @@ export default function Expenses() {
                     <TableCell>{format(new Date(expense.date), "MMM d, yyyy")}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium">{expense.cases?.case_number}</span>
+                        <span className="font-medium">{expense.case_number}</span>
                         <span className="text-xs text-muted-foreground">
-                          {expense.cases?.title}
+                          {expense.case_title}
                         </span>
                       </div>
                     </TableCell>
