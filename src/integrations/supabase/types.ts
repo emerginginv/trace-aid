@@ -1627,6 +1627,7 @@ export type Database = {
           import_batch_id: string | null
           import_timestamp: string | null
           is_ai_summary: boolean | null
+          linked_activity_id: string | null
           organization_id: string | null
           title: string
           update_type: string
@@ -1645,6 +1646,7 @@ export type Database = {
           import_batch_id?: string | null
           import_timestamp?: string | null
           is_ai_summary?: boolean | null
+          linked_activity_id?: string | null
           organization_id?: string | null
           title: string
           update_type?: string
@@ -1663,6 +1665,7 @@ export type Database = {
           import_batch_id?: string | null
           import_timestamp?: string | null
           is_ai_summary?: boolean | null
+          linked_activity_id?: string | null
           organization_id?: string | null
           title?: string
           update_type?: string
@@ -1695,6 +1698,13 @@ export type Database = {
             columns: ["import_batch_id"]
             isOneToOne: false
             referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_updates_linked_activity_id_fkey"
+            columns: ["linked_activity_id"]
+            isOneToOne: false
+            referencedRelation: "case_activities"
             referencedColumns: ["id"]
           },
           {
