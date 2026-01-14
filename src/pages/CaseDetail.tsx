@@ -42,6 +42,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { getStatusStyleFromPicklist, isClosedStatus } from "@/lib/statusUtils";
+import { useCaseTypeQuery } from "@/hooks/queries/useCaseTypesQuery";
+import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
 
 interface Case {
   id: string;
@@ -61,6 +63,7 @@ interface Case {
   parent_case_id: string | null;
   instance_number: number;
   reference_number?: string | null;
+  case_type_id?: string | null;
 }
 
 interface Account {
@@ -135,6 +138,12 @@ const CaseDetail = () => {
   const [summaryPdfDialogOpen, setSummaryPdfDialogOpen] = useState(false);
   const [updates, setUpdates] = useState<Array<{ id: string; title: string; description: string | null; created_at: string; update_type: string; user_id: string }>>([]);
   const [userProfiles, setUserProfiles] = useState<Record<string, { id: string; full_name: string; email: string }>>({});
+
+  // Fetch case type data using React Query
+  const { data: caseType } = useCaseTypeQuery(caseData?.case_type_id);
+  
+  // Fetch case service instances
+  const { data: serviceInstances = [] } = useCaseServiceInstances(id);
 
   // Set breadcrumbs based on case data
   useSetBreadcrumbs(
@@ -770,6 +779,21 @@ const CaseDetail = () => {
                         <InfoItem label="Account" value={account?.name} />
                         <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
                         <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
+                        {caseType && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">Case Type</p>
+                            <div className="flex items-center gap-1.5">
+                              <span 
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ backgroundColor: caseType.color || '#9ca3af' }}
+                              />
+                              <span className="text-sm font-medium">{caseType.name}</span>
+                              <Badge variant="outline" className="text-xs px-1.5 py-0 ml-1">
+                                {caseType.tag}
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
                         <InfoItem label="Reference No." value={caseData.reference_number} />
                         <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
                         <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
@@ -777,6 +801,27 @@ const CaseDetail = () => {
                           <InfoItem label="Closed" value={new Date(caseData.closed_at).toLocaleDateString()} className="text-muted-foreground" />
                         )}
                       </div>
+                      
+                      {/* Services Section */}
+                      {serviceInstances.length > 0 && (
+                        <div className="pt-3 border-t">
+                          <p className="text-xs text-muted-foreground mb-2">Services</p>
+                          <div className="flex flex-wrap gap-2">
+                            {serviceInstances.map((instance) => (
+                              <Badge 
+                                key={instance.id} 
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                {instance.service_name}
+                                {instance.service_code && (
+                                  <span className="text-muted-foreground ml-1">({instance.service_code})</span>
+                                )}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
