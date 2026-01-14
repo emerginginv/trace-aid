@@ -912,8 +912,9 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                   {filteredTimeEntries.map((entry) => (
                     <TableRow 
                       key={entry.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/time-entries/${entry.id}`)}
+                      className={entry.activity_id ? "cursor-pointer hover:bg-muted/50" : ""}
+                      title={!entry.activity_id ? "No linked activity to view" : undefined}
+                      onClick={() => entry.activity_id && navigate(`/cases/${caseId}/activities/${entry.activity_id}`)}
                     >
                       <TableCell className="whitespace-nowrap">
                         {format(new Date(entry.date), "MMM d, yyyy")}
