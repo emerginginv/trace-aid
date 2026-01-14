@@ -1,3 +1,31 @@
+/**
+ * useBillingEligibility Hook
+ * 
+ * Evaluates whether an activity is eligible for billing based on multiple gates.
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * SYSTEM PROMPT 7 COMPLIANCE: AUTOMATIC PRICING RESOLUTION
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Pricing is resolved automatically using the following priority order:
+ * 
+ * 1. Case-level pricing profile (case.pricing_profile_id)
+ * 2. Account-level default pricing profile (accounts.default_pricing_profile_id)
+ * 3. Organization default pricing profile (pricing_profiles.is_default = true)
+ * 
+ * CRITICAL RULE:
+ * Do NOT prompt the user to select pricing. The system automatically resolves
+ * the applicable pricing profile based on the hierarchy above.
+ * 
+ * IMPLEMENTATION:
+ * → Lines 166-210: Pricing profile resolution logic
+ * → First checks case.pricing_profile_id
+ * → If null, uses account.default_pricing_profile_id via case.accounts relation
+ * → If still null, fetches organization default pricing profile
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
