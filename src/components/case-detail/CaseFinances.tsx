@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, DollarSign, Pencil, Trash2, Search, CheckCircle, XCircle, AlertCircle, Calendar, TrendingUp, Clock, MoreVertical, Lock, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FinanceForm } from "./FinanceForm";
+import { FinancialEntryDialog } from "./FinancialEntryDialog";
 import { InvoiceFromExpenses } from "./InvoiceFromExpenses";
 import { InvoiceFromServices } from "./InvoiceFromServices";
 import { InvoiceDetail } from "./InvoiceDetail";
@@ -88,6 +89,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [defaultFinanceType, setDefaultFinanceType] = useState<"retainer" | "expense" | "time">("expense");
+  const [financialEntryOpen, setFinancialEntryOpen] = useState(false);
   
   // Sorting states
   const { sortColumn: expenseSortColumn, sortDirection: expenseSortDirection, handleSort: handleExpenseSort } = useSortPreference("case-finances-expenses", "date", "desc");
@@ -589,6 +591,10 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Button variant="outline" onClick={() => setFinancialEntryOpen(true)} disabled={!canAddFinances}>
+                <Plus className="h-4 w-4 mr-1" />
+                Batch Entry
+              </Button>
               <Button onClick={() => {
                 setDefaultFinanceType("expense");
                 setFormOpen(true);
@@ -1323,6 +1329,14 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
         editingFinance={editingFinance}
         defaultFinanceType={defaultFinanceType}
         organizationId={organization?.id || ""}
+      />
+
+      <FinancialEntryDialog
+        caseId={caseId}
+        organizationId={organization?.id || ""}
+        open={financialEntryOpen}
+        onOpenChange={setFinancialEntryOpen}
+        onSuccess={fetchFinances}
       />
 
       {selectedInvoiceId && (
