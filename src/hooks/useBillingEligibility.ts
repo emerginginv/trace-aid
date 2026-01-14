@@ -24,6 +24,26 @@
  * → If still null, fetches organization default pricing profile
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * SYSTEM PROMPT 7B COMPLIANCE: FLAT-FEE SAFEGUARD
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * If the service pricing model is flat_fee:
+ * - Allow only ONE billing item per Case Service Instance
+ * - If a billing item already exists:
+ *   → Block creation
+ *   → Display: "This service has already been billed under a flat fee."
+ * 
+ * IMPLEMENTATION (lines 315-352):
+ * 1. Check if instance has invoice_line_item_id (already invoiced)
+ * 2. Check for existing billing items in case_finances
+ * 3. Return isEligible: false with warning message
+ * 
+ * DOUBLE-CHECK in useBillingItemCreation.ts (lines 123-152):
+ * - Prevents race conditions by re-validating at creation time
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
 
 import { useState, useCallback } from "react";
@@ -318,7 +338,7 @@ export function useBillingEligibility() {
           if (instanceData.invoice_line_item_id) {
             const notEligible: BillingEligibilityResult = {
               isEligible: false,
-              reason: "This service has already been billed under a flat-fee."
+              reason: "This service has already been billed under a flat fee."
             };
             setResult(notEligible);
             return notEligible;
@@ -342,7 +362,7 @@ export function useBillingEligibility() {
           if (existingBillingItem) {
             const notEligible: BillingEligibilityResult = {
               isEligible: false,
-              reason: "This service has already been billed under a flat-fee."
+              reason: "This service has already been billed under a flat fee."
             };
             setResult(notEligible);
             return notEligible;
