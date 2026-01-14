@@ -529,6 +529,27 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
   const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const grandTotal = totalTimeValue + totalExpenses;
 
+  // Billed vs Unbilled calculations
+  const billedTimeValue = timeEntries
+    .filter(e => e.status === "billed")
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const billedExpenses = expenses
+    .filter(e => e.invoiced)
+    .reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const totalBilled = billedTimeValue + billedExpenses;
+
+  const unbilledTimeValue = timeEntries
+    .filter(e => e.status !== "billed")
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const unbilledBillableExpenses = expenses
+    .filter(e => e.billable && !e.invoiced)
+    .reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const totalBillableUninvoiced = unbilledTimeValue + unbilledBillableExpenses;
+
   // Calculate service breakdown
   const calculateServiceBreakdown = (): ServiceBreakdown[] => {
     const breakdown = new Map<string, ServiceBreakdown>();
@@ -713,20 +734,6 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <DollarSign className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Time Value</p>
-                <p className="text-2xl font-bold">${totalTimeValue.toFixed(2)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-orange-500/10">
                 <Receipt className="h-5 w-5 text-orange-500" />
               </div>
@@ -741,16 +748,50 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <TrendingUp className="h-5 w-5 text-green-500" />
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <DollarSign className="h-5 w-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Grand Total</p>
-                <p className="text-2xl font-bold">${grandTotal.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">Billable (Uninvoiced)</p>
+                <p className="text-2xl font-bold">${totalBillableUninvoiced.toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Billed</p>
+                <p className="text-2xl font-bold">${totalBilled.toFixed(2)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="text-center p-3 bg-muted/30 rounded-lg">
+          <p className="text-xs text-muted-foreground">Time Value</p>
+          <p className="text-lg font-semibold">${totalTimeValue.toFixed(2)}</p>
+        </div>
+        <div className="text-center p-3 bg-muted/30 rounded-lg">
+          <p className="text-xs text-muted-foreground">Billed Time</p>
+          <p className="text-lg font-semibold">${billedTimeValue.toFixed(2)}</p>
+        </div>
+        <div className="text-center p-3 bg-muted/30 rounded-lg">
+          <p className="text-xs text-muted-foreground">Billed Expenses</p>
+          <p className="text-lg font-semibold">${billedExpenses.toFixed(2)}</p>
+        </div>
+        <div className="text-center p-3 bg-muted/30 rounded-lg">
+          <p className="text-xs text-muted-foreground">Grand Total</p>
+          <p className="text-lg font-semibold">${grandTotal.toFixed(2)}</p>
+        </div>
       </div>
 
       {/* Filters */}
