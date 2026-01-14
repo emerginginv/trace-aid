@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchBudgetForecastOnce, BudgetForecastWarning } from "./useBudgetForecast";
+import { logBillingAudit } from "@/lib/billingAuditLogger";
 
 export interface CreateBillingItemParams {
   activityId: string;
@@ -174,6 +175,24 @@ export function useBillingItemCreation() {
         console.error("Error updating service instance:", updateError);
         // Don't fail the whole operation, billing item was created
       }
+
+      // SYSTEM PROMPT 11: Log billing item created audit event
+      await logBillingAudit({
+        action: 'billing_item_created',
+        organizationId: organizationId,
+        metadata: {
+          billingItemId: billingItem.id,
+          updateId: updateId,
+          activityId: activityId,
+          caseServiceInstanceId: caseServiceInstanceId,
+          caseId: caseId,
+          serviceName: serviceName,
+          pricingModel: pricingModel,
+          quantity: quantity,
+          rate: rate,
+          amount: amount,
+        },
+      });
 
       // SYSTEM PROMPT 9: Check budget forecast after creating pending billing item
       // Pending billing items may trigger warnings but do NOT consume budget definitively
