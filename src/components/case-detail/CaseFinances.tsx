@@ -517,24 +517,24 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
 
   return (
     <>
-      <Tabs defaultValue="expenses" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 gap-1">
-          <TabsTrigger value="expenses" className="text-xs sm:text-sm px-2 sm:px-3">Expenses</TabsTrigger>
-          <TabsTrigger value="time" className="text-xs sm:text-sm px-2 sm:px-3">Time</TabsTrigger>
-          <TabsTrigger value="invoices" className="text-xs sm:text-sm px-2 sm:px-3">Invoices</TabsTrigger>
+      <Tabs defaultValue="time-expenses" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4 gap-1">
+          <TabsTrigger value="time-expenses" className="text-xs sm:text-sm px-2 sm:px-3">Time & Expenses</TabsTrigger>
+          <TabsTrigger value="financial-summary" className="text-xs sm:text-sm px-2 sm:px-3">Financial Summary</TabsTrigger>
           <TabsTrigger value="create-invoice" className="text-xs sm:text-sm px-2 sm:px-3">Invoice (Services)</TabsTrigger>
           <TabsTrigger value="create-invoice-legacy" className="text-xs sm:text-sm px-2 sm:px-3">Invoice (Items)</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="expenses" className="space-y-6 animate-fade-in">
+        {/* TIME & EXPENSES - Canonical view of work performed */}
+        <TabsContent value="time-expenses" className="space-y-6 animate-fade-in">
           {isLoading ? (
             <ExpensesTabSkeleton />
           ) : (
             <>
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold">Finances</h2>
-              <p className="text-muted-foreground">Retainers, expenses, and invoices</p>
+              <h2 className="text-2xl font-bold">Time & Expenses</h2>
+              <p className="text-muted-foreground">Canonical ledger of work performed</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Pricing Profile:{" "}
                 {pricingLoading ? (
@@ -554,11 +554,228 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
               </p>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setFinancialEntryOpen(true)} disabled={!canAddFinances}>
+                <Plus className="h-4 w-4 mr-1" />
+                Batch Entry
+              </Button>
+              <Button onClick={() => {
+                setDefaultFinanceType("time");
+                setFormOpen(true);
+              }} disabled={!canAddFinances}>
+                <Plus className="h-4 w-4 mr-1" />
+                Log Time
+              </Button>
+              <Button onClick={() => {
+                setDefaultFinanceType("expense");
+                setFormOpen(true);
+              }} disabled={!canAddFinances}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add Expense
+              </Button>
+            </div>
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Time</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{timeMetrics.totalHours.toFixed(2)} hrs</div>
+                <p className="text-xs text-muted-foreground">${timeMetrics.totalAmount.toFixed(2)} value</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${totals.expenseTotal.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground">{expenseFinances.filter(f => f.finance_type === 'expense').length} entries</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Billable (Uninvoiced)</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  ${(finances.filter(f => (f.finance_type === 'time' || f.finance_type === 'expense') && f.status === 'approved').reduce((sum, f) => sum + Number(f.amount), 0)).toFixed(2)}
+                </div>
+                <p className="text-xs text-muted-foreground">Ready for invoicing</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${totals.invoiceTotal.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground">{invoices.length} invoices</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Time Entries Section */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Time Entries
+              </h3>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" size="sm">
                     <Download className="h-4 w-4 mr-2" />
-                    Export
+                    Export Time
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    const exportColumns: ExportColumn[] = [
+                      { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                      { key: "description", label: "Description" },
+                      { key: "hours", label: "Hours", format: (v) => v?.toFixed(2) || "0", align: "right" },
+                      { key: "hourly_rate", label: "Rate", format: (v) => v ? `$${Number(v).toFixed(2)}` : "-", align: "right" },
+                      { key: "amount", label: "Total", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
+                      { key: "status", label: "Status", format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || "-" },
+                    ];
+                    exportToCSV(timeFinances, exportColumns, "case-time-entries");
+                  }}>
+                    Export to CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    const exportColumns: ExportColumn[] = [
+                      { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
+                      { key: "description", label: "Description" },
+                      { key: "hours", label: "Hours", format: (v) => v?.toFixed(2) || "0", align: "right" },
+                      { key: "hourly_rate", label: "Rate", format: (v) => v ? `$${Number(v).toFixed(2)}` : "-", align: "right" },
+                      { key: "amount", label: "Total", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
+                    ];
+                    exportToPDF(timeFinances, exportColumns, "Case Time Entries", "case-time-entries", [
+                      { label: "Total Hours", value: timeMetrics.totalHours.toFixed(2) },
+                      { label: "Total Amount", value: `$${timeMetrics.totalAmount.toFixed(2)}` }
+                    ]);
+                  }}>
+                    Export to PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {timeFinances.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <Clock className="h-8 w-8 mb-2 opacity-20" />
+                  <p>No time entries yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableTableHead column="date" label="Date" sortColumn={timeSortColumn} sortDirection={timeSortDirection} onSort={handleTimeSort} />
+                      <TableHead>Description</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Hours</TableHead>
+                      <TableHead className="text-right">Rate</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {timeFinances.map((finance) => (
+                      <TableRow key={finance.id}>
+                        <TableCell>{new Date(finance.date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{finance.description}</div>
+                            {finance.notes && (
+                              <div className="text-sm text-muted-foreground">{finance.notes}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {finance.category ? (
+                            <Badge variant="outline">{finance.category}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">{finance.hours?.toFixed(2) || 0}</TableCell>
+                        <TableCell className="text-right">${finance.hourly_rate?.toFixed(2) || 0}</TableCell>
+                        <TableCell className="text-right font-medium">${Number(finance.amount).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(finance.status)}>
+                            {finance.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {(canEditFinances || canDeleteFinances) ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {canEditFinances && (
+                                  <DropdownMenuItem onClick={() => handleEdit(finance)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                )}
+                                {canEditFinances && finance.status === "pending" && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => handleApprove(finance.id, finance.finance_type)}>
+                                      <CheckCircle className="mr-2 h-4 w-4" />
+                                      Approve
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleReject(finance.id, finance.finance_type)}>
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Reject
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {canDeleteFinances && (
+                                  <DropdownMenuItem onClick={() => handleDelete(finance.id)} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            )}
+          </div>
+
+          {/* Expense Entries Section */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Expense Entries
+              </h3>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Expenses
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -570,11 +787,12 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                       { key: "amount", label: "Amount", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
                       { key: "status", label: "Status", format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || "-" },
                     ];
-                    exportToCSV(expenseFinances, exportColumns, "case-expenses");
+                    exportToCSV(expenseFinances.filter(f => f.finance_type === 'expense'), exportColumns, "case-expenses");
                   }}>
                     Export to CSV
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => {
+                    const onlyExpenses = expenseFinances.filter(f => f.finance_type === 'expense');
                     const exportColumns: ExportColumn[] = [
                       { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
                       { key: "category", label: "Category", format: (v) => v || "-" },
@@ -582,8 +800,8 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                       { key: "amount", label: "Amount", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
                       { key: "status", label: "Status", format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || "-" },
                     ];
-                    const expenseTotal = expenseFinances.reduce((sum, f) => sum + Number(f.amount), 0);
-                    exportToPDF(expenseFinances, exportColumns, "Case Expenses", "case-expenses", [
+                    const expenseTotal = onlyExpenses.reduce((sum, f) => sum + Number(f.amount), 0);
+                    exportToPDF(onlyExpenses, exportColumns, "Case Expenses", "case-expenses", [
                       { label: "Total", value: `$${expenseTotal.toFixed(2)}` }
                     ]);
                   }}>
@@ -591,561 +809,118 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="outline" onClick={() => setFinancialEntryOpen(true)} disabled={!canAddFinances}>
-                <Plus className="h-4 w-4 mr-1" />
-                Batch Entry
-              </Button>
-              <Button onClick={() => {
-                setDefaultFinanceType("expense");
-                setFormOpen(true);
-              }} disabled={!canAddFinances}>
-                <Plus className="h-4 w-4" />
-                Add Transaction
-              </Button>
             </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search finances (description, invoice #, notes)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="retainer">Retainer</SelectItem>
-                <SelectItem value="expense">Expense</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="partial">Partially Paid</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-              </SelectContent>
-            </Select>
-            <ColumnVisibility
-              columns={EXPENSE_COLUMNS}
-              visibility={expenseVisibility}
-              onToggle={toggleExpenseColumn}
-              onReset={resetExpenseDefaults}
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400">Total Retainer</CardTitle>
-                <DollarSign className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">${totals.retainerTotal.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400">Total Expenses</CardTitle>
-                <DollarSign className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">${totals.expenseTotal.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/50">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">Total Invoiced</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">${totals.invoiceTotal.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Dashboard Widgets */}
-          {invoiceMetrics.overdueCount > 0 && (
-            <Card className="border-red-500/50 bg-red-500/5">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-red-500 mb-1">
-                      {invoiceMetrics.overdueCount} {invoiceMetrics.overdueCount === 1 ? 'invoice is' : 'invoices are'} overdue
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Total outstanding: <span className="font-bold text-red-500">${invoiceMetrics.overdueTotal.toFixed(2)}</span>
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Unpaid Invoices Card */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Unpaid Invoices</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-baseline gap-2">
-                    <div className="text-2xl font-bold">{invoiceMetrics.unpaidCount}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {invoiceMetrics.unpaidCount === 1 ? 'invoice' : 'invoices'}
-                    </div>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Total outstanding: </span>
-                    <span className="font-bold">${invoiceMetrics.unpaidTotal.toFixed(2)}</span>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full mt-2"
-                    onClick={() => {
-                      setTypeFilter("invoice");
-                      setStatusFilter("all");
-                    }}
-                  >
-                    View Invoices
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Upcoming Due Dates Card */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Upcoming Due Dates</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {invoiceMetrics.upcomingInvoices.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">
-                    No invoices due in the next 7 days
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {invoiceMetrics.upcomingInvoices.map((invoice) => (
-                      <div 
-                        key={invoice.id}
-                        className="flex items-center justify-between text-sm border-b last:border-0 pb-2 last:pb-0"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">
-                            {invoice.invoice_number || invoice.description}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge className={getDueDateColor(invoice.due_date!)} variant="outline">
-                              {getDueDateLabel(invoice.due_date!)}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="text-right ml-2">
-                          <div className="font-bold">
-                            ${Number(invoice.total || 0).toFixed(2)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full mt-2"
-                      onClick={() => {
-                        setTypeFilter("invoice");
-                      }}
-                    >
-                      View All
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {finances.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground mb-4">No financial records yet</p>
-                {canAddFinances && (
-                  <Button onClick={() => setFormOpen(true)}>
-                    <Plus className="h-4 w-4" />
-                    Add First Transaction
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : filteredFinances.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground">No finances match your search criteria</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Activity</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenseFinances.map((finance) => (
-                    <TableRow key={finance.id} className="hover:bg-muted/50">
-                      <TableCell className="font-medium">
-                        {new Date(finance.date).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <div>
-                          <div className="font-medium truncate" title={finance.description}>{finance.description}</div>
-                          {finance.notes && (
-                            <div className="text-sm text-muted-foreground truncate" title={finance.notes}>{finance.notes}</div>
-                          )}
-                          {finance.invoice_number && (
-                            <div className="text-sm text-muted-foreground truncate">
-                              Invoice #: {finance.invoice_number}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getTypeColor(finance.finance_type)}>
-                          {finance.finance_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(finance.status)}>
-                          {finance.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[120px]">
-                        {finance.category && (
-                          <Badge variant="outline" className="truncate max-w-full" title={finance.category}>{finance.category}</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {finance.quantity || 1}
-                      </TableCell>
-                      <TableCell className="max-w-[150px]">
-                        {finance.subject_id ? (
-                          <div className="text-sm truncate" title={subjects.find(s => s.id === finance.subject_id)?.name || 'Unknown'}>
-                            {subjects.find(s => s.id === finance.subject_id)?.name || 'Unknown'}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        {finance.activity_id ? (
-                          <div className="text-sm truncate" title={activities.find(a => a.id === finance.activity_id)?.title || 'Unknown'}>
-                            {activities.find(a => a.id === finance.activity_id)?.title || 'Unknown'}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        ${Number(finance.amount).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {(canEditFinances || canDeleteFinances) ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {canEditFinances && (
-                                <DropdownMenuItem onClick={() => handleEdit(finance)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                              )}
-                              {canEditFinances && (finance.finance_type === "expense" || finance.finance_type === "billing_item") && finance.status === "pending" && (
-                                <>
-                                  <DropdownMenuItem onClick={() => handleApprove(finance.id, finance.finance_type)}>
-                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                    Approve
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleReject(finance.id, finance.finance_type)}>
-                                    <XCircle className="mr-2 h-4 w-4" />
-                                    Reject
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              {canDeleteFinances && (
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(finance.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">-</span>
-                        )}
-                      </TableCell>
+            {expenseFinances.filter(f => f.finance_type === 'expense').length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <DollarSign className="h-8 w-8 mb-2 opacity-20" />
+                  <p>No expense entries yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableTableHead column="date" label="Date" sortColumn={expenseSortColumn} sortDirection={expenseSortDirection} onSort={handleExpenseSort} />
+                      <TableHead>Description</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-          )}
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="time" className="space-y-6 animate-fade-in">
-          {isLoading ? (
-            <TimeTabSkeleton />
-          ) : (
-            <>
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold">Time Tracking</h2>
-              <p className="text-muted-foreground">
-                {timeMetrics.totalHours.toFixed(2)} hours logged · ${timeMetrics.totalAmount.toFixed(2)} total value
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => {
-                        const exportColumns: ExportColumn[] = [
-                          { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
-                          { key: "description", label: "Description" },
-                          { key: "hours", label: "Hours", format: (v) => v?.toFixed(2) || "0", align: "right" },
-                          { key: "hourly_rate", label: "Rate", format: (v) => v ? `$${Number(v).toFixed(2)}` : "-", align: "right" },
-                          { key: "amount", label: "Total", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
-                          { key: "status", label: "Status", format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || "-" },
-                        ];
-                        exportToCSV(timeFinances, exportColumns, "case-time-entries");
-                      }}>
-                        Export to CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {
-                        const exportColumns: ExportColumn[] = [
-                          { key: "date", label: "Date", format: (v) => format(new Date(v), "MMM d, yyyy") },
-                          { key: "description", label: "Description" },
-                          { key: "hours", label: "Hours", format: (v) => v?.toFixed(2) || "0", align: "right" },
-                          { key: "hourly_rate", label: "Rate", format: (v) => v ? `$${Number(v).toFixed(2)}` : "-", align: "right" },
-                          { key: "amount", label: "Total", format: (v) => `$${Number(v).toFixed(2)}`, align: "right" },
-                        ];
-                        exportToPDF(timeFinances, exportColumns, "Case Time Entries", "case-time-entries", [
-                          { label: "Total Hours", value: timeMetrics.totalHours.toFixed(2) },
-                          { label: "Total Amount", value: `$${timeMetrics.totalAmount.toFixed(2)}` }
-                        ]);
-                      }}>
-                        Export to PDF
-                      </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button onClick={() => {
-                setDefaultFinanceType("time");
-                setFormOpen(true);
-              }} disabled={!canAddFinances}>
-                <Plus className="h-4 w-4 mr-2" />
-                Log Time
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Hours Logged</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{timeMetrics.totalHours.toFixed(2)} hrs</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Time Value</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${timeMetrics.totalAmount.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search time entries..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {timeFinances.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Clock className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No time entries yet</p>
-                </div>
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Subject</TableHead>
-                        <TableHead className="text-right">Hours</TableHead>
-                        <TableHead className="text-right">Rate</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                  </TableHeader>
+                  <TableBody>
+                    {expenseFinances.filter(f => f.finance_type === 'expense').map((finance) => (
+                      <TableRow key={finance.id}>
+                        <TableCell>{new Date(finance.date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{finance.description}</div>
+                            {finance.notes && (
+                              <div className="text-sm text-muted-foreground">{finance.notes}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {finance.category ? (
+                            <Badge variant="outline">{finance.category}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">{finance.quantity || 1}</TableCell>
+                        <TableCell className="text-right">${finance.unit_price?.toFixed(2) || '0.00'}</TableCell>
+                        <TableCell className="text-right font-medium">${Number(finance.amount).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(finance.status)}>
+                            {finance.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {(canEditFinances || canDeleteFinances) ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {canEditFinances && (
+                                  <DropdownMenuItem onClick={() => handleEdit(finance)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                )}
+                                {canEditFinances && finance.status === "pending" && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => handleApprove(finance.id, finance.finance_type)}>
+                                      <CheckCircle className="mr-2 h-4 w-4" />
+                                      Approve
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleReject(finance.id, finance.finance_type)}>
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Reject
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {canDeleteFinances && (
+                                  <DropdownMenuItem onClick={() => handleDelete(finance.id)} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {timeFinances.map((finance) => (
-                        <TableRow key={finance.id}>
-                          <TableCell>{new Date(finance.date).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{finance.description}</div>
-                              {finance.category && (
-                                <div className="text-sm text-muted-foreground">{finance.category}</div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {finance.subject_id ? (
-                              <Badge variant="outline">Linked</Badge>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">{finance.hours?.toFixed(2) || 0}</TableCell>
-                          <TableCell className="text-right">${finance.hourly_rate?.toFixed(2) || 0}</TableCell>
-                          <TableCell className="text-right font-medium">${Number(finance.amount).toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(finance.status)}>
-                              {finance.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {(canEditFinances || canDeleteFinances) ? (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {canEditFinances && (
-                                    <DropdownMenuItem onClick={() => handleEdit(finance)}>
-                                      <Pencil className="mr-2 h-4 w-4" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                  )}
-                                  {canEditFinances && finance.status === "pending" && (
-                                    <>
-                                      <DropdownMenuItem onClick={() => handleApprove(finance.id)}>
-                                        <CheckCircle className="mr-2 h-4 w-4" />
-                                        Approve
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleReject(finance.id)}>
-                                        <XCircle className="mr-2 h-4 w-4" />
-                                        Reject
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                  {canDeleteFinances && (
-                                    <DropdownMenuItem
-                                      onClick={() => handleDelete(finance.id)}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">-</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            )}
+          </div>
             </>
           )}
         </TabsContent>
 
-        <TabsContent value="invoices" className="space-y-6 animate-fade-in">
+        {/* FINANCIAL SUMMARY - Retainers, Invoices, Balances */}
+        <TabsContent value="financial-summary" className="space-y-6 animate-fade-in">
           {isLoading ? (
             <InvoicesTabSkeleton />
           ) : (
             <>
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold">Invoices</h2>
+              <h2 className="text-2xl font-bold">Financial Summary</h2>
               <p className="text-muted-foreground">
-                {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
+                Retainers, invoices, and payment status
               </p>
             </div>
             <div className="flex gap-2">
@@ -1190,6 +965,59 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
               </DropdownMenu>
             </div>
           </div>
+
+          {/* Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400">Total Retainer</CardTitle>
+                <DollarSign className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">${totals.retainerTotal.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Unpaid Invoices</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{invoiceMetrics.unpaidCount}</div>
+                <p className="text-xs text-muted-foreground">${invoiceMetrics.unpaidTotal.toFixed(2)} outstanding</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/50">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">Total Invoiced</CardTitle>
+                <DollarSign className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">${totals.invoiceTotal.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Overdue Warning */}
+          {invoiceMetrics.overdueCount > 0 && (
+            <Card className="border-red-500/50 bg-red-500/5">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-500 mb-1">
+                      {invoiceMetrics.overdueCount} {invoiceMetrics.overdueCount === 1 ? 'invoice is' : 'invoices are'} overdue
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Total outstanding: <span className="font-bold text-red-500">${invoiceMetrics.overdueTotal.toFixed(2)}</span>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <h3 className="text-lg font-semibold">Invoices</h3>
 
             {invoices.length === 0 ? (
               <Card>
