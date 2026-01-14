@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, DollarSign, Receipt, TrendingUp, Search, Download, FileText, Link, CheckCircle, Lock } from "lucide-react";
+import { Clock, DollarSign, Receipt, TrendingUp, Search, Download, FileText, Link, CheckCircle, Lock, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { format, differenceInMinutes } from "date-fns";
 import { exportToCSV, ExportColumn } from "@/lib/exportUtils";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,9 @@ interface DerivedTimeEntry {
   pricing_source: string;
   pricing_model: string;
   invoice_line_item_id?: string | null;
+  activity_id: string | null;
+  activity_title: string | null;
+  source_type: "activity" | "service_instance" | "invoice";
 }
 
 interface ExpenseEntry {
@@ -178,6 +182,7 @@ function resolvePricingForService(
 
 export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailProps) {
   const { organization } = useOrganization();
+  const navigate = useNavigate();
   const orgId = organizationId || organization?.id;
   
   const [timeEntries, setTimeEntries] = useState<DerivedTimeEntry[]>([]);
@@ -185,6 +190,13 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Handle click to navigate to source activity
+  const handleActivityClick = (activityId: string | null) => {
+    if (!activityId) return;
+    // Navigate to case detail with activities tab and highlight the activity
+    navigate(`/cases/${caseId}?tab=activities#activity-${activityId}`);
+  };
 
   useEffect(() => {
     if (orgId) {
@@ -361,6 +373,9 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
             pricing_source: status === "billed" ? "invoice" : pricing.source,
             pricing_model: status === "billed" && invoiceItem ? invoiceItem.pricing_model : pricing.pricingModel,
             invoice_line_item_id: invoiceItem?.id,
+            activity_id: activity.id,
+            activity_title: activity.title,
+            source_type: "activity",
           });
         }
       } else if (instance.quantity_actual && instance.quantity_actual > 0) {
@@ -394,6 +409,9 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
           pricing_source: status === "billed" ? "invoice" : pricing.source,
           pricing_model: status === "billed" && invoiceItem ? invoiceItem.pricing_model : pricing.pricingModel,
           invoice_line_item_id: invoiceItem?.id,
+          activity_id: null,
+          activity_title: null,
+          source_type: "service_instance",
         });
       } else if (invoiceItem) {
         // Billed service instance without activity data - use invoice data
@@ -411,6 +429,9 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
           pricing_source: "invoice",
           pricing_model: invoiceItem.pricing_model,
           invoice_line_item_id: invoiceItem.id,
+          activity_id: null,
+          activity_title: null,
+          source_type: "invoice",
         });
       }
     }
@@ -582,6 +603,8 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
     const columns: ExportColumn[] = [
       { key: "date", label: "Date" },
       { key: "service_name", label: "Service" },
+      { key: "activity_title", label: "Source Activity" },
+      { key: "source_type", label: "Source Type" },
       { key: "description", label: "Description" },
       { key: "hours", label: "Hours" },
       { key: "rate", label: "Rate" },
@@ -593,6 +616,8 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
       filteredTimeEntries.map(e => ({
         ...e,
         date: format(new Date(e.date), "yyyy-MM-dd"),
+        activity_title: e.activity_title || "-",
+        source_type: e.source_type,
         rate: `$${e.rate.toFixed(2)}`,
         amount: `$${e.amount.toFixed(2)}`,
       })),
@@ -739,6 +764,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Service</TableHead>
+                    <TableHead>Source Activity</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead className="text-right">Hours</TableHead>
                     <TableHead className="text-right">Rate</TableHead>
@@ -766,6 +792,30 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
+                      <TableCell>
+                        {entry.activity_id ? (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-left font-normal"
+                            onClick={() => handleActivityClick(entry.activity_id)}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1 inline" />
+                            <span className="truncate max-w-[150px] inline-block align-bottom">
+                              {entry.activity_title || "View Activity"}
+                            </span>
+                          </Button>
+                        ) : entry.source_type === "invoice" ? (
+                          <Badge variant="outline" className="text-xs">
+                            <FileText className="h-3 w-3 mr-1" />
+                            Invoice Data
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            Service Instance
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell className="max-w-xs truncate">{entry.description}</TableCell>
                       <TableCell className="text-right">{entry.hours.toFixed(2)}</TableCell>
                       <TableCell className="text-right">
@@ -779,7 +829,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                   ))}
                   {/* Subtotal Row */}
                   <TableRow className="bg-muted/50 font-medium">
-                    <TableCell colSpan={3}>Subtotal</TableCell>
+                    <TableCell colSpan={4}>Subtotal</TableCell>
                     <TableCell className="text-right">
                       {filteredTimeEntries.reduce((sum, e) => sum + e.hours, 0).toFixed(2)}
                     </TableCell>
