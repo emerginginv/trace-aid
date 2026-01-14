@@ -61,6 +61,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   // Billing eligibility state (System Prompt 4)
   const [billingPromptOpen, setBillingPromptOpen] = useState(false);
   const [billingEligibility, setBillingEligibility] = useState<UpdateBillingEligibilityResult | null>(null);
+  const [createdUpdateId, setCreatedUpdateId] = useState<string | null>(null); // SYSTEM PROMPT 9: Track created update ID
   const { evaluate: evaluateBillingEligibility, reset: resetBillingEligibility } = useUpdateBillingEligibility();
   const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
 
@@ -283,6 +284,10 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
           .single();
         error = result.error;
         newUpdate = result.data;
+        // SYSTEM PROMPT 9: Store created update ID for billing item linkage
+        if (result.data) {
+          setCreatedUpdateId(result.data.id);
+        }
       }
 
       if (error) throw error;
@@ -365,7 +370,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     }
   };
 
-  // Handle billing item creation from prompt with confirmed times (SYSTEM PROMPT 6)
+  // Handle billing item creation from prompt with confirmed times (SYSTEM PROMPT 6 & 9)
   const handleCreateBillingItem = async (confirmedTimes: ConfirmedTimes) => {
     if (!billingEligibility || !billingEligibility.isEligible) return;
     
@@ -373,12 +378,20 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     let quantity = billingEligibility.quantity!;
     const pricingModel = billingEligibility.pricingModel;
     
+    // SYSTEM PROMPT 9: Build ISO timestamps from confirmed times
+    let startTimeISO: string | undefined;
+    let endTimeISO: string | undefined;
+    
     if ((pricingModel === 'hourly' || pricingModel === 'daily') && 
         confirmedTimes.startDate && confirmedTimes.startTime && 
         confirmedTimes.endDate && confirmedTimes.endTime) {
       const start = new Date(`${confirmedTimes.startDate}T${confirmedTimes.startTime}`);
       const end = new Date(`${confirmedTimes.endDate}T${confirmedTimes.endTime}`);
       const diffMs = end.getTime() - start.getTime();
+      
+      // Build ISO timestamps for database
+      startTimeISO = start.toISOString();
+      endTimeISO = end.toISOString();
       
       if (diffMs > 0) {
         if (pricingModel === 'hourly') {
@@ -401,6 +414,10 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       rate: billingEligibility.serviceRate!,
       pricingProfileId: billingEligibility.pricingProfileId,
       pricingRuleSnapshot: billingEligibility.pricingRuleSnapshot,
+      // SYSTEM PROMPT 9: Pass update linkage and confirmed times
+      updateId: createdUpdateId || undefined,
+      startTime: startTimeISO,
+      endTime: endTimeISO,
     });
 
     if (result.success) {
@@ -431,6 +448,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     // Clean up and close
     setBillingPromptOpen(false);
     setBillingEligibility(null);
+    setCreatedUpdateId(null); // SYSTEM PROMPT 9: Clear update ID
     resetBillingEligibility();
     onOpenChange(false);
     onSuccess();
@@ -440,6 +458,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   const handleSkipBilling = () => {
     setBillingPromptOpen(false);
     setBillingEligibility(null);
+    setCreatedUpdateId(null); // SYSTEM PROMPT 9: Clear update ID
     resetBillingEligibility();
     onOpenChange(false);
     onSuccess();

@@ -1013,6 +1013,7 @@ export type Database = {
           description: string
           due_date: string | null
           end_date: string | null
+          end_time: string | null
           expense_user_id: string | null
           external_record_id: string | null
           external_system_name: string | null
@@ -1031,9 +1032,11 @@ export type Database = {
           pricing_snapshot: Json | null
           quantity: number | null
           start_date: string | null
+          start_time: string | null
           status: string | null
           subject_id: string | null
           unit_price: number | null
+          update_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1051,6 +1054,7 @@ export type Database = {
           description: string
           due_date?: string | null
           end_date?: string | null
+          end_time?: string | null
           expense_user_id?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
@@ -1069,9 +1073,11 @@ export type Database = {
           pricing_snapshot?: Json | null
           quantity?: number | null
           start_date?: string | null
+          start_time?: string | null
           status?: string | null
           subject_id?: string | null
           unit_price?: number | null
+          update_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1089,6 +1095,7 @@ export type Database = {
           description?: string
           due_date?: string | null
           end_date?: string | null
+          end_time?: string | null
           expense_user_id?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
@@ -1107,9 +1114,11 @@ export type Database = {
           pricing_snapshot?: Json | null
           quantity?: number | null
           start_date?: string | null
+          start_time?: string | null
           status?: string | null
           subject_id?: string | null
           unit_price?: number | null
+          update_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1161,6 +1170,13 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_finances_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "case_updates"
             referencedColumns: ["id"]
           },
         ]
