@@ -230,13 +230,13 @@ export function ActivityForm({
           due_date: editingActivity.activity_type === "task" ? dueDate : undefined,
           start_date: editingActivity.activity_type === "event" ? dueDate : undefined,
           start_time: editingActivity.activity_type === "event" 
-            ? (editingActivity.start_time || "09:00") 
+            ? ((editingActivity.start_time ? String(editingActivity.start_time).slice(0, 5) : null) || "09:00") 
             : "09:00",
           end_date: editingActivity.activity_type === "event" 
             ? (endDate || dueDate) 
             : undefined,
           end_time: editingActivity.activity_type === "event" 
-            ? (editingActivity.end_time || "10:00") 
+            ? ((editingActivity.end_time ? String(editingActivity.end_time).slice(0, 5) : null) || "10:00") 
             : "10:00",
           status: editingActivity.status,
           assigned_user_id: editingActivity.assigned_user_id || undefined,
@@ -382,18 +382,32 @@ export function ActivityForm({
       if (error) throw error;
 
       // Update case_service_instances with scheduled times for proper billing calculation
-      const serviceInstanceId = editingActivity?.case_service_instance_id || values.case_service_instance_id;
+      const serviceInstanceId = editingActivity?.case_service_instance_id || caseServiceInstanceId;
       if (serviceInstanceId && values.activity_type === "event") {
-        const startDateStr = `${values.start_date.getFullYear()}-${String(values.start_date.getMonth() + 1).padStart(2, '0')}-${String(values.start_date.getDate()).padStart(2, '0')}`;
-        const endDateStr = `${values.end_date.getFullYear()}-${String(values.end_date.getMonth() + 1).padStart(2, '0')}-${String(values.end_date.getDate()).padStart(2, '0')}`;
-        
-        const scheduledStart = `${startDateStr}T${values.start_time}:00`;
-        const scheduledEnd = `${endDateStr}T${values.end_time}:00`;
-        
-        const startMs = new Date(scheduledStart).getTime();
-        const endMs = new Date(scheduledEnd).getTime();
-        const durationHours = Math.max(0.25, (endMs - startMs) / (1000 * 60 * 60));
-        
+        const parseTimeParts = (t: string) => {
+          const [hh, mm, ss] = String(t).split(":");
+          return {
+            h: Number(hh) || 0,
+            m: Number(mm) || 0,
+            s: Number(ss) || 0,
+          };
+        };
+
+        const startParts = parseTimeParts(values.start_time);
+        const endParts = parseTimeParts(values.end_time);
+
+        const startDt = new Date(values.start_date);
+        startDt.setHours(startParts.h, startParts.m, startParts.s, 0);
+
+        const endDt = new Date(values.end_date);
+        endDt.setHours(endParts.h, endParts.m, endParts.s, 0);
+
+        const scheduledStart = startDt.toISOString();
+        const scheduledEnd = endDt.toISOString();
+
+        const diffMs = endDt.getTime() - startDt.getTime();
+        const durationHours = Math.max(0.25, diffMs / (1000 * 60 * 60));
+
         const { error: serviceUpdateError } = await supabase
           .from("case_service_instances")
           .update({
@@ -403,9 +417,9 @@ export function ActivityForm({
             updated_at: new Date().toISOString(),
           })
           .eq("id", serviceInstanceId);
-        
+
         if (serviceUpdateError) {
-          console.error('Error updating service instance times:', serviceUpdateError);
+          console.error("Error updating service instance times:", serviceUpdateError);
         }
       }
 

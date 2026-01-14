@@ -199,11 +199,56 @@ export function useBillingEligibility() {
       const pricingModel = pricingRule.pricing_model;
       let quantity: number | undefined;
 
+      // Prefer event duration stored on the activity itself (prevents stale service-instance quantities)
+      let activityDurationHours: number | undefined;
+      let activityDurationDays: number | undefined;
+      const { data: activityData } = await supabase
+        .from("case_activities")
+        .select("title, activity_type, due_date, start_time, end_time, end_date")
+        .eq("id", activityId)
+        .limit(1)
+        .maybeSingle();
+
+      if (
+        activityData?.activity_type === "event" &&
+        activityData.due_date &&
+        activityData.start_time &&
+        activityData.end_time
+      ) {
+        const parseDateOnly = (dateStr: string) => {
+          const [y, m, d] = dateStr.split("-").map(Number);
+          return new Date(y, m - 1, d);
+        };
+        const parseTimeParts = (t: string) => {
+          const [hh, mm, ss] = String(t).split(":");
+          return { h: Number(hh) || 0, m: Number(mm) || 0, s: Number(ss) || 0 };
+        };
+
+        const startDt = parseDateOnly(activityData.due_date);
+        const endDt = parseDateOnly(activityData.end_date || activityData.due_date);
+
+        const st = parseTimeParts(activityData.start_time);
+        const et = parseTimeParts(activityData.end_time);
+
+        startDt.setHours(st.h, st.m, st.s, 0);
+        endDt.setHours(et.h, et.m, et.s, 0);
+
+        const diffMs = endDt.getTime() - startDt.getTime();
+        if (diffMs > 0) {
+          activityDurationHours = Math.max(0.25, diffMs / (1000 * 60 * 60));
+          activityDurationDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        }
+      }
+
       switch (pricingModel) {
         case "hourly":
         case "daily": {
           // Check for duration data
-          if (instanceData.quantity_actual && instanceData.quantity_actual > 0) {
+          if (pricingModel === "hourly" && activityDurationHours) {
+            quantity = activityDurationHours;
+          } else if (pricingModel === "daily" && activityDurationDays) {
+            quantity = activityDurationDays;
+          } else if (instanceData.quantity_actual && instanceData.quantity_actual > 0) {
             quantity = instanceData.quantity_actual;
           } else if (instanceData.scheduled_start && instanceData.scheduled_end) {
             // Calculate duration from scheduled times
@@ -287,12 +332,9 @@ export function useBillingEligibility() {
           quantity = instanceData.quantity_actual;
       }
 
-      // Fetch activity title
-      const { data: activityData } = await supabase
-        .from("case_activities")
-        .select("title")
-        .eq("id", activityId)
-        .single();
+
+      // Activity title already loaded above (activityData)
+
 
       // Calculate estimated amount
       const estimatedAmount = pricingRule.rate * (quantity || 1);
