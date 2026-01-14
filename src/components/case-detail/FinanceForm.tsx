@@ -40,6 +40,7 @@ const formSchema = z.object({
   notes: z.string().optional(),
   hours: z.string().optional(),
   hourly_rate: z.string().optional(),
+  expense_user_id: z.string().optional(),
 }).refine(
   (data) => {
     // For expenses, require unit_price to be provided and positive
@@ -70,6 +71,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [users, setUsers] = useState<{id: string; email: string; full_name: string | null}[]>([]);
   const [caseTitle, setCaseTitle] = useState<string>("");
   const navigate = useNavigate();
 
@@ -94,6 +96,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       invoice_number: undefined,
       notes: undefined,
       due_date: undefined,
+      expense_user_id: undefined,
     },
   });
 
@@ -121,6 +124,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         due_date: editingFinance.due_date ? new Date(editingFinance.due_date) : undefined,
         hours: editingFinance.hours?.toString() || undefined,
         hourly_rate: editingFinance.hourly_rate?.toString() || undefined,
+        expense_user_id: editingFinance.expense_user_id || undefined,
       });
     } else {
       form.reset({
@@ -142,6 +146,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         due_date: undefined,
         hours: undefined,
         hourly_rate: undefined,
+        expense_user_id: undefined,
       });
     }
   }, [editingFinance, form, defaultFinanceType]);
@@ -151,20 +156,32 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [subjectsRes, activitiesRes] = await Promise.all([
+      // Get organization members for expense user dropdown
+      const { data: orgMembers } = await supabase
+        .from("organization_members")
+        .select("user_id")
+        .eq("organization_id", organizationId);
+
+      const userIds = orgMembers?.map(m => m.user_id) || [];
+
+      const [subjectsRes, activitiesRes, usersRes] = await Promise.all([
         supabase.from("case_subjects").select("*").eq("case_id", caseId).eq("user_id", user.id),
         supabase.from("case_activities").select("*").eq("case_id", caseId).eq("user_id", user.id),
+        userIds.length > 0 
+          ? supabase.from("profiles").select("id, email, full_name").in("id", userIds).order("full_name", { ascending: true })
+          : Promise.resolve({ data: [] }),
       ]);
 
       if (subjectsRes.data) setSubjects(subjectsRes.data);
       if (activitiesRes.data) setActivities(activitiesRes.data);
+      if (usersRes.data) setUsers(usersRes.data);
     };
 
     if (open) {
       fetchData();
       fetchCaseTitle();
     }
-  }, [caseId, open]);
+  }, [caseId, open, organizationId]);
 
   const fetchCaseTitle = async () => {
     try {
@@ -225,6 +242,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
         notes: values.notes || null,
         due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
         organization_id: organizationId,
+        expense_user_id: values.expense_user_id === "none" ? null : (values.expense_user_id || null),
         ...(isTimeEntry && {
           hours: hours,
           hourly_rate: hourlyRate,
@@ -307,7 +325,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FinanceFormFields form={form} subjects={subjects} activities={activities} />
+            <FinanceFormFields form={form} subjects={subjects} activities={activities} users={users} />
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
