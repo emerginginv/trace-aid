@@ -671,6 +671,267 @@ export function useEmailClientBillingSummary() {
 
 
 // ============================================
+// 8. MULTIPLE UPDATES PER ACTIVITY
+// ============================================
+
+export interface ActivityUpdateLink {
+  updateId: string;
+  updateType: string;
+  content: string;
+  createdAt: string;
+  createdBy: string;
+  createdByName?: string;
+  billingItemId?: string; // If billing was created for this update
+  billedAmount?: number;
+  billedHours?: number;
+}
+
+export interface MultiUpdateActivity {
+  activityId: string;
+  activityType: 'task' | 'event';
+  activityTitle: string;
+  caseId: string;
+  caseNumber: string;
+  updates: ActivityUpdateLink[];
+  totalUpdates: number;
+  totalBilledHours: number;
+  totalBilledAmount: number;
+}
+
+export interface MultiUpdateActivityParams {
+  activityId: string;
+  includeArchived?: boolean;
+}
+
+/**
+ * @future Get all updates linked to a single activity
+ * Enables multiple updates per task/event
+ */
+export function useActivityUpdates(_params: MultiUpdateActivityParams) {
+  console.warn('useActivityUpdates is not yet implemented');
+  
+  return {
+    data: null as MultiUpdateActivity | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+/**
+ * @future Create an additional update for an existing activity
+ * Allows adding updates to activities that already have updates
+ */
+export function useCreateLinkedUpdate() {
+  console.warn('useCreateLinkedUpdate is not yet implemented');
+  
+  return {
+    mutate: (_params: { activityId: string; caseId: string; updateType: string; content: string }) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_params: { activityId: string; caseId: string; updateType: string; content: string }) => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+/**
+ * @future Get billing summary across all updates for an activity
+ */
+export function useActivityBillingSummary(_activityId: string) {
+  console.warn('useActivityBillingSummary is not yet implemented');
+  
+  return {
+    data: null as { totalHours: number; totalAmount: number; billingItemCount: number } | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+
+// ============================================
+// 9. EXPENSE BILLING FROM UPDATES
+// ============================================
+
+export type ExpenseType = 'mileage' | 'materials' | 'filing_fee' | 'service_fee' | 'court_fee' | 'other';
+
+export interface ExpenseBillingFromUpdate {
+  updateId: string;
+  expenseType: ExpenseType;
+  description: string;
+  amount: number;
+  quantity?: number;
+  unitCost?: number;
+  receiptUrl?: string;
+  isReimbursable: boolean;
+  vendorName?: string;
+  expenseDate?: string;
+}
+
+export interface OrganizationExpenseType {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  defaultUnitCost?: number;
+  requiresReceipt: boolean;
+  isActive: boolean;
+}
+
+export interface ExpenseBillingParams {
+  updateId: string;
+  caseId: string;
+  caseServiceInstanceId: string;
+  expense: Omit<ExpenseBillingFromUpdate, 'updateId'>;
+}
+
+/**
+ * @future Create expense billing item from an update
+ * Enables expense-type billing (not just time) from case updates
+ */
+export function useCreateExpenseBillingItem() {
+  console.warn('useCreateExpenseBillingItem is not yet implemented');
+  
+  return {
+    mutate: (_params: ExpenseBillingParams) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_params: ExpenseBillingParams) => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+/**
+ * @future Get available expense types for organization
+ */
+export function useOrganizationExpenseTypes(_organizationId: string) {
+  console.warn('useOrganizationExpenseTypes is not yet implemented');
+  
+  return {
+    data: null as OrganizationExpenseType[] | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+/**
+ * @future Check if update can have expense billing created
+ */
+export function useExpenseBillingEligibility(_updateId: string) {
+  console.warn('useExpenseBillingEligibility is not yet implemented');
+  
+  return {
+    data: null as { isEligible: boolean; reason?: string } | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+
+// ============================================
+// 10. BATCH BILLING FROM UPDATES
+// ============================================
+
+export interface BatchBillingUpdateItem {
+  updateId: string;
+  caseId: string;
+  activityId: string;
+  caseServiceInstanceId: string;
+  billingType: 'time' | 'expense';
+  // Time fields
+  startTime?: string;
+  endTime?: string;
+  hours?: number;
+  hourlyRate?: number;
+  // Expense fields
+  expenseType?: ExpenseType;
+  amount?: number;
+  description?: string;
+}
+
+export interface BatchBillingUpdateResult {
+  updateId: string;
+  billingItemId?: string;
+  success: boolean;
+  error?: string;
+  budgetWarning?: boolean;
+  budgetMessage?: string;
+}
+
+export interface BatchBillingFromUpdatesResult {
+  totalItems: number;
+  successCount: number;
+  failureCount: number;
+  budgetWarnings: number;
+  totalAmount: number;
+  totalHours: number;
+  results: BatchBillingUpdateResult[];
+}
+
+export interface BatchBillingFromUpdatesParams {
+  organizationId: string;
+  items: BatchBillingUpdateItem[];
+  skipBudgetCheck?: boolean;
+  createAsDraft?: boolean;
+}
+
+/**
+ * @future Get updates that don't have billing items yet
+ * For a given case, returns updates eligible for batch billing
+ */
+export function usePendingUpdatesForBilling(_caseId: string) {
+  console.warn('usePendingUpdatesForBilling is not yet implemented');
+  
+  return {
+    data: null as Array<{ updateId: string; activityId: string; updateType: string; createdAt: string }> | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+/**
+ * @future Create billing items for multiple updates in one operation
+ * Batch creates billing items with consolidated budget checking
+ */
+export function useBatchCreateBillingFromUpdates() {
+  console.warn('useBatchCreateBillingFromUpdates is not yet implemented');
+  
+  return {
+    mutate: (_params: BatchBillingFromUpdatesParams) => {
+      throw new Error('Not implemented');
+    },
+    mutateAsync: async (_params: BatchBillingFromUpdatesParams): Promise<BatchBillingFromUpdatesResult> => {
+      throw new Error('Not implemented');
+    },
+    isPending: false,
+    error: null,
+  };
+}
+
+/**
+ * @future Pre-validate batch billing items before creation
+ * Checks budget limits, service validity, and returns warnings
+ */
+export function useValidateBatchBilling(_items: BatchBillingUpdateItem[]) {
+  console.warn('useValidateBatchBilling is not yet implemented');
+  
+  return {
+    data: null as {
+      isValid: boolean;
+      errors: Array<{ updateId: string; error: string }>;
+      warnings: Array<{ updateId: string; warning: string }>;
+    } | null,
+    isLoading: false,
+    error: new Error('Not implemented'),
+  };
+}
+
+
+// ============================================
 // FUTURE DATABASE TABLES (Reference Only)
 // ============================================
 
@@ -704,4 +965,16 @@ export function useEmailClientBillingSummary() {
  * 
  * 8. client_billing_summary_cache
  *    - Cached billing summaries for performance
+ * 
+ * 9. update_activity_links
+ *    - Join table for multiple updates per activity
+ *    - Enables tracking multiple updates for a single task/event
+ * 
+ * 10. expense_types
+ *    - Organization-configurable expense categories
+ *    - Supports custom expense types with default rates
+ * 
+ * 11. update_billing_batch_jobs
+ *    - Track batch billing operations from updates
+ *    - Audit trail for batch-created billing items
  */
