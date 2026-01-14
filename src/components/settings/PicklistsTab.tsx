@@ -43,6 +43,8 @@ interface PicklistsTabProps {
   setUpdateTypes: React.Dispatch<React.SetStateAction<PicklistItem[]>>;
   expenseCategories: PicklistItem[];
   setExpenseCategories: React.Dispatch<React.SetStateAction<PicklistItem[]>>;
+  subjectTypes: PicklistItem[];
+  setSubjectTypes: React.Dispatch<React.SetStateAction<PicklistItem[]>>;
   loadSettings: () => Promise<void>;
 }
 
@@ -84,10 +86,12 @@ export const PicklistsTab = ({
   setUpdateTypes,
   expenseCategories,
   setExpenseCategories,
+  subjectTypes,
+  setSubjectTypes,
   loadSettings,
 }: PicklistsTabProps) => {
   const [picklistDialogOpen, setPicklistDialogOpen] = useState(false);
-  const [picklistType, setPicklistType] = useState<"status" | "updateType" | "expenseCategory">("status");
+  const [picklistType, setPicklistType] = useState<"status" | "updateType" | "expenseCategory" | "subjectType">("status");
   const [editingPicklistItem, setEditingPicklistItem] = useState<{ id: string; value: string; color: string; statusType?: string } | null>(null);
   const [picklistValue, setPicklistValue] = useState("");
   const [picklistColor, setPicklistColor] = useState("#6366f1");
@@ -114,12 +118,15 @@ export const PicklistsTab = ({
         status: "case_status",
         updateType: "update_type",
         expenseCategory: "expense_category",
+        subjectType: "subject_type",
       };
 
       const currentLength = picklistType === "status" 
         ? caseStatuses.length 
         : picklistType === "updateType" 
         ? updateTypes.length 
+        : picklistType === "subjectType"
+        ? subjectTypes.length
         : expenseCategories.length;
 
       const insertData: any = {
@@ -155,6 +162,8 @@ export const PicklistsTab = ({
         setCaseStatuses([...caseStatuses, newItem]);
       } else if (picklistType === "updateType") {
         setUpdateTypes([...updateTypes, newItem]);
+      } else if (picklistType === "subjectType") {
+        setSubjectTypes([...subjectTypes, newItem]);
       } else {
         setExpenseCategories([...expenseCategories, newItem]);
       }
@@ -205,6 +214,12 @@ export const PicklistsTab = ({
             item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim(), color: picklistColor } : item
           )
         );
+      } else if (picklistType === "subjectType") {
+        setSubjectTypes(
+          subjectTypes.map((item) =>
+            item.id === editingPicklistItem.id ? { ...item, value: picklistValue.trim(), color: picklistColor } : item
+          )
+        );
       } else {
         setExpenseCategories(
           expenseCategories.map((item) =>
@@ -224,7 +239,7 @@ export const PicklistsTab = ({
     }
   };
 
-  const handleTogglePicklistActive = async (id: string, isActive: boolean, type: "status" | "updateType" | "expenseCategory") => {
+  const handleTogglePicklistActive = async (id: string, isActive: boolean, type: "status" | "updateType" | "expenseCategory" | "subjectType") => {
     try {
       const { error } = await supabase
         .from("picklists")
@@ -245,6 +260,12 @@ export const PicklistsTab = ({
             item.id === id ? { ...item, isActive: !isActive } : item
           )
         );
+      } else if (type === "subjectType") {
+        setSubjectTypes(
+          subjectTypes.map((item) =>
+            item.id === id ? { ...item, isActive: !isActive } : item
+          )
+        );
       } else {
         setExpenseCategories(
           expenseCategories.map((item) =>
@@ -259,7 +280,7 @@ export const PicklistsTab = ({
     }
   };
 
-  const handleDeletePicklistItem = async (id: string, type: "status" | "updateType" | "expenseCategory") => {
+  const handleDeletePicklistItem = async (id: string, type: "status" | "updateType" | "expenseCategory" | "subjectType") => {
     try {
       const { data: picklistData } = await supabase
         .from("picklists")
@@ -299,6 +320,14 @@ export const PicklistsTab = ({
         
         usageCount = count || 0;
         isInUse = usageCount > 0;
+      } else if (type === "subjectType") {
+        const { count } = await supabase
+          .from("case_subjects")
+          .select("*", { count: "exact", head: true })
+          .eq("subject_type", picklistData.value);
+        
+        usageCount = count || 0;
+        isInUse = usageCount > 0;
       }
 
       if (isInUse) {
@@ -317,6 +346,8 @@ export const PicklistsTab = ({
         setCaseStatuses(caseStatuses.filter((item) => item.id !== id));
       } else if (type === "updateType") {
         setUpdateTypes(updateTypes.filter((item) => item.id !== id));
+      } else if (type === "subjectType") {
+        setSubjectTypes(subjectTypes.filter((item) => item.id !== id));
       } else {
         setExpenseCategories(expenseCategories.filter((item) => item.id !== id));
       }
@@ -327,7 +358,7 @@ export const PicklistsTab = ({
     }
   };
 
-  const openAddPicklistDialog = (type: "status" | "updateType" | "expenseCategory") => {
+  const openAddPicklistDialog = (type: "status" | "updateType" | "expenseCategory" | "subjectType") => {
     setPicklistType(type);
     setEditingPicklistItem(null);
     setPicklistValue("");
@@ -336,7 +367,7 @@ export const PicklistsTab = ({
     setPicklistDialogOpen(true);
   };
 
-  const openEditPicklistDialog = (item: { id: string; value: string; color: string; statusType?: string }, type: "status" | "updateType" | "expenseCategory") => {
+  const openEditPicklistDialog = (item: { id: string; value: string; color: string; statusType?: string }, type: "status" | "updateType" | "expenseCategory" | "subjectType") => {
     setPicklistType(type);
     setEditingPicklistItem(item);
     setPicklistValue(item.value);
@@ -345,7 +376,7 @@ export const PicklistsTab = ({
     setPicklistDialogOpen(true);
   };
 
-  const handleDragEnd = async (event: DragEndEvent, type: "status" | "updateType" | "expenseCategory") => {
+  const handleDragEnd = async (event: DragEndEvent, type: "status" | "updateType" | "expenseCategory" | "subjectType") => {
     const { active, over } = event;
 
     if (!over || active.id === over.id) return;
@@ -354,6 +385,8 @@ export const PicklistsTab = ({
       ? caseStatuses 
       : type === "updateType" 
       ? updateTypes 
+      : type === "subjectType"
+      ? subjectTypes
       : expenseCategories;
 
     const oldIndex = items.findIndex((item) => item.id === active.id);
@@ -365,6 +398,8 @@ export const PicklistsTab = ({
       setCaseStatuses(newItems);
     } else if (type === "updateType") {
       setUpdateTypes(newItems);
+    } else if (type === "subjectType") {
+      setSubjectTypes(newItems);
     } else {
       setExpenseCategories(newItems);
     }
@@ -392,7 +427,7 @@ export const PicklistsTab = ({
 
   const renderPicklistTable = (
     items: PicklistItem[],
-    type: "status" | "updateType" | "expenseCategory",
+    type: "status" | "updateType" | "expenseCategory" | "subjectType",
     title: string,
     description: string,
     addButtonLabel: string,
@@ -524,18 +559,26 @@ export const PicklistsTab = ({
         "Add Category"
       )}
 
+      {renderPicklistTable(
+        subjectTypes,
+        "subjectType",
+        "Subject Type Picklist",
+        "Manage available types for case subjects",
+        "Add Type"
+      )}
+
       {/* Add/Edit Dialog */}
       <Dialog open={picklistDialogOpen} onOpenChange={setPicklistDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {editingPicklistItem ? "Edit" : "Add"}{" "}
-              {picklistType === "status" ? "Status" : picklistType === "updateType" ? "Update Type" : "Expense Category"}
+              {picklistType === "status" ? "Status" : picklistType === "updateType" ? "Update Type" : picklistType === "subjectType" ? "Subject Type" : "Expense Category"}
             </DialogTitle>
             <DialogDescription>
               {editingPicklistItem
                 ? "Update the value and settings"
-                : `Add a new ${picklistType === "status" ? "status" : picklistType === "updateType" ? "update type" : "expense category"}`}
+                : `Add a new ${picklistType === "status" ? "status" : picklistType === "updateType" ? "update type" : picklistType === "subjectType" ? "subject type" : "expense category"}`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
