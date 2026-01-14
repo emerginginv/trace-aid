@@ -607,7 +607,7 @@ const CaseDetail = () => {
       )}
       
       {/* Header */}
-      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-start sm:gap-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:gap-4">
         {/* Back button + Title row */}
         <div className="flex items-start gap-2 min-w-0 flex-1">
           <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
@@ -617,7 +617,10 @@ const CaseDetail = () => {
           </Button>
           
           <div className="flex-1 min-w-0">
-            <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate md:whitespace-normal md:overflow-visible leading-tight ${isClosed ? 'text-muted-foreground' : ''}`} title={caseData.title}>
+            <h1
+              className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold leading-tight break-words ${isClosed ? 'text-muted-foreground' : ''}`}
+              title={caseData.title}
+            >
               {caseData.title}
             </h1>
             <p className={`text-xs mt-0.5 font-medium ${isClosed ? 'text-muted-foreground' : 'text-primary'}`}>
@@ -626,8 +629,8 @@ const CaseDetail = () => {
           </div>
         </div>
         
-        {/* Status + Actions - Full width row on mobile */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap pl-9 sm:pl-0">
+        {/* Status + Actions - break under title until lg, then sit to the right */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap pl-9 lg:pl-0 w-full lg:w-auto lg:ml-auto">
           {/* Status Dropdown */}
           {!isVendor && (
             <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
@@ -659,7 +662,7 @@ const CaseDetail = () => {
           
           {/* Desktop Action Buttons */}
           {!isVendor && !isMobile && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
               {isManager && (
                 <Button variant="outline" className="h-9 px-3" onClick={() => setSummaryPdfDialogOpen(true)}>
                   <FileText className="h-4 w-4 mr-2" />
