@@ -743,61 +743,62 @@ const CaseDetail = () => {
             {/* Info Tab */}
             {!isVendor && (
               <TabsContent value="info" className="mt-0">
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
-                  {/* Case Details Card */}
-                  <div className="xl:col-span-1 lg:col-span-2 flex flex-col">
-                    <Card className="flex-1">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <Briefcase className="h-5 w-5" />
-                          Case Details
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {caseData.description && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Case Objective</p>
-                            <p className="text-sm">{caseData.description}</p>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                          <InfoItem label="Account" value={account?.name} />
-                          <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
-                          <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
-                          <InfoItem label="Reference No." value={caseData.reference_number} />
-                          <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
-                          <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
-                          {isClosed && caseData.closed_at && (
-                            <InfoItem label="Closed" value={new Date(caseData.closed_at).toLocaleDateString()} className="text-muted-foreground" />
-                          )}
+                <div className="space-y-4 sm:space-y-6">
+                  {/* Case Details Card - Always full width */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Briefcase className="h-5 w-5" />
+                        Case Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {caseData.description && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Case Objective</p>
+                          <p className="text-sm">{caseData.description}</p>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                      )}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
+                        <InfoItem label="Account" value={account?.name} />
+                        <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
+                        <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
+                        <InfoItem label="Reference No." value={caseData.reference_number} />
+                        <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
+                        <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
+                        {isClosed && caseData.closed_at && (
+                          <InfoItem label="Closed" value={new Date(caseData.closed_at).toLocaleDateString()} className="text-muted-foreground" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                  {/* Budget + Retainer Column */}
-                  <div className="space-y-4 flex flex-col">
-                    {organization?.id && (
-                      <BudgetStatusCard 
+                  {/* Two-column grid for Budget/Retainer and Team */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    {/* Budget + Retainer Column */}
+                    <div className="space-y-4">
+                      {organization?.id && (
+                        <BudgetStatusCard 
+                          caseId={id!} 
+                          organizationId={organization.id}
+                          refreshKey={budgetRefreshKey}
+                          onViewHistory={handleViewBudgetHistory}
+                        />
+                      )}
+                      {organization?.id && <RetainerFundsWidget caseId={id!} organizationId={organization.id} />}
+                    </div>
+
+                    {/* Team + Related Cases Column */}
+                    <div className="space-y-4">
+                      <CaseTeamManager 
                         caseId={id!} 
-                        organizationId={organization.id}
-                        refreshKey={budgetRefreshKey}
-                        onViewHistory={handleViewBudgetHistory}
+                        caseManagerId={caseData.case_manager_id}
+                        caseManager2Id={caseData.case_manager_2_id}
+                        investigatorIds={caseData.investigator_ids || []} 
+                        onUpdate={fetchCaseData} 
                       />
-                    )}
-                    {organization?.id && <RetainerFundsWidget caseId={id!} organizationId={organization.id} />}
-                  </div>
-
-                  {/* Team + Related Cases Column */}
-                  <div className="space-y-4">
-                    <CaseTeamManager 
-                      caseId={id!} 
-                      caseManagerId={caseData.case_manager_id}
-                      caseManager2Id={caseData.case_manager_2_id}
-                      investigatorIds={caseData.investigator_ids || []} 
-                      onUpdate={fetchCaseData} 
-                    />
-                    <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
+                      <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
+                    </div>
                   </div>
                 </div>
               </TabsContent>
