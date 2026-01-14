@@ -43,6 +43,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import { useCaseTypesQuery, CaseType } from "@/hooks/queries/useCaseTypesQuery";
+import { addDays } from "date-fns";
 
 const caseSchema = z.object({
   title: z.string().max(200).optional(),
@@ -58,6 +60,7 @@ const caseSchema = z.object({
   budget_notes: z.string().max(500).optional().nullable(),
   reference_number: z.string().max(100).optional().nullable(),
   pricing_profile_id: z.string().optional().nullable(),
+  case_type_id: z.string().optional().nullable(),
 });
 
 type CaseFormData = z.infer<typeof caseSchema>;
@@ -81,6 +84,7 @@ interface CaseFormProps {
     budget_notes?: string | null;
     reference_number?: string | null;
     pricing_profile_id?: string | null;
+    case_type_id?: string | null;
   };
 }
 
@@ -115,6 +119,29 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [primarySubjectName, setPrimarySubjectName] = useState<string | null>(null);
   const [pricingProfiles, setPricingProfiles] = useState<PricingProfile[]>([]);
+  const [selectedCaseTypeId, setSelectedCaseTypeId] = useState<string | null>(null);
+
+  // Fetch case types using React Query
+  const { data: caseTypes = [] } = useCaseTypesQuery();
+
+  // Get the selected case type object
+  const selectedCaseType = useMemo(() => {
+    return caseTypes.find(ct => ct.id === selectedCaseTypeId) || null;
+  }, [caseTypes, selectedCaseTypeId]);
+
+  // Determine budget visibility based on case type
+  const budgetConfig = useMemo(() => {
+    if (!selectedCaseType) {
+      return { showHours: true, showDollars: true, required: false };
+    }
+    const strategy = selectedCaseType.budget_strategy || 'both';
+    return {
+      showHours: strategy === 'hours_only' || strategy === 'both',
+      showDollars: strategy === 'money_only' || strategy === 'both',
+      required: selectedCaseType.budget_required || false,
+      disabled: strategy === 'disabled',
+    };
+  }, [selectedCaseType]);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
@@ -131,6 +158,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       budget_notes: null,
       reference_number: null,
       pricing_profile_id: null,
+      case_type_id: null,
     },
   });
 
@@ -178,7 +206,9 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_notes: editingCase.budget_notes ?? null,
           reference_number: editingCase.reference_number ?? null,
           pricing_profile_id: editingCase.pricing_profile_id ?? null,
+          case_type_id: editingCase.case_type_id ?? null,
         });
+        setSelectedCaseTypeId(editingCase.case_type_id || null);
         // @ts-ignore - case_manager_id, case_manager_2_id and investigator_ids exist on editingCase
         setCaseManagerId(editingCase.case_manager_id || "");
         // @ts-ignore
@@ -187,6 +217,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         setInvestigators(editingCase.investigator_ids || []);
       } else {
         setPrimarySubjectName(null);
+        setSelectedCaseTypeId(null);
         generateCaseNumber();
         form.reset({
           title: "",
@@ -201,6 +232,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_notes: null,
           reference_number: null,
           pricing_profile_id: null,
+          case_type_id: null,
         });
         setCaseManagerId("");
         setCaseManager2Id("");
@@ -208,6 +240,29 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       }
     }
   }, [open, editingCase, organization?.id]);
+
+  // Handle case type change - set defaults based on case type
+  const handleCaseTypeChange = (caseTypeId: string | null) => {
+    setSelectedCaseTypeId(caseTypeId);
+    form.setValue("case_type_id", caseTypeId);
+    
+    if (caseTypeId) {
+      const caseType = caseTypes.find(ct => ct.id === caseTypeId);
+      if (caseType) {
+        // Auto-set due date based on default_due_days (only for new cases)
+        if (!editingCase && caseType.default_due_days && caseType.default_due_days > 0) {
+          const newDueDate = addDays(new Date(), caseType.default_due_days);
+          form.setValue("due_date", newDueDate);
+        }
+        
+        // Clear budget fields if strategy is disabled
+        if (caseType.budget_strategy === 'disabled') {
+          form.setValue("budget_hours", null);
+          form.setValue("budget_dollars", null);
+        }
+      }
+    }
+  };
 
   // Set default status when statuses are loaded
   useEffect(() => {
@@ -474,6 +529,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         budget_notes: data.budget_notes || null,
         reference_number: data.reference_number || null,
         pricing_profile_id: data.pricing_profile_id || null,
+        case_type_id: data.case_type_id || null,
       };
 
       if (editingCase) {
@@ -602,6 +658,54 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                 )}
               />
             </div>
+
+            {/* Case Type Selector */}
+            <FormField
+              control={form.control}
+              name="case_type_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Case Type</FormLabel>
+                  <Select 
+                    onValueChange={(value) => handleCaseTypeChange(value === "__none__" ? null : value)} 
+                    value={field.value || "__none__"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select case type (optional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">
+                        <span className="text-muted-foreground">No case type</span>
+                      </SelectItem>
+                      {caseTypes.map((caseType) => (
+                        <SelectItem key={caseType.id} value={caseType.id}>
+                          <span className="flex items-center gap-2">
+                            <span 
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: caseType.color || '#9ca3af' }}
+                            />
+                            {caseType.name}
+                            <Badge variant="outline" className="ml-1 text-xs px-1.5 py-0">
+                              {caseType.tag}
+                            </Badge>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedCaseType && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedCaseType.description || `Budget: ${selectedCaseType.budget_strategy || 'both'}`}
+                      {selectedCaseType.due_date_required && ' • Due date required'}
+                      {selectedCaseType.default_due_days && ` • Default due: ${selectedCaseType.default_due_days} days`}
+                    </p>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Use Primary Subject as Title Checkbox */}
             <FormField
@@ -796,7 +900,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                 name="due_date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Due Date</FormLabel>
+                    <FormLabel>Due Date{selectedCaseType?.due_date_required && ' *'}</FormLabel>
                     <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -960,20 +1064,23 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               )}
             </div>
 
-            {/* Budget Authorization */}
+            {/* Budget Authorization - conditionally shown based on case type */}
+            {!budgetConfig.disabled && (
             <div className="border-t pt-4 space-y-4">
               <h3 className="text-sm font-semibold">Budget Authorization</h3>
               <p className="text-xs text-muted-foreground">
                 Set authorization limits for this case. This is NOT a retainer or payment.
+                {budgetConfig.required && <span className="text-destructive ml-1">*Required</span>}
               </p>
               
               <div className="grid grid-cols-2 gap-4">
+                {budgetConfig.showHours && (
                 <FormField
                   control={form.control}
                   name="budget_hours"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Budget Hours</FormLabel>
+                      <FormLabel>Budget Hours{budgetConfig.required && ' *'}</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
@@ -988,13 +1095,15 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                     </FormItem>
                   )}
                 />
+                )}
 
+                {budgetConfig.showDollars && (
                 <FormField
                   control={form.control}
                   name="budget_dollars"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Budget Dollars</FormLabel>
+                      <FormLabel>Budget Dollars{budgetConfig.required && ' *'}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -1013,6 +1122,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                     </FormItem>
                   )}
                 />
+                )}
               </div>
 
               <FormField
@@ -1034,6 +1144,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                 )}
               />
             </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-4">
               <Button
