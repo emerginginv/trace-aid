@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useSubjectTypes } from "@/hooks/useSubjectTypes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,9 +58,7 @@ const BUDGET_STRATEGIES = [
   { value: 'disabled', label: 'Disabled', icon: <Ban className="h-3 w-3" /> },
 ];
 
-const SUBJECT_TYPES = [
-  'Claimant', 'Subject', 'Insured', 'Defendant', 'Plaintiff', 'Witness', 'Applicant', 'Employee', 'Other'
-];
+// Subject types are now dynamic - fetched from the useSubjectTypes hook
 
 const DEFAULT_COLORS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#6366f1', '#ef4444', '#22c55e', '#06b6d4', '#f97316'
@@ -129,6 +128,7 @@ function SortableCaseTypeRow({ caseType, onEdit, onDelete }: {
 
 export function CaseTypesTab() {
   const { organization } = useOrganization();
+  const { subjectTypes: dynamicSubjectTypes, loading: subjectTypesLoading } = useSubjectTypes({ activeOnly: true });
   const [caseTypes, setCaseTypes] = useState<CaseType[]>([]);
   const [services, setServices] = useState<CaseService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -693,22 +693,31 @@ export function CaseTypesTab() {
                 </AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-2">
                   <p className="text-sm text-muted-foreground">
-                    Select which subject types are relevant for this case type
+                    Select which subject types are allowed for this case type. Leave empty to allow all.
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {SUBJECT_TYPES.map(subjectType => (
-                      <div key={subjectType} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`subject-${subjectType}`}
-                          checked={formData.allowed_subject_types.includes(subjectType)}
-                          onCheckedChange={() => toggleSubjectType(subjectType)}
-                        />
-                        <Label htmlFor={`subject-${subjectType}`} className="font-normal cursor-pointer">
-                          {subjectType}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
+                  {subjectTypesLoading ? (
+                    <div className="text-sm text-muted-foreground">Loading subject types...</div>
+                  ) : dynamicSubjectTypes.length === 0 ? (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      No subject types configured. Add subject types in the Subject Types tab.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {dynamicSubjectTypes.map(subjectType => (
+                        <div key={subjectType.code} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`subject-${subjectType.code}`}
+                            checked={formData.allowed_subject_types.includes(subjectType.code)}
+                            onCheckedChange={() => toggleSubjectType(subjectType.code)}
+                          />
+                          <Label htmlFor={`subject-${subjectType.code}`} className="font-normal cursor-pointer">
+                            {subjectType.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {formData.allowed_subject_types.length > 0 && (
                     <div className="space-y-2">
@@ -721,9 +730,14 @@ export function CaseTypesTab() {
                           <SelectValue placeholder="Select default..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {formData.allowed_subject_types.map(st => (
-                            <SelectItem key={st} value={st}>{st}</SelectItem>
-                          ))}
+                          {formData.allowed_subject_types.map(code => {
+                            const st = dynamicSubjectTypes.find(s => s.code === code);
+                            return (
+                              <SelectItem key={code} value={code}>
+                                {st?.name || code}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
