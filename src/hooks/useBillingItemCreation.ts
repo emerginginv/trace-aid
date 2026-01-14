@@ -169,8 +169,11 @@ export function useBillingItemCreation() {
           activity_id: activityId,                          // SYSTEM PROMPT 9
           update_id: updateId || null,                      // SYSTEM PROMPT 9: Link to case update
           billing_type: 'time',                             // SYSTEM PROMPT 9: Always 'time'
-          start_time: startTime || null,                    // SYSTEM PROMPT 9: Confirmed start time
-          end_time: endTime || null,                        // SYSTEM PROMPT 9: Confirmed end time
+          // DEPRECATED: start_time/end_time from case_activities fields
+          // TODO: Billing duration now derived from Time Entries.
+          // These fields should be populated from linked Time Entry records, not activity scheduling fields.
+          start_time: null,                                 // No longer derived from activity
+          end_time: null,                                   // No longer derived from activity
           pricing_model: pricingModel,
           quantity: quantity,
           unit_price: rate,                                 // rate

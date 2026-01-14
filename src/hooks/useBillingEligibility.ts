@@ -252,46 +252,32 @@ export function useBillingEligibility() {
       const pricingModel = pricingRule.pricing_model;
       let quantity: number | undefined;
 
-      // Prefer event duration stored on the activity itself (prevents stale service-instance quantities)
-      let activityDurationHours: number | undefined;
-      let activityDurationDays: number | undefined;
+      // ═══════════════════════════════════════════════════════════════════════════════
+      // TODO: Billing duration now derived from Time Entries.
+      // ═══════════════════════════════════════════════════════════════════════════════
+      // DEPRECATED: The following case_activities fields are NO LONGER used for billing:
+      //   - start_time
+      //   - end_time
+      //   - due_date
+      //   - end_date
+      // These fields remain for scheduling/display purposes only.
+      // Duration for billing should come from linked Time Entry records.
+      // ═══════════════════════════════════════════════════════════════════════════════
+      
+      // Fetch activity data for title/type only - NOT for billing duration
       const { data: activityData } = await supabase
         .from("case_activities")
-        .select("title, activity_type, due_date, start_time, end_time, end_date")
+        .select("title, activity_type")
         .eq("id", activityId)
         .limit(1)
         .maybeSingle();
 
-      if (
-        activityData?.activity_type === "event" &&
-        activityData.due_date &&
-        activityData.start_time &&
-        activityData.end_time
-      ) {
-        const parseDateOnly = (dateStr: string) => {
-          const [y, m, d] = dateStr.split("-").map(Number);
-          return new Date(y, m - 1, d);
-        };
-        const parseTimeParts = (t: string) => {
-          const [hh, mm, ss] = String(t).split(":");
-          return { h: Number(hh) || 0, m: Number(mm) || 0, s: Number(ss) || 0 };
-        };
-
-        const startDt = parseDateOnly(activityData.due_date);
-        const endDt = parseDateOnly(activityData.end_date || activityData.due_date);
-
-        const st = parseTimeParts(activityData.start_time);
-        const et = parseTimeParts(activityData.end_time);
-
-        startDt.setHours(st.h, st.m, st.s, 0);
-        endDt.setHours(et.h, et.m, et.s, 0);
-
-        const diffMs = endDt.getTime() - startDt.getTime();
-        if (diffMs > 0) {
-          activityDurationHours = Math.max(0.25, diffMs / (1000 * 60 * 60));
-          activityDurationDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-        }
-      }
+      // DEPRECATED: Event duration calculation from activity fields
+      // This logic block is disabled - duration should come from Time Entries
+      const activityDurationHours: number | undefined = undefined;
+      const activityDurationDays: number | undefined = undefined;
+      // Previously calculated from: due_date, end_date, start_time, end_time
+      // Now: Billing duration now derived from Time Entries.
 
       switch (pricingModel) {
         case "hourly":
@@ -408,11 +394,14 @@ export function useBillingEligibility() {
         estimatedAmount,
         activityId,
         activityTitle: activityData?.title,
-        // Time confirmation fields per SYSTEM PROMPT 6
-        startDate: activityData?.due_date || undefined,
-        startTime: activityData?.start_time || undefined,
-        endDate: activityData?.end_date || activityData?.due_date || undefined,
-        endTime: activityData?.end_time || undefined,
+        // DEPRECATED: Time confirmation fields from case_activities
+        // TODO: Billing duration now derived from Time Entries.
+        // These fields are no longer populated from activity scheduling fields.
+        // startDate, startTime, endDate, endTime should come from Time Entry records.
+        startDate: undefined,
+        startTime: undefined,
+        endDate: undefined,
+        endTime: undefined,
         // Audit fields for billing item creation per SYSTEM PROMPT 8
         caseId: instanceData.case_id,
         organizationId: instanceData.organization_id,
