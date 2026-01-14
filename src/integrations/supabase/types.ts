@@ -1630,13 +1630,6 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "case_subjects_subject_type_id_fkey"
-            columns: ["subject_type_id"]
-            isOneToOne: false
-            referencedRelation: "subject_types"
-            referencedColumns: ["id"]
-          },
         ]
       }
       case_types: {
@@ -6539,10 +6532,10 @@ export type Database = {
       }
       subject_types: {
         Row: {
+          category: string
           code: string
           color: string | null
           created_at: string | null
-          created_by: string | null
           description: string | null
           display_order: number | null
           icon: string | null
@@ -6553,10 +6546,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          category: string
           code: string
           color?: string | null
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           display_order?: number | null
           icon?: string | null
@@ -6567,10 +6560,10 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          category?: string
           code?: string
           color?: string | null
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           display_order?: number | null
           icon?: string | null
