@@ -677,71 +677,43 @@ const CaseDetail = () => {
             </Badge>
           )}
           
-          {/* Desktop Action Buttons */}
-          {!isVendor && !isMobile && (
-            <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
-              {isManager && (
-                <Button variant="outline" className="h-9 px-3" onClick={() => setSummaryPdfDialogOpen(true)}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Summary PDF
+          {/* Action Menu */}
+          {!isVendor && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="shrink-0 h-9 w-9">
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
-              )}
-              <Button variant="outline" className="h-9 px-3" onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
-                <Mail className="h-4 w-4 mr-2" />
-                Send Email
-              </Button>
-              {hasPermission('edit_cases') && (
-                <Button variant="outline" className="h-9 px-3" onClick={() => setEditFormOpen(true)} disabled={isClosed}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              )}
-              {hasPermission('delete_cases') && (
-                <Button variant="outline" className="h-9 px-3 text-destructive hover:bg-destructive/10" onClick={handleDelete} disabled={deleting}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {deleting ? "Deleting..." : "Delete"}
-                </Button>
-              )}
-            </div>
-          )}
-          
-          {/* Mobile Action Menu */}
-          {!isVendor && isMobile && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="shrink-0 h-9 w-9">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {isManager && (
-                <DropdownMenuItem onClick={() => setSummaryPdfDialogOpen(true)}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Summary PDF
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {isManager && (
+                  <DropdownMenuItem onClick={() => setSummaryPdfDialogOpen(true)}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Summary PDF
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
-                <Mail className="h-4 w-4 mr-2" />
-                Send Email
-              </DropdownMenuItem>
-              {hasPermission('edit_cases') && (
-                <DropdownMenuItem onClick={() => setEditFormOpen(true)} disabled={isClosed}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Case
-                </DropdownMenuItem>
-              )}
-              {hasPermission('delete_cases') && (
-                <DropdownMenuItem 
-                  onClick={handleDelete} 
-                  disabled={deleting}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {deleting ? "Deleting..." : "Delete Case"}
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {hasPermission('edit_cases') && (
+                  <DropdownMenuItem onClick={() => setEditFormOpen(true)} disabled={isClosed}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Case
+                  </DropdownMenuItem>
+                )}
+                {hasPermission('delete_cases') && (
+                  <DropdownMenuItem 
+                    onClick={handleDelete} 
+                    disabled={deleting}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {deleting ? "Deleting..." : "Delete Case"}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>
