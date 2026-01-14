@@ -28,6 +28,8 @@ import { logBillingAudit } from "@/lib/billingAuditLogger";
 interface CreateBillingItemButtonProps {
   activityId: string;
   updateId?: string;
+  /** The update's description/narrative - required for billing eligibility */
+  updateDescription?: string | null;
   organizationId: string;
   variant?: "default" | "outline" | "ghost" | "secondary";
   size?: "default" | "sm" | "lg" | "icon";
@@ -38,6 +40,7 @@ interface CreateBillingItemButtonProps {
 export function CreateBillingItemButton({
   activityId,
   updateId,
+  updateDescription,
   organizationId,
   variant = "outline",
   size = "sm",
@@ -55,8 +58,11 @@ export function CreateBillingItemButton({
     setIsChecking(true);
     
     try {
-      // Re-run eligibility checks
-      const result = await evaluateBillingEligibility({ linkedActivityId: activityId });
+      // Re-run eligibility checks - pass updateDescription for narrative validation
+      const result = await evaluateBillingEligibility({ 
+        linkedActivityId: activityId,
+        updateDescription 
+      });
       
       // Log diagnostic info
       console.log('[Billing Diagnostics] Create Billing Later - Eligibility check:', {
