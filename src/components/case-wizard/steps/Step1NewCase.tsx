@@ -40,7 +40,6 @@ const formSchema = z.object({
   due_date: z.date().optional(),
   assign_myself_as: z.enum(["none", "case_manager", "investigator"]).default("none"),
   reference_number: z.string().max(100).optional().nullable(),
-  pricing_profile_id: z.string().optional().nullable(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -63,13 +62,6 @@ interface Profile {
   email: string;
 }
 
-interface PricingProfile {
-  id: string;
-  name: string;
-  is_default: boolean;
-  is_active: boolean;
-}
-
 interface Step1Props {
   organizationId: string;
   onComplete: (caseId: string, caseNumber: string, caseData: CaseFormData) => void;
@@ -86,7 +78,6 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   const [seriesInstance, setSeriesInstance] = useState<number | null>(null);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pricingProfiles, setPricingProfiles] = useState<PricingProfile[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -99,7 +90,6 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
       due_date: existingData?.due_date || undefined,
       assign_myself_as: "none",
       reference_number: existingData?.reference_number || "",
-      pricing_profile_id: existingData?.pricing_profile_id || null,
     },
   });
 
@@ -128,7 +118,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setCurrentUserId(user.id);
 
-      const [accountsRes, contactsRes, statusesRes, pricingProfilesRes] = await Promise.all([
+      const [accountsRes, contactsRes, statusesRes] = await Promise.all([
         supabase
           .from("accounts")
           .select("id, name")
@@ -146,13 +136,6 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
           .eq("is_active", true)
           .eq("organization_id", organizationId)
           .order("display_order"),
-        supabase
-          .from("pricing_profiles")
-          .select("id, name, is_default, is_active")
-          .eq("organization_id", organizationId)
-          .eq("is_active", true)
-          .order("is_default", { ascending: false })
-          .order("name"),
       ]);
 
       if (accountsRes.data) setAccounts(accountsRes.data);
@@ -166,18 +149,6 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
           );
           if (newStatus) {
             form.setValue("status", newStatus.value);
-          }
-        }
-      }
-      
-      // Set pricing profiles and default
-      if (pricingProfilesRes.data) {
-        setPricingProfiles(pricingProfilesRes.data);
-        // Set default pricing profile if not already set
-        if (!existingData?.pricing_profile_id) {
-          const defaultProfile = pricingProfilesRes.data.find(p => p.is_default);
-          if (defaultProfile) {
-            form.setValue("pricing_profile_id", defaultProfile.id);
           }
         }
       }
@@ -269,7 +240,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
 
     setIsSubmitting(true);
     try {
-      // Prepare case data
+      // Prepare case data - pricing_profile_id is automatically set by database trigger
       const caseData: any = {
         title: data.title || generatedCaseNumber,
         case_number: generatedCaseNumber,
@@ -284,7 +255,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         is_draft: true,
         draft_created_by: currentUserId,
         reference_number: data.reference_number || null,
-        pricing_profile_id: data.pricing_profile_id || null,
+        // Note: pricing_profile_id is automatically resolved from account or org default via database trigger
         // New series tracking fields
         series_number: seriesNumber || undefined,
         series_instance: seriesInstance || 1,
@@ -318,7 +289,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         case_manager_2_id: null,
         investigator_ids: data.assign_myself_as === "investigator" ? [currentUserId] : [],
         reference_number: data.reference_number || null,
-        pricing_profile_id: data.pricing_profile_id || null,
+        pricing_profile_id: newCase.pricing_profile_id || null, // Get from created case (set by trigger)
       };
 
       toast.success("Draft case created");
@@ -490,39 +461,6 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
                 <FormControl>
                   <Input placeholder="Client's internal reference" {...field} value={field.value || ""} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Pricing Profile */}
-          <FormField
-            control={form.control}
-            name="pricing_profile_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pricing Profile</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value || ""}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select pricing profile" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {pricingProfiles.map((profile) => (
-                      <SelectItem key={profile.id} value={profile.id}>
-                        {profile.name}
-                        {profile.is_default && " (Default)"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  Determines how services are billed for this case
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
