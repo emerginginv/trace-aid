@@ -19,7 +19,8 @@ import {
   FileBarChart,
   Plug,
   Briefcase,
-  DollarSign
+  DollarSign,
+  FolderKanban
 } from "lucide-react";
 import {
   Collapsible,
@@ -40,6 +41,7 @@ const navItems: SettingsNavItem[] = [
   { value: "permissions", label: "Permissions", icon: Shield, roles: ['admin'] },
   { value: "users", label: "Users", icon: Users, roles: ['admin', 'manager'] },
   { value: "authentication", label: "Authentication", icon: KeyRound, roles: ['admin'] },
+  { value: "case-types", label: "Case Types", icon: FolderKanban, roles: ['admin', 'manager'] },
   { value: "case-services", label: "Case Services", icon: Briefcase, roles: ['admin', 'manager'] },
   { value: "pricing-profiles", label: "Pricing Profiles", icon: DollarSign, roles: ['admin', 'manager'] },
   { value: "picklists", label: "Picklists", icon: List, roles: ['admin', 'manager'] },

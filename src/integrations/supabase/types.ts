@@ -1629,6 +1629,95 @@ export type Database = {
           },
         ]
       }
+      case_types: {
+        Row: {
+          allow_on_public_form: boolean | null
+          allowed_case_flags: string[] | null
+          allowed_service_ids: string[] | null
+          allowed_subject_types: string[] | null
+          allowed_template_ids: string[] | null
+          budget_required: boolean | null
+          budget_strategy: string | null
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          default_due_days: number | null
+          default_subject_type: string | null
+          description: string | null
+          display_order: number | null
+          due_date_required: boolean | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          reference_label_1: string | null
+          reference_label_2: string | null
+          reference_label_3: string | null
+          tag: string
+          updated_at: string | null
+        }
+        Insert: {
+          allow_on_public_form?: boolean | null
+          allowed_case_flags?: string[] | null
+          allowed_service_ids?: string[] | null
+          allowed_subject_types?: string[] | null
+          allowed_template_ids?: string[] | null
+          budget_required?: boolean | null
+          budget_strategy?: string | null
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_due_days?: number | null
+          default_subject_type?: string | null
+          description?: string | null
+          display_order?: number | null
+          due_date_required?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          reference_label_1?: string | null
+          reference_label_2?: string | null
+          reference_label_3?: string | null
+          tag: string
+          updated_at?: string | null
+        }
+        Update: {
+          allow_on_public_form?: boolean | null
+          allowed_case_flags?: string[] | null
+          allowed_service_ids?: string[] | null
+          allowed_subject_types?: string[] | null
+          allowed_template_ids?: string[] | null
+          budget_required?: boolean | null
+          budget_strategy?: string | null
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_due_days?: number | null
+          default_subject_type?: string | null
+          description?: string | null
+          display_order?: number | null
+          due_date_required?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          reference_label_1?: string | null
+          reference_label_2?: string | null
+          reference_label_3?: string | null
+          tag?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_updates: {
         Row: {
           activity_timeline: Json | null
@@ -1748,6 +1837,7 @@ export type Database = {
           case_manager_2_id: string | null
           case_manager_id: string | null
           case_number: string
+          case_type_id: string | null
           case_type_tag: string | null
           closed_at: string | null
           closed_by_user_id: string | null
@@ -1793,6 +1883,7 @@ export type Database = {
           case_manager_2_id?: string | null
           case_manager_id?: string | null
           case_number: string
+          case_type_id?: string | null
           case_type_tag?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
@@ -1838,6 +1929,7 @@ export type Database = {
           case_manager_2_id?: string | null
           case_manager_id?: string | null
           case_number?: string
+          case_type_id?: string | null
           case_type_tag?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
@@ -1895,6 +1987,13 @@ export type Database = {
             columns: ["case_manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_case_type_id_fkey"
+            columns: ["case_type_id"]
+            isOneToOne: false
+            referencedRelation: "case_types"
             referencedColumns: ["id"]
           },
           {
