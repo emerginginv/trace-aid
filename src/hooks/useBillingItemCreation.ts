@@ -121,23 +121,39 @@ export function useBillingItemCreation() {
       }
 
       // ═══════════════════════════════════════════════════════════════════════════════
-      // GATE 0: Prevent billing item creation for EVENTS via direct activity_id
+      // RUNTIME GUARD: Events must NEVER be billable directly
       // ═══════════════════════════════════════════════════════════════════════════════
-      // Events must be billed through the Updates workflow (useUpdateBillingEligibility).
-      // This hook should only be called with an updateId when billing events.
-      // If activity_id is provided, verify it's not an event, or that updateId is also provided.
+      // Events must never be billable. Updates are the source of truth.
+      // If an event activity_id is passed without an updateId, this is a critical error.
       // ═══════════════════════════════════════════════════════════════════════════════
       const { data: activityCheck } = await supabase
         .from("case_activities")
-        .select("activity_type")
+        .select("activity_type, title")
         .eq("id", activityId)
         .single();
 
-      if (activityCheck?.activity_type === "event" && !updateId) {
-        return { 
-          success: false, 
-          error: "Events must be billed through the Updates workflow. Please create an update narrative for this event." 
-        };
+      if (activityCheck?.activity_type === "event") {
+        // Log with HIGH severity - this should never happen in production
+        console.error(
+          `[BILLING GUARD - HIGH SEVERITY] Attempted to create billing item directly from event. ` +
+          `Activity ID: ${activityId}, Update ID: ${updateId || 'NONE'}, Case ID: ${caseId}`
+        );
+        
+        await logBillingAudit({
+          action: 'event_billing_blocked',
+          organizationId: organizationId,
+          metadata: {
+            activityId: activityId,
+            updateId: updateId,
+            caseId: caseId,
+            reason: 'Events must never be billable. Updates are the source of truth.',
+            severity: 'HIGH',
+          },
+        });
+
+        // Throw error to ensure this is caught by any caller
+        const errorMessage = "BILLING ERROR: Events must never be billable. Updates are the source of truth. Create an update narrative to log time and expenses.";
+        throw new Error(errorMessage);
       }
 
       // FLAT-FEE ENFORCEMENT: Check if billing item already exists for this service instance
@@ -308,5 +324,44 @@ function buildBillingDescription(
       return `${serviceName} - Flat fee @ ${formattedRate}`;
     default:
       return `${serviceName} - ${quantity} units @ ${formattedRate}`;
+  }
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * RUNTIME GUARD ASSERTION: Events must NEVER be billable
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Events must never be billable. Updates are the source of truth.
+ * 
+ * This guard ensures that:
+ * 1. Any attempt to create a billing item from an event throws an error
+ * 2. The violation is logged with HIGH severity to audit_events
+ * 3. The error message clearly instructs users to use the Updates workflow
+ * 
+ * TEST CASES (validated at runtime):
+ * - Event activity_type → THROW ERROR + log HIGH severity
+ * - Task activity_type → ALLOW (no guard triggered)
+ * - Event with updateId → Still THROW ERROR (events are never billable directly)
+ * 
+ * AUDIT LOG ENTRY:
+ * {
+ *   action: 'event_billing_blocked',
+ *   metadata: {
+ *     activityId: string,
+ *     caseId: string,
+ *     reason: 'Events must never be billable. Updates are the source of truth.',
+ *     severity: 'HIGH'
+ *   }
+ * }
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+export function assertEventBillingGuard(activityType: string): void {
+  if (activityType === 'event') {
+    // Events must never be billable. Updates are the source of truth.
+    throw new Error(
+      'BILLING ERROR: Events must never be billable. Updates are the source of truth. ' +
+      'Create an update narrative to log time and expenses.'
+    );
   }
 }
