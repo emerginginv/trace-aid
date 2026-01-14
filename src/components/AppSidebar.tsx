@@ -6,7 +6,6 @@ import {
 } from "@/components/ui/sidebar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
-import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 import {
   SidebarBranding,
   SidebarNavigation,
@@ -22,9 +21,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border p-4 space-y-3">
+      <SidebarHeader className="border-b border-sidebar-border p-4">
         <SidebarBranding orgSettings={orgSettings} />
-        <OrganizationSwitcher />
       </SidebarHeader>
 
       <SidebarContent>
