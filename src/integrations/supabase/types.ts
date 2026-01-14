@@ -2438,6 +2438,138 @@ export type Database = {
           },
         ]
       }
+      credit_memos: {
+        Row: {
+          account_id: string | null
+          amount: number
+          applied_at: string | null
+          applied_to_invoice_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          case_id: string | null
+          created_at: string | null
+          created_by: string | null
+          credit_number: string
+          date: string
+          external_id: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          original_invoice_id: string | null
+          reason: string
+          status: string | null
+          sync_error: string | null
+          sync_status: string | null
+          synced_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          applied_at?: string | null
+          applied_to_invoice_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          case_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credit_number: string
+          date?: string
+          external_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          original_invoice_id?: string | null
+          reason: string
+          status?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          applied_at?: string | null
+          applied_to_invoice_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          case_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credit_number?: string
+          date?: string
+          external_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          original_invoice_id?: string | null
+          reason?: string
+          status?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_memos_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memos_applied_to_invoice_id_fkey"
+            columns: ["applied_to_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memos_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memos_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memos_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memos_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_health_snapshots: {
         Row: {
           active_users_count: number
@@ -3848,6 +3980,7 @@ export type Database = {
           case_service_instance_id: string
           created_at: string
           description: string
+          gl_account_code: string | null
           id: string
           invoice_id: string
           organization_id: string
@@ -3858,6 +3991,8 @@ export type Database = {
           rate: number
           service_code: string | null
           service_name: string
+          tax_amount: number | null
+          tax_code: string | null
           unit_label: string | null
         }
         Insert: {
@@ -3869,6 +4004,7 @@ export type Database = {
           case_service_instance_id: string
           created_at?: string
           description: string
+          gl_account_code?: string | null
           id?: string
           invoice_id: string
           organization_id: string
@@ -3879,6 +4015,8 @@ export type Database = {
           rate?: number
           service_code?: string | null
           service_name: string
+          tax_amount?: number | null
+          tax_code?: string | null
           unit_label?: string | null
         }
         Update: {
@@ -3890,6 +4028,7 @@ export type Database = {
           case_service_instance_id?: string
           created_at?: string
           description?: string
+          gl_account_code?: string | null
           id?: string
           invoice_id?: string
           organization_id?: string
@@ -3900,6 +4039,8 @@ export type Database = {
           rate?: number
           service_code?: string | null
           service_name?: string
+          tax_amount?: number | null
+          tax_code?: string | null
           unit_label?: string | null
         }
         Relationships: [
@@ -3951,33 +4092,51 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          external_id: string | null
           id: string
+          idempotency_key: string | null
           invoice_id: string
           notes: string | null
           organization_id: string
           payment_date: string
+          payment_method: string | null
+          payment_status: string | null
+          reference_number: string | null
+          sync_status: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           amount: number
           created_at?: string
+          external_id?: string | null
           id?: string
+          idempotency_key?: string | null
           invoice_id: string
           notes?: string | null
           organization_id: string
           payment_date?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          reference_number?: string | null
+          sync_status?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           amount?: number
           created_at?: string
+          external_id?: string | null
           id?: string
+          idempotency_key?: string | null
           invoice_id?: string
           notes?: string | null
           organization_id?: string
           payment_date?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          reference_number?: string | null
+          sync_status?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -4005,14 +4164,20 @@ export type Database = {
           created_at: string
           date: string
           due_date: string | null
+          exported_at: string | null
+          external_id: string | null
           finalized_at: string | null
           finalized_by: string | null
           id: string
           invoice_number: string
           notes: string | null
           organization_id: string | null
+          posting_date: string | null
           retainer_applied: number | null
           status: string
+          sync_error: string | null
+          sync_status: string | null
+          synced_at: string | null
           total: number
           total_paid: number | null
           updated_at: string
@@ -4027,14 +4192,20 @@ export type Database = {
           created_at?: string
           date?: string
           due_date?: string | null
+          exported_at?: string | null
+          external_id?: string | null
           finalized_at?: string | null
           finalized_by?: string | null
           id?: string
           invoice_number: string
           notes?: string | null
           organization_id?: string | null
+          posting_date?: string | null
           retainer_applied?: number | null
           status?: string
+          sync_error?: string | null
+          sync_status?: string | null
+          synced_at?: string | null
           total: number
           total_paid?: number | null
           updated_at?: string
@@ -4049,14 +4220,20 @@ export type Database = {
           created_at?: string
           date?: string
           due_date?: string | null
+          exported_at?: string | null
+          external_id?: string | null
           finalized_at?: string | null
           finalized_by?: string | null
           id?: string
           invoice_number?: string
           notes?: string | null
           organization_id?: string | null
+          posting_date?: string | null
           retainer_applied?: number | null
           status?: string
+          sync_error?: string | null
+          sync_status?: string | null
+          synced_at?: string | null
           total?: number
           total_paid?: number | null
           updated_at?: string
@@ -6583,6 +6760,56 @@ export type Database = {
           },
         ]
       }
+      tax_rates: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          external_id: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          organization_id: string
+          rate: number
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          external_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          organization_id: string
+          rate?: number
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          external_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          organization_id?: string
+          rate?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_header_footer_config: {
         Row: {
           created_at: string | null
@@ -7013,6 +7240,97 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      write_offs: {
+        Row: {
+          amount: number
+          billing_item_id: string | null
+          case_id: string | null
+          created_at: string | null
+          external_id: string | null
+          id: string
+          invoice_id: string | null
+          organization_id: string
+          reason_code: string
+          reason_detail: string | null
+          sync_status: string | null
+          written_off_at: string | null
+          written_off_by: string | null
+        }
+        Insert: {
+          amount: number
+          billing_item_id?: string | null
+          case_id?: string | null
+          created_at?: string | null
+          external_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          organization_id: string
+          reason_code: string
+          reason_detail?: string | null
+          sync_status?: string | null
+          written_off_at?: string | null
+          written_off_by?: string | null
+        }
+        Update: {
+          amount?: number
+          billing_item_id?: string | null
+          case_id?: string | null
+          created_at?: string | null
+          external_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          organization_id?: string
+          reason_code?: string
+          reason_detail?: string | null
+          sync_status?: string | null
+          written_off_at?: string | null
+          written_off_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "write_offs_billing_item_id_fkey"
+            columns: ["billing_item_id"]
+            isOneToOne: false
+            referencedRelation: "case_finances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "write_offs_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "write_offs_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "write_offs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "write_offs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "write_offs_written_off_by_fkey"
+            columns: ["written_off_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
