@@ -21,6 +21,35 @@
  *    No flags are set, no records are modified to prevent future billing.
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
+ * SYSTEM PROMPT 6 COMPLIANCE: TIME CONFIRMATION STEP
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Before creating a billing item, the user must confirm start and end times
+ * for the linked task or event.
+ * 
+ * UI BEHAVIOR:
+ * 1. Pre-populate start/end times from the linked task/event
+ *    → Implemented in useEffect (line ~66-77) using eligibility.startDate,
+ *      startTime, endDate, endTime
+ * 
+ * 2. Allow user edits
+ *    → Implemented via editable Input fields in 'time' step
+ * 
+ * 3. Validate end time is after start time
+ *    → Implemented in validateTimes() function
+ *    → Error displayed: "End time must be after start time"
+ * 
+ * CRITICAL RULE:
+ * Do NOT create any billing item until user explicitly confirms.
+ * → handleConfirmAndCreate() only calls onCreateBillingItem after
+ *   validateTimes() returns true
+ * 
+ * FLOW:
+ * Step 1 ('confirm'): User sees billing prompt → clicks "Yes, Create Billing Item"
+ * Step 2 ('time'): User confirms/edits times → clicks "Confirm & Create"
+ * → Only then is onCreateBillingItem() called with confirmedTimes
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
 
 import { useState, useEffect } from "react";
