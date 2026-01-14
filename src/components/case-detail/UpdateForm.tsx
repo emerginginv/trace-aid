@@ -18,6 +18,10 @@ import { ExternalLink, Paperclip, Link2 } from "lucide-react";
 import { AttachmentPicker } from "./AttachmentPicker";
 import { ActivityTimelineEditor, TimelineEntry } from "./ActivityTimelineEditor";
 import { format } from "date-fns";
+import { useUpdateBillingEligibility, UpdateBillingEligibilityResult } from "@/hooks/useUpdateBillingEligibility";
+import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
+import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
+import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -53,6 +57,12 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [caseActivities, setCaseActivities] = useState<CaseActivity[]>([]);
   const navigate = useNavigate();
+  
+  // Billing eligibility state (System Prompt 4)
+  const [billingPromptOpen, setBillingPromptOpen] = useState(false);
+  const [billingEligibility, setBillingEligibility] = useState<UpdateBillingEligibilityResult | null>(null);
+  const { evaluate: evaluateBillingEligibility, reset: resetBillingEligibility } = useUpdateBillingEligibility();
+  const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -313,6 +323,30 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         description: editingUpdate ? "Update edited successfully" : "Update added successfully",
       });
 
+      // SYSTEM PROMPT 3 & 4: Check billing eligibility only if update is linked to an activity
+      // If linked, evaluate billing eligibility; if eligible, show billing prompt
+      // If not linked or not eligible, complete normally without prompt
+      const linkedActivityId = values.linked_activity_id;
+      
+      if (linkedActivityId && !editingUpdate) {
+        // Only check billing for new updates (not edits) with linked activities
+        const eligibilityResult = await evaluateBillingEligibility({ linkedActivityId });
+        
+        if (eligibilityResult.isEligible) {
+          // Store eligibility result and show billing prompt
+          setBillingEligibility(eligibilityResult);
+          setBillingPromptOpen(true);
+          // Don't close the dialog yet - wait for billing decision
+          form.reset();
+          setSelectedAttachmentIds([]);
+          setIncludeTimeline(false);
+          setTimelineEntries([]);
+          // Keep dialog state but let billing prompt overlay
+          return; // Exit early - onSuccess will be called after billing decision
+        }
+      }
+
+      // No billing prompt needed - complete normally
       form.reset();
       setSelectedAttachmentIds([]);
       setIncludeTimeline(false);
@@ -329,6 +363,66 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handle billing item creation from prompt
+  const handleCreateBillingItem = async () => {
+    if (!billingEligibility || !billingEligibility.isEligible) return;
+    
+    const result = await createBillingItem({
+      activityId: billingEligibility.activityId!,
+      caseServiceInstanceId: billingEligibility.serviceInstanceId!,
+      caseId: billingEligibility.caseId!,
+      organizationId: billingEligibility.organizationId!,
+      accountId: billingEligibility.accountId,
+      serviceName: billingEligibility.serviceName!,
+      pricingModel: billingEligibility.pricingModel!,
+      quantity: billingEligibility.quantity!,
+      rate: billingEligibility.serviceRate!,
+      pricingProfileId: billingEligibility.pricingProfileId,
+      pricingRuleSnapshot: billingEligibility.pricingRuleSnapshot,
+    });
+
+    if (result.success) {
+      toast({
+        title: "Billing Item Created",
+        description: `Pending billing item created for ${billingEligibility.serviceName}`,
+      });
+      
+      // Show budget warning if applicable (SYSTEM PROMPT 9)
+      if (result.budgetWarning?.isForecastWarning) {
+        toast({
+          title: result.budgetWarning.isForecastExceeded ? "Budget Warning" : "Budget Notice",
+          description: getBudgetForecastWarningMessage(
+            result.budgetWarning.isForecastExceeded,
+            result.budgetWarning.hardCap
+          ),
+          variant: result.budgetWarning.isForecastExceeded ? "destructive" : "default",
+        });
+      }
+    } else {
+      toast({
+        title: "Billing Error",
+        description: result.error || "Failed to create billing item",
+        variant: "destructive",
+      });
+    }
+
+    // Clean up and close
+    setBillingPromptOpen(false);
+    setBillingEligibility(null);
+    resetBillingEligibility();
+    onOpenChange(false);
+    onSuccess();
+  };
+
+  // Handle skipping billing item creation
+  const handleSkipBilling = () => {
+    setBillingPromptOpen(false);
+    setBillingEligibility(null);
+    resetBillingEligibility();
+    onOpenChange(false);
+    onSuccess();
   };
 
   return (
@@ -519,6 +613,15 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
           </form>
         </Form>
       </DialogContent>
+
+      {/* Billing Prompt Dialog - SYSTEM PROMPT 4 */}
+      <BillingPromptDialog
+        open={billingPromptOpen}
+        onOpenChange={setBillingPromptOpen}
+        eligibility={billingEligibility}
+        onCreateBillingItem={handleCreateBillingItem}
+        onSkip={handleSkipBilling}
+      />
     </Dialog>
   );
 };
