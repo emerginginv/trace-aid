@@ -588,8 +588,8 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                     Related Task/Event (Optional)
                   </FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || ""}
+                    onValueChange={(val) => field.onChange(val === "none" ? "" : val)} 
+                    value={field.value || "none"}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -597,7 +597,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {caseActivities.map((activity) => (
                         <SelectItem key={activity.id} value={activity.id}>
                           <span className="flex items-center gap-2">
