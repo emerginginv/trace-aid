@@ -304,11 +304,19 @@ export default function Updates() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <HelpfulHeader feature="global_updates">
-          <h1 className="text-2xl font-bold tracking-tight">All Updates</h1>
-        </HelpfulHeader>
-        <p className="text-muted-foreground">View and manage updates across all cases</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <HelpfulHeader feature="global_updates">
+            <h1 className="text-2xl font-bold tracking-tight">All Updates</h1>
+          </HelpfulHeader>
+          <p className="text-muted-foreground">View and manage updates across all cases</p>
+        </div>
+        {hasPermission('add_updates') && (
+          <Button onClick={() => setShowCaseSelector(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Update
+          </Button>
+        )}
       </div>
 
       {/* Stat Cards */}
@@ -380,12 +388,6 @@ export default function Updates() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {hasPermission('add_updates') && (
-          <Button size="sm" className="h-10" onClick={() => setShowCaseSelector(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Update
-          </Button>
-        )}
         <ImportTemplateButton templateFileName="07_Updates.csv" entityDisplayName="Updates" />
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button

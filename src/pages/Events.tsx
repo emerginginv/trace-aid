@@ -341,9 +341,17 @@ export default function Events() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Events</h1>
-        <p className="text-muted-foreground">View and manage events across all cases</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Events</h1>
+          <p className="text-muted-foreground">View and manage events across all cases</p>
+        </div>
+        {hasPermission('add_activities') && (
+          <Button onClick={() => setShowCaseSelector(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Event
+          </Button>
+        )}
       </div>
 
       {/* Stat Cards */}
@@ -422,12 +430,6 @@ export default function Events() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {hasPermission('add_activities') && (
-          <Button size="sm" className="h-10" onClick={() => setShowCaseSelector(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Event
-          </Button>
-        )}
         <ImportTemplateButton templateFileName="15_Events.csv" entityDisplayName="Events" />
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
