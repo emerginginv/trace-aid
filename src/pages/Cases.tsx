@@ -66,6 +66,9 @@ interface Case {
   case_manager?: CaseManager | null;
   budget_summary?: BudgetSummary | null;
   financial_totals?: FinancialTotals | null;
+  reference_number?: string | null;
+  reference_number_2?: string | null;
+  reference_number_3?: string | null;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -153,6 +156,7 @@ const Cases = () => {
         .select(`
           id, case_number, title, description, status, due_date, created_at,
           case_manager_id, budget_dollars,
+          reference_number, reference_number_2, reference_number_3,
           case_manager:profiles!cases_case_manager_id_fkey(
             id, full_name, avatar_url, color
           )
@@ -358,7 +362,14 @@ const Cases = () => {
 
 
   const filteredCases = cases.filter(caseItem => {
-    const matchesSearch = searchQuery === '' || caseItem.title.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.case_number.toLowerCase().includes(searchQuery.toLowerCase()) || caseItem.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = searchQuery === '' || 
+      caseItem.title.toLowerCase().includes(query) || 
+      caseItem.case_number.toLowerCase().includes(query) || 
+      caseItem.description?.toLowerCase().includes(query) ||
+      caseItem.reference_number?.toLowerCase().includes(query) ||
+      caseItem.reference_number_2?.toLowerCase().includes(query) ||
+      caseItem.reference_number_3?.toLowerCase().includes(query);
     const matchesStatus = statusFilter === 'all' || caseItem.status === statusFilter;
     const statusPicklist = statusPicklists.find(s => s.value === caseItem.status);
     const matchesStatusType = statusTypeFilter === 'all' || statusPicklist?.status_type === statusTypeFilter;
@@ -424,7 +435,7 @@ const Cases = () => {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search cases by title, number, or description..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
+          <Input placeholder="Search cases by title, number, description, or reference..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
         </div>
         <Select value={statusTypeFilter} onValueChange={setStatusTypeFilter}>
           <SelectTrigger className="w-full sm:w-40">
