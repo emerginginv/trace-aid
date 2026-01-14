@@ -381,7 +381,8 @@ export function ActivityForm({
 
       if (error) throw error;
 
-      // Update case_service_instances with scheduled times for proper billing calculation
+      // Update case_service_instances with scheduled times (for planning purposes only)
+      // NOTE: Events no longer update quantity_actual - that is derived from approved billing items
       const serviceInstanceId = editingActivity?.case_service_instance_id || caseServiceInstanceId;
       if (serviceInstanceId && values.activity_type === "event") {
         const parseTimeParts = (t: string) => {
@@ -405,15 +406,12 @@ export function ActivityForm({
         const scheduledStart = startDt.toISOString();
         const scheduledEnd = endDt.toISOString();
 
-        const diffMs = endDt.getTime() - startDt.getTime();
-        const durationHours = Math.max(0.25, diffMs / (1000 * 60 * 60));
-
+        // Only update scheduled times for planning - quantity_actual is now derived from approved billing items
         const { error: serviceUpdateError } = await supabase
           .from("case_service_instances")
           .update({
             scheduled_start: scheduledStart,
             scheduled_end: scheduledEnd,
-            quantity_actual: durationHours,
             updated_at: new Date().toISOString(),
           })
           .eq("id", serviceInstanceId);
@@ -623,56 +621,66 @@ export function ActivityForm({
             />
 
             {/* Link to Service - for budget tracking and invoicing */}
-            <FormField
-              control={form.control}
-              name="case_service_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Link className="h-4 w-4" />
-                    Service (Optional)
-                  </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || "none"}
-                    disabled={servicesLoading}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={servicesLoading ? "Loading services..." : "Select a service"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">No service</SelectItem>
-                      {availableServices.length === 0 && !servicesLoading && (
-                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                          No services configured in pricing profile
-                        </div>
-                      )}
-                      {availableServices.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{service.name}</span>
-                            {service.code && (
-                              <span className="text-muted-foreground text-xs">({service.code})</span>
-                            )}
-                            {service.is_billable && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                Billable
-                              </span>
-                            )}
+            {activityType === "task" ? (
+              <FormField
+                control={form.control}
+                name="case_service_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Link className="h-4 w-4" />
+                      Service (Optional)
+                    </FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || "none"}
+                      disabled={servicesLoading}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={servicesLoading ? "Loading services..." : "Select a service"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No service</SelectItem>
+                        {availableServices.length === 0 && !servicesLoading && (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                            No services configured in pricing profile
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Link this {activityType} to a service for budget tracking and invoicing.
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                        )}
+                        {availableServices.map((service) => (
+                          <SelectItem key={service.id} value={service.id}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{service.name}</span>
+                              {service.code && (
+                                <span className="text-muted-foreground text-xs">({service.code})</span>
+                              )}
+                              {service.is_billable && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                  Billable
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Link this task to a service for budget tracking and invoicing.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              /* Events: Show info that costs are derived from updates */
+              <div className="rounded-lg border border-muted bg-muted/30 p-3">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Link className="h-4 w-4 shrink-0" />
+                  <span>Costs shown are derived from updates. Create an update after this event to log time and expenses.</span>
+                </p>
+              </div>
+            )}
 
             {activityType === "task" ? (
               <FormField

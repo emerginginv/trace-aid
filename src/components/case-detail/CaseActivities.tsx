@@ -615,6 +615,21 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+              {/* Info banner about event billing */}
+              <div className="rounded-md border border-muted bg-muted/30 px-3 py-2 mt-2">
+                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Link className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    Costs are derived from updates.{" "}
+                    <a 
+                      href={`/cases/${caseId}?tab=updates`}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      View related updates →
+                    </a>
+                  </span>
+                </p>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Event filters */}
