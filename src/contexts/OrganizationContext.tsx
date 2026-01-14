@@ -176,9 +176,13 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
           return;
         }
         
-        // Try to restore from localStorage, or use first org
+        // Try to restore from localStorage, prefer Emerging Investigations, or use first org
         const storedOrgId = localStorage.getItem(SELECTED_ORG_KEY);
-        const selectedOrg = allOrgs.find(org => org.id === storedOrgId) || allOrgs[0];
+        const EMERGING_ORG_ID = 'd76c9a66-790e-445a-a090-817229943cf5';
+        const selectedOrg = 
+          allOrgs.find(org => org.id === storedOrgId) || 
+          allOrgs.find(org => org.id === EMERGING_ORG_ID) ||
+          allOrgs[0];
         
         setOrganization(selectedOrg);
         localStorage.setItem(SELECTED_ORG_KEY, selectedOrg.id);
