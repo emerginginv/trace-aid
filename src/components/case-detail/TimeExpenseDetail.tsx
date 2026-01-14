@@ -108,6 +108,11 @@ interface ExpenseEntry {
   service_name?: string;
   service_code?: string;
   invoice_id?: string | null;
+  // Billable and invoiced state fields
+  billable: boolean;
+  billable_source: "service" | "manual" | "default";
+  invoiced: boolean;
+  invoice_number?: string | null;
 }
 
 interface ServiceBreakdown {
@@ -289,14 +294,14 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
         .from("case_finances")
         .select(`
           id, date, description, category, quantity, unit_price, amount, status,
-          expense_user_id, case_service_instance_id, invoice_id
+          expense_user_id, case_service_instance_id, invoice_id, invoiced, invoice_number
         `)
         .eq("case_id", caseId)
         .eq("organization_id", orgId!)
         .eq("finance_type", "expense")
         .order("date", { ascending: false });
 
-      const expensesWithDetails = await enrichExpenseData(expenseData || [], instances || []);
+      const expensesWithDetails = await enrichExpenseData(expenseData || [], instances || [], pricingRules);
       setExpenses(expensesWithDetails);
 
     } catch (error) {
@@ -442,7 +447,8 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
 
   const enrichExpenseData = async (
     entries: any[],
-    instances: ServiceInstance[]
+    instances: ServiceInstance[],
+    pricingRules: PricingRule[]
   ): Promise<ExpenseEntry[]> => {
     // Get user info
     const userIds = entries
@@ -461,30 +467,60 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
       );
     }
 
-    // Create instance map for service info
+    // Create instance map for service info and billability
     const instanceMap = new Map(
       instances.map(inst => [
         inst.id,
         {
           name: inst.case_services?.name || "Unknown Service",
-          code: inst.case_services?.code || null
+          code: inst.case_services?.code || null,
+          billable: inst.billable ?? inst.case_services?.is_billable ?? true,
+          serviceId: inst.case_service_id
         }
       ])
     );
 
-    return entries.map(entry => ({
-      ...entry,
-      expense_user_name: entry.expense_user_id 
-        ? userMap.get(entry.expense_user_id) 
-        : undefined,
-      service_name: entry.case_service_instance_id 
-        ? instanceMap.get(entry.case_service_instance_id)?.name 
-        : undefined,
-      service_code: entry.case_service_instance_id 
-        ? instanceMap.get(entry.case_service_instance_id)?.code 
-        : undefined,
-      status: entry.invoice_id ? "invoiced" : (entry.status || "pending"),
-    }));
+    // Check pricing rules for billability override
+    const pricingBillableMap = new Map(
+      pricingRules.filter(r => r.is_billable !== null)
+        .map(r => [r.case_service_id, r.is_billable])
+    );
+
+    return entries.map(entry => {
+      const instanceInfo = entry.case_service_instance_id 
+        ? instanceMap.get(entry.case_service_instance_id)
+        : null;
+
+      // Determine billability with waterfall logic
+      let billable = true; // Default to billable
+      let billableSource: "service" | "manual" | "default" = "default";
+
+      if (instanceInfo) {
+        // Check pricing profile first
+        const pricingBillable = pricingBillableMap.get(instanceInfo.serviceId);
+        if (pricingBillable !== undefined) {
+          billable = pricingBillable;
+          billableSource = "service";
+        } else {
+          billable = instanceInfo.billable;
+          billableSource = "service";
+        }
+      }
+
+      return {
+        ...entry,
+        expense_user_name: entry.expense_user_id 
+          ? userMap.get(entry.expense_user_id) 
+          : undefined,
+        service_name: instanceInfo?.name,
+        service_code: instanceInfo?.code,
+        billable,
+        billable_source: billableSource,
+        invoiced: !!entry.invoice_id,
+        invoice_number: entry.invoice_number || null,
+        status: entry.invoice_id ? "invoiced" : (entry.status || "pending"),
+      };
+    });
   };
 
   // Calculate totals
@@ -632,17 +668,20 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
       { key: "category", label: "Category" },
       { key: "description", label: "Description" },
       { key: "expense_user_name", label: "Submitted By" },
-      { key: "quantity", label: "Qty" },
-      { key: "unit_price", label: "Unit Price" },
       { key: "amount", label: "Amount" },
-      { key: "status", label: "Status" },
+      { key: "billable", label: "Billable" },
+      { key: "invoiced", label: "Invoiced" },
+      { key: "invoice_number", label: "Invoice #" },
+      { key: "service_name", label: "Service" },
     ];
     exportToCSV(
       filteredExpenses.map(e => ({
         ...e,
         date: format(new Date(e.date), "yyyy-MM-dd"),
-        unit_price: e.unit_price ? `$${e.unit_price.toFixed(2)}` : "",
         amount: `$${Number(e.amount).toFixed(2)}`,
+        billable: e.billable ? "Yes" : "No",
+        invoiced: e.invoiced ? "Yes" : "No",
+        invoice_number: e.invoice_number || "",
       })),
       columns,
       `expenses-${caseId}`
@@ -874,10 +913,9 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                     <TableHead>Category</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Submitted By</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Billable</TableHead>
+                    <TableHead>Invoiced</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -897,23 +935,40 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                       </TableCell>
                       <TableCell className="max-w-xs truncate">{entry.description}</TableCell>
                       <TableCell>{entry.expense_user_name || "—"}</TableCell>
-                      <TableCell className="text-right">{entry.quantity || "—"}</TableCell>
-                      <TableCell className="text-right">
-                        {entry.unit_price ? `$${entry.unit_price.toFixed(2)}` : "—"}
-                      </TableCell>
                       <TableCell className="text-right font-medium">
                         ${Number(entry.amount).toFixed(2)}
                       </TableCell>
-                      <TableCell>{getStatusBadge(entry.status)}</TableCell>
+                      <TableCell>
+                        {entry.billable ? (
+                          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                            <DollarSign className="h-3 w-3 mr-1" />
+                            Billable
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Non-billable
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {entry.invoiced ? (
+                          <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                            <FileText className="h-3 w-3 mr-1" />
+                            {entry.invoice_number || "Invoiced"}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">Not invoiced</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                   {/* Subtotal Row */}
                   <TableRow className="bg-muted/50 font-medium">
-                    <TableCell colSpan={6}>Subtotal</TableCell>
+                    <TableCell colSpan={4}>Subtotal</TableCell>
                     <TableCell className="text-right">
                       ${filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0).toFixed(2)}
                     </TableCell>
-                    <TableCell />
+                    <TableCell colSpan={2} />
                   </TableRow>
                 </TableBody>
               </Table>
