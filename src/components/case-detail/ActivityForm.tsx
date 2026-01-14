@@ -463,10 +463,13 @@ export function ActivityForm({
       });
 
       // Check billing eligibility if activity was completed and has a service instance
+      // NOTE: Billing moved to Updates - Events no longer trigger billing prompts
       const isCompleted = values.status === "done" || values.status === "completed";
       const activityIdToCheck = editingActivity?.id || insertedActivity?.id;
       
-      if (isCompleted && caseServiceInstanceId && activityIdToCheck) {
+      // Only trigger billing prompt for TASKS, not events
+      // Events (activity_type = 'event') billing is handled via Updates workflow
+      if (isCompleted && caseServiceInstanceId && activityIdToCheck && activityType === "task") {
         const eligibility = await evaluateBillingEligibility({
           activityId: activityIdToCheck,
           caseServiceInstanceId: caseServiceInstanceId,

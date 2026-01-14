@@ -228,7 +228,9 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
       });
 
       // Check billing eligibility if completing and has service instance
-      if (isCompleting && activity.case_service_instance_id) {
+      // NOTE: Billing moved to Updates - Events no longer trigger billing prompts
+      // Only trigger billing prompt for TASKS, not events
+      if (isCompleting && activity.case_service_instance_id && type === "task") {
         const eligibility = await evaluateBillingEligibility({
           activityId: activity.id,
           caseServiceInstanceId: activity.case_service_instance_id,
@@ -239,6 +241,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
           setBillingPromptOpen(true);
         }
       }
+      // Events (type === "event") billing is now handled via the Updates workflow
     } catch (error) {
       console.error('Error updating activity:', error);
       toast({
