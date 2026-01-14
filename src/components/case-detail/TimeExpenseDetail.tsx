@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, DollarSign, Receipt, TrendingUp, Search, Download, FileText, Link } from "lucide-react";
+import { Clock, DollarSign, Receipt, TrendingUp, Search, Download, FileText, Link, CheckCircle, Lock } from "lucide-react";
 import { format, differenceInMinutes } from "date-fns";
 import { exportToCSV, ExportColumn } from "@/lib/exportUtils";
 import { cn } from "@/lib/utils";
@@ -85,6 +85,7 @@ interface DerivedTimeEntry {
   service_code: string | null;
   service_instance_id: string;
   pricing_source: string;
+  pricing_model: string;
   invoice_line_item_id?: string | null;
 }
 
@@ -106,13 +107,17 @@ interface ExpenseEntry {
 }
 
 interface ServiceBreakdown {
-  serviceId: string;
+  serviceInstanceId: string;
   serviceName: string;
   serviceCode: string | null;
-  totalHours: number;
-  timeAmount: number;
-  expenseAmount: number;
-  combinedTotal: number;
+  status: string;
+  pricingModel: string;
+  totalTime: number;
+  totalExpenses: number;
+  billableAmount: number;
+  isBilled: boolean;
+  billedAt: string | null;
+  isLocked: boolean;
 }
 
 interface TimeExpenseDetailProps {
@@ -354,6 +359,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
             service_code: service.code,
             service_instance_id: instance.id,
             pricing_source: status === "billed" ? "invoice" : pricing.source,
+            pricing_model: status === "billed" && invoiceItem ? invoiceItem.pricing_model : pricing.pricingModel,
             invoice_line_item_id: invoiceItem?.id,
           });
         }
@@ -386,6 +392,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
           service_code: service.code,
           service_instance_id: instance.id,
           pricing_source: status === "billed" ? "invoice" : pricing.source,
+          pricing_model: status === "billed" && invoiceItem ? invoiceItem.pricing_model : pricing.pricingModel,
           invoice_line_item_id: invoiceItem?.id,
         });
       } else if (invoiceItem) {
@@ -402,6 +409,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
           service_code: invoiceItem.service_code,
           service_instance_id: instance.id,
           pricing_source: "invoice",
+          pricing_model: invoiceItem.pricing_model,
           invoice_line_item_id: invoiceItem.id,
         });
       }
@@ -468,43 +476,65 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
   const calculateServiceBreakdown = (): ServiceBreakdown[] => {
     const breakdown = new Map<string, ServiceBreakdown>();
 
-    // Process time entries
+    // Process time entries - group by service instance
     timeEntries.forEach(entry => {
       const key = entry.service_instance_id || "unassigned";
-      const existing = breakdown.get(key) || {
-        serviceId: key,
-        serviceName: entry.service_name || "Unassigned",
-        serviceCode: entry.service_code || null,
-        totalHours: 0,
-        timeAmount: 0,
-        expenseAmount: 0,
-        combinedTotal: 0,
-      };
-      existing.totalHours += entry.hours;
-      existing.timeAmount += entry.amount;
-      existing.combinedTotal = existing.timeAmount + existing.expenseAmount;
-      breakdown.set(key, existing);
+      const existing = breakdown.get(key);
+      
+      if (existing) {
+        existing.totalTime += entry.hours;
+        existing.billableAmount += entry.amount;
+        // Update billed status if any entry is billed
+        if (entry.status === "billed") {
+          existing.isBilled = true;
+        }
+      } else {
+        breakdown.set(key, {
+          serviceInstanceId: key,
+          serviceName: entry.service_name || "Unassigned",
+          serviceCode: entry.service_code || null,
+          status: entry.status === "billed" ? "completed" : "in_progress",
+          pricingModel: entry.pricing_model || "hourly",
+          totalTime: entry.hours,
+          totalExpenses: 0,
+          billableAmount: entry.amount,
+          isBilled: entry.status === "billed",
+          billedAt: null,
+          isLocked: entry.status === "pending",
+        });
+      }
     });
 
-    // Process expenses
+    // Process expenses - add to existing or create new
     expenses.forEach(entry => {
       const key = entry.case_service_instance_id || "unassigned";
-      const existing = breakdown.get(key) || {
-        serviceId: key,
-        serviceName: entry.service_name || "Unassigned",
-        serviceCode: entry.service_code || null,
-        totalHours: 0,
-        timeAmount: 0,
-        expenseAmount: 0,
-        combinedTotal: 0,
-      };
-      existing.expenseAmount += Number(entry.amount);
-      existing.combinedTotal = existing.timeAmount + existing.expenseAmount;
-      breakdown.set(key, existing);
+      const existing = breakdown.get(key);
+      
+      if (existing) {
+        existing.totalExpenses += Number(entry.amount);
+        existing.billableAmount += Number(entry.amount);
+        if (entry.status === "invoiced") {
+          existing.isBilled = true;
+        }
+      } else {
+        breakdown.set(key, {
+          serviceInstanceId: key,
+          serviceName: entry.service_name || "Unassigned",
+          serviceCode: entry.service_code || null,
+          status: entry.status === "invoiced" ? "completed" : "in_progress",
+          pricingModel: "expense",
+          totalTime: 0,
+          totalExpenses: Number(entry.amount),
+          billableAmount: Number(entry.amount),
+          isBilled: entry.status === "invoiced",
+          billedAt: null,
+          isLocked: false,
+        });
+      }
     });
 
     return Array.from(breakdown.values())
-      .sort((a, b) => b.combinedTotal - a.combinedTotal);
+      .sort((a, b) => b.billableAmount - a.billableAmount);
   };
 
   const serviceBreakdown = calculateServiceBreakdown();
@@ -861,18 +891,20 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                 <TableHeader>
                   <TableRow>
                     <TableHead>Service</TableHead>
-                    <TableHead className="text-right">Total Hours</TableHead>
-                    <TableHead className="text-right">Time Amount</TableHead>
-                    <TableHead className="text-right">Expense Amount</TableHead>
-                    <TableHead className="text-right">Combined Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Pricing Model</TableHead>
+                    <TableHead className="text-right">Total Time</TableHead>
+                    <TableHead className="text-right">Total Expenses</TableHead>
+                    <TableHead className="text-right">Billable Amount</TableHead>
+                    <TableHead>Billed</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {serviceBreakdown.map((service) => (
-                    <TableRow key={service.serviceId}>
+                    <TableRow key={service.serviceInstanceId}>
                       <TableCell>
                         <div>
-                          <span>{service.serviceName}</span>
+                          <span className="font-medium">{service.serviceName}</span>
                           {service.serviceCode && (
                             <span className="text-xs text-muted-foreground ml-1">
                               ({service.serviceCode})
@@ -880,21 +912,58 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{service.totalHours.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${service.timeAmount.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${service.expenseAmount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "capitalize",
+                            service.status === "completed" && "bg-green-500/10 text-green-600 border-green-500/20",
+                            service.status === "in_progress" && "bg-amber-500/10 text-amber-600 border-amber-500/20",
+                            service.status === "scheduled" && "bg-blue-500/10 text-blue-600 border-blue-500/20",
+                            service.status === "unscheduled" && "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {service.status.replace(/_/g, " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="capitalize">
+                          {service.pricingModel.replace(/_/g, " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {service.totalTime > 0 ? `${service.totalTime.toFixed(2)}h` : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {service.totalExpenses > 0 ? `$${service.totalExpenses.toFixed(2)}` : "—"}
+                      </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${service.combinedTotal.toFixed(2)}
+                        ${service.billableAmount.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        {service.isBilled ? (
+                          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Billed
+                          </Badge>
+                        ) : service.isLocked ? (
+                          <Badge variant="outline" className="text-amber-600 border-amber-500/20">
+                            <Lock className="h-3 w-3 mr-1" />
+                            Locked
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
                   {/* Grand Total Row */}
                   <TableRow className="bg-muted/50 font-medium">
-                    <TableCell>Grand Total</TableCell>
-                    <TableCell className="text-right">{totalHours.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">${totalTimeValue.toFixed(2)}</TableCell>
+                    <TableCell colSpan={3}>Grand Total</TableCell>
+                    <TableCell className="text-right">{totalHours.toFixed(2)}h</TableCell>
                     <TableCell className="text-right">${totalExpenses.toFixed(2)}</TableCell>
                     <TableCell className="text-right">${grandTotal.toFixed(2)}</TableCell>
+                    <TableCell />
                   </TableRow>
                 </TableBody>
               </Table>
