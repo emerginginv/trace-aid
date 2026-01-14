@@ -14,6 +14,10 @@ export interface CreateBillingItemParams {
   rate: number;
   pricingProfileId?: string;
   pricingRuleSnapshot?: Record<string, unknown>;
+  // SYSTEM PROMPT 9: New required fields
+  updateId?: string;    // Links billing item to case_updates.id
+  startTime?: string;   // ISO timestamp from confirmation
+  endTime?: string;     // ISO timestamp from confirmation
 }
 
 /**
@@ -61,6 +65,10 @@ export function useBillingItemCreation() {
       rate,
       pricingProfileId,
       pricingRuleSnapshot,
+      // SYSTEM PROMPT 9: New fields
+      updateId,
+      startTime,
+      endTime,
     } = params;
 
     setIsCreating(true);
@@ -107,28 +115,31 @@ export function useBillingItemCreation() {
       const amount = rate * quantity;
 
       // Create billing record in case_finances (pending billing item)
-      // Per SYSTEM PROMPT 8: Create Billing Item with status pending
+      // Per SYSTEM PROMPT 9: Create Billing Item with status pending_review
       const billingDescription = buildBillingDescription(serviceName, pricingModel, quantity, rate);
       
       const { data: billingItem, error: insertError } = await supabase
         .from("case_finances")
         .insert({
-          // Required fields per SYSTEM PROMPT 8
+          // Required fields per SYSTEM PROMPT 9
           case_id: caseId,
-          account_id: accountId || null,                    // SYSTEM PROMPT 8
-          case_service_instance_id: caseServiceInstanceId,  // SYSTEM PROMPT 8
-          activity_id: activityId,
-          billing_type: getBillingType(pricingModel),       // SYSTEM PROMPT 8: time | expense
-          pricing_model: pricingModel,                      // SYSTEM PROMPT 8
+          account_id: accountId || null,                    // SYSTEM PROMPT 9
+          case_service_instance_id: caseServiceInstanceId,  // SYSTEM PROMPT 9
+          activity_id: activityId,                          // SYSTEM PROMPT 9
+          update_id: updateId || null,                      // SYSTEM PROMPT 9: Link to case update
+          billing_type: 'time',                             // SYSTEM PROMPT 9: Always 'time'
+          start_time: startTime || null,                    // SYSTEM PROMPT 9: Confirmed start time
+          end_time: endTime || null,                        // SYSTEM PROMPT 9: Confirmed end time
+          pricing_model: pricingModel,
           quantity: quantity,
           unit_price: rate,                                 // rate
           amount: amount,
-          status: "pending",                                // SYSTEM PROMPT 8: Always pending
+          status: "pending_review",                         // SYSTEM PROMPT 9: Always pending_review
           user_id: user.id,                                 // created_by
           
           // Additional context fields
           organization_id: organizationId,
-          finance_type: getBillingType(pricingModel),
+          finance_type: 'time',                             // Match billing_type per SP9
           description: billingDescription,
           hourly_rate: pricingModel === "hourly" ? rate : null,
           hours: pricingModel === "hourly" ? quantity : null,
@@ -137,10 +148,10 @@ export function useBillingItemCreation() {
           notes: pricingProfileId 
             ? `Pricing Profile: ${pricingProfileId}. ${pricingRuleSnapshot ? JSON.stringify(pricingRuleSnapshot) : ''}`
             : null,
-          // SYSTEM PROMPT 8 Rules:
-          // - Do not approve automatically (status: 'pending')
-          // - Do not add to invoice (invoiced: false is default, invoice_id: null)
-          // - Do not lock activity yet (no locked_at update)
+          // SYSTEM PROMPT 9 Rules:
+          // - Do not approve automatically (status: 'pending_review')
+          // - Do not invoice automatically (invoiced: false is default, invoice_id: null)
+          // - Do not lock the update or activity (no locked_at update)
         })
         .select("id")
         .single();
