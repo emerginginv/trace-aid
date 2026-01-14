@@ -910,7 +910,11 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                 </TableHeader>
                 <TableBody>
                   {filteredTimeEntries.map((entry) => (
-                    <TableRow key={entry.id}>
+                    <TableRow 
+                      key={entry.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/time-entries/${entry.id}`)}
+                    >
                       <TableCell className="whitespace-nowrap">
                         {format(new Date(entry.date), "MMM d, yyyy")}
                       </TableCell>
@@ -1016,7 +1020,11 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                 </TableHeader>
                 <TableBody>
                   {filteredExpenses.map((entry) => (
-                    <TableRow key={entry.id}>
+                    <TableRow 
+                      key={entry.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/expenses/${entry.id}`)}
+                    >
                       <TableCell className="whitespace-nowrap">
                         {format(new Date(entry.date), "MMM d, yyyy")}
                       </TableCell>
