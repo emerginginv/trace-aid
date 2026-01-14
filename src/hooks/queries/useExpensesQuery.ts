@@ -20,9 +20,12 @@ export interface Expense {
   unit_price?: number;
   created_at: string;
   updated_at?: string;
+  // Joined case data
+  case_number?: string;
+  case_title?: string;
 }
 
-export type ExpenseInput = Omit<Expense, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+export type ExpenseInput = Omit<Expense, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'case_number' | 'case_title'>;
 
 interface UseExpensesQueryOptions {
   caseId?: string;
@@ -47,7 +50,13 @@ export function useExpensesQuery(options: UseExpensesQueryOptions = {}) {
 
       let query = supabase
         .from('case_finances')
-        .select('*')
+        .select(`
+          *,
+          cases:case_id (
+            case_number,
+            title
+          )
+        `)
         .eq('organization_id', organization.id)
         .order('date', { ascending: false });
 
@@ -73,7 +82,13 @@ export function useExpensesQuery(options: UseExpensesQueryOptions = {}) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Expense[];
+      
+      // Flatten case data
+      return (data || []).map((item: any) => ({
+        ...item,
+        case_number: item.cases?.case_number,
+        case_title: item.cases?.title,
+      })) as Expense[];
     },
     enabled: enabled && !!organization?.id,
     staleTime: 1000 * 60 * 2,
