@@ -1,3 +1,22 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * InvoiceFromServices Component
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * UPDATED: Services are now DESCRIPTIVE only, not the source of truth for billing.
+ * 
+ * Invoice generation now comes from APPROVED BILLING ITEMS:
+ * 1. Time entries and expenses are created via Updates
+ * 2. Billing items are approved
+ * 3. Invoices are generated from approved billing items
+ * 
+ * This component shows:
+ * - Approved billing items ready for invoicing (source of truth)
+ * - Service context for reference (descriptive only)
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,10 +25,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileText, DollarSign, Clock, Package, AlertCircle } from "lucide-react";
-import { CreateBillingItemButton } from "@/components/billing/CreateBillingItemButton";
+import { FileText, DollarSign, Clock, Package, AlertCircle, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
-import { useBillableServiceInstances, useGenerateInvoiceFromServices } from "@/hooks/useInvoiceGeneration";
+import { useApprovedBillingItems, useGenerateInvoiceFromBillingItems } from "@/hooks/useInvoiceGeneration";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -20,12 +38,12 @@ interface InvoiceFromServicesProps {
 }
 
 export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesProps) {
-  const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [retainerToApply, setRetainerToApply] = useState(0);
   
   const { organization } = useOrganization();
-  const { data: billableServices, isLoading, error, refetch: refetchServices } = useBillableServiceInstances(caseId);
-  const generateInvoice = useGenerateInvoiceFromServices();
+  const { data: approvedItems, isLoading, error, refetch } = useApprovedBillingItems(caseId);
+  const generateInvoice = useGenerateInvoiceFromBillingItems();
   
   // Fetch retainer balance
   const { data: retainerBalance = 0 } = useQuery({
@@ -54,57 +72,58 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
     enabled: !!caseId,
   });
   
-  const toggleService = (serviceId: string) => {
-    const newSelected = new Set(selectedServices);
-    if (newSelected.has(serviceId)) {
-      newSelected.delete(serviceId);
+  const toggleItem = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
     } else {
-      newSelected.add(serviceId);
+      newSelected.add(itemId);
     }
-    setSelectedServices(newSelected);
+    setSelectedItems(newSelected);
   };
   
   const selectAll = () => {
-    if (billableServices) {
-      setSelectedServices(new Set(billableServices.map(s => s.id)));
+    if (approvedItems) {
+      setSelectedItems(new Set(approvedItems.map(s => s.id)));
     }
   };
   
   const clearSelection = () => {
-    setSelectedServices(new Set());
+    setSelectedItems(new Set());
   };
   
   const selectedTotal = useMemo(() => {
-    if (!billableServices) return 0;
-    return billableServices
-      .filter(s => selectedServices.has(s.id))
-      .reduce((sum, s) => sum + s.estimated_amount, 0);
-  }, [billableServices, selectedServices]);
+    if (!approvedItems) return 0;
+    return approvedItems
+      .filter(item => selectedItems.has(item.id))
+      .reduce((sum, item) => sum + Number(item.amount), 0);
+  }, [approvedItems, selectedItems]);
   
   const balanceDue = selectedTotal - retainerToApply;
   
   const handleGenerateInvoice = async () => {
-    if (selectedServices.size === 0) return;
+    if (selectedItems.size === 0) return;
     
     await generateInvoice.mutateAsync({
       caseId,
-      serviceInstanceIds: Array.from(selectedServices),
+      billingItemIds: Array.from(selectedItems),
       applyRetainer: retainerToApply,
     });
     
-    setSelectedServices(new Set());
+    setSelectedItems(new Set());
     setRetainerToApply(0);
+    refetch();
     onSuccess?.();
   };
   
-  const getPricingModelBadge = (model: string) => {
-    const variants: Record<string, "default" | "secondary" | "outline"> = {
-      hourly: "default",
-      flat: "secondary",
-      per_unit: "outline",
-      retainer: "secondary",
+  const getFinanceTypeBadge = (type: string) => {
+    const config: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+      time: { label: "Time", variant: "default" },
+      expense: { label: "Expense", variant: "secondary" },
+      billing_item: { label: "Billing", variant: "outline" },
     };
-    return <Badge variant={variants[model] || "default"}>{model}</Badge>;
+    const { label, variant } = config[type] || { label: type, variant: "outline" };
+    return <Badge variant={variant}>{label}</Badge>;
   };
   
   if (isLoading) {
@@ -120,7 +139,7 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Failed to load billable services</AlertDescription>
+        <AlertDescription>Failed to load approved billing items</AlertDescription>
       </Alert>
     );
   }
@@ -129,20 +148,21 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Generate Invoice from Services</h2>
+          <h2 className="text-2xl font-bold">Generate Invoice</h2>
           <p className="text-muted-foreground">
-            Select completed service instances to include in the invoice
+            Select approved billing items to include in the invoice
           </p>
         </div>
       </div>
       
-      {!billableServices || billableServices.length === 0 ? (
+      {!approvedItems || approvedItems.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground font-medium">No billable services available</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Services must be marked as completed and billable to appear here
+            <CheckCircle2 className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground font-medium">No approved billing items</p>
+            <p className="text-sm text-muted-foreground mt-2 text-center max-w-md">
+              Billing items must be approved before they can be invoiced.
+              Create billing items from Updates linked to events, then approve them.
             </p>
           </CardContent>
         </Card>
@@ -151,7 +171,7 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Completed Services</CardTitle>
+                <CardTitle className="text-lg">Approved Billing Items</CardTitle>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={selectAll}>
                     Select All
@@ -162,7 +182,7 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
                 </div>
               </div>
               <CardDescription>
-                {billableServices.length} service{billableServices.length !== 1 ? 's' : ''} ready for billing
+                {approvedItems.length} approved item{approvedItems.length !== 1 ? 's' : ''} ready for invoicing
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -171,77 +191,66 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
                   <TableRow>
                     <TableHead className="w-12">
                       <Checkbox
-                        checked={selectedServices.size === billableServices.length && billableServices.length > 0}
+                        checked={selectedItems.size === approvedItems.length && approvedItems.length > 0}
                         onCheckedChange={(checked) => {
                           if (checked) selectAll();
                           else clearSelection();
                         }}
                       />
                     </TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead>Service</TableHead>
-                    <TableHead>Pricing</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead className="text-center">Qty</TableHead>
                     <TableHead className="text-right">Rate</TableHead>
-                    <TableHead className="text-center">Activities</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-center">Billing</TableHead>
+                    <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {billableServices.map((service) => (
+                  {approvedItems.map((item) => (
                     <TableRow 
-                      key={service.id}
+                      key={item.id}
                       className="cursor-pointer hover:bg-accent/50"
-                      onClick={() => toggleService(service.id)}
+                      onClick={() => toggleItem(item.id)}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
-                          checked={selectedServices.has(service.id)}
-                          onCheckedChange={() => toggleService(service.id)}
+                          checked={selectedItems.has(item.id)}
+                          onCheckedChange={() => toggleItem(item.id)}
                         />
                       </TableCell>
                       <TableCell>
+                        <div className="max-w-xs truncate">
+                          {item.description}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div>
-                          <div className="font-medium">{service.service_name}</div>
-                          {service.service_code && (
-                            <div className="text-xs text-muted-foreground">{service.service_code}</div>
-                          )}
-                          {service.notes && (
-                            <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                              {service.notes}
+                          <div className="font-medium text-sm">
+                            {item.service_name || '—'}
+                          </div>
+                          {item.service_code && (
+                            <div className="text-xs text-muted-foreground">
+                              {item.service_code}
                             </div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {getPricingModelBadge(service.pricing_model)}
+                        {getFinanceTypeBadge(item.finance_type)}
                       </TableCell>
                       <TableCell className="text-center">
-                        {service.quantity_actual || service.quantity_estimated || 1}
+                        {item.quantity || 1}
                       </TableCell>
                       <TableCell className="text-right">
-                        ${Number(service.rate).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline" className="gap-1">
-                          <Clock className="h-3 w-3" />
-                          {service.activity_count}
-                        </Badge>
+                        ${Number(item.unit_price || 0).toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${Number(service.estimated_amount).toFixed(2)}
+                        ${Number(item.amount).toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-center">
-                        {service.activity_count > 0 && organization?.id && (
-                          <CreateBillingItemButton
-                            activityId={service.id}
-                            organizationId={organization.id}
-                            variant="ghost"
-                            size="sm"
-                            className="h-8"
-                            onSuccess={() => refetchServices()}
-                          />
-                        )}
+                      <TableCell className="text-muted-foreground">
+                        {format(new Date(item.date), 'MMM d, yyyy')}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -250,7 +259,7 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
             </CardContent>
           </Card>
           
-          {selectedServices.size > 0 && (
+          {selectedItems.size > 0 && (
             <Card className="border-primary">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -292,7 +301,7 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
                 
                 <div className="space-y-2 pt-2 border-t">
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal ({selectedServices.size} service{selectedServices.size !== 1 ? 's' : ''}):</span>
+                    <span>Subtotal ({selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''}):</span>
                     <span className="font-medium">${selectedTotal.toFixed(2)}</span>
                   </div>
                   {retainerToApply > 0 && (
@@ -311,7 +320,7 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
                   <Button 
                     onClick={handleGenerateInvoice} 
                     size="lg"
-                    disabled={generateInvoice.isPending || selectedServices.size === 0}
+                    disabled={generateInvoice.isPending || selectedItems.size === 0}
                     className="gap-2"
                   >
                     <FileText className="h-4 w-4" />
@@ -327,10 +336,10 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
             <AlertDescription>
               <strong>Invoice Generation Rules:</strong>
               <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                <li>Invoices summarize completed work — they do not calculate quantities</li>
-                <li>Pricing is frozen at the time of invoice generation</li>
-                <li>Each service instance can only be billed once</li>
-                <li>Work records are never modified by invoice generation</li>
+                <li>Invoices are generated from <strong>approved billing items only</strong></li>
+                <li>Services provide context but are not the source of billing data</li>
+                <li>Pricing is frozen at billing item approval time</li>
+                <li>Each billing item can only be invoiced once</li>
               </ul>
             </AlertDescription>
           </Alert>
