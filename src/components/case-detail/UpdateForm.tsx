@@ -343,12 +343,23 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       // ═══════════════════════════════════════════════════════════════════════════
       // SYSTEM PROMPT 3 & 4: Check billing eligibility only if update is linked to an activity
       // If linked, evaluate billing eligibility; if eligible, show billing prompt
-      // If not linked or not eligible, complete normally without prompt
+      // 4. If any condition fails:
+      //    a. Log the failure reason internally (console.log)
+      //    b. Complete update submission normally without billing prompt
       const linkedActivityId = values.linked_activity_id;
       
       if (linkedActivityId && !editingUpdate) {
         // Only check billing for new updates (not edits) with linked activities
         const eligibilityResult = await evaluateBillingEligibility({ linkedActivityId });
+        
+        // Log failure reasons internally when not eligible
+        if (!eligibilityResult.isEligible) {
+          console.log('[Billing Eligibility] Not eligible:', {
+            activityId: linkedActivityId,
+            reason: eligibilityResult.reason,
+            activityAlreadyBilled: eligibilityResult.activityAlreadyBilled,
+          });
+        }
         
         if (eligibilityResult.isEligible) {
           // SYSTEM PROMPT 11: Log billing prompt shown audit event
