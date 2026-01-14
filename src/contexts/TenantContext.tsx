@@ -17,6 +17,21 @@ interface TenantContextType {
 const TenantContext = React.createContext<TenantContextType | undefined>(undefined);
 
 /**
+ * Gets a development subdomain override from URL parameter.
+ * Only works in non-production environments.
+ */
+function getDevSubdomainOverride(): string | null {
+  const hostname = window.location.hostname;
+  // Only allow in non-production environments
+  if (TENANT_ENABLED_DOMAINS.some(d => hostname.endsWith(d))) {
+    return null;
+  }
+  
+  const params = new URLSearchParams(window.location.search);
+  return params.get('org');
+}
+
+/**
  * Detects the tenant subdomain from the current hostname.
  */
 function detectTenantSubdomain(): string | null {
@@ -81,8 +96,15 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     } else {
       // Standard subdomain detection
       const detected = detectTenantSubdomain();
-      console.log("Tenant subdomain:", detected);
-      setTenantSubdomain(detected);
+      const devOverride = getDevSubdomainOverride();
+      
+      if (devOverride) {
+        console.log("[TenantContext] Development subdomain override:", devOverride);
+        setTenantSubdomain(devOverride);
+      } else {
+        console.log("Tenant subdomain:", detected);
+        setTenantSubdomain(detected);
+      }
     }
   }, []);
 
