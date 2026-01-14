@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,6 +61,7 @@ const COLUMNS: ColumnDefinition[] = [
 const TimeEntries = () => {
   useSetBreadcrumbs([{ label: "Time Entries" }]);
   
+  const navigate = useNavigate();
   const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
@@ -724,7 +726,11 @@ const TimeEntries = () => {
                 </TableRow>
               ) : (
                 sortedTimeEntries.map((entry) => (
-                  <TableRow key={entry.id}>
+                  <TableRow 
+                    key={entry.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/time-entries/${entry.id}`)}
+                  >
                     {isVisible("select") && (
                       <TableCell>
                         <Checkbox
