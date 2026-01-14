@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useCasePricingProfile } from "@/hooks/useCasePricingProfile";
 import { FinancesTabSkeleton, ExpensesTabSkeleton, TimeTabSkeleton, InvoicesTabSkeleton, CreateInvoiceTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +73,7 @@ const TIME_COLUMNS: ColumnDefinition[] = [
 
 export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
   const { organization } = useOrganization();
+  const { profileName, source: pricingSource, isLoading: pricingLoading } = useCasePricingProfile(caseId);
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const [finances, setFinances] = useState<Finance[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -531,6 +533,23 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
             <div>
               <h2 className="text-2xl font-bold">Finances</h2>
               <p className="text-muted-foreground">Retainers, expenses, and invoices</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Pricing Profile:{" "}
+                {pricingLoading ? (
+                  <span className="text-xs">Loading...</span>
+                ) : (
+                  <>
+                    <span className="font-medium">{profileName || "Not Configured"}</span>
+                    {pricingSource !== "not_configured" && (
+                      <span className="text-xs ml-1">
+                        ({pricingSource === "case" ? "Case Override" : 
+                          pricingSource === "account" ? "Account Default" : 
+                          "Organization Default"})
+                      </span>
+                    )}
+                  </>
+                )}
+              </p>
             </div>
             <div className="flex gap-2">
               <DropdownMenu>
