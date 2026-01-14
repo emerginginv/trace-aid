@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { SUBJECT_CATEGORIES, SubjectCategoryValue } from "@/hooks/useSubjectTypes";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Pencil, Trash2, GripVertical, FolderKanban, Clock, DollarSign, Ban, AlertCircle, Users, Car, MapPin, Package, Building2 } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, FolderKanban, Clock, DollarSign, Ban, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -39,8 +39,6 @@ interface CaseType {
   default_due_days: number | null;
   due_date_required: boolean;
   allowed_service_ids: string[];
-  allowed_subject_types: string[]; // These are now hardcoded category values
-  default_subject_type: string | null;
   allow_on_public_form: boolean;
 }
 
@@ -58,14 +56,6 @@ const BUDGET_STRATEGIES = [
   { value: 'disabled', label: 'Disabled', icon: <Ban className="h-3 w-3" /> },
 ];
 
-// Icons for subject categories
-const CATEGORY_ICONS: Record<SubjectCategoryValue, React.ElementType> = {
-  person: Users,
-  vehicle: Car,
-  location: MapPin,
-  item: Package,
-  business: Building2,
-};
 
 const DEFAULT_COLORS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#6366f1', '#ef4444', '#22c55e', '#06b6d4', '#f97316'
@@ -158,8 +148,6 @@ export function CaseTypesTab() {
     default_due_days: string;
     due_date_required: boolean;
     allowed_service_ids: string[];
-    allowed_subject_types: string[];
-    default_subject_type: string;
     allow_on_public_form: boolean;
   }>({
     name: '',
@@ -175,8 +163,6 @@ export function CaseTypesTab() {
     default_due_days: '',
     due_date_required: false,
     allowed_service_ids: [] as string[],
-    allowed_subject_types: [] as string[],
-    default_subject_type: '',
     allow_on_public_form: true,
   });
 
@@ -276,8 +262,6 @@ export function CaseTypesTab() {
       default_due_days: '',
       due_date_required: false,
       allowed_service_ids: [],
-      allowed_subject_types: [],
-      default_subject_type: '',
       allow_on_public_form: true,
     });
     setDialogOpen(true);
@@ -299,8 +283,6 @@ export function CaseTypesTab() {
       default_due_days: caseType.default_due_days?.toString() || '',
       due_date_required: caseType.due_date_required,
       allowed_service_ids: caseType.allowed_service_ids || [],
-      allowed_subject_types: caseType.allowed_subject_types || [],
-      default_subject_type: caseType.default_subject_type || '',
       allow_on_public_form: caseType.allow_on_public_form,
     });
     setDialogOpen(true);
@@ -333,8 +315,6 @@ export function CaseTypesTab() {
         default_due_days: formData.default_due_days ? parseInt(formData.default_due_days) : null,
         due_date_required: formData.due_date_required,
         allowed_service_ids: formData.allowed_service_ids,
-        allowed_subject_types: formData.allowed_subject_types,
-        default_subject_type: formData.default_subject_type || null,
         allow_on_public_form: formData.allow_on_public_form,
       };
 
@@ -399,14 +379,6 @@ export function CaseTypesTab() {
     }));
   };
 
-  const toggleSubjectType = (subjectType: string) => {
-    setFormData(prev => ({
-      ...prev,
-      allowed_subject_types: prev.allowed_subject_types.includes(subjectType)
-        ? prev.allowed_subject_types.filter(st => st !== subjectType)
-        : [...prev.allowed_subject_types, subjectType]
-    }));
-  };
 
   if (loading) {
     return (
@@ -692,63 +664,6 @@ export function CaseTypesTab() {
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Subject Categories */}
-              <AccordionItem value="subjects" className="border rounded-lg px-4">
-                <AccordionTrigger className="hover:no-underline">
-                  Subject Categories ({formData.allowed_subject_types.length} selected)
-                </AccordionTrigger>
-                <AccordionContent className="space-y-4 pt-2">
-                  <p className="text-sm text-muted-foreground">
-                    Select which subject categories are allowed for this case type. Leave empty to allow all.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {SUBJECT_CATEGORIES.map(category => {
-                      const IconComponent = CATEGORY_ICONS[category.value];
-                      return (
-                        <div key={category.value} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`category-${category.value}`}
-                            checked={formData.allowed_subject_types.includes(category.value)}
-                            onCheckedChange={() => toggleSubjectType(category.value)}
-                          />
-                          <Label htmlFor={`category-${category.value}`} className="font-normal cursor-pointer flex items-center gap-2">
-                            <IconComponent className="h-4 w-4 text-muted-foreground" />
-                            {category.label}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {formData.allowed_subject_types.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Default Subject Category</Label>
-                      <Select
-                        value={formData.default_subject_type}
-                        onValueChange={value => setFormData(prev => ({ ...prev, default_subject_type: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select default..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formData.allowed_subject_types.map(categoryValue => {
-                            const category = SUBJECT_CATEGORIES.find(c => c.value === categoryValue);
-                            const IconComponent = category ? CATEGORY_ICONS[category.value] : null;
-                            return (
-                              <SelectItem key={categoryValue} value={categoryValue}>
-                                <span className="flex items-center gap-2">
-                                  {IconComponent && <IconComponent className="h-4 w-4" />}
-                                  {category?.label || categoryValue}
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
 
               {/* Options */}
               <AccordionItem value="options" className="border rounded-lg px-4">
