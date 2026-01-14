@@ -647,7 +647,7 @@ const CaseDetail = () => {
         </div>
         
         {/* Status + Actions - break under title until lg, then sit to the right */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap pl-9 xl:pl-0 w-full xl:w-auto xl:ml-auto">
+        <div className="flex items-center gap-2 shrink-0 pl-9 xl:pl-0 xl:ml-auto">
           {/* Status Dropdown */}
           {!isVendor && (
             <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
