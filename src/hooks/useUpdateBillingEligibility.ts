@@ -1,3 +1,22 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * SYSTEM PROMPT 12 COMPLIANCE: NON-BILLING RULE FOR GENERAL UPDATES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Updates that are NOT linked to a task or event must:
+ * - Never display billing prompts
+ * - Never request time confirmation
+ * - Never create billing items
+ * - Remain narrative-only records
+ * 
+ * IMPLEMENTATION (GATE 1 - lines 46-54):
+ * → If linkedActivityId is null/undefined, immediately return isEligible: false
+ * → This prevents any downstream billing logic from executing
+ * → UpdateForm.tsx skips evaluation entirely if no linked activity
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBillingEligibility, BillingEligibilityResult } from "./useBillingEligibility";
