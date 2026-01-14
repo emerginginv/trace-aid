@@ -19,6 +19,7 @@ interface SubjectDrawerProps {
   organizationId: string;
   onSuccess: () => void;
   readOnly?: boolean;
+  signedProfileImageUrl?: string | null;
 }
 
 export const SubjectDrawer = ({
@@ -30,6 +31,7 @@ export const SubjectDrawer = ({
   organizationId,
   onSuccess,
   readOnly = false,
+  signedProfileImageUrl,
 }: SubjectDrawerProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -422,6 +424,7 @@ export const SubjectDrawer = ({
             onSubmit={handlePersonSubmit}
             isSubmitting={isSubmitting}
             readOnly={readOnly}
+            signedProfileImageUrl={signedProfileImageUrl}
           />
         );
       case 'vehicle':

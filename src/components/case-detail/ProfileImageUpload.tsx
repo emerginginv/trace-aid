@@ -6,12 +6,13 @@ import { toast } from "@/hooks/use-toast";
 
 interface ProfileImageUploadProps {
   currentImageUrl?: string;
+  displayUrl?: string;  // Signed URL for display
   onImageChange: (url: string | null) => void;
   subjectId?: string;
 }
 
-export const ProfileImageUpload = ({ currentImageUrl, onImageChange, subjectId }: ProfileImageUploadProps) => {
-  const [preview, setPreview] = useState<string | null>(currentImageUrl || null);
+export const ProfileImageUpload = ({ currentImageUrl, displayUrl, onImageChange, subjectId }: ProfileImageUploadProps) => {
+  const [preview, setPreview] = useState<string | null>(displayUrl || currentImageUrl || null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 

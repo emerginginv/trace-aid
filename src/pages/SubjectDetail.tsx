@@ -699,6 +699,7 @@ const SubjectDetail = () => {
           caseId={caseId}
           organizationId={subject.organization_id}
           onSuccess={fetchSubjectDetails}
+          signedProfileImageUrl={signedImageUrl}
         />
       )}
     </div>
