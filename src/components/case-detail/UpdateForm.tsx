@@ -22,6 +22,7 @@ import { useUpdateBillingEligibility, UpdateBillingEligibilityResult } from "@/h
 import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
 import { BillingPromptDialog, ConfirmedTimes } from "@/components/billing/BillingPromptDialog";
 import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
+import { logBillingAudit } from "@/lib/billingAuditLogger";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -338,6 +339,22 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         const eligibilityResult = await evaluateBillingEligibility({ linkedActivityId });
         
         if (eligibilityResult.isEligible) {
+          // SYSTEM PROMPT 11: Log billing prompt shown audit event
+          await logBillingAudit({
+            action: 'billing_prompt_shown',
+            organizationId: organizationId,
+            metadata: {
+              updateId: newUpdate?.id,
+              activityId: linkedActivityId,
+              caseServiceInstanceId: eligibilityResult.serviceInstanceId,
+              caseId: caseId,
+              serviceName: eligibilityResult.serviceName,
+              pricingModel: eligibilityResult.pricingModel,
+              quantity: eligibilityResult.quantity,
+              rate: eligibilityResult.serviceRate,
+            },
+          });
+          
           // Store eligibility result and show billing prompt
           setBillingEligibility(eligibilityResult);
           setBillingPromptOpen(true);
@@ -402,6 +419,25 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       }
     }
     
+    // SYSTEM PROMPT 11: Log time confirmed audit event
+    await logBillingAudit({
+      action: 'time_confirmed',
+      organizationId: billingEligibility.organizationId!,
+      metadata: {
+        updateId: createdUpdateId || undefined,
+        activityId: billingEligibility.activityId,
+        caseServiceInstanceId: billingEligibility.serviceInstanceId,
+        caseId: billingEligibility.caseId,
+        pricingModel: billingEligibility.pricingModel,
+        confirmedTimes: confirmedTimes.startDate ? {
+          startDate: confirmedTimes.startDate,
+          startTime: confirmedTimes.startTime,
+          endDate: confirmedTimes.endDate,
+          endTime: confirmedTimes.endTime,
+        } : undefined,
+      },
+    });
+    
     const result = await createBillingItem({
       activityId: billingEligibility.activityId!,
       caseServiceInstanceId: billingEligibility.serviceInstanceId!,
@@ -455,7 +491,23 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   };
 
   // Handle skipping billing item creation
-  const handleSkipBilling = () => {
+  const handleSkipBilling = async () => {
+    // SYSTEM PROMPT 11: Log billing skipped audit event
+    if (billingEligibility) {
+      await logBillingAudit({
+        action: 'billing_skipped',
+        organizationId: billingEligibility.organizationId!,
+        metadata: {
+          updateId: createdUpdateId || undefined,
+          activityId: billingEligibility.activityId,
+          caseServiceInstanceId: billingEligibility.serviceInstanceId,
+          caseId: billingEligibility.caseId,
+          serviceName: billingEligibility.serviceName,
+          reason: 'user_declined',
+        },
+      });
+    }
+    
     setBillingPromptOpen(false);
     setBillingEligibility(null);
     setCreatedUpdateId(null); // SYSTEM PROMPT 9: Clear update ID
