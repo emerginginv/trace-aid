@@ -607,28 +607,31 @@ const CaseDetail = () => {
       )}
       
       {/* Header */}
-      <div className="flex items-start gap-2 sm:gap-4">
-        <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
-          <Link to="/cases">
-            <ChevronLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        
-        <div className="flex-1 min-w-0">
-          <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate md:whitespace-normal md:overflow-visible leading-tight ${isClosed ? 'text-muted-foreground' : ''}`} title={caseData.title}>
-            {caseData.title}
-          </h1>
-          <p className={`text-xs mt-0.5 font-medium ${isClosed ? 'text-muted-foreground' : 'text-primary'}`}>
-            {caseData.case_number}
-          </p>
+      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-start sm:gap-4">
+        {/* Back button + Title row */}
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
+            <Link to="/cases">
+              <ChevronLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          
+          <div className="flex-1 min-w-0">
+            <h1 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate md:whitespace-normal md:overflow-visible leading-tight ${isClosed ? 'text-muted-foreground' : ''}`} title={caseData.title}>
+              {caseData.title}
+            </h1>
+            <p className={`text-xs mt-0.5 font-medium ${isClosed ? 'text-muted-foreground' : 'text-primary'}`}>
+              {caseData.case_number}
+            </p>
+          </div>
         </div>
         
-        {/* Status + Actions Group */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Status + Actions - Full width row on mobile */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap pl-9 sm:pl-0">
           {/* Status Dropdown */}
           {!isVendor && (
             <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-              <SelectTrigger className={`w-[120px] sm:w-[140px] h-9 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
+              <SelectTrigger className={`w-[140px] h-9 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -774,7 +777,7 @@ const CaseDetail = () => {
                   </Card>
 
                   {/* Two-column grid for Budget/Retainer and Team */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {/* Budget + Retainer Column */}
                     <div className="space-y-4">
                       {organization?.id && (
