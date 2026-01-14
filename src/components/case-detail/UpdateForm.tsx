@@ -329,6 +329,14 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         description: editingUpdate ? "Update edited successfully" : "Update added successfully",
       });
 
+      // ═══════════════════════════════════════════════════════════════════════════
+      // SYSTEM PROMPT 2: POST-SAVE INTERCEPTOR
+      // This section executes AFTER the update has been persisted to the database.
+      // Requirements:
+      // 1. Update must be saved before this runs (non-blocking)
+      // 2. If no task/event is referenced → end immediately, no billing prompt
+      // 3. If task/event is linked → evaluate billing eligibility
+      // ═══════════════════════════════════════════════════════════════════════════
       // SYSTEM PROMPT 3 & 4: Check billing eligibility only if update is linked to an activity
       // If linked, evaluate billing eligibility; if eligible, show billing prompt
       // If not linked or not eligible, complete normally without prompt
