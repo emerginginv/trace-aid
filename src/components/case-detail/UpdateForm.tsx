@@ -20,7 +20,7 @@ import { ActivityTimelineEditor, TimelineEntry } from "./ActivityTimelineEditor"
 import { format } from "date-fns";
 import { useUpdateBillingEligibility, UpdateBillingEligibilityResult } from "@/hooks/useUpdateBillingEligibility";
 import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
-import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
+import { BillingPromptDialog, ConfirmedTimes } from "@/components/billing/BillingPromptDialog";
 import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
 
 const formSchema = z.object({
@@ -365,9 +365,29 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     }
   };
 
-  // Handle billing item creation from prompt
-  const handleCreateBillingItem = async () => {
+  // Handle billing item creation from prompt with confirmed times (SYSTEM PROMPT 6)
+  const handleCreateBillingItem = async (confirmedTimes: ConfirmedTimes) => {
     if (!billingEligibility || !billingEligibility.isEligible) return;
+    
+    // Recalculate quantity based on user-confirmed times for hourly/daily pricing
+    let quantity = billingEligibility.quantity!;
+    const pricingModel = billingEligibility.pricingModel;
+    
+    if ((pricingModel === 'hourly' || pricingModel === 'daily') && 
+        confirmedTimes.startDate && confirmedTimes.startTime && 
+        confirmedTimes.endDate && confirmedTimes.endTime) {
+      const start = new Date(`${confirmedTimes.startDate}T${confirmedTimes.startTime}`);
+      const end = new Date(`${confirmedTimes.endDate}T${confirmedTimes.endTime}`);
+      const diffMs = end.getTime() - start.getTime();
+      
+      if (diffMs > 0) {
+        if (pricingModel === 'hourly') {
+          quantity = Math.max(0.25, diffMs / (1000 * 60 * 60));
+        } else if (pricingModel === 'daily') {
+          quantity = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        }
+      }
+    }
     
     const result = await createBillingItem({
       activityId: billingEligibility.activityId!,
@@ -377,7 +397,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       accountId: billingEligibility.accountId,
       serviceName: billingEligibility.serviceName!,
       pricingModel: billingEligibility.pricingModel!,
-      quantity: billingEligibility.quantity!,
+      quantity: quantity,
       rate: billingEligibility.serviceRate!,
       pricingProfileId: billingEligibility.pricingProfileId,
       pricingRuleSnapshot: billingEligibility.pricingRuleSnapshot,

@@ -13,6 +13,11 @@ export interface BillingEligibilityResult {
   estimatedAmount?: number;
   activityId?: string;
   activityTitle?: string;
+  // Time confirmation fields per SYSTEM PROMPT 6
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
   // Audit and creation fields per SYSTEM PROMPT 8
   caseId?: string;
   organizationId?: string;
@@ -355,6 +360,11 @@ export function useBillingEligibility() {
         estimatedAmount,
         activityId,
         activityTitle: activityData?.title,
+        // Time confirmation fields per SYSTEM PROMPT 6
+        startDate: activityData?.due_date || undefined,
+        startTime: activityData?.start_time || undefined,
+        endDate: activityData?.end_date || activityData?.due_date || undefined,
+        endTime: activityData?.end_time || undefined,
         // Audit fields for billing item creation per SYSTEM PROMPT 8
         caseId: instanceData.case_id,
         organizationId: instanceData.organization_id,
