@@ -8,22 +8,84 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, DollarSign, Receipt, TrendingUp, Search, Download, FileText } from "lucide-react";
-import { format } from "date-fns";
+import { Clock, DollarSign, Receipt, TrendingUp, Search, Download, FileText, Link } from "lucide-react";
+import { format, differenceInMinutes } from "date-fns";
 import { exportToCSV, ExportColumn } from "@/lib/exportUtils";
 import { cn } from "@/lib/utils";
 
-interface TimeEntry {
+// --- Data Types ---
+
+interface ServiceInstance {
+  id: string;
+  case_id: string;
+  status: string;
+  billable: boolean | null;
+  billed_at: string | null;
+  locked_at: string | null;
+  quantity_actual: number | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  invoice_line_item_id: string | null;
+  case_service_id: string;
+  case_services: {
+    id: string;
+    name: string;
+    code: string | null;
+    is_billable: boolean | null;
+    default_rate: number | null;
+    budget_unit: string | null;
+  } | null;
+}
+
+interface Activity {
+  id: string;
+  title: string;
+  activity_type: string;
+  completed: boolean | null;
+  completed_at: string | null;
+  due_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  end_date: string | null;
+  case_service_instance_id: string | null;
+  address: string | null;
+  status: string;
+}
+
+interface InvoiceLineItem {
+  id: string;
+  case_service_instance_id: string;
+  amount: number;
+  quantity: number;
+  rate: number;
+  service_name: string;
+  service_code: string | null;
+  pricing_model: string;
+  invoice_id: string;
+  activity_ids: string[] | null;
+}
+
+interface PricingRule {
+  case_service_id: string;
+  rate: number;
+  pricing_model: string;
+  pricing_profile_id: string;
+  is_billable: boolean | null;
+}
+
+interface DerivedTimeEntry {
   id: string;
   date: string;
   description: string;
-  hours: number | null;
-  hourly_rate: number | null;
+  hours: number;
+  rate: number;
   amount: number;
-  status: string;
-  case_service_instance_id: string | null;
-  service_name?: string;
-  service_code?: string;
+  status: "unbilled" | "pending" | "billed";
+  service_name: string;
+  service_code: string | null;
+  service_instance_id: string;
+  pricing_source: string;
+  invoice_line_item_id?: string | null;
 }
 
 interface ExpenseEntry {
@@ -40,6 +102,7 @@ interface ExpenseEntry {
   case_service_instance_id: string | null;
   service_name?: string;
   service_code?: string;
+  invoice_id?: string | null;
 }
 
 interface ServiceBreakdown {
@@ -57,11 +120,62 @@ interface TimeExpenseDetailProps {
   organizationId?: string;
 }
 
+// --- Helper Functions ---
+
+function calculateActivityDuration(activity: Activity): number | null {
+  // Only calculate for event-type activities with proper time fields
+  if (
+    activity.activity_type !== "event" ||
+    !activity.due_date ||
+    !activity.start_time ||
+    !activity.end_time
+  ) {
+    return null;
+  }
+
+  try {
+    const startDt = new Date(`${activity.due_date}T${activity.start_time}`);
+    const endDt = new Date(`${activity.end_date || activity.due_date}T${activity.end_time}`);
+    
+    const diffMinutes = differenceInMinutes(endDt, startDt);
+    if (diffMinutes <= 0) return null;
+
+    // Return hours, minimum 0.25 (15 minutes)
+    return Math.max(0.25, diffMinutes / 60);
+  } catch {
+    return null;
+  }
+}
+
+function resolvePricingForService(
+  caseServiceId: string,
+  pricingRules: PricingRule[],
+  fallbackRate: number | null
+): { rate: number; pricingModel: string; source: string } {
+  const rule = pricingRules.find(r => r.case_service_id === caseServiceId);
+  
+  if (rule) {
+    return {
+      rate: rule.rate,
+      pricingModel: rule.pricing_model,
+      source: "pricing_profile"
+    };
+  }
+  
+  return {
+    rate: fallbackRate || 0,
+    pricingModel: "hourly",
+    source: "service_default"
+  };
+}
+
+// --- Main Component ---
+
 export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailProps) {
   const { organization } = useOrganization();
   const orgId = organizationId || organization?.id;
   
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [timeEntries, setTimeEntries] = useState<DerivedTimeEntry[]>([]);
   const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -76,55 +190,98 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
   const fetchTimeExpenseData = async () => {
     setLoading(true);
     try {
-      // Fetch time entries
-      const { data: timeData, error: timeError } = await supabase
-        .from("case_finances")
+      // 1. Fetch the case to get pricing_profile_id and account_id
+      const { data: caseData } = await supabase
+        .from("cases")
+        .select("pricing_profile_id, account_id")
+        .eq("id", caseId)
+        .single();
+
+      // 2. Resolve pricing profile using waterfall: Case → Account → Org Default
+      let pricingProfileId = caseData?.pricing_profile_id;
+      
+      if (!pricingProfileId && caseData?.account_id) {
+        const { data: account } = await supabase
+          .from("accounts")
+          .select("default_pricing_profile_id")
+          .eq("id", caseData.account_id)
+          .single();
+        pricingProfileId = account?.default_pricing_profile_id;
+      }
+      
+      if (!pricingProfileId) {
+        const { data: defaultProfile } = await supabase
+          .from("pricing_profiles")
+          .select("id")
+          .eq("organization_id", orgId!)
+          .eq("is_default", true)
+          .single();
+        pricingProfileId = defaultProfile?.id;
+      }
+
+      // 3. Fetch pricing rules for the resolved profile
+      let pricingRules: PricingRule[] = [];
+      if (pricingProfileId) {
+        const { data: rules } = await supabase
+          .from("service_pricing_rules")
+          .select("case_service_id, rate, pricing_model, pricing_profile_id, is_billable")
+          .eq("pricing_profile_id", pricingProfileId);
+        pricingRules = rules || [];
+      }
+
+      // 4. Fetch case service instances with their service definitions
+      const { data: instances } = await supabase
+        .from("case_service_instances")
         .select(`
-          id,
-          date,
-          description,
-          hours,
-          hourly_rate,
-          amount,
-          status,
-          case_service_instance_id
+          id, case_id, status, billable, billed_at, locked_at,
+          quantity_actual, scheduled_start, scheduled_end,
+          invoice_line_item_id, case_service_id,
+          case_services (id, name, code, is_billable, default_rate, budget_unit)
         `)
         .eq("case_id", caseId)
-        .eq("organization_id", orgId)
-        .eq("finance_type", "time")
-        .order("date", { ascending: false });
+        .eq("organization_id", orgId!);
 
-      if (timeError) throw timeError;
-
-      // Fetch service instance info for time entries
-      const timeWithServices = await enrichWithServiceInfo(timeData || []);
-      setTimeEntries(timeWithServices);
-
-      // Fetch expenses
-      const { data: expenseData, error: expenseError } = await supabase
-        .from("case_finances")
+      // 5. Fetch activities linked to service instances
+      const { data: activities } = await supabase
+        .from("case_activities")
         .select(`
-          id,
-          date,
-          description,
-          category,
-          quantity,
-          unit_price,
-          amount,
-          status,
-          expense_user_id,
-          case_service_instance_id
+          id, title, activity_type, completed, completed_at,
+          due_date, start_time, end_time, end_date,
+          case_service_instance_id, address, status
         `)
         .eq("case_id", caseId)
-        .eq("organization_id", orgId)
+        .not("case_service_instance_id", "is", null);
+
+      // 6. Fetch invoice line items for billed status
+      const { data: invoiceItems } = await supabase
+        .from("invoice_line_items")
+        .select("id, case_service_instance_id, amount, quantity, rate, service_name, service_code, pricing_model, invoice_id, activity_ids")
+        .eq("case_id", caseId);
+
+      // 7. Derive time entries from activities and service instances
+      const derivedEntries = deriveTimeEntries(
+        instances || [],
+        activities || [],
+        invoiceItems || [],
+        pricingRules
+      );
+      setTimeEntries(derivedEntries);
+
+      // 8. Fetch expenses from case_finances (still the source for expense data)
+      const { data: expenseData } = await supabase
+        .from("case_finances")
+        .select(`
+          id, date, description, category, quantity, unit_price, amount, status,
+          expense_user_id, case_service_instance_id, invoice_id
+        `)
+        .eq("case_id", caseId)
+        .eq("organization_id", orgId!)
         .eq("finance_type", "expense")
         .order("date", { ascending: false });
 
-      if (expenseError) throw expenseError;
-
-      // Enrich expenses with user and service info
-      const expensesWithDetails = await enrichExpenseData(expenseData || []);
+      const expensesWithDetails = await enrichExpenseData(expenseData || [], instances || []);
       setExpenses(expensesWithDetails);
+
     } catch (error) {
       console.error("Error fetching time/expense data:", error);
     } finally {
@@ -132,43 +289,132 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
     }
   };
 
-  const enrichWithServiceInfo = async (entries: any[]): Promise<TimeEntry[]> => {
-    const instanceIds = entries
-      .filter(e => e.case_service_instance_id)
-      .map(e => e.case_service_instance_id);
-    
-    if (instanceIds.length === 0) return entries;
+  const deriveTimeEntries = (
+    instances: ServiceInstance[],
+    activities: Activity[],
+    invoiceItems: InvoiceLineItem[],
+    pricingRules: PricingRule[]
+  ): DerivedTimeEntry[] => {
+    const entries: DerivedTimeEntry[] = [];
 
-    const { data: instances } = await supabase
-      .from("case_service_instances")
-      .select(`
-        id,
-        case_services (id, name, code)
-      `)
-      .in("id", instanceIds);
-
-    const instanceMap = new Map(
-      (instances || []).map(inst => [
-        inst.id,
-        {
-          name: inst.case_services?.name || "Unknown Service",
-          code: inst.case_services?.code || null
-        }
-      ])
+    // Create maps for faster lookup
+    const invoiceItemMap = new Map(
+      invoiceItems.map(item => [item.case_service_instance_id, item])
     );
+    const activitiesForInstance = new Map<string, Activity[]>();
+    activities.forEach(act => {
+      if (act.case_service_instance_id) {
+        const existing = activitiesForInstance.get(act.case_service_instance_id) || [];
+        existing.push(act);
+        activitiesForInstance.set(act.case_service_instance_id, existing);
+      }
+    });
 
-    return entries.map(entry => ({
-      ...entry,
-      service_name: entry.case_service_instance_id 
-        ? instanceMap.get(entry.case_service_instance_id)?.name 
-        : undefined,
-      service_code: entry.case_service_instance_id 
-        ? instanceMap.get(entry.case_service_instance_id)?.code 
-        : undefined,
-    }));
+    for (const instance of instances) {
+      const service = instance.case_services;
+      if (!service) continue;
+
+      const invoiceItem = invoiceItemMap.get(instance.id);
+      const instanceActivities = activitiesForInstance.get(instance.id) || [];
+      
+      // Check for completed activities to derive time entries
+      const completedActivities = instanceActivities.filter(a => a.completed);
+      
+      if (completedActivities.length > 0) {
+        // Derive from completed activities
+        for (const activity of completedActivities) {
+          const durationHours = calculateActivityDuration(activity);
+          if (durationHours === null) continue;
+
+          const pricing = resolvePricingForService(
+            instance.case_service_id,
+            pricingRules,
+            service.default_rate
+          );
+
+          // Determine status based on invoice linkage
+          let status: "unbilled" | "pending" | "billed" = "unbilled";
+          if (invoiceItem && invoiceItem.activity_ids?.includes(activity.id)) {
+            status = "billed";
+          } else if (instance.locked_at || instance.billed_at) {
+            status = "pending";
+          }
+
+          entries.push({
+            id: `${instance.id}-${activity.id}`,
+            date: activity.completed_at || activity.due_date || new Date().toISOString(),
+            description: activity.title,
+            hours: durationHours,
+            rate: status === "billed" && invoiceItem ? invoiceItem.rate : pricing.rate,
+            amount: status === "billed" && invoiceItem 
+              ? invoiceItem.amount / Math.max(invoiceItem.quantity, 1) 
+              : durationHours * pricing.rate,
+            status,
+            service_name: service.name,
+            service_code: service.code,
+            service_instance_id: instance.id,
+            pricing_source: status === "billed" ? "invoice" : pricing.source,
+            invoice_line_item_id: invoiceItem?.id,
+          });
+        }
+      } else if (instance.quantity_actual && instance.quantity_actual > 0) {
+        // Use quantity_actual from service instance if no activities with duration
+        const pricing = resolvePricingForService(
+          instance.case_service_id,
+          pricingRules,
+          service.default_rate
+        );
+
+        let status: "unbilled" | "pending" | "billed" = "unbilled";
+        if (invoiceItem) {
+          status = "billed";
+        } else if (instance.locked_at || instance.billed_at) {
+          status = "pending";
+        }
+
+        entries.push({
+          id: instance.id,
+          date: instance.scheduled_start || instance.billed_at || new Date().toISOString(),
+          description: `${service.name}${instance.status !== "completed" ? ` (${instance.status})` : ""}`,
+          hours: instance.quantity_actual,
+          rate: status === "billed" && invoiceItem ? invoiceItem.rate : pricing.rate,
+          amount: status === "billed" && invoiceItem 
+            ? invoiceItem.amount 
+            : instance.quantity_actual * pricing.rate,
+          status,
+          service_name: service.name,
+          service_code: service.code,
+          service_instance_id: instance.id,
+          pricing_source: status === "billed" ? "invoice" : pricing.source,
+          invoice_line_item_id: invoiceItem?.id,
+        });
+      } else if (invoiceItem) {
+        // Billed service instance without activity data - use invoice data
+        entries.push({
+          id: instance.id,
+          date: instance.scheduled_start || instance.billed_at || new Date().toISOString(),
+          description: invoiceItem.service_name,
+          hours: invoiceItem.quantity,
+          rate: invoiceItem.rate,
+          amount: invoiceItem.amount,
+          status: "billed",
+          service_name: invoiceItem.service_name,
+          service_code: invoiceItem.service_code,
+          service_instance_id: instance.id,
+          pricing_source: "invoice",
+          invoice_line_item_id: invoiceItem.id,
+        });
+      }
+    }
+
+    // Sort by date descending
+    return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
-  const enrichExpenseData = async (entries: any[]): Promise<ExpenseEntry[]> => {
+  const enrichExpenseData = async (
+    entries: any[],
+    instances: ServiceInstance[]
+  ): Promise<ExpenseEntry[]> => {
     // Get user info
     const userIds = entries
       .filter(e => e.expense_user_id)
@@ -186,31 +432,16 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
       );
     }
 
-    // Get service info
-    const instanceIds = entries
-      .filter(e => e.case_service_instance_id)
-      .map(e => e.case_service_instance_id);
-
-    let instanceMap = new Map<string, { name: string; code: string | null }>();
-    if (instanceIds.length > 0) {
-      const { data: instances } = await supabase
-        .from("case_service_instances")
-        .select(`
-          id,
-          case_services (id, name, code)
-        `)
-        .in("id", instanceIds);
-
-      instanceMap = new Map(
-        (instances || []).map(inst => [
-          inst.id,
-          {
-            name: inst.case_services?.name || "Unknown Service",
-            code: inst.case_services?.code || null
-          }
-        ])
-      );
-    }
+    // Create instance map for service info
+    const instanceMap = new Map(
+      instances.map(inst => [
+        inst.id,
+        {
+          name: inst.case_services?.name || "Unknown Service",
+          code: inst.case_services?.code || null
+        }
+      ])
+    );
 
     return entries.map(entry => ({
       ...entry,
@@ -223,12 +454,13 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
       service_code: entry.case_service_instance_id 
         ? instanceMap.get(entry.case_service_instance_id)?.code 
         : undefined,
+      status: entry.invoice_id ? "invoiced" : (entry.status || "pending"),
     }));
   };
 
   // Calculate totals
-  const totalHours = timeEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
-  const totalTimeValue = timeEntries.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalHours = timeEntries.reduce((sum, e) => sum + e.hours, 0);
+  const totalTimeValue = timeEntries.reduce((sum, e) => sum + e.amount, 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const grandTotal = totalTimeValue + totalExpenses;
 
@@ -238,7 +470,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
 
     // Process time entries
     timeEntries.forEach(entry => {
-      const key = entry.case_service_instance_id || "unassigned";
+      const key = entry.service_instance_id || "unassigned";
       const existing = breakdown.get(key) || {
         serviceId: key,
         serviceName: entry.service_name || "Unassigned",
@@ -248,8 +480,8 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
         expenseAmount: 0,
         combinedTotal: 0,
       };
-      existing.totalHours += entry.hours || 0;
-      existing.timeAmount += Number(entry.amount);
+      existing.totalHours += entry.hours;
+      existing.timeAmount += entry.amount;
       existing.combinedTotal = existing.timeAmount + existing.expenseAmount;
       breakdown.set(key, existing);
     });
@@ -297,14 +529,21 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
+      unbilled: "bg-muted text-muted-foreground border-border",
       pending: "bg-amber-500/10 text-amber-600 border-amber-500/20",
       approved: "bg-green-500/10 text-green-600 border-green-500/20",
       rejected: "bg-red-500/10 text-red-600 border-red-500/20",
+      billed: "bg-blue-500/10 text-blue-600 border-blue-500/20",
       invoiced: "bg-blue-500/10 text-blue-600 border-blue-500/20",
     };
     return (
       <Badge variant="outline" className={cn("capitalize", variants[status] || "")}>
-        {status}
+        {status === "billed" || status === "invoiced" ? (
+          <span className="flex items-center gap-1">
+            <Link className="h-3 w-3" />
+            {status}
+          </span>
+        ) : status}
       </Badge>
     );
   };
@@ -315,15 +554,16 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
       { key: "service_name", label: "Service" },
       { key: "description", label: "Description" },
       { key: "hours", label: "Hours" },
-      { key: "hourly_rate", label: "Rate" },
+      { key: "rate", label: "Rate" },
       { key: "amount", label: "Amount" },
       { key: "status", label: "Status" },
+      { key: "pricing_source", label: "Pricing Source" },
     ];
     exportToCSV(
       filteredTimeEntries.map(e => ({
         ...e,
         date: format(new Date(e.date), "yyyy-MM-dd"),
-        hourly_rate: e.hourly_rate ? `$${e.hourly_rate.toFixed(2)}` : "",
+        rate: `$${e.rate.toFixed(2)}`,
         amount: `$${e.amount.toFixed(2)}`,
       })),
       columns,
@@ -347,7 +587,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
         ...e,
         date: format(new Date(e.date), "yyyy-MM-dd"),
         unit_price: e.unit_price ? `$${e.unit_price.toFixed(2)}` : "",
-        amount: `$${e.amount.toFixed(2)}`,
+        amount: `$${Number(e.amount).toFixed(2)}`,
       })),
       columns,
       `expenses-${caseId}`
@@ -436,10 +676,9 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="unbilled">Unbilled</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="invoiced">Invoiced</SelectItem>
+            <SelectItem value="billed">Billed</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -498,12 +737,12 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                         )}
                       </TableCell>
                       <TableCell className="max-w-xs truncate">{entry.description}</TableCell>
-                      <TableCell className="text-right">{entry.hours?.toFixed(2) || "—"}</TableCell>
+                      <TableCell className="text-right">{entry.hours.toFixed(2)}</TableCell>
                       <TableCell className="text-right">
-                        {entry.hourly_rate ? `$${entry.hourly_rate.toFixed(2)}` : "—"}
+                        ${entry.rate.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${Number(entry.amount).toFixed(2)}
+                        ${entry.amount.toFixed(2)}
                       </TableCell>
                       <TableCell>{getStatusBadge(entry.status)}</TableCell>
                     </TableRow>
@@ -512,11 +751,11 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                   <TableRow className="bg-muted/50 font-medium">
                     <TableCell colSpan={3}>Subtotal</TableCell>
                     <TableCell className="text-right">
-                      {filteredTimeEntries.reduce((sum, e) => sum + (e.hours || 0), 0).toFixed(2)}
+                      {filteredTimeEntries.reduce((sum, e) => sum + e.hours, 0).toFixed(2)}
                     </TableCell>
                     <TableCell />
                     <TableCell className="text-right">
-                      ${filteredTimeEntries.reduce((sum, e) => sum + Number(e.amount), 0).toFixed(2)}
+                      ${filteredTimeEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
                     </TableCell>
                     <TableCell />
                   </TableRow>
