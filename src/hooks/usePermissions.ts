@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "./useUserRole";
 
@@ -7,48 +7,47 @@ type Permission = {
   allowed: boolean;
 };
 
+/**
+ * Hook for getting the current user's permissions based on their role.
+ * Uses React Query for caching to prevent duplicate permissions queries.
+ * 
+ * Cache settings:
+ * - staleTime: 5 minutes (permissions rarely change during a session)
+ * - gcTime: 15 minutes
+ */
 export function usePermissions() {
   const { role, loading: roleLoading } = useUserRole();
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchPermissions = async () => {
+  const { data: permissions = {}, isLoading: permissionsLoading } = useQuery<Record<string, boolean>>({
+    queryKey: ['permissions', role],
+    queryFn: async () => {
       if (!role) {
-        setPermissions({});
-        setLoading(false);
-        return;
+        return {};
       }
 
-      // Set loading true when we have a role and are about to fetch
-      setLoading(true);
-      
-      try {
-        const { data, error } = await supabase
-          .from("permissions" as any)
-          .select("feature_key, allowed")
-          .eq("role", role);
+      const { data, error } = await supabase
+        .from("permissions" as any)
+        .select("feature_key, allowed")
+        .eq("role", role);
 
-        if (error) {
-          console.error("Error fetching permissions:", error);
-          setPermissions({});
-        } else {
-          const permissionsMap = ((data as any) || []).reduce((acc: Record<string, boolean>, perm: Permission) => {
-            acc[perm.feature_key] = perm.allowed;
-            return acc;
-          }, {} as Record<string, boolean>);
-          setPermissions(permissionsMap);
-        }
-      } catch (error) {
-        console.error("Error in fetchPermissions:", error);
-        setPermissions({});
-      } finally {
-        setLoading(false);
+      if (error) {
+        console.error("[usePermissions] Error fetching permissions:", error);
+        return {};
       }
-    };
 
-    fetchPermissions();
-  }, [role]);
+      const permissionsMap = ((data as any) || []).reduce((acc: Record<string, boolean>, perm: Permission) => {
+        acc[perm.feature_key] = perm.allowed;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      return permissionsMap;
+    },
+    enabled: !roleLoading && !!role,
+    staleTime: 1000 * 60 * 5,  // 5 minutes
+    gcTime: 1000 * 60 * 15,    // 15 minutes
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
 
   const hasPermission = (featureKey: string): boolean => {
     return permissions[featureKey] ?? false;
@@ -56,7 +55,7 @@ export function usePermissions() {
 
   return {
     permissions,
-    loading: loading || roleLoading,
+    loading: roleLoading || permissionsLoading,
     hasPermission,
   };
 }
