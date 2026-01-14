@@ -128,7 +128,7 @@ export function useBillingItemCreation() {
           
           // Additional context fields
           organization_id: organizationId,
-          finance_type: "billing_item",
+          finance_type: getBillingType(pricingModel),
           description: billingDescription,
           hourly_rate: pricingModel === "hourly" ? rate : null,
           hours: pricingModel === "hourly" ? quantity : null,
