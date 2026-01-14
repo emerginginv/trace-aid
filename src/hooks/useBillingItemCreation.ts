@@ -1,3 +1,43 @@
+/**
+ * useBillingItemCreation Hook
+ * 
+ * Creates pending billing items for time/expense tracking.
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * SYSTEM PROMPT 9 COMPLIANCE: CREATE BILLING ITEM (PENDING REVIEW ONLY)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Creates a Billing Item with status pending_review.
+ * 
+ * REQUIRED FIELDS (all implemented in createBillingItem):
+ * - case_id
+ * - account_id
+ * - case_service_instance_id
+ * - activity_id (task or event)
+ * - update_id
+ * - billing_type = 'time'
+ * - start_time
+ * - end_time
+ * - quantity
+ * - rate (stored as unit_price)
+ * - amount (calculated as rate * quantity)
+ * - status = 'pending_review'
+ * - created_by (stored as user_id)
+ * 
+ * RULES:
+ * 1. Do NOT approve automatically - status remains 'pending_review'
+ * 2. Do NOT add to invoices automatically - no invoice_id is set
+ * 3. Do NOT lock the update or activity - no locked_at modification
+ * 
+ * IMPLEMENTATION:
+ * → Lines 150-186: Billing item insert with all required fields
+ * → status: 'pending_review' hardcoded (line 166)
+ * → No invoice_id assignment
+ * → No locked_at update on activity or update
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchBudgetForecastOnce, BudgetForecastWarning } from "./useBudgetForecast";
