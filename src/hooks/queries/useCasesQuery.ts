@@ -53,7 +53,7 @@ export function useCasesQuery(options: UseCasesQueryOptions = {}) {
       }
 
       if (search) {
-        query = query.or(`title.ilike.%${search}%,case_number.ilike.%${search}%`);
+        query = query.or(`title.ilike.%${search}%,case_number.ilike.%${search}%,reference_number.ilike.%${search}%,reference_number_2.ilike.%${search}%,reference_number_3.ilike.%${search}%`);
       }
 
       if (limit) {

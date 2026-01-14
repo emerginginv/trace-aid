@@ -23,6 +23,9 @@ interface CaseOption {
   id: string;
   case_number: string;
   title: string;
+  reference_number?: string | null;
+  reference_number_2?: string | null;
+  reference_number_3?: string | null;
 }
 
 interface CaseSelectorDialogProps {
@@ -64,7 +67,7 @@ export function CaseSelectorDialog({
     try {
       const { data, error } = await supabase
         .from("cases")
-        .select("id, case_number, title")
+        .select("id, case_number, title, reference_number, reference_number_2, reference_number_3")
         .eq("organization_id", organization.id)
         .neq("status", "closed")
         .order("case_number", { ascending: false })
@@ -85,7 +88,10 @@ export function CaseSelectorDialog({
     const query = searchQuery.toLowerCase();
     return (
       c.case_number.toLowerCase().includes(query) ||
-      c.title.toLowerCase().includes(query)
+      c.title.toLowerCase().includes(query) ||
+      c.reference_number?.toLowerCase().includes(query) ||
+      c.reference_number_2?.toLowerCase().includes(query) ||
+      c.reference_number_3?.toLowerCase().includes(query)
     );
   });
 
