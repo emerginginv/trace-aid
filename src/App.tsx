@@ -59,10 +59,7 @@ import CaseAnalytics from "./pages/CaseAnalytics";
 import BudgetAnalytics from "./pages/BudgetAnalytics";
 import TimeExpenseAnalytics from "./pages/TimeExpenseAnalytics";
 import ActivityAnalytics from "./pages/ActivityAnalytics";
-import ReportAnalytics from "./pages/ReportAnalytics";
 import SystemSecurityAnalytics from "./pages/SystemSecurityAnalytics";
-import ReportsHub from "./pages/reports/index";
-import ReportViewer from "./pages/reports/ReportViewer";
 import SupportConsole from "./pages/SupportConsole";
 import PlatformCompliance from "./pages/PlatformCompliance";
 import PlatformResilience from "./pages/PlatformResilience";
@@ -354,16 +351,6 @@ const App = () => {
           }
         />
         <Route
-          path="/analytics/reports"
-          element={
-            <ProtectedRoute blockVendors={true}>
-              <DashboardLayout>
-                <ReportAnalytics />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/analytics/system"
           element={
             <ProtectedRoute requiredRole="admin">
@@ -550,27 +537,6 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <AttachmentViewer />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-        {/* Reports Hub */}
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute blockVendors={true}>
-              <DashboardLayout>
-                <ReportsHub />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports/:reportId"
-          element={
-            <ProtectedRoute blockVendors={true}>
-              <DashboardLayout>
-                <ReportViewer />
               </DashboardLayout>
             </ProtectedRoute>
           }

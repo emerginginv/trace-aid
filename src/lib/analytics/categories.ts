@@ -3,7 +3,6 @@ import {
   DollarSign, 
   Clock, 
   Activity, 
-  FileText, 
   Shield,
   type LucideIcon 
 } from "lucide-react";
@@ -77,18 +76,6 @@ export const ANALYTICS_CATEGORIES: AnalyticsCategory[] = [
     metricCategory: "activities",
     links: [
       { label: "Dashboard", href: "/analytics/activities", description: "View activity metrics" }
-    ]
-  },
-  {
-    id: "reports",
-    title: "Report & Output Analytics",
-    description: "Report template usage, generation history, and document analytics",
-    icon: FileText,
-    gradient: "from-amber-500/10 to-amber-500/5",
-    iconColor: "text-amber-500",
-    iconBg: "bg-amber-500/10",
-    links: [
-      { label: "Dashboard", href: "/analytics/reports", description: "View report metrics" }
     ]
   },
   {
