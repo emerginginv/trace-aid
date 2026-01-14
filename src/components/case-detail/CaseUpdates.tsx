@@ -586,6 +586,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                               <CreateBillingItemButton
                                 activityId={update.linked_activity_id}
                                 updateId={update.id}
+                                updateDescription={update.description}
                                 organizationId={organization?.id || ""}
                                 variant="ghost"
                                 size="icon"
