@@ -34,6 +34,7 @@ import { LoginBrandingSection } from "@/components/settings/LoginBrandingSection
 import { CaseServicesTab } from "@/components/settings/CaseServicesTab";
 import { PricingProfilesTab } from "@/components/settings/PricingProfilesTab";
 import { CaseTypesTab } from "@/components/settings/CaseTypesTab";
+import { SubjectTypesTab } from "@/components/settings/SubjectTypesTab";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -117,7 +118,7 @@ const Settings = () => {
   const [caseStatuses, setCaseStatuses] = useState<PicklistItem[]>([]);
   const [updateTypes, setUpdateTypes] = useState<PicklistItem[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<PicklistItem[]>([]);
-  const [subjectTypes, setSubjectTypes] = useState<PicklistItem[]>([]);
+  
 
   // Organization Context
   const { organization, subscriptionStatus, checkSubscription, refreshOrganization } = useOrganization();
@@ -260,13 +261,9 @@ const Settings = () => {
       const categories = picklists
         .filter(p => p.type === 'expense_category')
         .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
-      const subjects = picklists
-        .filter(p => p.type === 'subject_type')
-        .map(p => ({ id: p.id, value: p.value, isActive: p.is_active, color: p.color || '#6366f1' }));
       setCaseStatuses(statuses);
       setUpdateTypes(updates);
       setExpenseCategories(categories);
-      setSubjectTypes(subjects);
     } catch (error) {
       console.error("Error loading settings:", error);
       toast.error("Failed to load settings");
@@ -668,6 +665,13 @@ const Settings = () => {
               </TabsContent>
             )}
 
+            {/* Subject Types Tab - Admin and Manager Only */}
+            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+              <TabsContent value="subject-types" className="space-y-6">
+                <SubjectTypesTab />
+              </TabsContent>
+            )}
+
             {/* Case Services Tab - Admin and Manager Only */}
             {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
               <TabsContent value="case-services" className="space-y-6">
@@ -691,8 +695,6 @@ const Settings = () => {
                 setUpdateTypes={setUpdateTypes}
                 expenseCategories={expenseCategories}
                 setExpenseCategories={setExpenseCategories}
-                subjectTypes={subjectTypes}
-                setSubjectTypes={setSubjectTypes}
                 loadSettings={loadSettings}
               />
             </TabsContent>

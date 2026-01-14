@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useSubjectTypes } from "@/hooks/useSubjectTypes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,13 +44,6 @@ interface CaseType {
   allow_on_public_form: boolean;
 }
 
-interface SubjectTypePicklist {
-  id: string;
-  value: string;
-  color: string;
-  is_active: boolean;
-}
-
 interface CaseService {
   id: string;
   name: string;
@@ -64,7 +58,7 @@ const BUDGET_STRATEGIES = [
   { value: 'disabled', label: 'Disabled', icon: <Ban className="h-3 w-3" /> },
 ];
 
-// Subject types are now fetched from the picklists table
+// Subject types are now dynamic - fetched from the useSubjectTypes hook
 
 const DEFAULT_COLORS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#6366f1', '#ef4444', '#22c55e', '#06b6d4', '#f97316'
@@ -134,8 +128,7 @@ function SortableCaseTypeRow({ caseType, onEdit, onDelete }: {
 
 export function CaseTypesTab() {
   const { organization } = useOrganization();
-  const [subjectTypePicklists, setSubjectTypePicklists] = useState<SubjectTypePicklist[]>([]);
-  const [subjectTypesLoading, setSubjectTypesLoading] = useState(true);
+  const { subjectTypes: dynamicSubjectTypes, loading: subjectTypesLoading } = useSubjectTypes({ activeOnly: true });
   const [caseTypes, setCaseTypes] = useState<CaseType[]>([]);
   const [services, setServices] = useState<CaseService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,31 +183,8 @@ export function CaseTypesTab() {
     if (organization?.id) {
       fetchCaseTypes();
       fetchServices();
-      fetchSubjectTypes();
     }
   }, [organization?.id]);
-
-  const fetchSubjectTypes = async () => {
-    if (!organization?.id) return;
-    setSubjectTypesLoading(true);
-    
-    try {
-      const { data, error } = await supabase
-        .from('picklists')
-        .select('id, value, color, is_active')
-        .eq('organization_id', organization.id)
-        .eq('type', 'subject_type')
-        .eq('is_active', true)
-        .order('display_order');
-
-      if (error) throw error;
-      setSubjectTypePicklists(data || []);
-    } catch (error) {
-      console.error('Error fetching subject types:', error);
-    } finally {
-      setSubjectTypesLoading(false);
-    }
-  };
 
   const fetchCaseTypes = async () => {
     if (!organization?.id) return;
@@ -727,22 +697,22 @@ export function CaseTypesTab() {
                   </p>
                   {subjectTypesLoading ? (
                     <div className="text-sm text-muted-foreground">Loading subject types...</div>
-                  ) : subjectTypePicklists.length === 0 ? (
+                  ) : dynamicSubjectTypes.length === 0 ? (
                     <div className="text-sm text-muted-foreground flex items-center gap-2">
                       <AlertCircle className="h-4 w-4" />
-                      No subject types configured. Add subject types in the Picklists tab.
+                      No subject types configured. Add subject types in the Subject Types tab.
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
-                      {subjectTypePicklists.map(subjectType => (
-                        <div key={subjectType.value} className="flex items-center gap-2">
+                      {dynamicSubjectTypes.map(subjectType => (
+                        <div key={subjectType.code} className="flex items-center gap-2">
                           <Checkbox
-                            id={`subject-${subjectType.value}`}
-                            checked={formData.allowed_subject_types.includes(subjectType.value)}
-                            onCheckedChange={() => toggleSubjectType(subjectType.value)}
+                            id={`subject-${subjectType.code}`}
+                            checked={formData.allowed_subject_types.includes(subjectType.code)}
+                            onCheckedChange={() => toggleSubjectType(subjectType.code)}
                           />
-                          <Label htmlFor={`subject-${subjectType.value}`} className="font-normal cursor-pointer">
-                            {subjectType.value}
+                          <Label htmlFor={`subject-${subjectType.code}`} className="font-normal cursor-pointer">
+                            {subjectType.name}
                           </Label>
                         </div>
                       ))}
@@ -760,11 +730,11 @@ export function CaseTypesTab() {
                           <SelectValue placeholder="Select default..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {formData.allowed_subject_types.map(value => {
-                            const st = subjectTypePicklists.find(s => s.value === value);
+                          {formData.allowed_subject_types.map(code => {
+                            const st = dynamicSubjectTypes.find(s => s.code === code);
                             return (
-                              <SelectItem key={value} value={value}>
-                                {st?.value || value}
+                              <SelectItem key={code} value={code}>
+                                {st?.name || code}
                               </SelectItem>
                             );
                           })}
