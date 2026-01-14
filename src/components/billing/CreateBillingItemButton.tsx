@@ -224,6 +224,8 @@ export function CreateBillingItemButton({
     resetBillingEligibility();
   };
 
+  const isIconOnly = size === "icon";
+
   return (
     <>
       <Button
@@ -232,13 +234,14 @@ export function CreateBillingItemButton({
         className={className}
         onClick={handleClick}
         disabled={isChecking || isCreating}
+        title="Create Billing Item"
       >
         {isChecking ? (
-          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          <Loader2 className={`h-4 w-4 animate-spin ${isIconOnly ? "" : "mr-2"}`} />
         ) : (
-          <DollarSign className="h-4 w-4 mr-2" />
+          <DollarSign className={`h-4 w-4 ${isIconOnly ? "" : "mr-2"}`} />
         )}
-        Create Billing Item
+        {!isIconOnly && "Create Billing Item"}
       </Button>
       
       <BillingPromptDialog

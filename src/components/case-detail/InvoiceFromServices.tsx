@@ -7,10 +7,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileText, DollarSign, Clock, Package, AlertCircle } from "lucide-react";
+import { CreateBillingItemButton } from "@/components/billing/CreateBillingItemButton";
 import { format } from "date-fns";
 import { useBillableServiceInstances, useGenerateInvoiceFromServices } from "@/hooks/useInvoiceGeneration";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface InvoiceFromServicesProps {
   caseId: string;
@@ -21,7 +23,8 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
   const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
   const [retainerToApply, setRetainerToApply] = useState(0);
   
-  const { data: billableServices, isLoading, error } = useBillableServiceInstances(caseId);
+  const { organization } = useOrganization();
+  const { data: billableServices, isLoading, error, refetch: refetchServices } = useBillableServiceInstances(caseId);
   const generateInvoice = useGenerateInvoiceFromServices();
   
   // Fetch retainer balance
@@ -181,6 +184,7 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
                     <TableHead className="text-right">Rate</TableHead>
                     <TableHead className="text-center">Activities</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-center">Billing</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -226,6 +230,18 @@ export function InvoiceFromServices({ caseId, onSuccess }: InvoiceFromServicesPr
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         ${Number(service.estimated_amount).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {service.activity_count > 0 && organization?.id && (
+                          <CreateBillingItemButton
+                            activityId={service.id}
+                            organizationId={organization.id}
+                            variant="ghost"
+                            size="sm"
+                            className="h-8"
+                            onSuccess={() => refetchServices()}
+                          />
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
