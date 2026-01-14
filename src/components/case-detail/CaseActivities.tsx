@@ -20,6 +20,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { useBillingEligibility, BillingEligibilityResult } from "@/hooks/useBillingEligibility";
 import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
+import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
 
 interface Activity {
   id: string;
@@ -62,6 +63,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const [billingPromptOpen, setBillingPromptOpen] = useState(false);
   const [billingEligibility, setBillingEligibility] = useState<BillingEligibilityResult | null>(null);
   const { evaluate: evaluateBillingEligibility } = useBillingEligibility();
+  const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
 
   // Separate state for tasks panel
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
@@ -788,6 +790,62 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
         }}
         editingActivity={editingActivity}
         organizationId={organization?.id || ""}
+      />
+
+      <BillingPromptDialog
+        open={billingPromptOpen}
+        onOpenChange={(open) => {
+          setBillingPromptOpen(open);
+          if (!open) setBillingEligibility(null);
+        }}
+        eligibility={billingEligibility}
+        onCreateBillingItem={async () => {
+          if (!billingEligibility) return;
+          
+          const result = await createBillingItem({
+            activityId: billingEligibility.activityId!,
+            caseServiceInstanceId: billingEligibility.serviceInstanceId!,
+            caseId: billingEligibility.caseId!,
+            organizationId: billingEligibility.organizationId!,
+            accountId: billingEligibility.accountId,
+            serviceName: billingEligibility.serviceName!,
+            pricingModel: billingEligibility.pricingModel!,
+            quantity: billingEligibility.quantity!,
+            rate: billingEligibility.serviceRate!,
+            pricingProfileId: billingEligibility.pricingProfileId,
+            pricingRuleSnapshot: billingEligibility.pricingRuleSnapshot,
+          });
+          
+          if (result.success) {
+            toast({
+              title: "Billing Item Created",
+              description: `Added ${billingEligibility.serviceName} to billing`,
+            });
+            if (result.budgetWarning?.isForecastWarning || result.budgetWarning?.isForecastExceeded) {
+              toast({
+                title: "Budget Warning",
+                description: result.budgetWarning.isForecastExceeded 
+                  ? "Budget forecast exceeded" 
+                  : "Approaching budget limit",
+                variant: "destructive",
+              });
+            }
+          } else {
+            toast({
+              title: "Error",
+              description: result.error || "Failed to create billing item",
+              variant: "destructive",
+            });
+          }
+          
+          setBillingPromptOpen(false);
+          setBillingEligibility(null);
+          fetchActivities();
+        }}
+        onSkip={() => {
+          setBillingPromptOpen(false);
+          setBillingEligibility(null);
+        }}
       />
     </>
   );
