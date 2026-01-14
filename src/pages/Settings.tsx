@@ -26,7 +26,6 @@ import { HelpCenterAdmin } from "@/components/help-center";
 import { DataComplianceTab } from "@/components/settings/DataComplianceTab";
 import { AuthenticationTab } from "@/components/settings/AuthenticationTab";
 import { LegalTab } from "@/components/settings/LegalTab";
-import { ReportsExportsTab } from "@/components/settings/ReportsExportsTab";
 import { SlaSuccessTab } from "@/components/settings/SlaSuccessTab";
 import { CaseNumberingSection } from "@/components/settings/CaseNumberingSection";
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
@@ -746,13 +745,6 @@ const Settings = () => {
             {currentUserRole === 'admin' && (
               <TabsContent value="legal" className="space-y-6">
                 <LegalTab />
-              </TabsContent>
-            )}
-
-            {/* Reports & Exports Tab - Admin Only */}
-            {currentUserRole === 'admin' && (
-              <TabsContent value="reports" className="space-y-6">
-                <ReportsExportsTab />
               </TabsContent>
             )}
 

@@ -9,7 +9,6 @@ import {
   Wallet,
   Receipt,
   BarChart3,
-  ClipboardList,
   UserSearch,
   ListTodo,
   FileEdit,
@@ -126,12 +125,6 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Analytics & Reporting",
     items: [
-      {
-        title: "Reports",
-        icon: ClipboardList,
-        url: "/reports",
-        roles: ["admin", "manager"],
-      },
       {
         title: "Analytics",
         icon: BarChart3,
