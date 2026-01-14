@@ -362,6 +362,17 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         }
         
         if (eligibilityResult.isEligible) {
+          // ═══════════════════════════════════════════════════════════════════════════
+          // SYSTEM PROMPT 5: Display billing modal immediately after update submission
+          // Requirements:
+          //   a. Show modal with message: "This update is linked to a billable activity.
+          //      Would you like to create a billing item for this activity?"
+          //   b. Options: "Yes, create billing item" / "No, skip billing"
+          //   c. CRITICAL: Choosing "No" must NOT disable future billing actions
+          //      (onSkip only logs audit event and resets UI state)
+          // Implementation: BillingPromptDialog component handles the modal UI
+          // ═══════════════════════════════════════════════════════════════════════════
+          
           // SYSTEM PROMPT 11: Log billing prompt shown audit event
           await logBillingAudit({
             action: 'billing_prompt_shown',

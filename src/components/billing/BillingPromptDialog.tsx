@@ -1,3 +1,28 @@
+/**
+ * BillingPromptDialog Component
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * SYSTEM PROMPT 5 COMPLIANCE:
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * This dialog displays immediately after update submission when the update is
+ * linked to a billable activity.
+ * 
+ * REQUIREMENTS:
+ * 1. Display modal with message: "This update is linked to a billable activity.
+ *    Would you like to create a billing item for this activity?"
+ * 
+ * 2. Provide two options:
+ *    - "Yes, create billing item" → Calls onCreateBillingItem
+ *    - "No, skip billing" → Calls onSkip
+ * 
+ * 3. CRITICAL: Choosing "No, skip billing" must NOT disable future billing actions.
+ *    The onSkip handler only logs an audit event and resets UI state.
+ *    No flags are set, no records are modified to prevent future billing.
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
