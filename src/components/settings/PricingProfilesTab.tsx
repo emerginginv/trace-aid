@@ -29,9 +29,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Star, DollarSign, Settings2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Star, DollarSign, Settings2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { ServicePricingRulesEditor } from "./ServicePricingRulesEditor";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PricingProfile {
   id: string;
@@ -333,14 +339,35 @@ export function PricingProfilesTab() {
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteProfileId(profile.id)}
-                    disabled={profile.is_default}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {profile.is_default ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled
+                              className="cursor-not-allowed"
+                            >
+                              <Lock className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Cannot delete the default pricing profile</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteProfileId(profile.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -375,6 +402,7 @@ export function PricingProfilesTab() {
             profileName={rulesEditorProfile.name}
             isOpen={!!rulesEditorProfile}
             onClose={() => setRulesEditorProfile(null)}
+            isDefaultProfile={rulesEditorProfile.is_default}
           />
         )}
       </CardContent>

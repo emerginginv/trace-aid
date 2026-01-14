@@ -91,13 +91,15 @@ interface ServicePricingRulesEditorProps {
   profileName: string;
   isOpen: boolean;
   onClose: () => void;
+  isDefaultProfile?: boolean;
 }
 
 export function ServicePricingRulesEditor({ 
   profileId, 
   profileName, 
   isOpen, 
-  onClose 
+  onClose,
+  isDefaultProfile = false
 }: ServicePricingRulesEditorProps) {
   const { organization } = useOrganization();
   const queryClient = useQueryClient();
@@ -198,6 +200,11 @@ export function ServicePricingRulesEditor({
   // Delete rule mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check if this is the last rule on a default profile
+      if (isDefaultProfile && rules?.length === 1) {
+        throw new Error("Cannot delete the last pricing rule from the default profile");
+      }
+      
       const { error } = await supabase
         .from("service_pricing_rules")
         .delete()
