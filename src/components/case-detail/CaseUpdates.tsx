@@ -5,7 +5,7 @@ import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, ShieldAlert, Download, Paperclip, Link2, X, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, ShieldAlert, Download, Paperclip, Link2, X, Sparkles, DollarSign } from "lucide-react";
 import { AttachmentPreviewThumbnail } from "./AttachmentPreviewThumbnail";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AIBadge } from "@/components/ui/ai-badge";
 import { AISummaryDialog } from "./AISummaryDialog";
+import { CreateBillingItemButton } from "@/components/billing/CreateBillingItemButton";
 
 interface TimelineEntry {
   time: string;
@@ -42,6 +43,7 @@ interface Update {
   user_id: string;
   activity_timeline: TimelineEntry[] | null;
   is_ai_summary?: boolean;
+  linked_activity_id: string | null;
 }
 
 interface UserProfile {
@@ -124,6 +126,7 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         user_id: item.user_id,
         activity_timeline: item.activity_timeline as unknown as TimelineEntry[] | null,
         is_ai_summary: item.is_ai_summary || false,
+        linked_activity_id: item.linked_activity_id,
       }));
 
       setUpdates(mappedUpdates);
@@ -579,6 +582,16 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                       {isVisible("actions") && (
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
+                            {update.linked_activity_id && !isClosedCase && (
+                              <CreateBillingItemButton
+                                activityId={update.linked_activity_id}
+                                updateId={update.id}
+                                organizationId={organization?.id || ""}
+                                variant="ghost"
+                                size="icon"
+                                onSuccess={fetchUpdates}
+                              />
+                            )}
                             {canEditUpdates && (
                               <Button variant="ghost" size="icon" onClick={() => handleEdit(update)} disabled={isClosedCase}>
                                 <Pencil className="h-4 w-4" />

@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Clock, DollarSign, FileText, User, Briefcase, X, CheckCircle } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, DollarSign, FileText, User, Briefcase, X } from "lucide-react";
+import { CreateBillingItemButton } from "@/components/billing/CreateBillingItemButton";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
@@ -28,6 +29,8 @@ interface TimeEntry {
   invoice_number: string | null;
   created_at: string;
   case_service_instance_id: string | null;
+  activity_id: string | null;
+  organization_id: string | null;
 }
 
 interface UserProfile {
@@ -340,6 +343,26 @@ const TimeEntryDetail = () => {
               >
                 View Invoice {timeEntry.invoice_number ? `(${timeEntry.invoice_number})` : ""}
               </Button>
+            </div>
+          )}
+
+          {/* Create Billing Item action - show for unbilled entries with activity */}
+          {timeEntry.activity_id && 
+           !timeEntry.invoiced && 
+           timeEntry.status !== "billed" && 
+           timeEntry.organization_id && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 font-semibold">
+                <DollarSign className="h-4 w-4" />
+                Billing Actions
+              </div>
+              <CreateBillingItemButton
+                activityId={timeEntry.activity_id}
+                organizationId={timeEntry.organization_id}
+                variant="outline"
+                size="default"
+                onSuccess={fetchTimeEntry}
+              />
             </div>
           )}
         </CardContent>
