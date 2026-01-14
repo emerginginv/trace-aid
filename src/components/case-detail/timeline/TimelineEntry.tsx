@@ -122,6 +122,12 @@ export function TimelineEntryComponent({ entry, onNavigate, isLast }: TimelineEn
             By {entry.userName}
           </p>
         )}
+        {/* Event cost hint */}
+        {entry.entryType === 'event' && (
+          <p className="text-xs text-muted-foreground/70 mt-1 italic">
+            Costs derived from linked updates
+          </p>
+        )}
       </div>
     </div>
   );
