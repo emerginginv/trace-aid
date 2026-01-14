@@ -177,6 +177,10 @@ export const PersonForm = ({ subject, onSubmit, isSubmitting, readOnly = false }
                       setDobOpen(false);
                     }}
                     disabled={(date) => date > new Date()}
+                    captionLayout="dropdown"
+                    fromYear={1920}
+                    toYear={new Date().getFullYear()}
+                    defaultMonth={field.value || new Date(2000, 0, 1)}
                     initialFocus
                   />
                 </PopoverContent>
