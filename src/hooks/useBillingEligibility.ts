@@ -88,6 +88,19 @@ export function useBillingEligibility() {
     setIsEvaluating(true);
     
     try {
+      // ═══════════════════════════════════════════════════════════════════════════════
+      // DEPRECATED: This hook is no longer the primary billing eligibility evaluator.
+      // ═══════════════════════════════════════════════════════════════════════════════
+      // Billing eligibility MUST now be evaluated via useUpdateBillingEligibility,
+      // which requires:
+      //   1. A linked EVENT (activity_type = 'event')
+      //   2. A completed update narrative
+      // 
+      // This hook is retained as a helper for service/pricing validation only.
+      // It should NOT be called directly for billing decisions.
+      // TODO: Billing moved to Updates workflow.
+      // ═══════════════════════════════════════════════════════════════════════════════
+      
       // GATE 1: Activity must be linked to a Case Service Instance
       if (!caseServiceInstanceId) {
         const notEligible: BillingEligibilityResult = {

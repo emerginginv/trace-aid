@@ -120,6 +120,26 @@ export function useBillingItemCreation() {
         return { success: false, error: "User not authenticated" };
       }
 
+      // ═══════════════════════════════════════════════════════════════════════════════
+      // GATE 0: Prevent billing item creation for EVENTS via direct activity_id
+      // ═══════════════════════════════════════════════════════════════════════════════
+      // Events must be billed through the Updates workflow (useUpdateBillingEligibility).
+      // This hook should only be called with an updateId when billing events.
+      // If activity_id is provided, verify it's not an event, or that updateId is also provided.
+      // ═══════════════════════════════════════════════════════════════════════════════
+      const { data: activityCheck } = await supabase
+        .from("case_activities")
+        .select("activity_type")
+        .eq("id", activityId)
+        .single();
+
+      if (activityCheck?.activity_type === "event" && !updateId) {
+        return { 
+          success: false, 
+          error: "Events must be billed through the Updates workflow. Please create an update narrative for this event." 
+        };
+      }
+
       // FLAT-FEE ENFORCEMENT: Check if billing item already exists for this service instance
       if (pricingModel === "flat") {
         // Check for existing billing record linked to this service instance

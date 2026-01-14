@@ -1,18 +1,25 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * SYSTEM PROMPT 12 COMPLIANCE: NON-BILLING RULE FOR GENERAL UPDATES
+ * useUpdateBillingEligibility - PRIMARY BILLING ELIGIBILITY HOOK
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * Updates that are NOT linked to a task or event must:
- * - Never display billing prompts
- * - Never request time confirmation
- * - Never create billing items
- * - Remain narrative-only records
+ * This is the ONLY hook that can return isEligible: true for billing.
  * 
- * IMPLEMENTATION (GATE 1 - lines 46-54):
- * → If linkedActivityId is null/undefined, immediately return isEligible: false
- * → This prevents any downstream billing logic from executing
- * → UpdateForm.tsx skips evaluation entirely if no linked activity
+ * REQUIREMENTS for billing eligibility:
+ * 1. Update must be linked to an EVENT (activity_type = 'event', NOT 'task')
+ * 2. Update must have a completed narrative (description IS NOT NULL/empty)
+ * 3. Event must be linked to a billable Case Service Instance
+ * 4. Pricing rule must exist for the service
+ * 5. Activity has NOT already generated a billing item
+ * 
+ * TODO: Billing duration now derived from Time Entries.
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * DEPRECATED: Direct activity completion billing (useBillingEligibility)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * The old workflow where completing an event would trigger a billing prompt
+ * is DEPRECATED. Billing is now triggered via the Updates workflow only.
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
  */
@@ -24,6 +31,8 @@ import { BillingEvaluationDiagnostics } from "@/types/billing";
 
 export interface UpdateBillingEligibilityParams {
   linkedActivityId: string | null | undefined;
+  /** The update narrative description - REQUIRED for billing eligibility */
+  updateDescription?: string | null;
 }
 
 export interface UpdateBillingEligibilityResult extends BillingEligibilityResult {
@@ -34,21 +43,24 @@ export interface UpdateBillingEligibilityResult extends BillingEligibilityResult
 }
 
 /**
- * Hook to check billing eligibility specifically for case updates.
+ * Hook to check billing eligibility for case updates.
  * 
- * Per SYSTEM PROMPT 4, billing eligibility for updates requires ALL conditions:
- * 1. Update is linked to a task/event (linked_activity_id IS NOT NULL)
- * 2. Activity is linked to Case Service Instance (case_activities.case_service_instance_id IS NOT NULL)
- * 3. Service Instance is billable (case_service_instances.billable = true OR case_services.is_billable = true)
- * 4. Pricing rule exists (service_pricing_rules check via profile hierarchy)
- * 5. Activity has NOT already generated a billing item (case_finances WHERE activity_id = X)
+ * This is the ONLY hook that can return isEligible: true for billing.
+ * 
+ * REQUIREMENTS (ALL must be met):
+ * 1. Update is linked to an EVENT (activity_type = 'event', NOT 'task')
+ * 2. Update has a completed narrative (updateDescription is not empty)
+ * 3. Event is linked to Case Service Instance (case_activities.case_service_instance_id IS NOT NULL)
+ * 4. Service Instance is billable (case_service_instances.billable = true OR case_services.is_billable = true)
+ * 5. Pricing rule exists (service_pricing_rules check via profile hierarchy)
+ * 6. Activity has NOT already generated a billing item (case_finances WHERE activity_id = X)
  */
 export function useUpdateBillingEligibility() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [result, setResult] = useState<UpdateBillingEligibilityResult | null>(null);
   const { evaluate: evaluateBase } = useBillingEligibility();
 
-  const evaluate = useCallback(async ({ linkedActivityId }: UpdateBillingEligibilityParams): Promise<UpdateBillingEligibilityResult> => {
+  const evaluate = useCallback(async ({ linkedActivityId, updateDescription }: UpdateBillingEligibilityParams): Promise<UpdateBillingEligibilityResult> => {
     setIsEvaluating(true);
 
     // Initialize diagnostics object (PART 3: Admin Diagnostics)
@@ -64,12 +76,25 @@ export function useUpdateBillingEligibility() {
     };
 
     try {
-      // GATE 1: Update must be linked to a task/event
-      if (!linkedActivityId) {
-        diagnostics.failure_reason = "Update is not linked to a task or event";
+      // GATE 0: Update must have a completed narrative
+      const hasNarrative = updateDescription && updateDescription.trim().length > 0;
+      if (!hasNarrative) {
+        diagnostics.failure_reason = "Update narrative is required for billing eligibility";
         const notEligible: UpdateBillingEligibilityResult = {
           isEligible: false,
-          reason: "Update is not linked to a task or event",
+          reason: "Update narrative is required for billing eligibility",
+          diagnostics,
+        };
+        setResult(notEligible);
+        return notEligible;
+      }
+
+      // GATE 1: Update must be linked to an activity
+      if (!linkedActivityId) {
+        diagnostics.failure_reason = "Update is not linked to an event";
+        const notEligible: UpdateBillingEligibilityResult = {
+          isEligible: false,
+          reason: "Update is not linked to an event",
           diagnostics,
         };
         setResult(notEligible);
@@ -79,10 +104,10 @@ export function useUpdateBillingEligibility() {
       diagnostics.has_linked_activity = true;
       diagnostics.context!.activityId = linkedActivityId;
 
-      // Fetch the linked activity to get case_service_instance_id
+      // Fetch the linked activity to get case_service_instance_id AND verify it's an EVENT
       const { data: activityData, error: activityError } = await supabase
         .from("case_activities")
-        .select("id, title, case_service_instance_id, case_id")
+        .select("id, title, case_service_instance_id, case_id, activity_type")
         .eq("id", linkedActivityId)
         .single();
 
@@ -91,6 +116,19 @@ export function useUpdateBillingEligibility() {
         const notEligible: UpdateBillingEligibilityResult = {
           isEligible: false,
           reason: "Could not find linked activity",
+          diagnostics,
+        };
+        setResult(notEligible);
+        return notEligible;
+      }
+
+      // GATE 1.5: Activity must be an EVENT (not a task)
+      // Billing is only allowed through Updates linked to events
+      if (activityData.activity_type !== "event") {
+        diagnostics.failure_reason = "Billing is only available for events, not tasks. Link this update to an event.";
+        const notEligible: UpdateBillingEligibilityResult = {
+          isEligible: false,
+          reason: "Billing is only available for events, not tasks. Link this update to an event.",
           diagnostics,
         };
         setResult(notEligible);
