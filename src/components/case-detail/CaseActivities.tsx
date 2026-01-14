@@ -84,7 +84,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   useEffect(() => {
     fetchUsers();
     fetchActivities();
-  }, [caseId]);
+  }, [caseId, organization?.id]);
 
   const fetchUsers = async () => {
     try {
