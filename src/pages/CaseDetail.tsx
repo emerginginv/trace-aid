@@ -624,7 +624,7 @@ const CaseDetail = () => {
       )}
       
       {/* Header */}
-      <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap xl:items-start xl:gap-4">
+      <div className="flex items-start gap-3 md:gap-4 min-w-0">
         {/* Back button + Title row */}
         <div className="flex items-start gap-2 min-w-0 flex-1">
           <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
@@ -647,7 +647,7 @@ const CaseDetail = () => {
         </div>
         
         {/* Status + Actions - break under title until lg, then sit to the right */}
-        <div className="flex items-center gap-2 shrink-0 pl-9 xl:pl-0 xl:ml-auto">
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
           {/* Status Dropdown */}
           {!isVendor && (
             <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
