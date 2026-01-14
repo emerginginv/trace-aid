@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -25,14 +25,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { ContactsPageSkeleton } from "@/components/ui/list-page-skeleton";
+
+// New shared components
+import { PermissionGate } from "@/components/shared/PermissionGate";
+import { useContactsQuery } from "@/hooks/queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Contact {
   id: string;
@@ -57,9 +61,8 @@ const Contacts = () => {
   
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const queryClient = useQueryClient();
   const { organization } = useOrganization();
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -69,35 +72,10 @@ const Contacts = () => {
   const [selectedContactEmail, setSelectedContactEmail] = useState<string>("");
   const [emailSubject, setEmailSubject] = useState<string>("");
   const { sortColumn, sortDirection, handleSort } = useSortPreference("contacts", "first_name", "asc");
-
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("contacts-columns", COLUMNS);
 
-  useEffect(() => {
-    fetchContacts();
-  }, [organization?.id]);
-
-  const fetchContacts = async () => {
-    try {
-      if (!organization?.id) {
-        setContacts([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("contacts")
-        .select("*")
-        .eq("organization_id", organization.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setContacts(data || []);
-    } catch (error) {
-      toast.error("Error fetching contacts");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use React Query for data fetching
+  const { data: contacts = [], isLoading } = useContactsQuery({ search: searchQuery });
 
   // Pending deletion tracking for undo functionality
   const pendingDeletions = useRef<Map<string, { item: Contact; timeoutId: NodeJS.Timeout }>>(new Map());
@@ -109,15 +87,16 @@ const Contacts = () => {
     const contactItem = contacts.find(c => c.id === contactToDelete);
     if (!contactItem) return;
     
-    // Close dialog and clear state immediately
     setDeleteDialogOpen(false);
     const deletedId = contactToDelete;
     setContactToDelete(null);
     
-    // Optimistically remove from UI
-    setContacts(prev => prev.filter(c => c.id !== deletedId));
+    // Optimistically update the cache
+    queryClient.setQueryData(
+      ['contacts', organization?.id, searchQuery, 100],
+      (old: Contact[] | undefined) => old?.filter(c => c.id !== deletedId) ?? []
+    );
     
-    // Show toast with undo action
     toast("Contact deleted", {
       description: "Click undo to restore",
       action: {
@@ -126,7 +105,7 @@ const Contacts = () => {
           const pending = pendingDeletions.current.get(deletedId);
           if (pending) {
             clearTimeout(pending.timeoutId);
-            setContacts(prev => [...prev, pending.item]);
+            queryClient.invalidateQueries({ queryKey: ['contacts'] });
             pendingDeletions.current.delete(deletedId);
             toast.success("Contact restored");
           }
@@ -135,23 +114,23 @@ const Contacts = () => {
       duration: UNDO_DELAY,
     });
     
-    // Schedule actual deletion
     const timeoutId = setTimeout(async () => {
       const { error } = await supabase.from("contacts").delete().eq("id", deletedId);
       if (error) {
-        const pending = pendingDeletions.current.get(deletedId);
-        if (pending) {
-          setContacts(prev => [...prev, pending.item]);
-          toast.error("Failed to delete contact. Item restored.");
-        }
+        queryClient.invalidateQueries({ queryKey: ['contacts'] });
+        toast.error("Failed to delete contact. Item restored.");
       }
       pendingDeletions.current.delete(deletedId);
     }, UNDO_DELAY);
     
     pendingDeletions.current.set(deletedId, {
-      item: contactItem,
+      item: contactItem as Contact,
       timeoutId,
     });
+  };
+
+  const handleFormSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['contacts'] });
   };
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -159,10 +138,11 @@ const Contacts = () => {
   };
 
 
+  // Filter contacts client-side for search
   const filteredContacts = contacts.filter(contact => {
     return searchQuery === '' || 
-      contact.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.phone?.toLowerCase().includes(searchQuery.toLowerCase());
   });
@@ -202,7 +182,7 @@ const Contacts = () => {
   const handleExportCSV = () => exportToCSV(sortedContacts, EXPORT_COLUMNS, "contacts");
   const handleExportPDF = () => exportToPDF(sortedContacts, EXPORT_COLUMNS, "Contacts Report", "contacts");
 
-  if (loading) {
+  if (isLoading) {
     return <ContactsPageSkeleton />;
   }
 
@@ -540,7 +520,7 @@ const Contacts = () => {
       <ContactForm 
         open={formOpen} 
         onOpenChange={setFormOpen} 
-        onSuccess={fetchContacts}
+        onSuccess={handleFormSuccess}
         organizationId={organization?.id || ""}
       />
 
