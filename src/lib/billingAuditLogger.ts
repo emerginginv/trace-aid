@@ -5,7 +5,8 @@ export type BillingAuditAction =
   | 'billing_prompt_shown'
   | 'time_confirmed'
   | 'billing_item_created'
-  | 'billing_skipped';
+  | 'billing_skipped'
+  | 'event_billing_blocked';
 
 export interface BillingAuditMetadata {
   updateId?: string;
@@ -27,6 +28,8 @@ export interface BillingAuditMetadata {
   reason?: string;
   /** Source of the billing action (e.g., 'update_form', 'create_billing_later') */
   source?: string;
+  /** Severity level for audit events */
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
 export interface BillingAuditLogEntry {
