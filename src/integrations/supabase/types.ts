@@ -1735,6 +1735,7 @@ export type Database = {
           import_batch_id: string | null
           import_timestamp: string | null
           is_ai_summary: boolean | null
+          is_legacy_billing: boolean | null
           linked_activity_id: string | null
           organization_id: string | null
           title: string
@@ -1754,6 +1755,7 @@ export type Database = {
           import_batch_id?: string | null
           import_timestamp?: string | null
           is_ai_summary?: boolean | null
+          is_legacy_billing?: boolean | null
           linked_activity_id?: string | null
           organization_id?: string | null
           title: string
@@ -1773,6 +1775,7 @@ export type Database = {
           import_batch_id?: string | null
           import_timestamp?: string | null
           is_ai_summary?: boolean | null
+          is_legacy_billing?: boolean | null
           linked_activity_id?: string | null
           organization_id?: string | null
           title?: string
