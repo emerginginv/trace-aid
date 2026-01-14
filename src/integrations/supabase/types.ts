@@ -1013,6 +1013,7 @@ export type Database = {
           description: string
           due_date: string | null
           end_date: string | null
+          expense_user_id: string | null
           external_record_id: string | null
           external_system_name: string | null
           finance_type: string
@@ -1050,6 +1051,7 @@ export type Database = {
           description: string
           due_date?: string | null
           end_date?: string | null
+          expense_user_id?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           finance_type: string
@@ -1087,6 +1089,7 @@ export type Database = {
           description?: string
           due_date?: string | null
           end_date?: string | null
+          expense_user_id?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           finance_type?: string
@@ -1130,6 +1133,13 @@ export type Database = {
             columns: ["case_service_instance_id"]
             isOneToOne: false
             referencedRelation: "case_service_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_finances_expense_user_id_fkey"
+            columns: ["expense_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

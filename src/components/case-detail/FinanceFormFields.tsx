@@ -16,9 +16,10 @@ interface FinanceFormFieldsProps {
   form: UseFormReturn<any>;
   subjects: any[];
   activities: any[];
+  users: {id: string; email: string; full_name: string | null}[];
 }
 
-export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFieldsProps) => {
+export const FinanceFormFields = ({ form, subjects, activities, users }: FinanceFormFieldsProps) => {
   const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [dueDatePickerOpen, setDueDatePickerOpen] = useState(false);
@@ -141,6 +142,36 @@ export const FinanceFormFields = ({ form, subjects, activities }: FinanceFormFie
 
       {financeType === "expense" && (
         <>
+          {users.length > 0 && (
+            <FormField
+              control={form.control}
+              name="expense_user_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Expense For (Optional)</FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(value === "none" ? undefined : value)} 
+                    value={field.value || "none"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select team member" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-background z-50">
+                      <SelectItem value="none">Not specified</SelectItem>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.full_name || user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
           <FormField
             control={form.control}
             name="quantity"
