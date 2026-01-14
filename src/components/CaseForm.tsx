@@ -59,6 +59,8 @@ const caseSchema = z.object({
   budget_dollars: z.coerce.number().min(0).optional().nullable(),
   budget_notes: z.string().max(500).optional().nullable(),
   reference_number: z.string().max(100).optional().nullable(),
+  reference_number_2: z.string().max(100).optional().nullable(),
+  reference_number_3: z.string().max(100).optional().nullable(),
   pricing_profile_id: z.string().optional().nullable(),
   case_type_id: z.string().optional().nullable(),
 });
@@ -83,6 +85,8 @@ interface CaseFormProps {
     budget_dollars?: number | null;
     budget_notes?: string | null;
     reference_number?: string | null;
+    reference_number_2?: string | null;
+    reference_number_3?: string | null;
     pricing_profile_id?: string | null;
     case_type_id?: string | null;
   };
@@ -157,6 +161,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       budget_dollars: null,
       budget_notes: null,
       reference_number: null,
+      reference_number_2: null,
+      reference_number_3: null,
       pricing_profile_id: null,
       case_type_id: null,
     },
@@ -205,6 +211,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_dollars: editingCase.budget_dollars ?? null,
           budget_notes: editingCase.budget_notes ?? null,
           reference_number: editingCase.reference_number ?? null,
+          reference_number_2: editingCase.reference_number_2 ?? null,
+          reference_number_3: editingCase.reference_number_3 ?? null,
           pricing_profile_id: editingCase.pricing_profile_id ?? null,
           case_type_id: editingCase.case_type_id ?? null,
         });
@@ -231,6 +239,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           budget_dollars: null,
           budget_notes: null,
           reference_number: null,
+          reference_number_2: null,
+          reference_number_3: null,
           pricing_profile_id: null,
           case_type_id: null,
         });
@@ -528,6 +538,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         budget_dollars: data.budget_dollars || null,
         budget_notes: data.budget_notes || null,
         reference_number: data.reference_number || null,
+        reference_number_2: data.reference_number_2 || null,
+        reference_number_3: data.reference_number_3 || null,
         pricing_profile_id: data.pricing_profile_id || null,
         case_type_id: data.case_type_id || null,
       };
@@ -939,24 +951,72 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               />
             </div>
 
-            {/* Reference Number */}
-            <FormField
-              control={form.control}
-              name="reference_number"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reference No. (Optional)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="External reference number" 
-                      {...field} 
-                      value={field.value || ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Reference Numbers - Dynamic based on Case Type */}
+            {(selectedCaseType?.reference_label_1 || !selectedCaseType) && (
+              <FormField
+                control={form.control}
+                name="reference_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {selectedCaseType?.reference_label_1 || "Reference No."} (Optional)
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder={`Enter ${selectedCaseType?.reference_label_1 || 'reference number'}...`}
+                        {...field} 
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {selectedCaseType?.reference_label_2 && (
+              <FormField
+                control={form.control}
+                name="reference_number_2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {selectedCaseType.reference_label_2} (Optional)
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder={`Enter ${selectedCaseType.reference_label_2}...`}
+                        {...field} 
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {selectedCaseType?.reference_label_3 && (
+              <FormField
+                control={form.control}
+                name="reference_number_3"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {selectedCaseType.reference_label_3} (Optional)
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder={`Enter ${selectedCaseType.reference_label_3}...`}
+                        {...field} 
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Case Manager and Investigators */}
             <div className="border-t pt-4 space-y-4">

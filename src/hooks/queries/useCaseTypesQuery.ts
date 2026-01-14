@@ -19,6 +19,9 @@ export interface CaseType {
   allowed_case_flags?: string[];
   display_order?: number;
   created_at: string;
+  reference_label_1?: string | null;
+  reference_label_2?: string | null;
+  reference_label_3?: string | null;
 }
 
 interface UseCaseTypesQueryOptions {

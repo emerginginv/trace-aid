@@ -63,6 +63,8 @@ interface Case {
   parent_case_id: string | null;
   instance_number: number;
   reference_number?: string | null;
+  reference_number_2?: string | null;
+  reference_number_3?: string | null;
   case_type_id?: string | null;
 }
 
@@ -798,7 +800,25 @@ const CaseDetail = () => {
                             <p className="text-sm font-medium text-muted-foreground/60">—</p>
                           )}
                         </div>
-                        <InfoItem label="Reference No." value={caseData.reference_number} />
+                        {/* Reference Numbers - Dynamic based on Case Type */}
+                        {(caseType?.reference_label_1 || !caseType) && (
+                          <InfoItem 
+                            label={caseType?.reference_label_1 || "Reference No."} 
+                            value={caseData.reference_number} 
+                          />
+                        )}
+                        {caseType?.reference_label_2 && (
+                          <InfoItem 
+                            label={caseType.reference_label_2} 
+                            value={caseData.reference_number_2} 
+                          />
+                        )}
+                        {caseType?.reference_label_3 && (
+                          <InfoItem 
+                            label={caseType.reference_label_3} 
+                            value={caseData.reference_number_3} 
+                          />
+                        )}
                         <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
                         <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
                         {isClosed && (
