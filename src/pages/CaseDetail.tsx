@@ -571,13 +571,14 @@ const CaseDetail = () => {
 
   const isClosed = isClosedCase();
 
-  // Info item helper component
+  // Info item helper component - always shows the field, with placeholder when empty
   const InfoItem = ({ label, value, className = "" }: { label: string; value: string | undefined | null; className?: string }) => {
-    if (!value) return null;
     return (
       <div>
         <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-        <p className={`text-sm font-medium ${className}`}>{value}</p>
+        <p className={`text-sm font-medium ${value ? className : 'text-muted-foreground/60'}`}>
+          {value || "—"}
+        </p>
       </div>
     );
   };
@@ -779,9 +780,10 @@ const CaseDetail = () => {
                         <InfoItem label="Account" value={account?.name} />
                         <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
                         <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
-                        {caseType && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-0.5">Case Type</p>
+                        {/* Case Type - always show */}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Case Type</p>
+                          {caseType ? (
                             <div className="flex items-center gap-1.5">
                               <span 
                                 className="w-2.5 h-2.5 rounded-full shrink-0"
@@ -792,20 +794,22 @@ const CaseDetail = () => {
                                 {caseType.tag}
                               </Badge>
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <p className="text-sm font-medium text-muted-foreground/60">—</p>
+                          )}
+                        </div>
                         <InfoItem label="Reference No." value={caseData.reference_number} />
                         <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
                         <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
-                        {isClosed && caseData.closed_at && (
-                          <InfoItem label="Closed" value={new Date(caseData.closed_at).toLocaleDateString()} className="text-muted-foreground" />
+                        {isClosed && (
+                          <InfoItem label="Closed" value={caseData.closed_at ? new Date(caseData.closed_at).toLocaleDateString() : null} className="text-muted-foreground" />
                         )}
                       </div>
                       
-                      {/* Services Section */}
-                      {serviceInstances.length > 0 && (
-                        <div className="pt-3 border-t">
-                          <p className="text-xs text-muted-foreground mb-2">Services</p>
+                      {/* Services Section - always show */}
+                      <div className="pt-3 border-t">
+                        <p className="text-xs text-muted-foreground mb-2">Services</p>
+                        {serviceInstances.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {serviceInstances.map((instance) => (
                               <Badge 
@@ -820,8 +824,10 @@ const CaseDetail = () => {
                               </Badge>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <p className="text-sm text-muted-foreground/60">No services assigned</p>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
 
