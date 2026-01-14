@@ -36,9 +36,10 @@ interface PersonFormProps {
   onSubmit: (values: PersonFormValues, profileImageUrl: string | null) => void;
   isSubmitting: boolean;
   readOnly?: boolean;
+  signedProfileImageUrl?: string | null;
 }
 
-export const PersonForm = ({ subject, onSubmit, isSubmitting, readOnly = false }: PersonFormProps) => {
+export const PersonForm = ({ subject, onSubmit, isSubmitting, readOnly = false, signedProfileImageUrl }: PersonFormProps) => {
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(subject?.profile_image_url || null);
   const [dobOpen, setDobOpen] = useState(false);
   const [aliasInput, setAliasInput] = useState("");
@@ -97,6 +98,7 @@ export const PersonForm = ({ subject, onSubmit, isSubmitting, readOnly = false }
             {!readOnly && (
               <ProfileImageUpload
                 currentImageUrl={profileImageUrl || undefined}
+                displayUrl={signedProfileImageUrl || undefined}
                 onImageChange={setProfileImageUrl}
                 subjectId={subject?.id}
               />
