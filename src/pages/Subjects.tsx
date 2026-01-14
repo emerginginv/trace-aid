@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
-import { User, Car, MapPin, Package, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { User, Car, MapPin, Package, Building2, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,7 @@ interface SubjectCounts {
   vehicle: number;
   location: number;
   item: number;
+  business: number;
 }
 
 const CATEGORY_ICONS: Record<SubjectCategory, React.ElementType> = {
@@ -56,6 +57,7 @@ const CATEGORY_ICONS: Record<SubjectCategory, React.ElementType> = {
   vehicle: Car,
   location: MapPin,
   item: Package,
+  business: Building2,
 };
 
 const STAT_CARDS = [
@@ -63,6 +65,7 @@ const STAT_CARDS = [
   { key: 'vehicle' as const, label: 'Vehicles', icon: Car, color: 'text-green-500', bgColor: 'bg-green-500/10' },
   { key: 'location' as const, label: 'Locations', icon: MapPin, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
   { key: 'item' as const, label: 'Items', icon: Package, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+  { key: 'business' as const, label: 'Businesses', icon: Building2, color: 'text-teal-500', bgColor: 'bg-teal-500/10' },
 ];
 
 const EXPORT_COLUMNS: ExportColumn[] = [
@@ -95,6 +98,7 @@ export default function Subjects() {
     vehicle: 0,
     location: 0,
     item: 0,
+    business: 0,
   });
 
   useEffect(() => {
@@ -156,7 +160,7 @@ export default function Subjects() {
       setSubjects(enrichedSubjects);
 
       // Calculate counts for active subjects
-      const newCounts: SubjectCounts = { person: 0, vehicle: 0, location: 0, item: 0 };
+      const newCounts: SubjectCounts = { person: 0, vehicle: 0, location: 0, item: 0, business: 0 };
       enrichedSubjects.forEach((s) => {
         if (s.status === 'active' && s.subject_type in newCounts) {
           newCounts[s.subject_type as keyof SubjectCounts]++;
@@ -264,7 +268,7 @@ export default function Subjects() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {STAT_CARDS.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -304,6 +308,7 @@ export default function Subjects() {
             <SelectItem value="vehicle">Vehicles</SelectItem>
             <SelectItem value="location">Locations</SelectItem>
             <SelectItem value="item">Items</SelectItem>
+            <SelectItem value="business">Businesses</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>

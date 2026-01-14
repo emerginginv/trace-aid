@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { User, Car, MapPin, Package, ShieldAlert } from "lucide-react";
+import { User, Car, MapPin, Package, Building2, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SubjectCategory, SUBJECT_CATEGORY_LABELS } from "./types";
 import { SubjectSubTab } from "./SubjectSubTab";
@@ -20,6 +20,7 @@ interface SubjectCounts {
   vehicle: number;
   location: number;
   item: number;
+  business: number;
 }
 
 const CATEGORY_ICONS: Record<SubjectCategory, React.ComponentType<{ className?: string }>> = {
@@ -27,14 +28,15 @@ const CATEGORY_ICONS: Record<SubjectCategory, React.ComponentType<{ className?: 
   vehicle: Car,
   location: MapPin,
   item: Package,
+  business: Building2,
 };
 
-const CATEGORIES: SubjectCategory[] = ['person', 'vehicle', 'location', 'item'];
+const CATEGORIES: SubjectCategory[] = ['person', 'vehicle', 'location', 'item', 'business'];
 
 export const SubjectsTab = ({ caseId, isClosedCase = false }: SubjectsTabProps) => {
   const { organization } = useOrganization();
   const [activeCategory, setActiveCategory] = useState<SubjectCategory>('person');
-  const [counts, setCounts] = useState<SubjectCounts>({ person: 0, vehicle: 0, location: 0, item: 0 });
+  const [counts, setCounts] = useState<SubjectCounts>({ person: 0, vehicle: 0, location: 0, item: 0, business: 0 });
   const [loadingCounts, setLoadingCounts] = useState(true);
   
   const { hasPermission, loading: permissionsLoading } = usePermissions();
@@ -54,7 +56,7 @@ export const SubjectsTab = ({ caseId, isClosedCase = false }: SubjectsTabProps) 
 
       if (error) throw error;
 
-      const newCounts: SubjectCounts = { person: 0, vehicle: 0, location: 0, item: 0 };
+      const newCounts: SubjectCounts = { person: 0, vehicle: 0, location: 0, item: 0, business: 0 };
       (data || []).forEach((subject) => {
         const type = subject.subject_type as SubjectCategory;
         if (type in newCounts) {
