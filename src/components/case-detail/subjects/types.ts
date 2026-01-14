@@ -1,6 +1,6 @@
 // Subject types and interfaces for the Subjects Tab
 
-export type SubjectCategory = 'person' | 'vehicle' | 'location' | 'item';
+export type SubjectCategory = 'person' | 'vehicle' | 'location' | 'item' | 'business';
 export type SubjectStatus = 'active' | 'archived';
 
 export type SocialPlatform = 
@@ -167,6 +167,7 @@ export const SUBJECT_CATEGORY_LABELS: Record<SubjectCategory, string> = {
   vehicle: 'Vehicles',
   location: 'Locations',
   item: 'Items',
+  business: 'Businesses',
 };
 
 export const SUBJECT_CATEGORY_SINGULAR: Record<SubjectCategory, string> = {
@@ -174,4 +175,5 @@ export const SUBJECT_CATEGORY_SINGULAR: Record<SubjectCategory, string> = {
   vehicle: 'Vehicle',
   location: 'Location',
   item: 'Item',
+  business: 'Business',
 };
