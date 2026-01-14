@@ -71,7 +71,7 @@ export function BillingPromptDialog({
             Create Billing Item?
           </DialogTitle>
           <DialogDescription>
-            This activity is associated with a billable service. Would you like to create a billing item?
+            This update is linked to a billable activity. Would you like to create a billing item for this event?
           </DialogDescription>
         </DialogHeader>
         
@@ -129,7 +129,7 @@ export function BillingPromptDialog({
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={onSkip} className="w-full sm:w-auto">
-            No, Skip for Now
+            No, Skip Billing
           </Button>
           <Button onClick={onCreateBillingItem} className="w-full sm:w-auto">
             <Receipt className="h-4 w-4 mr-2" />
