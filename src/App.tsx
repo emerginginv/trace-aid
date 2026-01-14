@@ -43,6 +43,7 @@ import ContactEdit from "./pages/ContactEdit";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import Billing from "./pages/Billing";
+import BillingReviewQueue from "./pages/BillingReviewQueue";
 import ImportReview from "./pages/ImportReview";
 
 import UserProfile from "./pages/UserProfile";
@@ -291,6 +292,17 @@ const App = () => {
         <Route path="/finance" element={<Navigate to="/retainers" replace />} />
         <Route path="/all-expenses" element={<Navigate to="/expenses" replace />} />
         <Route path="/all-invoices" element={<Navigate to="/invoices" replace />} />
+        {/* Billing Review Queue - PART 8 */}
+        <Route
+          path="/billing-review"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <BillingReviewQueue />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/analytics"
           element={
