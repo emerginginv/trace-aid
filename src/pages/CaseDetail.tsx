@@ -34,7 +34,7 @@ import { GenerateReportDialog } from "@/components/templates/GenerateReportDialo
 import { CaseSummaryPdfDialog } from "@/components/case-detail/CaseSummaryPdfDialog";
 import { CaseReports } from "@/components/case-detail/CaseReports";
 import { CaseTimeline } from "@/components/case-detail/CaseTimeline";
-import { TimeExpenseDetail } from "@/components/case-detail/TimeExpenseDetail";
+
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -861,12 +861,6 @@ const CaseDetail = () => {
               </TabsContent>
             )}
 
-            {/* Time & Expense Tab */}
-            {!isVendor && (
-              <TabsContent value="time-expense" className="mt-0">
-                <TimeExpenseDetail caseId={id!} organizationId={organization?.id} />
-              </TabsContent>
-            )}
 
             {/* Attachments Tab */}
             <TabsContent value="attachments" className="mt-0">
