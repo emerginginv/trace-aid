@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, DollarSign, Receipt, TrendingUp, Search, Download, FileText, Link, CheckCircle, Lock, ExternalLink } from "lucide-react";
+import { Clock, DollarSign, Receipt, TrendingUp, Search, Download, FileText, Link, CheckCircle, Lock, ExternalLink, X, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInMinutes } from "date-fns";
 import { exportToCSV, ExportColumn } from "@/lib/exportUtils";
@@ -91,6 +91,9 @@ interface DerivedTimeEntry {
   activity_id: string | null;
   activity_title: string | null;
   source_type: "activity" | "service_instance" | "invoice";
+  // Billing state fields
+  billable: boolean;
+  invoice_number?: string | null;
 }
 
 interface ExpenseEntry {
@@ -381,6 +384,8 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
             activity_id: activity.id,
             activity_title: activity.title,
             source_type: "activity",
+            billable: instance.billable !== false && service.is_billable !== false,
+            invoice_number: null, // Invoice number will be populated from invoice data if available
           });
         }
       } else if (instance.quantity_actual && instance.quantity_actual > 0) {
@@ -417,6 +422,8 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
           activity_id: null,
           activity_title: null,
           source_type: "service_instance",
+          billable: instance.billable !== false && service.is_billable !== false,
+          invoice_number: null,
         });
       } else if (invoiceItem) {
         // Billed service instance without activity data - use invoice data
@@ -437,6 +444,8 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
           activity_id: null,
           activity_title: null,
           source_type: "invoice",
+          billable: true, // If it was invoiced, it was billable
+          invoice_number: null, // Invoice number would be populated from invoice lookup
         });
       }
     }
@@ -635,23 +644,64 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, string> = {
-      unbilled: "bg-muted text-muted-foreground border-border",
-      pending: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-      approved: "bg-green-500/10 text-green-600 border-green-500/20",
-      rejected: "bg-red-500/10 text-red-600 border-red-500/20",
-      billed: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-      invoiced: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-    };
+  // Billing State Badge for Time Entries
+  const getTimeBillingStateBadge = (entry: DerivedTimeEntry) => {
+    // State 1: Not billable
+    if (!entry.billable) {
+      return (
+        <Badge variant="outline" className="text-muted-foreground">
+          <X className="h-3 w-3 mr-1" />
+          Not Billable
+        </Badge>
+      );
+    }
+    
+    // State 2: Invoiced (with invoice reference)
+    if (entry.status === "billed") {
+      return (
+        <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+          <FileText className="h-3 w-3 mr-1" />
+          {entry.invoice_number || "Invoiced"}
+        </Badge>
+      );
+    }
+    
+    // State 3: Billable, not invoiced
     return (
-      <Badge variant="outline" className={cn("capitalize", variants[status] || "")}>
-        {status === "billed" || status === "invoiced" ? (
-          <span className="flex items-center gap-1">
-            <Link className="h-3 w-3" />
-            {status}
-          </span>
-        ) : status}
+      <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+        <Clock className="h-3 w-3 mr-1" />
+        Pending Invoice
+      </Badge>
+    );
+  };
+
+  // Billing State Badge for Expense Entries
+  const getExpenseBillingStateBadge = (entry: ExpenseEntry) => {
+    // State 1: Not billable
+    if (!entry.billable) {
+      return (
+        <Badge variant="outline" className="text-muted-foreground">
+          <X className="h-3 w-3 mr-1" />
+          Not Billable
+        </Badge>
+      );
+    }
+    
+    // State 2: Invoiced (with invoice reference)
+    if (entry.invoiced) {
+      return (
+        <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+          <FileText className="h-3 w-3 mr-1" />
+          {entry.invoice_number || "Invoiced"}
+        </Badge>
+      );
+    }
+    
+    // State 3: Billable, not invoiced
+    return (
+      <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+        <DollarSign className="h-3 w-3 mr-1" />
+        Pending Invoice
       </Badge>
     );
   };
@@ -715,6 +765,12 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
 
   return (
     <div className="space-y-6">
+      {/* Informational Banner */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
+        <Lock className="h-4 w-4 flex-shrink-0" />
+        <span>This view is informational and auditable only. To modify entries, use the Activities or Invoices sections.</span>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -849,7 +905,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                     <TableHead className="text-right">Hours</TableHead>
                     <TableHead className="text-right">Rate</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Billing State</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -904,7 +960,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                       <TableCell className="text-right font-medium">
                         ${entry.amount.toFixed(2)}
                       </TableCell>
-                      <TableCell>{getStatusBadge(entry.status)}</TableCell>
+                      <TableCell>{getTimeBillingStateBadge(entry)}</TableCell>
                     </TableRow>
                   ))}
                   {/* Subtotal Row */}
@@ -955,8 +1011,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                     <TableHead>Description</TableHead>
                     <TableHead>Submitted By</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Billable</TableHead>
-                    <TableHead>Invoiced</TableHead>
+                    <TableHead>Billing State</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -979,28 +1034,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                       <TableCell className="text-right font-medium">
                         ${Number(entry.amount).toFixed(2)}
                       </TableCell>
-                      <TableCell>
-                        {entry.billable ? (
-                          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-                            <DollarSign className="h-3 w-3 mr-1" />
-                            Billable
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            Non-billable
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {entry.invoiced ? (
-                          <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
-                            <FileText className="h-3 w-3 mr-1" />
-                            {entry.invoice_number || "Invoiced"}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">Not invoiced</span>
-                        )}
-                      </TableCell>
+                      <TableCell>{getExpenseBillingStateBadge(entry)}</TableCell>
                     </TableRow>
                   ))}
                   {/* Subtotal Row */}
@@ -1009,7 +1043,7 @@ export function TimeExpenseDetail({ caseId, organizationId }: TimeExpenseDetailP
                     <TableCell className="text-right">
                       ${filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0).toFixed(2)}
                     </TableCell>
-                    <TableCell colSpan={2} />
+                    <TableCell />
                   </TableRow>
                 </TableBody>
               </Table>
