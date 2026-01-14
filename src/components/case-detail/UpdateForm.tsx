@@ -335,7 +335,11 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       // Requirements:
       // 1. Update must be saved before this runs (non-blocking)
       // 2. If no task/event is referenced → end immediately, no billing prompt
-      // 3. If task/event is linked → evaluate billing eligibility
+      // 3. If task/event is linked:
+      //    a. Resolve the linked activity (fetch from case_activities)
+      //    b. Check if activity has case_service_instance_id
+      //    c. If NO Case Service Instance → end evaluation, no billing prompt
+      //    d. If Case Service Instance exists → continue to billing eligibility
       // ═══════════════════════════════════════════════════════════════════════════
       // SYSTEM PROMPT 3 & 4: Check billing eligibility only if update is linked to an activity
       // If linked, evaluate billing eligibility; if eligible, show billing prompt
