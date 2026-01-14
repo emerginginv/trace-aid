@@ -1868,6 +1868,8 @@ export type Database = {
           pricing_profile_id: string | null
           purpose_of_request: string | null
           reference_number: string | null
+          reference_number_2: string | null
+          reference_number_3: string | null
           retain_until: string | null
           retention_days: number | null
           series_instance: number | null
@@ -1914,6 +1916,8 @@ export type Database = {
           pricing_profile_id?: string | null
           purpose_of_request?: string | null
           reference_number?: string | null
+          reference_number_2?: string | null
+          reference_number_3?: string | null
           retain_until?: string | null
           retention_days?: number | null
           series_instance?: number | null
@@ -1960,6 +1964,8 @@ export type Database = {
           pricing_profile_id?: string | null
           purpose_of_request?: string | null
           reference_number?: string | null
+          reference_number_2?: string | null
+          reference_number_3?: string | null
           retain_until?: string | null
           retention_days?: number | null
           series_instance?: number | null
