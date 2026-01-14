@@ -321,9 +321,17 @@ export default function Tasks() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
-        <p className="text-muted-foreground">View and manage tasks across all cases</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
+          <p className="text-muted-foreground">View and manage tasks across all cases</p>
+        </div>
+        {hasPermission('add_activities') && (
+          <Button onClick={() => setShowCaseSelector(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
+          </Button>
+        )}
       </div>
 
       {/* Stat Cards */}
@@ -393,12 +401,6 @@ export default function Tasks() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {hasPermission('add_activities') && (
-          <Button size="sm" className="h-10" onClick={() => setShowCaseSelector(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
-          </Button>
-        )}
         <ImportTemplateButton templateFileName="16_Tasks.csv" entityDisplayName="Tasks" />
         <div className="flex items-center gap-1 border rounded-md p-1">
           <Button
