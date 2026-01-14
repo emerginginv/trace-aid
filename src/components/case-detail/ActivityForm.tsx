@@ -211,15 +211,33 @@ export function ActivityForm({
           caseServiceId = instanceData?.case_service_id;
         }
 
+        // Parse end_date if it exists
+        let endDate: Date | undefined = undefined;
+        if (editingActivity.end_date) {
+          const endDateStr = editingActivity.end_date;
+          if (endDateStr.length === 10) {
+            const [year, month, day] = endDateStr.split('-').map(Number);
+            endDate = new Date(year, month - 1, day);
+          } else {
+            endDate = new Date(endDateStr);
+          }
+        }
+
         form.reset({
           activity_type: editingActivity.activity_type,
           title: editingActivity.title,
           description: editingActivity.description || "",
           due_date: editingActivity.activity_type === "task" ? dueDate : undefined,
           start_date: editingActivity.activity_type === "event" ? dueDate : undefined,
-          start_time: editingActivity.activity_type === "event" && dueDate ? format(dueDate, "HH:mm") : "09:00",
-          end_date: editingActivity.activity_type === "event" ? dueDate : undefined,
-          end_time: editingActivity.activity_type === "event" && dueDate ? format(new Date(dueDate.getTime() + 3600000), "HH:mm") : "10:00",
+          start_time: editingActivity.activity_type === "event" 
+            ? (editingActivity.start_time || "09:00") 
+            : "09:00",
+          end_date: editingActivity.activity_type === "event" 
+            ? (endDate || dueDate) 
+            : undefined,
+          end_time: editingActivity.activity_type === "event" 
+            ? (editingActivity.end_time || "10:00") 
+            : "10:00",
           status: editingActivity.status,
           assigned_user_id: editingActivity.assigned_user_id || undefined,
           address: editingActivity.address || "",
@@ -258,13 +276,24 @@ export function ActivityForm({
         return;
       }
 
-      // Combine date and time for events
+      // Format date and time for saving
       let dueDate = null;
+      let startTime = null;
+      let endTime = null;
+      let endDate = null;
+      
       if (values.activity_type === "event") {
-        const [startHours, startMinutes] = values.start_time.split(':');
-        const startDateTime = new Date(values.start_date);
-        startDateTime.setHours(parseInt(startHours), parseInt(startMinutes));
-        dueDate = formatISO(startDateTime);
+        // Save start date as date-only string
+        const d = values.start_date;
+        dueDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        
+        // Save times in HH:mm format (TIME column)
+        startTime = values.start_time;
+        endTime = values.end_time;
+        
+        // Save end date as date-only string
+        const ed = values.end_date;
+        endDate = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
       } else if (values.due_date) {
         // Use local date parts to avoid timezone shift
         const d = values.due_date;
@@ -327,6 +356,9 @@ export function ActivityForm({
       // Add event-specific fields
       if (values.activity_type === "event") {
         activityData.address = values.address || null;
+        activityData.start_time = startTime;
+        activityData.end_time = endTime;
+        activityData.end_date = endDate;
       }
 
       let error;
@@ -486,7 +518,7 @@ export function ActivityForm({
                   <FormLabel>Status</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -524,7 +556,7 @@ export function ActivityForm({
                   <FormLabel>Assigned To</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>

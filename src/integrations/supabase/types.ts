@@ -661,6 +661,8 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
+          end_date: string | null
+          end_time: string | null
           external_record_id: string | null
           external_system_name: string | null
           id: string
@@ -669,6 +671,7 @@ export type Database = {
           locked_at: string | null
           locked_by_invoice_id: string | null
           organization_id: string | null
+          start_time: string | null
           status: string
           title: string
           updated_at: string
@@ -685,6 +688,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          end_date?: string | null
+          end_time?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           id?: string
@@ -693,6 +698,7 @@ export type Database = {
           locked_at?: string | null
           locked_by_invoice_id?: string | null
           organization_id?: string | null
+          start_time?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -709,6 +715,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          end_date?: string | null
+          end_time?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
           id?: string
@@ -717,6 +725,7 @@ export type Database = {
           locked_at?: string | null
           locked_by_invoice_id?: string | null
           organization_id?: string | null
+          start_time?: string | null
           status?: string
           title?: string
           updated_at?: string
