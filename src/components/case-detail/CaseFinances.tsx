@@ -695,12 +695,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                       <TableRow key={finance.id}>
                         <TableCell>{new Date(finance.date).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          <div>
-                            <div className="font-medium">{finance.description}</div>
-                            {finance.notes && (
-                              <div className="text-sm text-muted-foreground">{finance.notes}</div>
-                            )}
-                          </div>
+                          <div className="font-medium">{finance.description}</div>
                         </TableCell>
                         <TableCell>
                           {finance.category ? (
