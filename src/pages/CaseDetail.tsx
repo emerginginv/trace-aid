@@ -607,7 +607,7 @@ const CaseDetail = () => {
       )}
       
       {/* Header */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:gap-4">
+      <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap xl:items-start xl:gap-4">
         {/* Back button + Title row */}
         <div className="flex items-start gap-2 min-w-0 flex-1">
           <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
@@ -630,7 +630,7 @@ const CaseDetail = () => {
         </div>
         
         {/* Status + Actions - break under title until lg, then sit to the right */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap pl-9 lg:pl-0 w-full lg:w-auto lg:ml-auto">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap pl-9 xl:pl-0 w-full xl:w-auto xl:ml-auto">
           {/* Status Dropdown */}
           {!isVendor && (
             <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
@@ -662,7 +662,7 @@ const CaseDetail = () => {
           
           {/* Desktop Action Buttons */}
           {!isVendor && !isMobile && (
-            <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
+            <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
               {isManager && (
                 <Button variant="outline" className="h-9 px-3" onClick={() => setSummaryPdfDialogOpen(true)}>
                   <FileText className="h-4 w-4 mr-2" />
