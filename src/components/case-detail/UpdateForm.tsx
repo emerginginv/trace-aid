@@ -14,15 +14,25 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useNavigate } from "react-router-dom";
-import { ExternalLink, Paperclip } from "lucide-react";
+import { ExternalLink, Paperclip, Link2 } from "lucide-react";
 import { AttachmentPicker } from "./AttachmentPicker";
 import { ActivityTimelineEditor, TimelineEntry } from "./ActivityTimelineEditor";
+import { format } from "date-fns";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   update_type: z.string().min(1, "Update type is required"),
+  linked_activity_id: z.string().optional(),
 });
+
+interface CaseActivity {
+  id: string;
+  title: string;
+  activity_type: string;
+  due_date: string | null;
+  status: string;
+}
 
 interface UpdateFormProps {
   caseId: string;
@@ -41,6 +51,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   const [existingLinkIds, setExistingLinkIds] = useState<string[]>([]);
   const [includeTimeline, setIncludeTimeline] = useState(false);
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
+  const [caseActivities, setCaseActivities] = useState<CaseActivity[]>([]);
   const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -49,6 +60,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       title: "",
       description: "",
       update_type: "Other",
+      linked_activity_id: "",
     },
   });
 
@@ -56,6 +68,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     fetchUpdateTypes();
     if (caseId && open) {
       fetchCaseTitle();
+      fetchCaseActivities();
     }
     if (editingUpdate && open) {
       fetchExistingLinks();
@@ -63,8 +76,24 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     if (!open) {
       setSelectedAttachmentIds([]);
       setExistingLinkIds([]);
+      setCaseActivities([]);
     }
   }, [caseId, open, editingUpdate]);
+
+  const fetchCaseActivities = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("case_activities")
+        .select("id, title, activity_type, due_date, status")
+        .eq("case_id", caseId)
+        .order("due_date", { ascending: false, nullsFirst: false });
+
+      if (error) throw error;
+      setCaseActivities(data || []);
+    } catch (error) {
+      console.error("Error fetching case activities:", error);
+    }
+  };
 
   const fetchExistingLinks = async () => {
     if (!editingUpdate) return;
@@ -106,6 +135,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         title: editingUpdate.title,
         description: editingUpdate.description || "",
         update_type: editingUpdate.update_type || "Other",
+        linked_activity_id: editingUpdate.linked_activity_id || "",
       });
       // Load existing timeline data
       if (editingUpdate.activity_timeline && Array.isArray(editingUpdate.activity_timeline)) {
@@ -120,6 +150,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         title: "",
         description: "",
         update_type: "Other",
+        linked_activity_id: "",
       });
       setIncludeTimeline(false);
       setTimelineEntries([]);
@@ -194,6 +225,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         description: values.description || null,
         update_type: values.update_type,
         activity_timeline: timelineData,
+        linked_activity_id: values.linked_activity_id || null,
       };
 
       let error;
@@ -355,6 +387,52 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Linked Activity Selector */}
+            <FormField
+              control={form.control}
+              name="linked_activity_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Link2 className="h-4 w-4" />
+                    Related Task/Event (Optional)
+                  </FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a related task or event" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {caseActivities.map((activity) => (
+                        <SelectItem key={activity.id} value={activity.id}>
+                          <span className="flex items-center gap-2">
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                              {activity.activity_type}
+                            </span>
+                            <span>{activity.title}</span>
+                            {activity.due_date && (
+                              <span className="text-xs text-muted-foreground">
+                                ({format(new Date(activity.due_date), "MMM d")})
+                              </span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Optionally link this update to a specific task or event
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
