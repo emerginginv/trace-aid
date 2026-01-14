@@ -1554,6 +1554,7 @@ export type Database = {
           role: string | null
           status: string
           subject_type: string
+          subject_type_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1578,6 +1579,7 @@ export type Database = {
           role?: string | null
           status?: string
           subject_type: string
+          subject_type_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1602,6 +1604,7 @@ export type Database = {
           role?: string | null
           status?: string
           subject_type?: string
+          subject_type_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1625,6 +1628,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_subjects_subject_type_id_fkey"
+            columns: ["subject_type_id"]
+            isOneToOne: false
+            referencedRelation: "subject_types"
             referencedColumns: ["id"]
           },
         ]
@@ -6523,6 +6533,59 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "case_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subject_types: {
+        Row: {
+          code: string
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
