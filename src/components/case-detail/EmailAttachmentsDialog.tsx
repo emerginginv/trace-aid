@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,15 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { addHours, addDays, format } from "date-fns";
 import { Mail, File, Loader2, Eye, Edit3, Check, ChevronsUpDown, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Sanitization config for HTML content
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: [
+    "p", "br", "strong", "em", "u", "s", "h1", "h2", "h3",
+    "ul", "ol", "li", "a", "blockquote", "code", "pre", "div", "span"
+  ],
+  ALLOWED_ATTR: ["href", "target", "rel", "class", "style"],
+};
 
 interface Attachment {
   id: string;
@@ -130,21 +140,27 @@ export function EmailAttachmentsDialog({
     const expirationDate = getExpirationDate();
     const formattedExpiration = format(expirationDate, "EEEE, MMMM d, yyyy 'at' h:mm a");
     
-    // Generate placeholder file list for preview
-    const fileListHtml = attachments.map((att) => `
+    // Sanitize user-provided message to prevent XSS
+    const sanitizedMessage = DOMPurify.sanitize(message, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+    
+    // Generate placeholder file list for preview - sanitize file names
+    const fileListHtml = attachments.map((att) => {
+      const sanitizedName = DOMPurify.sanitize(att.name || att.file_name, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+      return `
       <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; background: #ffffff;">
         <div style="flex: 1;">
-          <div style="font-weight: 500; color: #1f2937;">${att.name || att.file_name}</div>
+          <div style="font-weight: 500; color: #1f2937;">${sanitizedName}</div>
         </div>
         <a href="#" style="color: #2563eb; text-decoration: none; font-weight: 500; padding: 6px 12px; border-radius: 6px; background: #eff6ff;">
           Download
         </a>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     return `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #374151;">
-        <p style="margin: 0 0 20px 0; line-height: 1.6; font-size: 15px;">${message}</p>
+        <p style="margin: 0 0 20px 0; line-height: 1.6; font-size: 15px;">${sanitizedMessage}</p>
         
         <div style="background: #f9fafb; border-radius: 12px; overflow: hidden; margin: 24px 0; border: 1px solid #e5e7eb;">
           <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 16px 20px; color: white;">
@@ -502,7 +518,7 @@ export function EmailAttachmentsDialog({
               <ScrollArea className="h-[280px] border rounded-lg bg-white dark:bg-muted/20">
                 <div 
                   className="p-4"
-                  dangerouslySetInnerHTML={{ __html: generateEmailHtml }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generateEmailHtml, SANITIZE_CONFIG) }}
                 />
               </ScrollArea>
               

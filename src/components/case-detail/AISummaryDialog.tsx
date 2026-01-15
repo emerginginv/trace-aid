@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import DOMPurify from "dompurify";
 import {
   Dialog,
   DialogContent,
@@ -300,7 +301,12 @@ export function AISummaryDialog({
               ) : (
                 <div
                   className="border rounded-lg p-4 prose prose-sm max-w-none bg-muted/30"
-                  dangerouslySetInnerHTML={{ __html: generatedSummary }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: DOMPurify.sanitize(generatedSummary, {
+                      ALLOWED_TAGS: ["p", "br", "strong", "em", "u", "s", "h1", "h2", "h3", "ul", "ol", "li", "a", "blockquote", "code", "pre"],
+                      ALLOWED_ATTR: ["href", "target", "rel", "class"],
+                    }) 
+                  }}
                 />
               )}
             </div>
