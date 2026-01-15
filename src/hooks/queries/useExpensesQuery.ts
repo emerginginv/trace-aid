@@ -3,6 +3,35 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from 'sonner';
 
+/**
+ * ExpenseEntry interface matching expense_entries table schema.
+ * This is the canonical source for expense data.
+ */
+export interface ExpenseEntry {
+  id: string;
+  case_id: string;
+  event_id: string | null;
+  update_id: string | null;
+  user_id: string;
+  organization_id: string;
+  quantity: number;
+  rate: number;           // Internal cost/pay rate
+  total: number;          // Total internal cost (quantity × rate)
+  status: string;
+  created_at: string;
+  updated_at: string;
+  finance_item_id: string | null;
+  invoice_rate: number | null;  // Client billing rate
+  item_type: string;
+  notes: string | null;
+  receipt_url: string | null;
+  // Joined case data
+  case_number?: string;
+  case_title?: string;
+  user_name?: string;
+}
+
+// Legacy interface for backward compatibility with existing code
 export interface Expense {
   id: string;
   description: string;
@@ -27,6 +56,74 @@ export interface Expense {
 
 export type ExpenseInput = Omit<Expense, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'case_number' | 'case_title'>;
 
+interface UseExpenseEntriesQueryOptions {
+  caseId?: string;
+  status?: string;
+  userId?: string;
+  limit?: number;
+  enabled?: boolean;
+}
+
+/**
+ * React Query hook for fetching expense entries from the canonical expense_entries table.
+ */
+export function useExpenseEntriesQuery(options: UseExpenseEntriesQueryOptions = {}) {
+  const { organization } = useOrganization();
+  const { caseId, status, userId, limit = 100, enabled = true } = options;
+
+  return useQuery({
+    queryKey: ['expense_entries', organization?.id, caseId, status, userId, limit],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+
+      let query = supabase
+        .from('expense_entries')
+        .select(`
+          *,
+          cases:case_id (
+            case_number,
+            title
+          ),
+          profiles:user_id (
+            full_name
+          )
+        `)
+        .eq('organization_id', organization.id)
+        .order('created_at', { ascending: false });
+
+      if (caseId) {
+        query = query.eq('case_id', caseId);
+      }
+
+      if (status) {
+        query = query.eq('status', status as any);
+      }
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      if (limit) {
+        query = query.limit(limit);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Flatten joined data
+      return (data || []).map((item: any) => ({
+        ...item,
+        case_number: item.cases?.case_number,
+        case_title: item.cases?.title,
+        user_name: item.profiles?.full_name,
+      })) as ExpenseEntry[];
+    },
+    enabled: enabled && !!organization?.id,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+// Legacy hook interface for backward compatibility
 interface UseExpensesQueryOptions {
   caseId?: string;
   financeType?: 'expense' | 'time' | 'retainer';
@@ -37,7 +134,8 @@ interface UseExpensesQueryOptions {
 }
 
 /**
- * React Query hook for fetching expenses/time entries with caching.
+ * Legacy React Query hook for fetching expenses/time entries from case_finances.
+ * @deprecated Use useExpenseEntriesQuery for expenses or useTimeEntriesQuery for time entries.
  */
 export function useExpensesQuery(options: UseExpensesQueryOptions = {}) {
   const { organization } = useOrganization();

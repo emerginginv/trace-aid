@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Pencil, Trash2, Check, X, Plus, Clock, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, LayoutGrid, List, Receipt } from "lucide-react";
+import { Search, Pencil, Trash2, Check, X, Plus, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, LayoutGrid, List, Receipt } from "lucide-react";
 import { ImportTemplateDropdown } from "@/components/ui/import-template-button";
 
 import { ResponsiveButton } from "@/components/ui/responsive-button";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import html2pdf from "html2pdf.js";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 
@@ -27,17 +28,20 @@ import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibi
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { ExpensesPageSkeleton } from "@/components/ui/list-page-skeleton";
 
+// Expense interface matching expense_entries table
 interface Expense {
   id: string;
   case_id: string;
-  date: string;
+  created_at: string;
   case_title: string;
   case_number: string;
-  category: string | null;
-  amount: number;
-  status: string | null;
-  invoiced: boolean;
-  quantity: number | null;
+  item_type: string;
+  quantity: number;
+  rate: number;       // Pay rate (internal cost)
+  total: number;      // Pay total (internal cost)
+  status: string;
+  notes: string | null;
+  user_name?: string;
 }
 
 interface Case {
@@ -46,21 +50,36 @@ interface Case {
   case_number: string;
 }
 
-const COLUMNS: ColumnDefinition[] = [
-  { key: "select", label: "Select", hideable: false },
-  { key: "date", label: "Date" },
-  { key: "case", label: "Case" },
-  { key: "category", label: "Category" },
-  { key: "quantity", label: "Quantity" },
-  { key: "amount", label: "Amount" },
-  { key: "status", label: "Status" },
-  { key: "actions", label: "Actions", hideable: false },
-];
-
 const AllExpenses = () => {
   useSetBreadcrumbs([{ label: "Expenses" }]);
   
   const { organization } = useOrganization();
+  const { isAdmin, isManager } = useUserRole();
+  const canViewRates = isAdmin || isManager;
+  
+  // Define columns dynamically based on role
+  const COLUMNS: ColumnDefinition[] = useMemo(() => {
+    const cols: ColumnDefinition[] = [
+      { key: "select", label: "Select", hideable: false },
+      { key: "date", label: "Date" },
+      { key: "case", label: "Case" },
+      { key: "category", label: "Type" },
+      { key: "quantity", label: "Quantity" },
+    ];
+    
+    if (canViewRates) {
+      cols.push({ key: "rate", label: "Pay Rate" });
+      cols.push({ key: "total", label: "Pay Total" });
+    }
+    
+    cols.push(
+      { key: "status", label: "Status" },
+      { key: "actions", label: "Actions", hideable: false }
+    );
+    
+    return cols;
+  }, [canViewRates]);
+  
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
@@ -119,13 +138,15 @@ const AllExpenses = () => {
       setCases(casesData || []);
       const casesMap = new Map(casesData?.map(c => [c.id, c]) || []);
 
-      // Fetch all expenses
+      // Fetch all expenses from expense_entries (canonical table)
       const { data: expenseData, error: expenseError } = await supabase
-        .from("case_finances")
-        .select("id, case_id, date, amount, category, status, invoiced, quantity")
+        .from("expense_entries")
+        .select(`
+          id, case_id, created_at, quantity, rate, total, status, item_type, notes,
+          profiles:user_id (full_name)
+        `)
         .eq("organization_id", orgId)
-        .eq("finance_type", "expense")
-        .order("date", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (expenseError) throw expenseError;
 
@@ -134,14 +155,16 @@ const AllExpenses = () => {
         return {
           id: exp.id,
           case_id: exp.case_id,
-          date: exp.date,
+          created_at: exp.created_at,
           case_title: caseInfo?.title || "Unknown",
           case_number: caseInfo?.case_number || "N/A",
-          category: exp.category,
-          amount: parseFloat(exp.amount),
+          item_type: exp.item_type || "Other",
+          quantity: parseFloat(exp.quantity) || 1,
+          rate: parseFloat(exp.rate) || 0,
+          total: parseFloat(exp.total) || 0,
           status: exp.status,
-          invoiced: exp.invoiced,
-          quantity: exp.quantity ? parseFloat(exp.quantity) : null,
+          notes: exp.notes,
+          user_name: exp.profiles?.full_name,
         };
       }) || [];
 
@@ -160,17 +183,17 @@ const AllExpenses = () => {
     const matchesSearch =
       expense.case_title.toLowerCase().includes(searchLower) ||
       expense.case_number.toLowerCase().includes(searchLower) ||
-      (expense.category?.toLowerCase().includes(searchLower) ?? false);
+      (expense.item_type?.toLowerCase().includes(searchLower) ?? false);
     
     const matchesStatus =
       expenseStatusFilter === "all" ||
-      (expenseStatusFilter === "invoiced" && expense.invoiced) ||
-      (expenseStatusFilter === "approved" && !expense.invoiced && expense.status === "approved") ||
+      (expenseStatusFilter === "committed" && expense.status === "committed") ||
+      (expenseStatusFilter === "approved" && expense.status === "approved") ||
       (expenseStatusFilter === "rejected" && expense.status === "rejected") ||
-      (expenseStatusFilter === "pending" && !expense.invoiced && expense.status === "pending");
+      (expenseStatusFilter === "pending" && expense.status === "pending");
     
     // Date range filter
-    const expenseDate = new Date(expense.date);
+    const expenseDate = new Date(expense.created_at);
     const matchesDateFrom = !dateFrom || expenseDate >= dateFrom;
     const matchesDateTo = !dateTo || expenseDate <= dateTo;
     
@@ -187,6 +210,16 @@ const AllExpenses = () => {
     if (sortColumn === "case") {
       aVal = a.case_title;
       bVal = b.case_title;
+    }
+    
+    if (sortColumn === "category") {
+      aVal = a.item_type;
+      bVal = b.item_type;
+    }
+    
+    if (sortColumn === "date") {
+      aVal = a.created_at;
+      bVal = b.created_at;
     }
     
     if (aVal == null) return sortDirection === "asc" ? 1 : -1;
@@ -212,10 +245,7 @@ const AllExpenses = () => {
   });
 
   // Get pending expenses for bulk selection
-  const pendingExpenses = sortedExpenses.filter(exp => exp.status === "pending" && !exp.invoiced);
-  const allPendingSelected = pendingExpenses.length > 0 && 
-    pendingExpenses.every(exp => selectedExpenses.has(exp.id));
-  const somePendingSelected = pendingExpenses.some(exp => selectedExpenses.has(exp.id));
+  const pendingExpenses = sortedExpenses.filter(exp => exp.status === "pending");
 
   const handleSelectAll = (checked: boolean) => {
     const newSelected = new Set(selectedExpenses);
@@ -246,7 +276,7 @@ const AllExpenses = () => {
     try {
       const ids = Array.from(selectedExpenses);
       const { error } = await supabase
-        .from("case_finances")
+        .from("expense_entries")
         .update({ status: "approved" })
         .in("id", ids);
 
@@ -270,8 +300,8 @@ const AllExpenses = () => {
     try {
       const ids = Array.from(selectedExpenses);
       const { error } = await supabase
-        .from("case_finances")
-        .update({ status: "rejected" })
+        .from("expense_entries")
+        .update({ status: "declined" as any })
         .in("id", ids);
 
       if (error) throw error;
@@ -287,18 +317,42 @@ const AllExpenses = () => {
     }
   };
 
+  // Helper to get status display name
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case "committed": return "Billed";
+      case "approved": return "Approved (Ready for Billing)";
+      case "rejected": return "Rejected";
+      case "pending": return "Pending";
+      default: return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
   // Export functions
   const exportToCSV = () => {
-    const headers = ["Date", "Case Number", "Case Title", "Category", "Quantity", "Amount", "Status"];
-    const rows = filteredExpenses.map(exp => [
-      format(new Date(exp.date), "yyyy-MM-dd"),
-      exp.case_number,
-      exp.case_title,
-      exp.category || "",
-      exp.quantity || 1,
-      exp.amount.toFixed(2),
-      exp.invoiced ? "Invoiced" : (exp.status || "Pending")
-    ]);
+    // Build headers based on role visibility
+    const headers = ["Date", "Case Number", "Case Title", "Type", "Quantity"];
+    if (canViewRates) {
+      headers.push("Pay Rate", "Pay Total");
+    }
+    headers.push("Status");
+    
+    const rows = filteredExpenses.map(exp => {
+      const row: (string | number)[] = [
+        format(new Date(exp.created_at), "yyyy-MM-dd"),
+        exp.case_number,
+        exp.case_title,
+        exp.item_type || "",
+        exp.quantity || 1,
+      ];
+      
+      if (canViewRates) {
+        row.push(exp.rate.toFixed(2), exp.total.toFixed(2));
+      }
+      
+      row.push(getStatusDisplay(exp.status));
+      return row;
+    });
     
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${cell}"`).join(","))
@@ -315,41 +369,56 @@ const AllExpenses = () => {
   };
 
   const exportToPDF = () => {
+    // Build table headers based on role
+    const rateHeaders = canViewRates ? `
+      <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Pay Rate</th>
+      <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Pay Total</th>
+    ` : '';
+    
     const printContent = document.createElement("div");
     printContent.innerHTML = `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h1 style="margin-bottom: 8px; font-size: 24px;">Expenses Report</h1>
+        <p style="margin-bottom: 4px; color: #666; font-size: 12px;">Internal expense tracking for investigator reimbursement</p>
         <p style="margin-bottom: 20px; color: #666; font-size: 14px;">Generated: ${format(new Date(), "MMMM d, yyyy")}</p>
         <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
           <thead>
             <tr style="background: #f3f4f6;">
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Case</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Category</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Type</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Qty</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Amount</th>
+              ${rateHeaders}
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Status</th>
             </tr>
           </thead>
           <tbody>
-            ${filteredExpenses.map(exp => `
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;">${format(new Date(exp.date), "MMM d, yyyy")}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${exp.case_number} - ${exp.case_title}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${exp.category || "-"}</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${exp.quantity || 1}</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${exp.amount.toFixed(2)}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${exp.invoiced ? "Invoiced" : (exp.status || "Pending")}</td>
-              </tr>
-            `).join("")}
+            ${filteredExpenses.map(exp => {
+              const rateColumns = canViewRates ? `
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${exp.rate.toFixed(2)}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${exp.total.toFixed(2)}</td>
+              ` : '';
+              return `
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${format(new Date(exp.created_at), "MMM d, yyyy")}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${exp.case_number} - ${exp.case_title}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${exp.item_type || "-"}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${exp.quantity || 1}</td>
+                  ${rateColumns}
+                  <td style="border: 1px solid #ddd; padding: 8px;">${getStatusDisplay(exp.status)}</td>
+                </tr>
+              `;
+            }).join("")}
           </tbody>
+          ${canViewRates ? `
           <tfoot>
             <tr style="background: #f3f4f6; font-weight: bold;">
-              <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total:</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${filteredExpenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}</td>
+              <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total:</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${filteredExpenses.reduce((sum, e) => sum + e.total, 0).toFixed(2)}</td>
               <td style="border: 1px solid #ddd; padding: 8px;"></td>
             </tr>
           </tfoot>
+          ` : ''}
         </table>
       </div>
     `;
@@ -373,15 +442,24 @@ const AllExpenses = () => {
     setShowAddDialog(true);
   };
 
-  const openAddTime = () => {
-    setFinanceFormType("time");
-    setSelectedCaseId("");
-    setShowAddDialog(true);
-  };
-
   const handleCaseSelected = () => {
     setShowAddDialog(false);
     setShowExpenseForm(true);
+  };
+
+  // Get status badge styling
+  const getStatusBadge = (status: string) => {
+    const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
+    switch (status) {
+      case "committed":
+        return `${baseClasses} bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200`;
+      case "approved":
+        return `${baseClasses} bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200`;
+      case "rejected":
+        return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200`;
+      default:
+        return `${baseClasses} bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200`;
+    }
   };
 
   if (loading) {
@@ -394,7 +472,7 @@ const AllExpenses = () => {
         <div>
           <h1 className="text-3xl font-bold">Expenses</h1>
           <p className="text-muted-foreground mt-2">
-            Manage expenses across all cases
+            Internal expense tracking for investigator reimbursement
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -445,12 +523,12 @@ const AllExpenses = () => {
         </Card>
       )}
 
-      {/* Search and Filters - Outside Card */}
+      {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by case, category..."
+            placeholder="Search by case, type..."
             value={expenseSearch}
             onChange={(e) => setExpenseSearch(e.target.value)}
             className="pl-9"
@@ -465,7 +543,7 @@ const AllExpenses = () => {
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="invoiced">Invoiced</SelectItem>
+            <SelectItem value="committed">Billed</SelectItem>
           </SelectContent>
         </Select>
         <Popover>
@@ -545,7 +623,6 @@ const AllExpenses = () => {
         </DropdownMenu>
         <ImportTemplateDropdown 
           options={[
-            { fileName: "09_TimeEntries.csv", label: "Time Entries Template" },
             { fileName: "10_Expenses.csv", label: "Expenses Template" },
           ]} 
         />
@@ -599,7 +676,7 @@ const AllExpenses = () => {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedExpenses.map((expense) => {
-            const isPending = expense.status === "pending" && !expense.invoiced;
+            const isPending = expense.status === "pending";
             return (
               <Card key={expense.id} className="hover:shadow-lg transition-shadow">
                 <CardContent className="pt-6">
@@ -608,33 +685,25 @@ const AllExpenses = () => {
                       <div className="font-semibold">{expense.case_title}</div>
                       <div className="text-sm text-muted-foreground">{expense.case_number}</div>
                     </div>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        expense.invoiced
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                          : expense.status === "approved"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : expense.status === "rejected"
-                          ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                      }`}
-                    >
-                      {expense.invoiced ? "Invoiced" : expense.status || "Pending"}
+                    <span className={getStatusBadge(expense.status)}>
+                      {getStatusDisplay(expense.status)}
                     </span>
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Date</span>
-                      <span>{format(new Date(expense.date), "MMM d, yyyy")}</span>
+                      <span>{format(new Date(expense.created_at), "MMM d, yyyy")}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Category</span>
-                      <span>{expense.category || "N/A"}</span>
+                      <span className="text-muted-foreground">Type</span>
+                      <span>{expense.item_type || "N/A"}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Amount</span>
-                      <span className="font-medium">${expense.amount.toFixed(2)}</span>
-                    </div>
+                    {canViewRates && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Pay Total</span>
+                        <span className="font-medium">${expense.total.toFixed(2)}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2 mt-4 pt-4 border-t">
                     {isPending && (
@@ -644,7 +713,7 @@ const AllExpenses = () => {
                           size="sm"
                           onClick={async () => {
                             const { error } = await supabase
-                              .from("case_finances")
+                              .from("expense_entries")
                               .update({ status: "approved" })
                               .eq("id", expense.id);
                             
@@ -664,9 +733,9 @@ const AllExpenses = () => {
                           variant="ghost"
                           size="sm"
                           onClick={async () => {
-                            const { error } = await supabase
-                              .from("case_finances")
-                              .update({ status: "rejected" })
+                          const { error } = await supabase
+                              .from("expense_entries")
+                              .update({ status: "declined" as any })
                               .eq("id", expense.id);
                             
                             if (error) {
@@ -688,7 +757,7 @@ const AllExpenses = () => {
                       size="sm"
                       onClick={async () => {
                         const { data, error } = await supabase
-                          .from("case_finances")
+                          .from("expense_entries")
                           .select("*")
                           .eq("id", expense.id)
                           .single();
@@ -709,7 +778,7 @@ const AllExpenses = () => {
                       onClick={async () => {
                         if (confirm("Are you sure you want to delete this expense?")) {
                           const { error } = await supabase
-                            .from("case_finances")
+                            .from("expense_entries")
                             .delete()
                             .eq("id", expense.id);
                           
@@ -731,326 +800,243 @@ const AllExpenses = () => {
           })}
         </div>
       ) : (
-        <>
-          {/* Mobile Card View */}
-          <div className="block sm:hidden space-y-4">
-            {sortedExpenses.map((expense) => {
-              const isPending = expense.status === "pending" && !expense.invoiced;
-              return (
-                <Card key={expense.id} className="p-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {isVisible("select") && (
+                  <SortableTableHead
+                    column=""
+                    label=""
+                    sortColumn=""
+                    sortDirection="asc"
+                    onSort={() => {}}
+                    className="w-[40px]"
+                  />
+                )}
+                {isVisible("date") && (
+                  <SortableTableHead
+                    column="date"
+                    label="Date"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("case") && (
+                  <SortableTableHead
+                    column="case"
+                    label="Case"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("category") && (
+                  <SortableTableHead
+                    column="category"
+                    label="Type"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("quantity") && (
+                  <SortableTableHead
+                    column="quantity"
+                    label="Quantity"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {canViewRates && isVisible("rate") && (
+                  <SortableTableHead
+                    column="rate"
+                    label="Pay Rate"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="text-right"
+                  />
+                )}
+                {canViewRates && isVisible("total") && (
+                  <SortableTableHead
+                    column="total"
+                    label="Pay Total"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    className="text-right"
+                  />
+                )}
+                {isVisible("status") && (
+                  <SortableTableHead
+                    column="status"
+                    label="Status"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
+                {isVisible("actions") && (
+                  <TableHead className="text-right">Actions</TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedExpenses.map((expense) => {
+                const isPending = expense.status === "pending";
+                return (
+                  <TableRow key={expense.id}>
+                    <TableCell>
+                      {isPending ? (
+                        <Checkbox
+                          checked={selectedExpenses.has(expense.id)}
+                          onCheckedChange={(checked) => handleSelectExpense(expense.id, checked as boolean)}
+                        />
+                      ) : (
+                        <div className="w-4" />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(expense.created_at), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>
                       <div>
                         <div className="font-medium">{expense.case_title}</div>
-                        <div className="text-sm text-muted-foreground">{expense.case_number}</div>
-                      </div>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          expense.invoiced
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                            : expense.status === "approved"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : expense.status === "rejected"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                        }`}
-                      >
-                        {expense.invoiced ? "Invoiced" : expense.status || "Pending"}
-                      </span>
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <div>Date: {format(new Date(expense.date), "MMM d, yyyy")}</div>
-                      <div>Category: {expense.category || "N/A"}</div>
-                      <div className="font-medium">Amount: ${expense.amount.toFixed(2)}</div>
-                    </div>
-                    <div className="flex gap-2 pt-2 border-t">
-                      {isPending && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              const { error } = await supabase
-                                .from("case_finances")
-                                .update({ status: "approved" })
-                                .eq("id", expense.id);
-                              
-                              if (error) {
-                                toast.error("Failed to approve expense");
-                              } else {
-                                toast.success("Expense approved");
-                                fetchExpenseData();
-                              }
-                            }}
-                            className="flex-1"
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              const { error } = await supabase
-                                .from("case_finances")
-                                .update({ status: "rejected" })
-                                .eq("id", expense.id);
-                              
-                              if (error) {
-                                toast.error("Failed to reject expense");
-                              } else {
-                                toast.success("Expense rejected");
-                                fetchExpenseData();
-                              }
-                            }}
-                            className="flex-1"
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Desktop Table View */}
-          <Card className="hidden sm:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {isVisible("select") && (
-                    <SortableTableHead
-                      column=""
-                      label=""
-                      sortColumn=""
-                      sortDirection="asc"
-                      onSort={() => {}}
-                      className="w-[40px]"
-                    />
-                  )}
-                  {isVisible("date") && (
-                    <SortableTableHead
-                      column="date"
-                      label="Date"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                    />
-                  )}
-                  {isVisible("case") && (
-                    <SortableTableHead
-                      column="case"
-                      label="Case"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                    />
-                  )}
-                  {isVisible("category") && (
-                    <SortableTableHead
-                      column="category"
-                      label="Category"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                    />
-                  )}
-                  {isVisible("quantity") && (
-                    <SortableTableHead
-                      column="quantity"
-                      label="Quantity"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                    />
-                  )}
-                  {isVisible("amount") && (
-                    <SortableTableHead
-                      column="amount"
-                      label="Amount"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                      className="text-right"
-                    />
-                  )}
-                  {isVisible("status") && (
-                    <SortableTableHead
-                      column="status"
-                      label="Status"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                    />
-                  )}
-                  {isVisible("actions") && (
-                    <TableHead className="text-right">Actions</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedExpenses.map((expense) => {
-                  const isPending = expense.status === "pending" && !expense.invoiced;
-                  return (
-                    <TableRow key={expense.id}>
-                      <TableCell>
-                        {isPending ? (
-                          <Checkbox
-                            checked={selectedExpenses.has(expense.id)}
-                            onCheckedChange={(checked) => handleSelectExpense(expense.id, checked as boolean)}
-                          />
-                        ) : (
-                          <div className="w-4" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(expense.date), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{expense.case_title}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {expense.case_number}
-                          </div>
+                        <div className="text-sm text-muted-foreground">
+                          {expense.case_number}
                         </div>
-                      </TableCell>
-                      <TableCell>{expense.category || "N/A"}</TableCell>
-                      <TableCell>
-                        {(expense.quantity || 1).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        ${expense.amount.toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            expense.invoiced
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                              : expense.status === "approved"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                              : expense.status === "rejected"
-                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                              : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                          }`}
-                        >
-                          {expense.invoiced ? "Invoiced" : expense.status || "Pending"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {isPending && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={async () => {
-                                  const { error } = await supabase
-                                    .from("case_finances")
-                                    .update({ status: "approved" })
-                                    .eq("id", expense.id);
-                                  
-                                  if (error) {
-                                    toast.error("Failed to approve expense");
-                                  } else {
-                                    toast.success("Expense approved");
-                                    fetchExpenseData();
-                                  }
-                                }}
-                                title="Approve expense"
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={async () => {
-                                  const { error } = await supabase
-                                    .from("case_finances")
-                                    .update({ status: "rejected" })
-                                    .eq("id", expense.id);
-                                  
-                                  if (error) {
-                                    toast.error("Failed to reject expense");
-                                  } else {
-                                    toast.success("Expense rejected");
-                                    fetchExpenseData();
-                                  }
-                                }}
-                                title="Reject expense"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={async () => {
-                              const { data, error } = await supabase
-                                .from("case_finances")
-                                .select("*")
-                                .eq("id", expense.id)
-                                .single();
-                              
-                              if (error) {
-                                toast.error("Failed to load expense details");
-                              } else {
-                                setEditingExpense(data);
-                                setShowExpenseForm(true);
-                              }
-                            }}
-                            title="Edit expense"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={async () => {
-                              if (confirm("Are you sure you want to delete this expense?")) {
+                      </div>
+                    </TableCell>
+                    <TableCell>{expense.item_type || "N/A"}</TableCell>
+                    <TableCell>
+                      {(expense.quantity || 1).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                    </TableCell>
+                    {canViewRates && (
+                      <>
+                        <TableCell className="text-right">
+                          ${expense.rate.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          ${expense.total.toFixed(2)}
+                        </TableCell>
+                      </>
+                    )}
+                    <TableCell>
+                      <span className={getStatusBadge(expense.status)}>
+                        {getStatusDisplay(expense.status)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        {isPending && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
                                 const { error } = await supabase
-                                  .from("case_finances")
-                                  .delete()
+                                  .from("expense_entries")
+                                  .update({ status: "approved" })
                                   .eq("id", expense.id);
                                 
                                 if (error) {
-                                  toast.error("Failed to delete expense");
+                                  toast.error("Failed to approve expense");
                                 } else {
-                                  toast.success("Expense deleted");
+                                  toast.success("Expense approved");
                                   fetchExpenseData();
                                 }
+                              }}
+                              title="Approve expense"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                const { error } = await supabase
+                                  .from("expense_entries")
+                                  .update({ status: "declined" as any })
+                                  .eq("id", expense.id);
+                                
+                                if (error) {
+                                  toast.error("Failed to reject expense");
+                                } else {
+                                  toast.success("Expense rejected");
+                                  fetchExpenseData();
+                                }
+                              }}
+                              title="Reject expense"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={async () => {
+                            const { data, error } = await supabase
+                              .from("expense_entries")
+                              .select("*")
+                              .eq("id", expense.id)
+                              .single();
+                            
+                            if (error) {
+                              toast.error("Failed to load expense details");
+                            } else {
+                              setEditingExpense(data);
+                              setShowExpenseForm(true);
+                            }
+                          }}
+                          title="Edit expense"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={async () => {
+                            if (confirm("Are you sure you want to delete this expense?")) {
+                              const { error } = await supabase
+                                .from("expense_entries")
+                                .delete()
+                                .eq("id", expense.id);
+                              
+                              if (error) {
+                                toast.error("Failed to delete expense");
+                              } else {
+                                toast.success("Expense deleted");
+                                fetchExpenseData();
                               }
-                            }}
-                            title="Delete expense"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </Card>
-        </>
+                            }
+                          }}
+                          title="Delete expense"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
-      {/* Add Expense/Time Dialog - Case Selection */}
+      {/* Add Expense Dialog - Case Selection */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {financeFormType === "expense" ? "Add Expense" : "Add Time Entry"}
-            </DialogTitle>
+            <DialogTitle>Add Expense</DialogTitle>
             <DialogDescription>
-              Select a case to add {financeFormType === "expense" ? "an expense" : "a time entry"} to
+              Select a case to add an expense to
             </DialogDescription>
           </DialogHeader>
           <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
