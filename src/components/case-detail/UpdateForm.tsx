@@ -39,7 +39,7 @@ interface UpdateFormProps {
   caseId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (options?: { addTimeExpenses?: boolean; updateId?: string }) => void;
   editingUpdate?: any;
   organizationId: string;
 }
@@ -53,6 +53,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   const [includeTimeline, setIncludeTimeline] = useState(false);
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [caseActivities, setCaseActivities] = useState<CaseActivity[]>([]);
+  const [addTimeExpensesAfterSave, setAddTimeExpensesAfterSave] = useState(false);
   const navigate = useNavigate();
   
   // Note: Billing CTAs removed - billing now initiated only from Update Details page
@@ -318,13 +319,25 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
 
       // Note: Billing prompts removed - billing now initiated only from Update Details page
 
-      // No billing prompt needed - complete normally
+      // Determine the update ID for post-save flow
+      const savedUpdateId = editingUpdate?.id || newUpdate?.id;
+      
+      // Capture the flag before resetting state
+      const shouldAddTimeExpenses = addTimeExpensesAfterSave;
+      
+      // Reset form state
       form.reset();
       setSelectedAttachmentIds([]);
       setIncludeTimeline(false);
       setTimelineEntries([]);
+      setAddTimeExpensesAfterSave(false);
       onOpenChange(false);
-      onSuccess();
+      
+      // Pass the flag and update ID to the parent
+      onSuccess({ 
+        addTimeExpenses: shouldAddTimeExpenses, 
+        updateId: savedUpdateId 
+      });
     } catch (error) {
       console.error("Error saving update:", error);
       toast({
@@ -514,6 +527,26 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                 organizationId={organizationId}
                 showUploadOption={true}
               />
+            </div>
+
+            {/* Add Time & Expenses After Saving checkbox */}
+            <div className="flex items-start space-x-3 rounded-lg border border-border p-4 bg-muted/30">
+              <Checkbox 
+                id="add-time-expenses"
+                checked={addTimeExpensesAfterSave}
+                onCheckedChange={(checked) => setAddTimeExpensesAfterSave(!!checked)}
+              />
+              <div className="space-y-1 leading-none">
+                <Label 
+                  htmlFor="add-time-expenses" 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Add time & expenses after saving
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Opens the time & expense entry panel after this update is saved
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2">
