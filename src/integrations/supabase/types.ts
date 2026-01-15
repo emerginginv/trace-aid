@@ -2103,6 +2103,7 @@ export type Database = {
           custom_invoice_rate: number
           effective_date: string | null
           end_date: string | null
+          finance_item_id: string | null
           id: string
           notes: string | null
           organization_id: string
@@ -2116,6 +2117,7 @@ export type Database = {
           custom_invoice_rate: number
           effective_date?: string | null
           end_date?: string | null
+          finance_item_id?: string | null
           id?: string
           notes?: string | null
           organization_id: string
@@ -2129,6 +2131,7 @@ export type Database = {
           custom_invoice_rate?: number
           effective_date?: string | null
           end_date?: string | null
+          finance_item_id?: string | null
           id?: string
           notes?: string | null
           organization_id?: string
@@ -2148,6 +2151,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_price_list_finance_item_id_fkey"
+            columns: ["finance_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_items"
             referencedColumns: ["id"]
           },
           {
@@ -3121,6 +3131,7 @@ export type Database = {
           custom_expense_rate: number
           effective_date: string | null
           end_date: string | null
+          finance_item_id: string | null
           id: string
           notes: string | null
           organization_id: string
@@ -3134,6 +3145,7 @@ export type Database = {
           custom_expense_rate: number
           effective_date?: string | null
           end_date?: string | null
+          finance_item_id?: string | null
           id?: string
           notes?: string | null
           organization_id: string
@@ -3147,6 +3159,7 @@ export type Database = {
           custom_expense_rate?: number
           effective_date?: string | null
           end_date?: string | null
+          finance_item_id?: string | null
           id?: string
           notes?: string | null
           organization_id?: string
@@ -3160,6 +3173,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_price_list_finance_item_id_fkey"
+            columns: ["finance_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_items"
             referencedColumns: ["id"]
           },
           {
@@ -3375,6 +3395,7 @@ export type Database = {
           event_id: string | null
           finance_item_id: string | null
           id: string
+          invoice_rate: number | null
           item_type: string
           notes: string | null
           organization_id: string
@@ -3393,6 +3414,7 @@ export type Database = {
           event_id?: string | null
           finance_item_id?: string | null
           id?: string
+          invoice_rate?: number | null
           item_type: string
           notes?: string | null
           organization_id: string
@@ -3411,6 +3433,7 @@ export type Database = {
           event_id?: string | null
           finance_item_id?: string | null
           id?: string
+          invoice_rate?: number | null
           item_type?: string
           notes?: string | null
           organization_id?: string
@@ -6418,6 +6441,7 @@ export type Database = {
           created_by: string | null
           default_rate: number
           expense_rate: number | null
+          finance_item_id: string | null
           id: string
           invoice_rate: number | null
           is_billable: boolean | null
@@ -6436,6 +6460,7 @@ export type Database = {
           created_by?: string | null
           default_rate: number
           expense_rate?: number | null
+          finance_item_id?: string | null
           id?: string
           invoice_rate?: number | null
           is_billable?: boolean | null
@@ -6454,6 +6479,7 @@ export type Database = {
           created_by?: string | null
           default_rate?: number
           expense_rate?: number | null
+          finance_item_id?: string | null
           id?: string
           invoice_rate?: number | null
           is_billable?: boolean | null
@@ -6479,6 +6505,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_pricing_rules_finance_item_id_fkey"
+            columns: ["finance_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_items"
             referencedColumns: ["id"]
           },
           {
@@ -7249,6 +7282,7 @@ export type Database = {
           finance_item_id: string | null
           hours: number
           id: string
+          invoice_rate: number | null
           item_type: string
           notes: string | null
           organization_id: string
@@ -7266,6 +7300,7 @@ export type Database = {
           finance_item_id?: string | null
           hours?: number
           id?: string
+          invoice_rate?: number | null
           item_type: string
           notes?: string | null
           organization_id: string
@@ -7283,6 +7318,7 @@ export type Database = {
           finance_item_id?: string | null
           hours?: number
           id?: string
+          invoice_rate?: number | null
           item_type?: string
           notes?: string | null
           organization_id?: string
@@ -8391,6 +8427,15 @@ export type Database = {
         }
         Returns: number
       }
+      get_expense_rate_by_finance_item: {
+        Args: {
+          p_date?: string
+          p_finance_item_id: string
+          p_organization_id: string
+          p_user_id: string
+        }
+        Returns: number
+      }
       get_expiring_contracts: { Args: never; Returns: Json }
       get_identity_dashboard: { Args: { p_org_id: string }; Returns: Json }
       get_invoice_rate: {
@@ -8399,6 +8444,15 @@ export type Database = {
           p_date?: string
           p_organization_id: string
           p_pricing_rule_id: string
+        }
+        Returns: number
+      }
+      get_invoice_rate_by_finance_item: {
+        Args: {
+          p_account_id: string
+          p_date?: string
+          p_finance_item_id: string
+          p_organization_id: string
         }
         Returns: number
       }
