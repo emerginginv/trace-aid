@@ -149,7 +149,7 @@ interface CaseCalendarProps {
 }
 
 export const CaseCalendar = forwardRef<
-  { triggerAddTask: () => void; triggerAddEvent: () => void },
+  { triggerAddActivity: () => void },
   CaseCalendarProps
 >(({ caseId, filterCase, filterUser, filterUsers, filterStatus: externalFilterStatus, onNeedCaseSelection, isClosedCase = false, showTaskList: externalShowTaskList, onToggleTaskList }, ref) => {
   const { organization } = useOrganization();
@@ -416,13 +416,14 @@ export const CaseCalendar = forwardRef<
     setActivityFormOpen(true);
   };
 
-  // Expose methods to parent via ref
+  // Expose methods to parent via ref - unified activity creation
   useImperativeHandle(ref, () => ({
-    triggerAddTask: () => {
+    triggerAddActivity: () => {
       if (!caseId && onNeedCaseSelection) {
         onNeedCaseSelection((selectedCase: string) => {
           setSelectedCaseId(selectedCase);
           setEditingActivity(null);
+          // Default to task but the form has a toggle to schedule
           setActivityType("task");
           setActivityFormOpen(true);
         });
@@ -430,21 +431,6 @@ export const CaseCalendar = forwardRef<
         setSelectedCaseId(caseId);
         setEditingActivity(null);
         setActivityType("task");
-        setActivityFormOpen(true);
-      }
-    },
-    triggerAddEvent: () => {
-      if (!caseId && onNeedCaseSelection) {
-        onNeedCaseSelection((selectedCase: string) => {
-          setSelectedCaseId(selectedCase);
-          setEditingActivity(null);
-          setActivityType("event");
-          setActivityFormOpen(true);
-        });
-      } else {
-        setSelectedCaseId(caseId);
-        setEditingActivity(null);
-        setActivityType("event");
         setActivityFormOpen(true);
       }
     },
