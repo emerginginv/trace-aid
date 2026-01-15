@@ -5,8 +5,7 @@ import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, ShieldAlert, Download, Paperclip, Link2, X, Sparkles, DollarSign } from "lucide-react";
-import { AttachmentPreviewThumbnail } from "./AttachmentPreviewThumbnail";
+import { Plus, Pencil, Trash2, Search, ShieldAlert, Download, Sparkles, ExternalLink } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { toast } from "@/hooks/use-toast";
@@ -16,18 +15,13 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components
 import { format } from "date-fns";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
-import { AttachmentPickerDialog } from "./AttachmentPicker";
-import { ActivityTimelineDisplay } from "./ActivityTimelineDisplay";
 import { ContextualHelp } from "@/components/help-center";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { AIBadge } from "@/components/ui/ai-badge";
 import { AISummaryDialog } from "./AISummaryDialog";
-import { CreateBillingItemButton } from "@/components/billing/CreateBillingItemButton";
 
 interface TimelineEntry {
   time: string;
@@ -52,19 +46,8 @@ interface UserProfile {
   email: string;
 }
 
-interface LinkedAttachment {
-  id: string;
-  attachment_id: string;
-  file_name: string;
-  file_type: string;
-  file_path: string;
-  preview_path: string | null;
-  preview_status: string | null;
-}
-
 const COLUMNS: ColumnDefinition[] = [
   { key: "select", label: "", hideable: false },
-  { key: "expand", label: "", hideable: false },
   { key: "title", label: "Title" },
   { key: "update_type", label: "Type" },
   { key: "user_id", label: "Created By" },
@@ -81,10 +64,6 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const [editingUpdate, setEditingUpdate] = useState<Update | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [linkedAttachments, setLinkedAttachments] = useState<Record<string, LinkedAttachment[]>>({});
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [linkingUpdateId, setLinkingUpdateId] = useState<string | null>(null);
   
   // AI Summary selection state
   const [selectedUpdateIds, setSelectedUpdateIds] = useState<Set<string>>(new Set());
@@ -159,12 +138,14 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
     }
   };
 
-  const handleEdit = (update: Update) => {
+  const handleEdit = (e: React.MouseEvent, update: Update) => {
+    e.stopPropagation();
     setEditingUpdate(update);
     setFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     if (!confirm("Delete this update?")) return;
     
     try {
@@ -187,92 +168,13 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
     }
   };
 
-  const toggleRow = (id: string) => {
-    setExpandedRows(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
+  const handleRowClick = (updateId: string) => {
+    navigate(`/cases/${caseId}/updates/${updateId}`);
   };
-
-  const fetchLinkedAttachments = async (updateId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("update_attachment_links")
-        .select(`
-          id,
-          attachment_id,
-          case_attachments!inner(file_name, file_type, file_path, preview_path, preview_status)
-        `)
-        .eq("update_id", updateId);
-
-      if (error) throw error;
-
-      const attachments: LinkedAttachment[] = (data || []).map((link: any) => ({
-        id: link.id,
-        attachment_id: link.attachment_id,
-        file_name: link.case_attachments.file_name,
-        file_type: link.case_attachments.file_type,
-        file_path: link.case_attachments.file_path,
-        preview_path: link.case_attachments.preview_path,
-        preview_status: link.case_attachments.preview_status,
-      }));
-
-      setLinkedAttachments((prev) => ({
-        ...prev,
-        [updateId]: attachments,
-      }));
-    } catch (error) {
-      console.error("Error fetching linked attachments:", error);
-    }
-  };
-
-  const handleOpenAttachment = (attachmentId: string) => {
-    navigate(`/attachments/${attachmentId}/view?caseId=${caseId}&returnTab=updates`);
-  };
-
-  const handleUnlinkAttachment = async (linkId: string, updateId: string) => {
-    try {
-      const { error } = await supabase
-        .from("update_attachment_links")
-        .delete()
-        .eq("id", linkId);
-
-      if (error) throw error;
-
-      // Refresh linked attachments for this update
-      fetchLinkedAttachments(updateId);
-      toast({ title: "Success", description: "Attachment unlinked" });
-    } catch (error) {
-      console.error("Error unlinking attachment:", error);
-      toast({
-        title: "Error",
-        description: "Failed to unlink attachment",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const openLinkDialog = (updateId: string) => {
-    setLinkingUpdateId(updateId);
-    setLinkDialogOpen(true);
-  };
-
-  // Fetch linked attachments when row is expanded
-  useEffect(() => {
-    expandedRows.forEach((updateId) => {
-      if (!linkedAttachments[updateId]) {
-        fetchLinkedAttachments(updateId);
-      }
-    });
-  }, [expandedRows]);
 
   // Selection handlers for AI Summary
-  const toggleUpdateSelection = (updateId: string) => {
+  const toggleUpdateSelection = (e: React.MouseEvent, updateId: string) => {
+    e.stopPropagation();
     setSelectedUpdateIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(updateId)) {
@@ -483,9 +385,6 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                     />
                   </th>
                 )}
-                {isVisible("expand") && (
-                  <th className="w-12 p-2"></th>
-                )}
                 {isVisible("title") && (
                   <SortableTableHead
                     column="title"
@@ -529,163 +428,81 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
             </TableHeader>
             <TableBody>
               {sortedUpdates.map((update) => {
-                const isExpanded = expandedRows.has(update.id);
                 const userProfile = userProfiles[update.user_id];
                 const isSelected = selectedUpdateIds.has(update.id);
                 
                 return (
-                  <React.Fragment key={update.id}>
-                    <TableRow className={isSelected ? "bg-muted/50" : ""}>
-                      {isVisible("select") && (
-                        <TableCell className="w-10">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => toggleUpdateSelection(update.id)}
-                          />
-                        </TableCell>
-                      )}
-                      {isVisible("expand") && (
-                        <TableCell className="w-12">
+                  <TableRow 
+                    key={update.id} 
+                    className={`cursor-pointer hover:bg-muted/50 ${isSelected ? "bg-muted/50" : ""}`}
+                    onClick={() => handleRowClick(update.id)}
+                  >
+                    {isVisible("select") && (
+                      <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleUpdateSelection({} as React.MouseEvent, update.id)}
+                        />
+                      </TableCell>
+                    )}
+                    {isVisible("title") && (
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {update.title}
+                          {update.is_ai_summary && <AIBadge size="sm" />}
+                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                        </div>
+                      </TableCell>
+                    )}
+                    {isVisible("update_type") && (
+                      <TableCell>{update.update_type}</TableCell>
+                    )}
+                    {isVisible("user_id") && (
+                      <TableCell className="text-muted-foreground">
+                        {userProfile?.full_name || userProfile?.email || "Unknown"}
+                      </TableCell>
+                    )}
+                    {isVisible("created_at") && (
+                      <TableCell>{format(new Date(update.created_at), "MMM dd, yyyy")}</TableCell>
+                    )}
+                    {isVisible("actions") && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-6 w-6"
-                            onClick={() => toggleRow(update.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRowClick(update.id);
+                            }}
+                            title="View details"
                           >
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
+                            <ExternalLink className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      )}
-                      {isVisible("title") && (
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {update.title}
-                            {update.is_ai_summary && <AIBadge size="sm" />}
-                          </div>
-                        </TableCell>
-                      )}
-                      {isVisible("update_type") && (
-                        <TableCell>{update.update_type}</TableCell>
-                      )}
-                      {isVisible("user_id") && (
-                        <TableCell className="text-muted-foreground">
-                          {userProfile?.full_name || userProfile?.email || "Unknown"}
-                        </TableCell>
-                      )}
-                      {isVisible("created_at") && (
-                        <TableCell>{format(new Date(update.created_at), "MMM dd, yyyy")}</TableCell>
-                      )}
-                      {isVisible("actions") && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {update.linked_activity_id && !isClosedCase && (
-                              <CreateBillingItemButton
-                                activityId={update.linked_activity_id}
-                                updateId={update.id}
-                                updateDescription={update.description}
-                                organizationId={organization?.id || ""}
-                                variant="ghost"
-                                size="icon"
-                                onSuccess={fetchUpdates}
-                              />
-                            )}
-                            {canEditUpdates && (
-                              <Button variant="ghost" size="icon" onClick={() => handleEdit(update)} disabled={isClosedCase}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {canDeleteUpdates && (
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(update.id)} disabled={isClosedCase}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                    {isExpanded && (
-                      <TableRow key={`${update.id}-expanded`}>
-                        <TableCell colSpan={COLUMNS.length} className="py-3 bg-muted/30 border-0">
-                          <div className="pl-10 space-y-4">
-                            {update.description && (
-                              <RichTextDisplay html={update.description} />
-                            )}
-
-                            {/* Activity Timeline Section */}
-                            {update.activity_timeline && update.activity_timeline.length > 0 && (
-                              <div className="pt-2 border-t border-border/50">
-                                <ActivityTimelineDisplay timeline={update.activity_timeline} />
-                              </div>
-                            )}
-                            
-                            {/* Linked Attachments Section */}
-                            <div className="pt-2 border-t border-border/50">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium flex items-center gap-1.5">
-                                  <Paperclip className="h-4 w-4" />
-                                  Linked Attachments
-                                </span>
-                                {canEditUpdates && !isClosedCase && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => openLinkDialog(update.id)}
-                                  >
-                                    <Link2 className="h-4 w-4 mr-1" />
-                                    Link Attachment
-                                  </Button>
-                                )}
-                              </div>
-                              
-                              {linkedAttachments[update.id]?.length > 0 ? (
-                                <div className="flex flex-wrap gap-3">
-                                  {linkedAttachments[update.id].map((attachment) => (
-                                    <div
-                                      key={attachment.id}
-                                      className="group relative flex flex-col items-center gap-1.5 p-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
-                                      onClick={() => handleOpenAttachment(attachment.attachment_id)}
-                                    >
-                                      <AttachmentPreviewThumbnail
-                                        filePath={attachment.file_path}
-                                        fileName={attachment.file_name}
-                                        fileType={attachment.file_type}
-                                        previewPath={attachment.preview_path ?? undefined}
-                                        previewStatus={attachment.preview_status ?? undefined}
-                                        size="md"
-                                        className="rounded"
-                                      />
-                                      <span className="text-xs truncate max-w-[80px] text-center text-muted-foreground">
-                                        {attachment.file_name}
-                                      </span>
-                                      {canEditUpdates && !isClosedCase && (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleUnlinkAttachment(attachment.id, update.id);
-                                          }}
-                                          className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <X className="h-3 w-3" />
-                                        </button>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-sm text-muted-foreground">
-                                  No attachments linked to this update
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                          {canEditUpdates && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={(e) => handleEdit(e, update)} 
+                              disabled={isClosedCase}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDeleteUpdates && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={(e) => handleDelete(e, update.id)} 
+                              disabled={isClosedCase}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     )}
-                  </React.Fragment>
+                  </TableRow>
                 );
               })}
             </TableBody>
@@ -701,21 +518,6 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         editingUpdate={editingUpdate}
         organizationId={organization?.id || ""}
       />
-
-      {linkingUpdateId && (
-        <AttachmentPickerDialog
-          open={linkDialogOpen}
-          onOpenChange={setLinkDialogOpen}
-          caseId={caseId}
-          updateId={linkingUpdateId}
-          organizationId={organization?.id || ""}
-          existingLinkIds={linkedAttachments[linkingUpdateId]?.map((a) => a.attachment_id) || []}
-          onSuccess={() => {
-            fetchLinkedAttachments(linkingUpdateId);
-          toast({ title: "Success", description: "Attachments linked" });
-          }}
-        />
-      )}
 
       <AISummaryDialog
         open={showAISummaryDialog}
