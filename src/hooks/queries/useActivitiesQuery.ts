@@ -132,9 +132,9 @@ export function useCreateActivity() {
       if (error) throw error;
       return data as Activity;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
-      toast.success(`${data.activity_type === 'task' ? 'Task' : 'Event'} created successfully`);
+      toast.success('Activity created successfully');
     },
     onError: (error) => {
       toast.error(`Failed to create activity: ${error.message}`);

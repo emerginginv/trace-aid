@@ -4,7 +4,7 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Filter, CheckSquare, Calendar as CalendarIcon } from "lucide-react";
+import { Filter, Plus, Calendar as CalendarIcon } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePanelVisibility } from "@/hooks/use-panel-visibility";
 import { useCalendarFiltersQuery } from "@/hooks/queries/useCalendarFiltersQuery";
@@ -20,8 +20,7 @@ export default function Calendar() {
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [pendingCallback, setPendingCallback] = useState<((caseId: string) => void) | null>(null);
   const calendarRef = useRef<{
-    triggerAddTask: () => void;
-    triggerAddEvent: () => void;
+    triggerAddActivity: () => void;
   } | null>(null);
   const {
     isVisible: showTaskList,
@@ -56,16 +55,10 @@ export default function Calendar() {
             View all tasks and events across cases
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => calendarRef.current?.triggerAddTask()} className="gap-2">
-            <CheckSquare className="h-4 w-4" />
-            Add Task
-          </Button>
-          <Button onClick={() => calendarRef.current?.triggerAddEvent()} className="gap-2" variant="outline">
-            <CalendarIcon className="h-4 w-4" />
-            Add Event
-          </Button>
-        </div>
+        <Button onClick={() => calendarRef.current?.triggerAddActivity()} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Activity
+        </Button>
       </div>
 
       {/* Filters - All on one row */}

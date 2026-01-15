@@ -166,15 +166,15 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
       <div className="space-y-6">
         <div className="text-center py-8">
           <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Would you like to add any events?</h3>
+          <h3 className="text-lg font-medium mb-2">Would you like to schedule any activities?</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-            Events can include surveillance sessions, interviews, site visits, or any scheduled field activity.
+            Scheduled activities can include surveillance sessions, interviews, site visits, or any field work.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button onClick={() => setHasStarted(true)} className="gap-2">
               <Plus className="h-4 w-4" />
-              Add Events
+              Add Activities
             </Button>
             <Button variant="outline" onClick={handleContinue} className="gap-2">
               <SkipForward className="h-4 w-4" />
@@ -196,16 +196,16 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Schedule Events</h3>
+        <h3 className="text-lg font-medium">Schedule Activities</h3>
         <p className="text-sm text-muted-foreground">
           Add surveillance sessions, interviews, or other scheduled activities.
         </p>
       </div>
 
-      {/* Existing events */}
+      {/* Existing scheduled activities */}
       {events.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">Scheduled Events</p>
+          <p className="text-sm font-medium text-muted-foreground">Scheduled Activities</p>
           {events.map(event => (
             <Card key={event.id}>
               <CardContent className="flex items-center justify-between p-3">
@@ -234,10 +234,10 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
         </div>
       )}
 
-      {/* Event form */}
+      {/* Activity form */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">New Event</CardTitle>
+          <CardTitle className="text-base">New Activity</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -332,7 +332,7 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={isSubmitting} size="sm">
-                  {isSubmitting ? "Adding..." : "Add Event"}
+                  {isSubmitting ? "Adding..." : "Add Activity"}
                 </Button>
               </div>
             </form>
