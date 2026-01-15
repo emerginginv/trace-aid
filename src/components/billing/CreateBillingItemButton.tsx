@@ -115,14 +115,20 @@ export function CreateBillingItemButton({
     if (!eligibilityResult || !eligibilityResult.isEligible) return;
     
     // Calculate quantity based on confirmed times
-    let quantity = eligibilityResult.quantity!;
+    let quantity = eligibilityResult.quantity || 1;
     const pricingModel = eligibilityResult.pricingModel;
     let startTimeISO: string | undefined;
     let endTimeISO: string | undefined;
     
-    if ((pricingModel === 'hourly' || pricingModel === 'daily') && 
+    // Task billing: use explicit hours, no start/end times
+    if (confirmedTimes.taskHours && confirmedTimes.taskHours > 0) {
+      quantity = confirmedTimes.taskHours;
+      startTimeISO = undefined;
+      endTimeISO = undefined;
+    } else if ((pricingModel === 'hourly' || pricingModel === 'daily') && 
         confirmedTimes.startDate && confirmedTimes.startTime && 
         confirmedTimes.endDate && confirmedTimes.endTime) {
+      // Event billing: calculate from times
       const start = new Date(`${confirmedTimes.startDate}T${confirmedTimes.startTime}`);
       const end = new Date(`${confirmedTimes.endDate}T${confirmedTimes.endTime}`);
       const diffMs = end.getTime() - start.getTime();

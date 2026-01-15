@@ -21,33 +21,18 @@
  *    No flags are set, no records are modified to prevent future billing.
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
- * SYSTEM PROMPT 6 COMPLIANCE: TIME CONFIRMATION STEP
+ * TASK vs EVENT BILLING FLOW:
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * Before creating a billing item, the user must confirm start and end times
- * for the linked task or event.
+ * TASKS:
+ * - Show a "Bill this task" checkbox
+ * - When checked, reveal "Hours to bill" numeric input (min 0.25, decimals allowed)
+ * - Hide start/end time fields completely
+ * - Cannot save without hours >= 0.25 if billing is opted in
  * 
- * UI BEHAVIOR:
- * 1. Pre-populate start/end times from the linked task/event
- *    → Implemented in useEffect (line ~66-77) using eligibility.startDate,
- *      startTime, endDate, endTime
- * 
- * 2. Allow user edits
- *    → Implemented via editable Input fields in 'time' step
- * 
- * 3. Validate end time is after start time
- *    → Implemented in validateTimes() function
- *    → Error displayed: "End time must be after start time"
- * 
- * CRITICAL RULE:
- * Do NOT create any billing item until user explicitly confirms.
- * → handleConfirmAndCreate() only calls onCreateBillingItem after
- *   validateTimes() returns true
- * 
- * FLOW:
- * Step 1 ('confirm'): User sees billing prompt → clicks "Yes, Create Billing Item"
- * Step 2 ('time'): User confirms/edits times → clicks "Confirm & Create"
- * → Only then is onCreateBillingItem() called with confirmedTimes
+ * EVENTS:
+ * - Show start/end time confirmation inputs
+ * - Keep existing validation logic
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
  */
@@ -57,20 +42,25 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DollarSign, Clock, Receipt, Calculator, ArrowLeft, AlertCircle } from "lucide-react";
-import { BillingEligibilityResult } from "@/hooks/useBillingEligibility";
+import { UpdateBillingEligibilityResult } from "@/hooks/useUpdateBillingEligibility";
 
 export interface ConfirmedTimes {
   startDate: string;
   startTime: string;
   endDate: string;
   endTime: string;
+  // Task-specific: explicit hours (no derived duration)
+  taskHours?: number;
+  // Whether billing was opted into for tasks
+  billTask?: boolean;
 }
 
 interface BillingPromptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  eligibility: BillingEligibilityResult | null;
+  eligibility: UpdateBillingEligibilityResult | null;
   onCreateBillingItem: (confirmedTimes: ConfirmedTimes) => void;
   onSkip: () => void;
 }
@@ -82,7 +72,7 @@ export function BillingPromptDialog({
   onCreateBillingItem,
   onSkip,
 }: BillingPromptDialogProps) {
-  const [step, setStep] = useState<'confirm' | 'time'>('confirm');
+  const [step, setStep] = useState<'confirm' | 'time' | 'task'>('confirm');
   const [editedTimes, setEditedTimes] = useState<ConfirmedTimes>({
     startDate: '',
     startTime: '',
@@ -90,6 +80,11 @@ export function BillingPromptDialog({
     endTime: '',
   });
   const [timeError, setTimeError] = useState<string | null>(null);
+  
+  // Task billing state
+  const [billTask, setBillTask] = useState(false);
+  const [taskHours, setTaskHours] = useState<string>('');
+  const [taskHoursError, setTaskHoursError] = useState<string | null>(null);
 
   // Reset state when dialog opens/closes or eligibility changes
   useEffect(() => {
@@ -102,10 +97,15 @@ export function BillingPromptDialog({
         endTime: eligibility.endTime || '',
       });
       setTimeError(null);
+      setBillTask(false);
+      setTaskHours('');
+      setTaskHoursError(null);
     }
   }, [open, eligibility]);
 
   if (!eligibility || !eligibility.isEligible) return null;
+
+  const isTask = eligibility.activityType === 'task';
 
   const formatRate = (rate?: number, unit?: string) => {
     if (!rate) return "Rate not set";
@@ -172,6 +172,16 @@ export function BillingPromptDialog({
     return true;
   };
 
+  const validateTaskHours = (): boolean => {
+    const hours = parseFloat(taskHours);
+    if (isNaN(hours) || hours < 0.25) {
+      setTaskHoursError("Hours to bill is required (minimum 0.25)");
+      return false;
+    }
+    setTaskHoursError(null);
+    return true;
+  };
+
   const calculateDurationFromTimes = () => {
     if (!editedTimes.startDate || !editedTimes.startTime || !editedTimes.endDate || !editedTimes.endTime) {
       return null;
@@ -201,28 +211,60 @@ export function BillingPromptDialog({
     return eligibility.serviceRate * quantity;
   };
 
+  const getTaskEstimate = () => {
+    const hours = parseFloat(taskHours);
+    if (isNaN(hours) || hours < 0.25 || !eligibility.serviceRate) return null;
+    return eligibility.serviceRate * hours;
+  };
+
   const handleProceedToTime = () => {
     setStep('time');
+  };
+
+  const handleProceedToTask = () => {
+    setStep('task');
   };
 
   const handleBack = () => {
     setStep('confirm');
     setTimeError(null);
+    setTaskHoursError(null);
   };
 
   const handleConfirmAndCreate = () => {
-    if (validateTimes()) {
-      onCreateBillingItem(editedTimes);
+    if (isTask && step === 'task') {
+      if (billTask) {
+        if (!validateTaskHours()) return;
+        onCreateBillingItem({ 
+          startDate: '', 
+          startTime: '', 
+          endDate: '', 
+          endTime: '',
+          taskHours: parseFloat(taskHours),
+          billTask: true
+        });
+      } else {
+        // User chose not to bill - treat as skip
+        onSkip();
+      }
+    } else {
+      // Event flow - existing validation
+      if (validateTimes()) {
+        onCreateBillingItem(editedTimes);
+      }
     }
   };
 
   const needsTimeConfirmation = eligibility.pricingModel === 'hourly' || eligibility.pricingModel === 'daily';
 
   const handleYesClick = () => {
-    if (needsTimeConfirmation) {
+    if (isTask) {
+      // Tasks go to task billing step
+      handleProceedToTask();
+    } else if (needsTimeConfirmation) {
       handleProceedToTime();
     } else {
-      // For flat/per_activity, skip time confirmation
+      // For flat/per_activity events, skip time confirmation
       onCreateBillingItem(editedTimes);
     }
   };
@@ -238,7 +280,7 @@ export function BillingPromptDialog({
                 Create Billing Item?
               </DialogTitle>
               <DialogDescription>
-                This update is linked to a billable activity. Would you like to create a billing item for this event?
+                This update is linked to a billable {isTask ? 'task' : 'activity'}. Would you like to create a billing item for this {isTask ? 'task' : 'event'}?
               </DialogDescription>
             </DialogHeader>
             
@@ -246,7 +288,7 @@ export function BillingPromptDialog({
               {/* Activity Info */}
               {eligibility.activityTitle && (
                 <div className="text-sm">
-                  <span className="text-muted-foreground">Activity:</span>{" "}
+                  <span className="text-muted-foreground">{isTask ? 'Task' : 'Activity'}:</span>{" "}
                   <span className="font-medium">{eligibility.activityTitle}</span>
                 </div>
               )}
@@ -271,8 +313,8 @@ export function BillingPromptDialog({
                   </span>
                 </div>
 
-                {/* Quantity and Estimate */}
-                {(eligibility.quantity || eligibility.estimatedAmount) && (
+                {/* Quantity and Estimate - only show for events with pre-calculated values */}
+                {!isTask && (eligibility.quantity || eligibility.estimatedAmount) && (
                   <div className="pt-2 border-t border-border/50">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1">
@@ -403,6 +445,98 @@ export function BillingPromptDialog({
               <Button onClick={handleConfirmAndCreate} className="w-full sm:w-auto">
                 <Receipt className="h-4 w-4 mr-2" />
                 Confirm & Create
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {step === 'task' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-primary" />
+                Bill This Task
+              </DialogTitle>
+              <DialogDescription>
+                Would you like to bill time for this task?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Checkbox: Bill this task */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="bill-task"
+                  checked={billTask}
+                  onCheckedChange={(checked) => {
+                    setBillTask(checked === true);
+                    if (!checked) {
+                      setTaskHours('');
+                      setTaskHoursError(null);
+                    }
+                  }}
+                />
+                <Label htmlFor="bill-task" className="cursor-pointer">Bill this task</Label>
+              </div>
+
+              {/* Hours input - only shown when checkbox is checked */}
+              {billTask && (
+                <div className="space-y-2 pl-6">
+                  <Label className="text-sm font-medium">Hours to bill *</Label>
+                  <Input
+                    type="number"
+                    step="0.25"
+                    min="0.25"
+                    placeholder="e.g., 1.5"
+                    value={taskHours}
+                    onChange={(e) => {
+                      setTaskHours(e.target.value);
+                      setTaskHoursError(null);
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Minimum 0.25 hours (15 minutes)
+                  </p>
+                </div>
+              )}
+
+              {/* Show rate and estimate when billing */}
+              {billTask && parseFloat(taskHours) >= 0.25 && eligibility.serviceRate && (
+                <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Hours:</span>
+                    <span className="font-medium">{parseFloat(taskHours).toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Rate:</span>
+                    <span className="font-medium">{formatRate(eligibility.serviceRate, eligibility.priceUnit)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Estimated Amount:</span>
+                    <span className="font-semibold text-primary">
+                      ${getTaskEstimate()?.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {taskHoursError && (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  {taskHoursError}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={handleBack} className="w-full sm:w-auto">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <Button onClick={handleConfirmAndCreate} className="w-full sm:w-auto">
+                <Receipt className="h-4 w-4 mr-2" />
+                {billTask ? "Create Billing Item" : "Skip Billing"}
               </Button>
             </DialogFooter>
           </>

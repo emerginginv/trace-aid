@@ -40,6 +40,8 @@ export interface UpdateBillingEligibilityResult extends BillingEligibilityResult
   activityAlreadyBilled?: boolean;
   // Structured diagnostics for admin visibility (PART 3)
   diagnostics?: BillingEvaluationDiagnostics;
+  // Activity type to control billing UI flow
+  activityType?: 'task' | 'event';
 }
 
 /**
@@ -122,18 +124,9 @@ export function useUpdateBillingEligibility() {
         return notEligible;
       }
 
-      // GATE 1.5: Activity must be an EVENT (not a task)
-      // Billing is only allowed through Updates linked to events
-      if (activityData.activity_type !== "event") {
-        diagnostics.failure_reason = "Billing is only available for events, not tasks. Link this update to an event.";
-        const notEligible: UpdateBillingEligibilityResult = {
-          isEligible: false,
-          reason: "Billing is only available for events, not tasks. Link this update to an event.",
-          diagnostics,
-        };
-        setResult(notEligible);
-        return notEligible;
-      }
+      // Store activity type for UI flow control
+      const activityType = activityData.activity_type as 'task' | 'event';
+      diagnostics.context!.activityType = activityType;
 
       // GATE 2: Activity must be linked to a Case Service Instance
       if (!activityData.case_service_instance_id) {
@@ -196,6 +189,7 @@ export function useUpdateBillingEligibility() {
         ...baseResult,
         activityAlreadyBilled: false,
         diagnostics,
+        activityType: activityData.activity_type as 'task' | 'event',
       };
 
       setResult(finalResult);

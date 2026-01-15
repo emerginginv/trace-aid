@@ -40,6 +40,7 @@ export interface BillingEvaluationDiagnostics {
     serviceInstanceId?: string;
     serviceName?: string;
     pricingModel?: string;
+    activityType?: 'task' | 'event';
   };
 }
 
