@@ -8,11 +8,12 @@ interface TimeEntry {
   case_title: string;
   case_number: string;
   description: string;
-  hours: number | null;
-  hourly_rate: number | null;
-  amount: number;
-  status: string | null;
-  invoiced: boolean;
+  hours: number;
+  pay_rate: number;
+  pay_total: number;
+  status: string;
+  user_id: string;
+  user_name: string | null;
 }
 
 interface Case {
@@ -27,8 +28,8 @@ interface TimeEntriesData {
 }
 
 /**
- * React Query hook for fetching time entries with case data.
- * Replaces the legacy useEffect-based fetchTimeData pattern.
+ * React Query hook for fetching time entries from the canonical time_entries table.
+ * Uses investigator pay rates (internal cost tracking), NOT client billing rates.
  * 
  * Cache settings:
  * - staleTime: 1 minute (time entries are frequently updated)
@@ -54,30 +55,39 @@ export function useTimeEntriesQuery(organizationId: string | undefined) {
       const cases = casesData || [];
       const casesMap = new Map(cases.map(c => [c.id, c]));
 
-      // Fetch all time entries
+      // Fetch all time entries from the canonical time_entries table
       const { data: timeData, error: timeError } = await supabase
-        .from("case_finances")
-        .select("id, case_id, date, amount, description, status, invoiced, hours, hourly_rate")
+        .from("time_entries")
+        .select("id, case_id, user_id, notes, hours, rate, total, status, created_at")
         .eq("organization_id", organizationId)
-        .eq("finance_type", "time")
-        .order("date", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (timeError) throw timeError;
+
+      // Fetch user profiles for display names
+      const userIds = [...new Set((timeData || []).map(e => e.user_id))];
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+
+      const profilesMap = new Map((profilesData || []).map(p => [p.id, p.full_name]));
 
       const timeEntries: TimeEntry[] = (timeData || []).map((entry: any) => {
         const caseInfo = casesMap.get(entry.case_id);
         return {
           id: entry.id,
           case_id: entry.case_id,
-          date: entry.date,
+          date: entry.created_at,
           case_title: caseInfo?.title || "Unknown",
           case_number: caseInfo?.case_number || "N/A",
-          description: entry.description || "",
-          hours: entry.hours ? parseFloat(entry.hours) : null,
-          hourly_rate: entry.hourly_rate ? parseFloat(entry.hourly_rate) : null,
-          amount: parseFloat(entry.amount),
-          status: entry.status,
-          invoiced: entry.invoiced,
+          description: entry.notes || "",
+          hours: parseFloat(entry.hours) || 0,
+          pay_rate: parseFloat(entry.rate) || 0,
+          pay_total: parseFloat(entry.total) || 0,
+          status: entry.status || "draft",
+          user_id: entry.user_id,
+          user_name: profilesMap.get(entry.user_id) || null,
         };
       });
 

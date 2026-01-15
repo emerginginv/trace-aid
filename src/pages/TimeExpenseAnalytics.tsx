@@ -104,50 +104,68 @@ export default function TimeExpenseAnalytics() {
     queryFn: async () => {
       if (!organization?.id) return null;
 
-      // Current period query
-      const { data: currentData, error: currentError } = await supabase
-        .from("case_finances")
-        .select("finance_type, hours, hourly_rate, amount, invoiced")
+      // Current period - Time entries from canonical time_entries table
+      const { data: currentTimeData, error: currentTimeError } = await supabase
+        .from("time_entries")
+        .select("hours, rate, total, status")
         .eq("organization_id", organization.id)
-        .in("finance_type", ["time", "expense"])
-        .gte("date", timeRange.start.toISOString().split("T")[0])
-        .lte("date", timeRange.end.toISOString().split("T")[0]);
+        .gte("created_at", timeRange.start.toISOString())
+        .lte("created_at", timeRange.end.toISOString());
 
-      if (currentError) throw currentError;
+      if (currentTimeError) throw currentTimeError;
 
-      // Previous period query
-      const { data: previousData, error: previousError } = await supabase
-        .from("case_finances")
-        .select("finance_type, hours, hourly_rate, amount, invoiced")
+      // Current period - Expenses from expense_entries table
+      const { data: currentExpenseData, error: currentExpenseError } = await supabase
+        .from("expense_entries")
+        .select("total, status")
         .eq("organization_id", organization.id)
-        .in("finance_type", ["time", "expense"])
-        .gte("date", previousTimeRange.start.toISOString().split("T")[0])
-        .lte("date", previousTimeRange.end.toISOString().split("T")[0]);
+        .gte("created_at", timeRange.start.toISOString())
+        .lte("created_at", timeRange.end.toISOString());
 
-      if (previousError) throw previousError;
+      if (currentExpenseError) throw currentExpenseError;
 
-      // Calculate current period metrics
-      const timeEntries = (currentData || []).filter(e => e.finance_type === "time");
-      const expenseEntries = (currentData || []).filter(e => e.finance_type === "expense");
+      // Previous period - Time entries
+      const { data: previousTimeData, error: previousTimeError } = await supabase
+        .from("time_entries")
+        .select("hours, rate, total, status")
+        .eq("organization_id", organization.id)
+        .gte("created_at", previousTimeRange.start.toISOString())
+        .lte("created_at", previousTimeRange.end.toISOString());
+
+      if (previousTimeError) throw previousTimeError;
+
+      // Previous period - Expenses
+      const { data: previousExpenseData, error: previousExpenseError } = await supabase
+        .from("expense_entries")
+        .select("total, status")
+        .eq("organization_id", organization.id)
+        .gte("created_at", previousTimeRange.start.toISOString())
+        .lte("created_at", previousTimeRange.end.toISOString());
+
+      if (previousExpenseError) throw previousExpenseError;
+
+      // Calculate current period metrics (using pay rates - internal cost)
+      const timeEntries = currentTimeData || [];
+      const expenseEntries = currentExpenseData || [];
 
       const totalHours = timeEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
-      const totalTimeValue = timeEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const totalTimeValue = timeEntries.reduce((sum, e) => sum + (e.total || 0), 0);
       const avgHourlyRate = totalHours > 0 ? totalTimeValue / totalHours : 0;
-      const totalExpenses = expenseEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const totalExpenses = expenseEntries.reduce((sum, e) => sum + (e.total || 0), 0);
       const expenseCount = expenseEntries.length;
       const timeEntryCount = timeEntries.length;
       const uninvoicedExpenses = expenseEntries
-        .filter(e => !e.invoiced)
-        .reduce((sum, e) => sum + (e.amount || 0), 0);
+        .filter(e => e.status !== 'paid')
+        .reduce((sum, e) => sum + (e.total || 0), 0);
 
       // Calculate previous period metrics
-      const prevTimeEntries = (previousData || []).filter(e => e.finance_type === "time");
-      const prevExpenseEntries = (previousData || []).filter(e => e.finance_type === "expense");
+      const prevTimeEntries = previousTimeData || [];
+      const prevExpenseEntries = previousExpenseData || [];
 
       const prevTotalHours = prevTimeEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
-      const prevTotalTimeValue = prevTimeEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const prevTotalTimeValue = prevTimeEntries.reduce((sum, e) => sum + (e.total || 0), 0);
       const prevAvgHourlyRate = prevTotalHours > 0 ? prevTotalTimeValue / prevTotalHours : 0;
-      const prevTotalExpenses = prevExpenseEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const prevTotalExpenses = prevExpenseEntries.reduce((sum, e) => sum + (e.total || 0), 0);
       const prevExpenseCount = prevExpenseEntries.length;
       const prevTimeEntryCount = prevTimeEntries.length;
 
