@@ -280,9 +280,7 @@ export function useQuickBill() {
           hours: pricingModel === "hourly" ? quantity : null,
           date: new Date().toISOString().split("T")[0],
           category: pricingModel,
-          notes: eligibility.pricingProfileId
-            ? `Quick Bill from event. Pricing Profile: ${eligibility.pricingProfileId}`
-            : "Quick Bill from event",
+          notes: "Quick Bill from event",
         })
         .select("id")
         .single();

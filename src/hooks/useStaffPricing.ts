@@ -150,17 +150,7 @@ export function useUpsertEmployeeRate() {
         if (error) throw error;
         return data;
       } else {
-        // Insert new - need a placeholder pricing_rule_id for legacy compatibility
-        // First check if there's a default pricing rule we can reference
-        const { data: defaultRule } = await supabase
-          .from("service_pricing_rules")
-          .select("id")
-          .eq("organization_id", organization.id)
-          .limit(1)
-          .maybeSingle();
-
-        const pricingRuleId = defaultRule?.id || crypto.randomUUID();
-
+        // Insert new employee price list entry
         const { data, error } = await supabase
           .from("employee_price_list")
           .insert({
@@ -171,7 +161,6 @@ export function useUpsertEmployeeRate() {
             effective_date: input.effectiveDate || new Date().toISOString().split("T")[0],
             end_date: input.endDate || null,
             notes: input.notes || null,
-            pricing_rule_id: pricingRuleId, // Legacy field - required
             created_by: user?.id || null,
           })
           .select()
