@@ -20,9 +20,10 @@ import {
   Trash2, 
   Link2, 
   DollarSign,
-  Clock,
-  MapPin,
-  X
+  X,
+  CheckCircle,
+  ListTodo,
+  CalendarDays
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -33,6 +34,9 @@ import { AIBadge } from "@/components/ui/ai-badge";
 import { UpdateForm } from "@/components/case-detail/UpdateForm";
 import { AttachmentPickerDialog } from "@/components/case-detail/AttachmentPicker";
 import { CreateBillingItemButton } from "@/components/billing/CreateBillingItemButton";
+import { UpdateContextSection } from "@/components/update-detail/UpdateContextSection";
+import { UpdateAuditSection } from "@/components/update-detail/UpdateAuditSection";
+import { UpdateBillingSummary } from "@/components/update-detail/UpdateBillingSummary";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,12 +69,15 @@ interface Update {
   title: string;
   description: string | null;
   created_at: string;
+  updated_at?: string | null;
   update_type: string;
   user_id: string;
   case_id: string;
   activity_timeline: TimelineEntry[] | null;
   is_ai_summary: boolean;
+  is_legacy_billing: boolean;
   linked_activity_id: string | null;
+  ai_approved_by: string | null;
 }
 
 interface LinkedActivity {
@@ -108,6 +115,7 @@ interface CaseInfo {
   title: string;
   case_number: string;
   status: string;
+  account_name?: string | null;
 }
 
 const CaseUpdateDetail = () => {
@@ -119,6 +127,7 @@ const CaseUpdateDetail = () => {
   const [update, setUpdate] = useState<Update | null>(null);
   const [caseInfo, setCaseInfo] = useState<CaseInfo | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [aiApprover, setAiApprover] = useState<UserProfile | null>(null);
   const [linkedActivity, setLinkedActivity] = useState<LinkedActivity | null>(null);
   const [linkedAttachments, setLinkedAttachments] = useState<LinkedAttachment[]>([]);
   const [billingEntries, setBillingEntries] = useState<BillingEntry[]>([]);
@@ -154,7 +163,7 @@ const CaseUpdateDetail = () => {
     try {
       setLoading(true);
 
-      // Fetch update
+      // Fetch update with all fields
       const { data: updateData, error: updateError } = await supabase
         .from("case_updates")
         .select("*")
@@ -179,24 +188,36 @@ const CaseUpdateDetail = () => {
         title: updateData.title,
         description: updateData.description,
         created_at: updateData.created_at,
+        updated_at: updateData.created_at, // case_updates doesn't have updated_at, use created_at as fallback
         update_type: updateData.update_type,
         user_id: updateData.user_id,
         case_id: updateData.case_id,
         activity_timeline: updateData.activity_timeline as unknown as TimelineEntry[] | null,
         is_ai_summary: updateData.is_ai_summary || false,
+        is_legacy_billing: updateData.is_legacy_billing || false,
         linked_activity_id: updateData.linked_activity_id,
+        ai_approved_by: updateData.ai_approved_by,
       };
       setUpdate(mappedUpdate);
 
-      // Fetch case info
+      // Fetch case info with account name
       const { data: caseData } = await supabase
         .from("cases")
-        .select("id, title, case_number, status")
+        .select(`
+          id, title, case_number, status,
+          accounts(name)
+        `)
         .eq("id", caseId)
         .maybeSingle();
 
       if (caseData) {
-        setCaseInfo(caseData);
+        setCaseInfo({
+          id: caseData.id,
+          title: caseData.title,
+          case_number: caseData.case_number,
+          status: caseData.status,
+          account_name: (caseData.accounts as any)?.name || null,
+        });
       }
 
       // Fetch user profile
@@ -208,6 +229,21 @@ const CaseUpdateDetail = () => {
 
       if (profileData) {
         setUserProfile(profileData);
+      }
+
+      // Fetch AI approver if exists
+      if (updateData.ai_approved_by) {
+        const { data: approverData } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .eq("id", updateData.ai_approved_by)
+          .maybeSingle();
+
+        if (approverData) {
+          setAiApprover(approverData);
+        }
+      } else {
+        setAiApprover(null);
       }
 
       // Fetch linked activity if exists
@@ -359,6 +395,23 @@ const CaseUpdateDetail = () => {
     }).format(amount);
   };
 
+  // Get display title - use first line of description if title is generic
+  const getDisplayTitle = (): string => {
+    if (update?.title && update.title.toLowerCase() !== "update" && update.title.toLowerCase() !== "case update") {
+      return update.title;
+    }
+    if (update?.description) {
+      // Strip HTML and get first line
+      const plainText = update.description.replace(/<[^>]*>/g, "").trim();
+      const firstLine = plainText.split("\n")[0].substring(0, 100);
+      return firstLine || update.title;
+    }
+    return update?.title || "Update";
+  };
+
+  // Check if update has billable entries
+  const hasBillableEntries = billingEntries.length > 0;
+
   if (loading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
@@ -382,307 +435,304 @@ const CaseUpdateDetail = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header with back button and actions */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(`/cases/${caseId}?tab=updates`)}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Updates
-        </Button>
+      {/* ========== HEADER SECTION ========== */}
+      <div className="space-y-4">
+        {/* Navigation and Actions */}
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/cases/${caseId}?tab=updates`)}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Updates
+          </Button>
 
-        <div className="flex items-center gap-2">
-          {update.linked_activity_id && !isClosedCase && (
-            <CreateBillingItemButton
-              activityId={update.linked_activity_id}
-              updateId={update.id}
-              updateDescription={update.description}
-              organizationId={organization?.id || ""}
-              variant="outline"
-              onSuccess={fetchData}
-            />
-          )}
-          {canEditUpdates && !isClosedCase && (
-            <Button variant="outline" onClick={() => setEditFormOpen(true)}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          )}
-          {canDeleteUpdates && !isClosedCase && (
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(true)}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {canEditUpdates && !isClosedCase && (
+              <Button variant="outline" onClick={() => setEditFormOpen(true)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+            {canDeleteUpdates && !isClosedCase && (
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(true)}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Title and Badges */}
+        <div className="space-y-3">
+          <h1 className="text-2xl font-bold tracking-tight">{getDisplayTitle()}</h1>
+          
+          {/* Status Badges Row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline">{update.update_type}</Badge>
+            {update.is_ai_summary && <AIBadge />}
+            {hasBillableEntries ? (
+              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Billable
+              </Badge>
+            ) : (
+              <Badge variant="secondary">
+                <DollarSign className="h-3 w-3 mr-1" />
+                No Billing
+              </Badge>
+            )}
+            {update.is_legacy_billing && (
+              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                Legacy
+              </Badge>
+            )}
+            {linkedActivity && (
+              <Badge variant="secondary">
+                {linkedActivity.activity_type === "task" ? (
+                  <ListTodo className="h-3 w-3 mr-1" />
+                ) : (
+                  <CalendarDays className="h-3 w-3 mr-1" />
+                )}
+                {linkedActivity.activity_type}
+              </Badge>
+            )}
+          </div>
+
+          {/* Author and Date */}
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            {userProfile && (
+              <span className="flex items-center gap-1.5">
+                <User className="h-4 w-4" />
+                {userProfile.full_name || userProfile.email}
+              </span>
+            )}
+            <span className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4" />
+              {format(new Date(update.created_at), "PPP 'at' p")}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Main update card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <CardTitle className="text-2xl">{update.title}</CardTitle>
-                {update.is_ai_summary && <AIBadge />}
-              </div>
-              <div className="flex items-center gap-3 flex-wrap text-sm text-muted-foreground">
-                <Badge variant="outline">{update.update_type}</Badge>
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {format(new Date(update.created_at), "PPP 'at' p")}
-                </span>
-                {userProfile && (
-                  <span className="flex items-center gap-1">
-                    <User className="h-4 w-4" />
-                    {userProfile.full_name || userProfile.email}
-                  </span>
-                )}
-              </div>
+      {/* ========== CONTEXT SECTION ========== */}
+      <UpdateContextSection
+        caseInfo={caseInfo}
+        linkedActivity={linkedActivity}
+        onViewCase={() => navigate(`/cases/${caseId}`)}
+      />
+
+      {/* ========== NARRATIVE SECTION (PRIMARY) ========== */}
+      <Card className="ring-1 ring-primary/10 bg-primary/[0.02]">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <CardTitle>Narrative</CardTitle>
             </div>
+            <Badge variant="secondary" className="text-xs">Primary</Badge>
           </div>
         </CardHeader>
-
         <CardContent className="space-y-6">
           {/* Description */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 font-semibold">
-              <FileText className="h-4 w-4" />
-              Description
-            </div>
-            <RichTextDisplay
-              html={update.description}
-              fallback="No description provided."
-              className="[&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1"
-            />
-          </div>
+          <RichTextDisplay
+            html={update.description}
+            fallback="No description provided."
+            className="[&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 prose prose-sm max-w-none"
+          />
 
-          {/* Linked Activity */}
-          {linkedActivity && (
-            <div className="space-y-3 pt-4 border-t">
-              <div className="flex items-center gap-2 font-semibold">
-                <Link2 className="h-4 w-4" />
-                Linked Activity
-              </div>
-              <Card className="bg-muted/30">
-                <CardContent className="py-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={linkedActivity.is_scheduled ? "default" : "secondary"}>
-                          {linkedActivity.activity_type}
-                        </Badge>
-                        <span className="font-medium">{linkedActivity.title}</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                        <Badge variant="outline">{linkedActivity.status}</Badge>
-                        {linkedActivity.due_date && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {format(new Date(linkedActivity.due_date), "MMM d, yyyy")}
-                          </span>
-                        )}
-                        {linkedActivity.start_time && linkedActivity.end_time && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {linkedActivity.start_time} - {linkedActivity.end_time}
-                          </span>
-                        )}
-                        {linkedActivity.address && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3.5 w-3.5" />
-                            {linkedActivity.address}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/cases/${caseId}?tab=activities`)}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Activity Timeline */}
+          {/* Activity Timeline (if exists) */}
           {update.activity_timeline && update.activity_timeline.length > 0 && (
-            <div className="space-y-3 pt-4 border-t">
+            <div className="pt-4 border-t">
               <ActivityTimelineDisplay timeline={update.activity_timeline} />
             </div>
           )}
-
-          {/* Linked Attachments */}
-          <div className="space-y-3 pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-semibold">
-                <Paperclip className="h-4 w-4" />
-                Linked Attachments
-                {linkedAttachments.length > 0 && (
-                  <Badge variant="secondary">{linkedAttachments.length}</Badge>
-                )}
-              </div>
-              {canEditUpdates && !isClosedCase && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLinkDialogOpen(true)}
-                >
-                  <Link2 className="h-4 w-4 mr-1" />
-                  Link Attachment
-                </Button>
-              )}
-            </div>
-
-            {linkedAttachments.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {linkedAttachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="flex items-start gap-3 p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors group relative"
-                  >
-                    <div
-                      className="cursor-pointer shrink-0"
-                      onClick={() => handleViewAttachment(attachment.attachment_id)}
-                    >
-                      <AttachmentPreviewThumbnail
-                        filePath={attachment.file_path}
-                        fileName={attachment.file_name}
-                        fileType={attachment.file_type}
-                        previewPath={attachment.preview_path}
-                        previewStatus={attachment.preview_status}
-                        size="md"
-                        className="rounded"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-sm font-medium truncate cursor-pointer hover:text-primary"
-                        onClick={() => handleViewAttachment(attachment.attachment_id)}
-                      >
-                        {attachment.file_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatFileSize(attachment.file_size)}
-                      </p>
-                      <div className="flex gap-2 mt-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => handleViewAttachment(attachment.attachment_id)}
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => handleDownload(attachment)}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                    {canEditUpdates && !isClosedCase && (
-                      <button
-                        onClick={() => handleUnlinkAttachment(attachment.id)}
-                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Unlink attachment"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No attachments linked to this update.
-              </p>
-            )}
-          </div>
-
-          {/* Billing / Time Entries */}
-          <div className="space-y-3 pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-semibold">
-                <DollarSign className="h-4 w-4" />
-                Billing / Time Entries
-                {billingEntries.length > 0 && (
-                  <Badge variant="secondary">{billingEntries.length}</Badge>
-                )}
-              </div>
-              {update.linked_activity_id && !isClosedCase && (
-                <CreateBillingItemButton
-                  activityId={update.linked_activity_id}
-                  updateId={update.id}
-                  updateDescription={update.description}
-                  organizationId={organization?.id || ""}
-                  variant="outline"
-                  size="sm"
-                  onSuccess={fetchData}
-                />
-              )}
-            </div>
-
-            {billingEntries.length > 0 ? (
-              <div className="space-y-2">
-                {billingEntries.map((entry) => (
-                  <Card key={entry.id} className="bg-muted/30">
-                    <CardContent className="py-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="capitalize">
-                              {entry.finance_type}
-                            </Badge>
-                            {entry.hours && entry.hourly_rate ? (
-                              <span className="text-sm font-medium">
-                                {entry.hours} hours @ {formatCurrency(entry.hourly_rate)}/hr = {formatCurrency(entry.amount)}
-                              </span>
-                            ) : (
-                              <span className="text-sm font-medium">
-                                {formatCurrency(entry.amount)}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {entry.description}
-                          </p>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            {entry.status && (
-                              <Badge variant="secondary" className="capitalize text-xs">
-                                {entry.status}
-                              </Badge>
-                            )}
-                            <span>{format(new Date(entry.date), "MMM d, yyyy")}</span>
-                            {entry.category && (
-                              <span className="capitalize">{entry.category}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No billing entries linked to this update.
-              </p>
-            )}
-          </div>
         </CardContent>
       </Card>
+
+      {/* ========== ATTACHMENTS SECTION ========== */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Paperclip className="h-5 w-5" />
+              <CardTitle>Attachments</CardTitle>
+              {linkedAttachments.length > 0 && (
+                <Badge variant="secondary">{linkedAttachments.length}</Badge>
+              )}
+            </div>
+            {canEditUpdates && !isClosedCase && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLinkDialogOpen(true)}
+              >
+                <Link2 className="h-4 w-4 mr-1" />
+                Link Attachment
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {linkedAttachments.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {linkedAttachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className="flex items-start gap-3 p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors group relative"
+                >
+                  <div
+                    className="cursor-pointer shrink-0"
+                    onClick={() => handleViewAttachment(attachment.attachment_id)}
+                  >
+                    <AttachmentPreviewThumbnail
+                      filePath={attachment.file_path}
+                      fileName={attachment.file_name}
+                      fileType={attachment.file_type}
+                      previewPath={attachment.preview_path}
+                      previewStatus={attachment.preview_status}
+                      size="md"
+                      className="rounded"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-sm font-medium truncate cursor-pointer hover:text-primary"
+                      onClick={() => handleViewAttachment(attachment.attachment_id)}
+                    >
+                      {attachment.file_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatFileSize(attachment.file_size)}
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handleViewAttachment(attachment.attachment_id)}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handleDownload(attachment)}
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                  {canEditUpdates && !isClosedCase && (
+                    <button
+                      onClick={() => handleUnlinkAttachment(attachment.id)}
+                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Unlink attachment"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No attachments linked to this update.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ========== BILLING SECTION ========== */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              <CardTitle>Billing / Time Entries</CardTitle>
+              {billingEntries.length > 0 && (
+                <Badge variant="secondary">{billingEntries.length}</Badge>
+              )}
+            </div>
+            {update.linked_activity_id && !isClosedCase && (
+              <CreateBillingItemButton
+                activityId={update.linked_activity_id}
+                updateId={update.id}
+                updateDescription={update.description}
+                organizationId={organization?.id || ""}
+                variant="outline"
+                size="sm"
+                onSuccess={fetchData}
+              />
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Billing Summary */}
+          <UpdateBillingSummary entries={billingEntries} />
+
+          {/* Individual Entries */}
+          {billingEntries.length > 0 ? (
+            <div className="space-y-2">
+              {billingEntries.map((entry) => (
+                <Card key={entry.id} className="bg-muted/30">
+                  <CardContent className="py-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="capitalize">
+                            {entry.finance_type}
+                          </Badge>
+                          {entry.hours && entry.hourly_rate ? (
+                            <span className="text-sm font-medium">
+                              {entry.hours} hours @ {formatCurrency(entry.hourly_rate)}/hr = {formatCurrency(entry.amount)}
+                            </span>
+                          ) : (
+                            <span className="text-sm font-medium">
+                              {formatCurrency(entry.amount)}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {entry.description}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          {entry.status && (
+                            <Badge variant="secondary" className="capitalize text-xs">
+                              {entry.status}
+                            </Badge>
+                          )}
+                          <span>{format(new Date(entry.date), "MMM d, yyyy")}</span>
+                          {entry.category && (
+                            <span className="capitalize">{entry.category}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No billing entries linked to this update.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ========== ACTIVITY / AUDIT SECTION ========== */}
+      <UpdateAuditSection
+        createdAt={update.created_at}
+        updatedAt={update.updated_at}
+        createdBy={userProfile}
+        isLegacyBilling={update.is_legacy_billing}
+        isAiSummary={update.is_ai_summary}
+        aiApprovedBy={aiApprover}
+      />
 
       {/* Edit Form Dialog */}
       <UpdateForm
