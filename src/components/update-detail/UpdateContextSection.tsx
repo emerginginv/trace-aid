@@ -43,85 +43,83 @@ export const UpdateContextSection = ({
           Context
         </div>
 
-        {/* Case Reference */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Case Reference</p>
-          <Card className="bg-muted/30 border-muted">
-            <CardContent className="py-3">
-              <div className="flex items-start justify-between gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Case Reference */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Case Reference</p>
+            <Card className="bg-muted/30 border-muted h-full">
+              <CardContent className="py-3">
                 <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium truncate">
                       {caseInfo.title || caseInfo.case_number}
                     </span>
-                    <span className="text-muted-foreground text-sm">
-                      ({caseInfo.case_number})
-                    </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">{caseInfo.case_number}</p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                     <Badge variant="outline" className="capitalize">
                       {caseInfo.status}
                     </Badge>
                     {caseInfo.account_name && (
-                      <span>Account: {caseInfo.account_name}</span>
+                      <span className="truncate">{caseInfo.account_name}</span>
                     )}
                   </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={onViewCase}>
-                  <ExternalLink className="h-4 w-4 mr-1" />
-                  View Case
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Linked Activity */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Linked Activity</p>
-          {linkedActivity ? (
-            <Card className="bg-muted/30 border-muted">
-              <CardContent className="py-3">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={linkedActivity.is_scheduled ? "default" : "secondary"}>
-                      {linkedActivity.activity_type}
-                    </Badge>
-                    <span className="font-medium">{linkedActivity.title}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                    <Badge variant="outline" className="capitalize">
-                      {linkedActivity.status}
-                    </Badge>
-                    {linkedActivity.due_date && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {format(new Date(linkedActivity.due_date), "MMM d, yyyy")}
-                      </span>
-                    )}
-                    {linkedActivity.start_time && linkedActivity.end_time && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        {linkedActivity.start_time} - {linkedActivity.end_time}
-                      </span>
-                    )}
-                  </div>
-                  {linkedActivity.address && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {linkedActivity.address}
-                    </div>
-                  )}
+                  <Button variant="ghost" size="sm" onClick={onViewCase} className="mt-2 -ml-2">
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    View Case
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          ) : (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground py-3 px-4 border border-dashed rounded-lg">
-              <Link2Off className="h-4 w-4" />
-              No linked activity
-            </div>
-          )}
+          </div>
+
+          {/* Linked Activity */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Linked Activity</p>
+            {linkedActivity ? (
+              <Card className="bg-muted/30 border-muted h-full">
+                <CardContent className="py-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant={linkedActivity.is_scheduled ? "default" : "secondary"}>
+                        {linkedActivity.activity_type}
+                      </Badge>
+                      <span className="font-medium truncate">{linkedActivity.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+                      <Badge variant="outline" className="capitalize">
+                        {linkedActivity.status}
+                      </Badge>
+                      {linkedActivity.due_date && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {format(new Date(linkedActivity.due_date), "MMM d, yyyy")}
+                        </span>
+                      )}
+                    </div>
+                    {linkedActivity.start_time && linkedActivity.end_time && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" />
+                        {linkedActivity.start_time} - {linkedActivity.end_time}
+                      </div>
+                    )}
+                    {linkedActivity.address && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{linkedActivity.address}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-3 px-4 border border-dashed rounded-lg h-full">
+                <Link2Off className="h-4 w-4" />
+                No linked activity
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
