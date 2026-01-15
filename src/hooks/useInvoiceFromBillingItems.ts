@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { validateBillingRatesForInvoice } from "@/hooks/useAccountPricingStatus";
 
 /**
  * SYSTEM PROMPT 11: Invoice Generation Rules
@@ -9,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
  * - Invoices never calculate quantities
  * - Invoices snapshot pricing at approval time
  * - Prevent double inclusion of billing items
+ * - VALIDATION: Block invoice generation if required rates are missing
  */
 
 export interface ApprovedBillingItem {
@@ -91,6 +93,24 @@ export function useGenerateInvoiceFromBillingItems() {
     }) => {
       if (billingItemIds.length === 0) {
         throw new Error("No billing items selected");
+      }
+
+      // Pre-flight validation: Check for missing billing rates
+      if (accountId) {
+        const missingRates = await validateBillingRatesForInvoice(
+          billingItemIds,
+          accountId,
+          organizationId
+        );
+        
+        if (missingRates.length > 0) {
+          const itemNames = missingRates.map(r => r.name).slice(0, 3).join(', ');
+          const moreCount = missingRates.length > 3 ? ` and ${missingRates.length - 3} more` : '';
+          throw new Error(
+            `Cannot generate invoice: ${missingRates.length} item(s) have no billing rate configured. ` +
+            `Go to Account > Client Pricing to set rates for: ${itemNames}${moreCount}`
+          );
+        }
       }
 
       // Get next invoice number

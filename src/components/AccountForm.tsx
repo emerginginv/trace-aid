@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,10 +20,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
-
 const accountSchema = z.object({
   name: z.string().min(1, "Account name is required").max(100),
   industry: z.string().max(100).optional(),
@@ -45,6 +47,7 @@ interface AccountFormProps {
 }
 
 export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: AccountFormProps) {
+  const navigate = useNavigate();
   const form = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
     defaultValues: {
@@ -69,7 +72,7 @@ export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: A
         throw new Error("Organization not found");
       }
 
-      const { error } = await supabase.from("accounts").insert([{
+      const { data: newAccount, error } = await supabase.from("accounts").insert([{
         name: data.name,
         industry: data.industry,
         email: data.email,
@@ -81,14 +84,23 @@ export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: A
         notes: data.notes,
         user_id: user.id,
         organization_id: organizationId,
-      }]);
+      }]).select().single();
 
       if (error) throw error;
 
-      toast.success("Account created successfully");
+      toast.success("Account created successfully", {
+        description: "Configure billing rates to enable invoicing.",
+        action: {
+          label: "Configure Rates",
+          onClick: () => navigate(`/accounts/${newAccount.id}?setup=pricing`),
+        },
+      });
       form.reset();
       onOpenChange(false);
       onSuccess();
+      
+      // Navigate to account detail with pricing setup prompt
+      navigate(`/accounts/${newAccount.id}?setup=pricing`);
     } catch (error) {
       toast.error("Failed to create account");
       console.error(error);
@@ -111,6 +123,13 @@ export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: A
           </DialogHeader>
           <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200">
+                <strong>Note:</strong> After creating this account, you'll need to configure billing rates before invoices can be generated.
+              </AlertDescription>
+            </Alert>
+            
             <FormField
               control={form.control}
               name="name"

@@ -178,10 +178,16 @@ export function AccountBillingRatesTab({
       {unconfiguredCount > 0 && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Missing Billing Rates</AlertTitle>
-          <AlertDescription>
-            {unconfiguredCount} item{unconfiguredCount !== 1 ? 's' : ''} without any billing rate configured. 
-            Configure an account rate or set an organization default in Invoice & Expense Items settings.
+          <AlertTitle>Billing Blocked: Missing Rates</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>
+              <strong>{unconfiguredCount}</strong> item{unconfiguredCount !== 1 ? 's' : ''} without any billing rate. 
+              Invoice generation will fail until these are configured.
+            </p>
+            <p className="text-sm">
+              <strong>To fix:</strong> Click the pencil icon next to each "Not Set" item to add an account rate, 
+              or set an organization default in Settings → Invoice & Expense Items.
+            </p>
           </AlertDescription>
         </Alert>
       )}
