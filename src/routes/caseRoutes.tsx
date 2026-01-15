@@ -9,6 +9,7 @@ import Tasks from "@/pages/Tasks";
 import Events from "@/pages/Events";
 import Updates from "@/pages/Updates";
 import UpdateDetail from "@/pages/UpdateDetail";
+import CaseUpdateDetail from "@/pages/CaseUpdateDetail";
 import Calendar from "@/pages/Calendar";
 
 /**
@@ -45,6 +46,14 @@ export const caseRoutes = (
       element={
         <RouteWrapper>
           <SubjectDetail />
+        </RouteWrapper>
+      }
+    />
+    <Route
+      path="/cases/:caseId/updates/:updateId"
+      element={
+        <RouteWrapper>
+          <CaseUpdateDetail />
         </RouteWrapper>
       }
     />
