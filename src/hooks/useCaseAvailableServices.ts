@@ -38,7 +38,7 @@ export function useCaseAvailableServices(caseId: string | undefined) {
         .select(`
           case_service_id,
           pricing_model,
-          rate,
+          default_rate,
           is_billable,
           case_services (
             id,
@@ -58,7 +58,7 @@ export function useCaseAvailableServices(caseId: string | undefined) {
         name: rule.case_services?.name || "Unknown Service",
         code: rule.case_services?.code || null,
         pricing_model: rule.pricing_model,
-        rate: rule.rate,
+        rate: rule.default_rate,
         is_billable: rule.is_billable ?? true,
       })) as AvailableService[];
     },

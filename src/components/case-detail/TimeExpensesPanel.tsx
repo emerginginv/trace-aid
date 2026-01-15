@@ -170,7 +170,8 @@ export const TimeExpensesPanel = ({
         .from("service_pricing_rules")
         .select(`
           id,
-          rate,
+          default_rate,
+          expense_rate,
           pricing_model,
           case_services:case_service_id (
             id,
@@ -183,7 +184,7 @@ export const TimeExpensesPanel = ({
         const items: RateScheduleItem[] = rules.map((rule: any) => ({
           id: rule.case_services?.id || rule.id,
           name: rule.case_services?.name || "Service",
-          rate: rule.rate,
+          rate: rule.expense_rate ?? rule.default_rate,
           pricingModel: rule.pricing_model,
         }));
         setRateScheduleItems(items);
