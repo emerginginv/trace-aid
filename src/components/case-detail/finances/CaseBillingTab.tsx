@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, AlertTriangle, Info } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { useBatchResolveInvoiceRates } from "@/hooks/useUnifiedPricing";
 
 interface Invoice {
   id: string;
@@ -34,6 +35,8 @@ interface TimeEntry {
   total: number;
   status: string;
   created_at: string;
+  finance_item_id: string | null;
+  invoice_rate: number | null;
 }
 
 interface ExpenseEntry {
@@ -48,6 +51,8 @@ interface ExpenseEntry {
   receipt_url: string | null;
   status: string;
   created_at: string;
+  finance_item_id: string | null;
+  invoice_rate: number | null;
 }
 
 interface UserProfile {
@@ -70,6 +75,24 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
   const [loading, setLoading] = useState(true);
   const [converting, setConverting] = useState(false);
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [billingRates, setBillingRates] = useState<Map<string, number>>(new Map());
+  const [ratesLoading, setRatesLoading] = useState(false);
+
+  const batchResolveRates = useBatchResolveInvoiceRates();
+
+  // Fetch case account_id for client-specific pricing
+  useEffect(() => {
+    const fetchCaseAccount = async () => {
+      const { data } = await supabase
+        .from("cases")
+        .select("account_id")
+        .eq("id", caseId)
+        .single();
+      setAccountId(data?.account_id || null);
+    };
+    fetchCaseAccount();
+  }, [caseId]);
 
   useEffect(() => {
     fetchData();
@@ -90,10 +113,10 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
       if (invoicesError) throw invoicesError;
       setInvoices(invoicesData || []);
 
-      // Fetch approved time entries (ready for billing)
+      // Fetch approved time entries (ready for billing) with finance_item_id
       const { data: timeData, error: timeError } = await supabase
         .from("time_entries")
-        .select("*")
+        .select("id, case_id, user_id, item_type, notes, hours, rate, total, status, created_at, finance_item_id, invoice_rate")
         .eq("case_id", caseId)
         .eq("organization_id", organizationId)
         .eq("status", "approved")
@@ -102,10 +125,10 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
       if (timeError) throw timeError;
       setTimeEntries(timeData || []);
 
-      // Fetch approved expense entries (ready for billing)
+      // Fetch approved expense entries (ready for billing) with finance_item_id
       const { data: expenseData, error: expenseError } = await supabase
         .from("expense_entries")
-        .select("*")
+        .select("id, case_id, user_id, item_type, notes, quantity, rate, total, receipt_url, status, created_at, finance_item_id, invoice_rate")
         .eq("case_id", caseId)
         .eq("organization_id", organizationId)
         .eq("status", "approved")
@@ -200,6 +223,52 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
     return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [timeEntries, expenseEntries]);
 
+  // Resolve billing rates from Client Price List when entries or account change
+  useEffect(() => {
+    const resolveRates = async () => {
+      if (!accountId || unbilledItems.length === 0) {
+        setBillingRates(new Map());
+        return;
+      }
+
+      setRatesLoading(true);
+      try {
+        const entries = unbilledItems.map(item => ({
+          id: item.id,
+          financeItemId: item.finance_item_id,
+        }));
+
+        const rates = await batchResolveRates.mutateAsync({ entries, accountId });
+        setBillingRates(rates);
+      } catch (error) {
+        console.error("Error resolving billing rates:", error);
+        // Fallback to stored invoice_rate or rate
+        const fallbackRates = new Map<string, number>();
+        unbilledItems.forEach(item => {
+          fallbackRates.set(item.id, item.invoice_rate ?? item.rate);
+        });
+        setBillingRates(fallbackRates);
+      } finally {
+        setRatesLoading(false);
+      }
+    };
+
+    resolveRates();
+  }, [accountId, unbilledItems.length, timeEntries, expenseEntries]);
+
+  // Get billing amount for an entry using resolved invoice rate
+  const getBillingRate = useCallback((item: CombinedEntry): number => {
+    return billingRates.get(item.id) ?? item.invoice_rate ?? item.rate;
+  }, [billingRates]);
+
+  const getBillingAmount = useCallback((item: CombinedEntry): number => {
+    const rate = getBillingRate(item);
+    const qty = item.entryType === "time" 
+      ? (item as TimeEntry).hours 
+      : (item as ExpenseEntry).quantity;
+    return qty * rate;
+  }, [getBillingRate]);
+
   const toggleItem = (itemKey: string) => {
     const newSelected = new Set(selectedItems);
     if (newSelected.has(itemKey)) {
@@ -218,11 +287,12 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
     setSelectedItems(new Set());
   };
 
-  const selectedTotal = useMemo(() => {
+  // Selected total uses billing amounts (invoice rates), not cost totals
+  const selectedBillingTotal = useMemo(() => {
     return unbilledItems
       .filter(item => selectedItems.has(`${item.entryType}-${item.id}`))
-      .reduce((sum, item) => sum + Number(item.total), 0);
-  }, [unbilledItems, selectedItems]);
+      .reduce((sum, item) => sum + getBillingAmount(item), 0);
+  }, [unbilledItems, selectedItems, getBillingAmount]);
 
   const handleConvertToInvoice = async () => {
     if (selectedItems.size === 0) return;
@@ -247,13 +317,13 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
       }
       const invoiceNumber = `INV-${String(nextNumber).padStart(5, "0")}`;
 
-      // Calculate total from selected items
+      // Calculate total from selected items using resolved billing rates
       const selectedEntries = unbilledItems.filter(item => 
         selectedItems.has(`${item.entryType}-${item.id}`)
       );
-      const invoiceTotal = selectedEntries.reduce((sum, item) => sum + Number(item.total), 0);
+      const invoiceTotal = selectedEntries.reduce((sum, item) => sum + getBillingAmount(item), 0);
 
-      // Create invoice
+      // Create invoice with billing total
       const { data: newInvoice, error: invoiceError } = await supabase
         .from("invoices")
         .insert({
@@ -271,30 +341,32 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
 
       if (invoiceError) throw invoiceError;
 
-      // Update time entries to billed status
-      const selectedTimeIds = selectedEntries
-        .filter(e => e.entryType === "time")
-        .map(e => e.id);
-      
-      if (selectedTimeIds.length > 0) {
+      // Update time entries to committed status with resolved invoice_rate
+      const selectedTimeEntries = selectedEntries.filter(e => e.entryType === "time");
+      for (const entry of selectedTimeEntries) {
+        const invoiceRate = getBillingRate(entry);
         const { error: timeUpdateError } = await supabase
           .from("time_entries")
-          .update({ status: "committed" })
-          .in("id", selectedTimeIds);
+          .update({ 
+            status: "committed",
+            invoice_rate: invoiceRate,
+          })
+          .eq("id", entry.id);
         
         if (timeUpdateError) throw timeUpdateError;
       }
 
-      // Update expense entries to committed status
-      const selectedExpenseIds = selectedEntries
-        .filter(e => e.entryType === "expense")
-        .map(e => e.id);
-      
-      if (selectedExpenseIds.length > 0) {
+      // Update expense entries to committed status with resolved invoice_rate
+      const selectedExpenseEntries = selectedEntries.filter(e => e.entryType === "expense");
+      for (const entry of selectedExpenseEntries) {
+        const invoiceRate = getBillingRate(entry);
         const { error: expenseUpdateError } = await supabase
           .from("expense_entries")
-          .update({ status: "committed" })
-          .in("id", selectedExpenseIds);
+          .update({ 
+            status: "committed",
+            invoice_rate: invoiceRate,
+          })
+          .eq("id", entry.id);
         
         if (expenseUpdateError) throw expenseUpdateError;
       }
@@ -477,8 +549,8 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
                     <TableHead>Employee</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead className="text-center">Hrs/Qty</TableHead>
-                    <TableHead className="text-right">Cost Rate</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
+                    <TableHead className="text-right">Bill Rate</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -513,8 +585,12 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
                           {item.notes || "—"}
                         </TableCell>
                         <TableCell className="text-center">{qtyOrHours}</TableCell>
-                        <TableCell className="text-right">${Number(item.rate).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-medium">${Number(item.total).toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          {ratesLoading ? "..." : `$${getBillingRate(item).toFixed(2)}`}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {ratesLoading ? "..." : `$${getBillingAmount(item).toFixed(2)}`}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -525,7 +601,7 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
                 <div className="border-t p-4 bg-muted/30 flex items-center justify-between">
                   <div>
                     <span className="font-medium">{selectedItems.size} item{selectedItems.size !== 1 ? "s" : ""} selected</span>
-                    <span className="text-lg font-bold ml-4">${selectedTotal.toFixed(2)}</span>
+                    <span className="text-lg font-bold ml-4">${selectedBillingTotal.toFixed(2)}</span>
                   </div>
                   <Button onClick={handleConvertToInvoice} disabled={converting}>
                     <FileText className="h-4 w-4 mr-2" />
