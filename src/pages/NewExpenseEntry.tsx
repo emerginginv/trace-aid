@@ -485,15 +485,26 @@ const NewExpenseEntry = () => {
 
         // Post-save navigation
         if (createUpdateAfterSave) {
-          // Navigate to new update form with prefilled data
-          const params = new URLSearchParams({
-            caseId: caseId!,
-            ...(activityId && { activityId }),
-          });
+          // Collect all saved entry IDs
+          const allEntryIds = [...savedTimeEntryIds, ...savedExpenseEntryIds];
+          
+          // Navigate to new update form with expense linking
+          const params = new URLSearchParams();
+          if (allEntryIds.length > 0) {
+            params.set("linkExpense", allEntryIds.join(","));
+          }
+          if (activityId) {
+            params.set("activityId", activityId);
+          }
           navigate(`/cases/${caseId}/updates/new?${params.toString()}`);
         } else {
-          // Navigate to case expenses tab
-          navigate(`/cases/${caseId}?tab=finances`);
+          // Navigate to expense entry detail page (using first saved ID)
+          const primaryId = savedExpenseEntryIds[0] || savedTimeEntryIds[0];
+          if (primaryId) {
+            navigate(`/cases/${caseId}/expenses/${primaryId}`);
+          } else {
+            navigate(`/cases/${caseId}?tab=finances`);
+          }
         }
       }
     } catch (error) {

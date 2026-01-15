@@ -13,6 +13,7 @@ import CaseUpdateDetail from "@/pages/CaseUpdateDetail";
 import Calendar from "@/pages/Calendar";
 import NewExpenseEntry from "@/pages/NewExpenseEntry";
 import ExpenseEntryDetail from "@/pages/ExpenseEntryDetail";
+import NewCaseUpdate from "@/pages/NewCaseUpdate";
 
 /**
  * Routes related to case management.
@@ -48,6 +49,14 @@ export const caseRoutes = (
       element={
         <RouteWrapper>
           <SubjectDetail />
+        </RouteWrapper>
+      }
+    />
+    <Route
+      path="/cases/:caseId/updates/new"
+      element={
+        <RouteWrapper>
+          <NewCaseUpdate />
         </RouteWrapper>
       }
     />
