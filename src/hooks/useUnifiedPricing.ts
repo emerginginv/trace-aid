@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { FinanceItem } from "./useFinanceItems";
 
 export interface UnifiedPricingItem {
@@ -199,9 +200,12 @@ export function useResolveInvoiceRate() {
 
 /**
  * Hook to get invoice rates for multiple entries in batch (for billing conversion)
+ * Returns empty map for investigators (no billing rate visibility)
  */
 export function useBatchResolveInvoiceRates() {
   const { organization } = useOrganization();
+  const { isAdmin, isManager } = useUserRole();
+  const canViewBillingRates = isAdmin || isManager;
 
   return useMutation({
     mutationFn: async ({
@@ -212,6 +216,12 @@ export function useBatchResolveInvoiceRates() {
       accountId: string;
     }) => {
       if (!organization?.id) throw new Error("No organization");
+      
+      // Block billing rate resolution for non-admin/manager users
+      if (!canViewBillingRates) {
+        console.warn("[useBatchResolveInvoiceRates] User does not have permission to view billing rates");
+        return new Map<string, number>();
+      }
 
       const results: Map<string, number> = new Map();
 

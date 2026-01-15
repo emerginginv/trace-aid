@@ -380,7 +380,7 @@ const App = () => {
         <Route
           path="/analytics/finances"
           element={
-            <ProtectedRoute blockVendors={true}>
+            <ProtectedRoute blockVendors={true} blockInvestigators={true}>
               <DashboardLayout>
                 <BudgetAnalytics />
               </DashboardLayout>
