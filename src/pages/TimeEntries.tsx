@@ -6,14 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+// Note: Dialog removed - billing now initiated only from Update Details page
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Pencil, Trash2, Check, X, Plus, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, LayoutGrid, List, Clock } from "lucide-react";
+import { Search, Pencil, Trash2, Check, X, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, LayoutGrid, List, Clock } from "lucide-react";
 import { ImportTemplateDropdown } from "@/components/ui/import-template-button";
 
-import { FinanceForm } from "@/components/case-detail/FinanceForm";
+// Note: FinanceForm removed - billing now initiated only from Update Details page
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -73,8 +73,7 @@ const TimeEntries = () => {
   const [timeStatusFilter, setTimeStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
-  const [editingTimeEntry, setEditingTimeEntry] = useState<any>(null);
-  const [showTimeForm, setShowTimeForm] = useState(false);
+  // Note: Add Time Entry removed - billing now initiated only from Update Details page
   
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("time-entries", "date", "desc");
@@ -83,9 +82,7 @@ const TimeEntries = () => {
   const [selectedTimeEntries, setSelectedTimeEntries] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
-  // Add time dialog state
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [selectedCaseId, setSelectedCaseId] = useState<string>("");
+  // Note: Add time dialog removed - billing now initiated only from Update Details page
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("time-entries-columns", COLUMNS);
 
@@ -379,15 +376,7 @@ const TimeEntries = () => {
     toast.success("Time entries exported to PDF");
   };
 
-  const openAddTime = () => {
-    setSelectedCaseId("");
-    setShowAddDialog(true);
-  };
-
-  const handleCaseSelected = () => {
-    setShowAddDialog(false);
-    setShowTimeForm(true);
-  };
+  // Note: Add time functions removed - billing now initiated only from Update Details page
 
   const handleDeleteTimeEntry = async (id: string) => {
     if (!confirm("Are you sure you want to delete this time entry?")) return;
@@ -476,10 +465,7 @@ const TimeEntries = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={openAddTime}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Time Entry
-          </Button>
+          {/* Note: Add Time Entry button removed - billing now initiated only from Update Details page */}
         </div>
       </div>
 
@@ -814,59 +800,7 @@ const TimeEntries = () => {
         </CardContent>
       </Card>
 
-      {/* Case Selection Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Time Entry</DialogTitle>
-            <DialogDescription>
-              Select a case to add a time entry to
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a case" />
-              </SelectTrigger>
-              <SelectContent>
-                {cases.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.case_number} - {c.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCaseSelected} disabled={!selectedCaseId}>
-                Continue
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Time Entry Form Dialog */}
-      <Dialog open={showTimeForm} onOpenChange={setShowTimeForm}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Time Entry</DialogTitle>
-          </DialogHeader>
-          <FinanceForm
-            caseId={selectedCaseId}
-            open={showTimeForm}
-            onOpenChange={setShowTimeForm}
-            onSuccess={() => {
-              setShowTimeForm(false);
-              fetchTimeData();
-            }}
-            defaultFinanceType="time"
-            organizationId={organization?.id || ""}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Note: Case Selection and Time Entry Form dialogs removed - billing now initiated only from Update Details page */}
     </div>
   );
 };

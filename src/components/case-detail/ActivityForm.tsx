@@ -18,9 +18,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { useBillingEligibility, BillingEligibilityResult } from "@/hooks/useBillingEligibility";
-import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
-import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
+// Note: Billing CTAs removed - billing now initiated only from Update Details page
 import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
 import { useBudgetConsumption } from "@/hooks/useBudgetConsumption";
 import { BudgetBlockedDialog } from "./BudgetBlockedDialog";
@@ -130,8 +128,7 @@ export function ActivityForm({
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [subjectAddresses, setSubjectAddresses] = useState<SubjectAddress[]>([]);
-  const [billingPromptOpen, setBillingPromptOpen] = useState(false);
-  const [billingEligibility, setBillingEligibility] = useState<BillingEligibilityResult | null>(null);
+  // Note: Billing CTAs removed - billing now initiated only from Update Details page
   const [budgetBlockedDialogOpen, setBudgetBlockedDialogOpen] = useState(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<any | null>(null);
   
@@ -139,8 +136,6 @@ export function ActivityForm({
   const [isScheduled, setIsScheduled] = useState(activityType === "event");
   
   const navigate = useNavigate();
-  const { evaluate: evaluateBillingEligibility } = useBillingEligibility();
-  const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
   const { consumption } = useBudgetConsumption(caseId);
   
   // Fetch available services from the case's pricing profile
@@ -553,29 +548,7 @@ export function ActivityForm({
           : `${isScheduled ? "Event" : "Task"} added successfully`,
       });
 
-      // Check billing eligibility if activity was completed and has a service instance
-      // NOTE: Billing via tasks only, scheduled events use Updates workflow
-      const isCompleted = effectiveValues.status === "done" || effectiveValues.status === "completed";
-      const activityIdToCheck = editingActivity?.id || insertedActivity?.id;
-      
-      // Only trigger billing prompt for unscheduled activities (tasks)
-      if (isCompleted && caseServiceInstanceId && activityIdToCheck && !isScheduled) {
-        const eligibility = await evaluateBillingEligibility({
-          activityId: activityIdToCheck,
-          caseServiceInstanceId: caseServiceInstanceId,
-        });
-        
-        if (eligibility.isEligible) {
-          setBillingEligibility(eligibility);
-          setBillingPromptOpen(true);
-          return;
-        } else if (eligibility.reason?.includes("flat-fee")) {
-          toast({
-            title: "Flat-Fee Service Already Billed",
-            description: eligibility.reason,
-          });
-        }
-      }
+      // Note: Billing prompts removed - billing now initiated only from Update Details page
 
       onOpenChange(false);
       onSuccess();
@@ -1087,68 +1060,7 @@ export function ActivityForm({
       </DialogContent>
     </Dialog>
     
-    {/* Billing Prompt Dialog - shows after completing an activity with billable service */}
-    <BillingPromptDialog
-      open={billingPromptOpen}
-      onOpenChange={(open) => {
-        setBillingPromptOpen(open);
-        if (!open) {
-          onOpenChange(false);
-          onSuccess();
-        }
-      }}
-      eligibility={billingEligibility}
-      onCreateBillingItem={async () => {
-        if (!billingEligibility) return;
-        
-        const result = await createBillingItem({
-          activityId: billingEligibility.activityId!,
-          caseServiceInstanceId: billingEligibility.serviceInstanceId!,
-          caseId: billingEligibility.caseId!,
-          organizationId: billingEligibility.organizationId!,
-          accountId: billingEligibility.accountId,
-          serviceName: billingEligibility.serviceName!,
-          pricingModel: billingEligibility.pricingModel!,
-          quantity: billingEligibility.quantity!,
-          rate: billingEligibility.serviceRate!,
-          pricingProfileId: billingEligibility.pricingProfileId,
-          pricingRuleSnapshot: billingEligibility.pricingRuleSnapshot,
-        });
-        
-        if (result.success) {
-          if (result.budgetWarning?.isForecastWarning) {
-            toast({
-              title: result.budgetWarning.isForecastExceeded ? "Budget Warning" : "Budget Notice",
-              description: getBudgetForecastWarningMessage(
-                result.budgetWarning.isForecastExceeded,
-                result.budgetWarning.hardCap
-              ),
-              variant: result.budgetWarning.isForecastExceeded ? "destructive" : "default",
-            });
-          }
-          
-          toast({
-            title: "Billing Item Created",
-            description: `A billing item for "${billingEligibility.serviceName}" is pending review.`,
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: result.error || "Failed to create billing item",
-            variant: "destructive",
-          });
-        }
-        
-        setBillingPromptOpen(false);
-        onOpenChange(false);
-        onSuccess();
-      }}
-      onSkip={() => {
-        setBillingPromptOpen(false);
-        onOpenChange(false);
-        onSuccess();
-      }}
-    />
+    {/* Note: Billing Prompt Dialog removed - billing now initiated only from Update Details page */}
     
     {/* Budget blocked dialog for smart handling */}
     {consumption && (

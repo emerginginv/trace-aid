@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays, Link, Zap, Clock, List } from "lucide-react";
+import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays, Link, Clock, List } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,11 +18,7 @@ import { format } from "date-fns";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useSortPreference } from "@/hooks/use-sort-preference";
-import { useBillingEligibility, BillingEligibilityResult } from "@/hooks/useBillingEligibility";
-import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
-import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
-import { QuickBillDialog } from "@/components/billing/QuickBillDialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+// Note: Billing CTAs removed - billing now initiated only from Update Details page
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface Activity {
@@ -71,15 +67,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   // Phase 3: Unified view filter
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
   
-  // Billing eligibility state
-  const [billingPromptOpen, setBillingPromptOpen] = useState(false);
-  const [billingEligibility, setBillingEligibility] = useState<BillingEligibilityResult | null>(null);
-  const { evaluate: evaluateBillingEligibility } = useBillingEligibility();
-  const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
-
-  // Quick Bill state
-  const [quickBillDialogOpen, setQuickBillDialogOpen] = useState(false);
-  const [selectedEventForQuickBill, setSelectedEventForQuickBill] = useState<Activity | null>(null);
+  // Note: Billing CTAs removed - billing now initiated only from Update Details page
 
   // Unified state for single activities panel
   const [searchQuery, setSearchQuery] = useState("");
@@ -245,19 +233,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
         description: "Activity updated successfully",
       });
 
-      // Check billing eligibility if completing and has service instance
-      // Only trigger billing prompt for unscheduled activities (tasks)
-      if (isCompleting && activity.case_service_instance_id && !isScheduled) {
-        const eligibility = await evaluateBillingEligibility({
-          activityId: activity.id,
-          caseServiceInstanceId: activity.case_service_instance_id,
-        });
-        
-        if (eligibility.isEligible) {
-          setBillingEligibility(eligibility);
-          setBillingPromptOpen(true);
-        }
-      }
+      // Note: Billing prompts removed - billing now initiated only from Update Details page
     } catch (error) {
       console.error('Error updating activity:', error);
       toast({
@@ -652,30 +628,6 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                           </TableCell>
                           <TableCell className="align-top">
                             <div className="flex gap-1">
-                              {/* Quick Bill Button - only for scheduled activities with linked services */}
-                              {isScheduled && activity.case_service_instance_id && !isDone && canEditActivities && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                          setSelectedEventForQuickBill(activity);
-                                          setQuickBillDialogOpen(true);
-                                        }}
-                                        disabled={isClosedCase}
-                                        className="h-7 w-7 text-primary hover:text-primary"
-                                      >
-                                        <Zap className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Quick Bill</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
                               {canEditActivities && (
                                 <Button
                                   variant="ghost"
@@ -729,80 +681,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
         organizationId={organization?.id || ""}
       />
 
-      <BillingPromptDialog
-        open={billingPromptOpen}
-        onOpenChange={(open) => {
-          setBillingPromptOpen(open);
-          if (!open) setBillingEligibility(null);
-        }}
-        eligibility={billingEligibility}
-        onCreateBillingItem={async () => {
-          if (!billingEligibility) return;
-          
-          const result = await createBillingItem({
-            activityId: billingEligibility.activityId!,
-            caseServiceInstanceId: billingEligibility.serviceInstanceId!,
-            caseId: billingEligibility.caseId!,
-            organizationId: billingEligibility.organizationId!,
-            accountId: billingEligibility.accountId,
-            serviceName: billingEligibility.serviceName!,
-            pricingModel: billingEligibility.pricingModel!,
-            quantity: billingEligibility.quantity!,
-            rate: billingEligibility.serviceRate!,
-            pricingProfileId: billingEligibility.pricingProfileId,
-            pricingRuleSnapshot: billingEligibility.pricingRuleSnapshot,
-          });
-          
-          if (result.success) {
-            toast({
-              title: "Billing Item Created",
-              description: `Added ${billingEligibility.serviceName} to billing`,
-            });
-            if (result.budgetWarning?.isForecastWarning || result.budgetWarning?.isForecastExceeded) {
-              toast({
-                title: "Budget Warning",
-                description: result.budgetWarning.isForecastExceeded 
-                  ? "Budget forecast exceeded" 
-                  : "Approaching budget limit",
-                variant: "destructive",
-              });
-            }
-          } else {
-            toast({
-              title: "Error",
-              description: result.error || "Failed to create billing item",
-              variant: "destructive",
-            });
-          }
-          
-          setBillingPromptOpen(false);
-          setBillingEligibility(null);
-          fetchActivities();
-        }}
-        onSkip={() => {
-          setBillingPromptOpen(false);
-          setBillingEligibility(null);
-        }}
-      />
-
-      {/* Quick Bill Dialog */}
-      {selectedEventForQuickBill && (
-        <QuickBillDialog
-          open={quickBillDialogOpen}
-          onOpenChange={(open) => {
-            setQuickBillDialogOpen(open);
-            if (!open) setSelectedEventForQuickBill(null);
-          }}
-          eventId={selectedEventForQuickBill.id}
-          caseId={caseId}
-          organizationId={organization?.id || ""}
-          onSuccess={() => {
-            fetchActivities();
-            setQuickBillDialogOpen(false);
-            setSelectedEventForQuickBill(null);
-          }}
-        />
-      )}
+      {/* Note: Billing dialogs removed - billing now initiated only from Update Details page */}
     </>
   );
 }

@@ -18,12 +18,7 @@ import { ExternalLink, Paperclip, Link2 } from "lucide-react";
 import { AttachmentPicker } from "./AttachmentPicker";
 import { ActivityTimelineEditor, TimelineEntry } from "./ActivityTimelineEditor";
 import { format } from "date-fns";
-import { useUpdateBillingEligibility, UpdateBillingEligibilityResult } from "@/hooks/useUpdateBillingEligibility";
-import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
-import { useExpenseBillingItemCreation, CreateExpenseParams } from "@/hooks/useExpenseBillingItemCreation";
-import { BillingPromptDialog, ConfirmedTimes, ExpenseData } from "@/components/billing/BillingPromptDialog";
-import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
-import { logBillingAudit } from "@/lib/billingAuditLogger";
+// Note: Billing CTAs removed - billing now initiated only from Update Details page
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -60,14 +55,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   const [caseActivities, setCaseActivities] = useState<CaseActivity[]>([]);
   const navigate = useNavigate();
   
-  // Billing eligibility state (System Prompt 4)
-  const [billingPromptOpen, setBillingPromptOpen] = useState(false);
-  const [billingEligibility, setBillingEligibility] = useState<UpdateBillingEligibilityResult | null>(null);
-  const [createdUpdateId, setCreatedUpdateId] = useState<string | null>(null); // SYSTEM PROMPT 9: Track created update ID
-  const { evaluate: evaluateBillingEligibility, reset: resetBillingEligibility } = useUpdateBillingEligibility();
-  const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
-  const { createExpenseItem, isCreating: isCreatingExpense } = useExpenseBillingItemCreation();
-  const [updateTitle, setUpdateTitle] = useState<string>(''); // Track update title for expense pre-fill
+  // Note: Billing CTAs removed - billing now initiated only from Update Details page
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -288,10 +276,6 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
           .single();
         error = result.error;
         newUpdate = result.data;
-        // SYSTEM PROMPT 9: Store created update ID for billing item linkage
-        if (result.data) {
-          setCreatedUpdateId(result.data.id);
-        }
       }
 
       if (error) throw error;
@@ -332,79 +316,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         description: editingUpdate ? "Update edited successfully" : "Update added successfully",
       });
 
-      // ═══════════════════════════════════════════════════════════════════════════
-      // SYSTEM PROMPT 2: POST-SAVE INTERCEPTOR
-      // This section executes AFTER the update has been persisted to the database.
-      // Requirements:
-      // 1. Update must be saved before this runs (non-blocking)
-      // 2. If no task/event is referenced → end immediately, no billing prompt
-      // 3. If task/event is linked:
-      //    a. Resolve the linked activity (fetch from case_activities)
-      //    b. Check if activity has case_service_instance_id
-      //    c. If NO Case Service Instance → end evaluation, no billing prompt
-      //    d. If Case Service Instance exists → continue to billing eligibility
-      // ═══════════════════════════════════════════════════════════════════════════
-      // SYSTEM PROMPT 3 & 4: Check billing eligibility only if update is linked to an activity
-      // If linked, evaluate billing eligibility; if eligible, show billing prompt
-      // 4. If any condition fails:
-      //    a. Log the failure reason internally (console.log)
-      //    b. Complete update submission normally without billing prompt
-      const linkedActivityId = values.linked_activity_id;
-      
-      if (linkedActivityId && !editingUpdate) {
-        // Only check billing for new updates (not edits) with linked activities
-        const eligibilityResult = await evaluateBillingEligibility({ linkedActivityId });
-        
-        // Log failure reasons internally when not eligible
-        if (!eligibilityResult.isEligible) {
-          console.log('[Billing Eligibility] Not eligible:', {
-            activityId: linkedActivityId,
-            reason: eligibilityResult.reason,
-            activityAlreadyBilled: eligibilityResult.activityAlreadyBilled,
-          });
-        }
-        
-        if (eligibilityResult.isEligible) {
-          // ═══════════════════════════════════════════════════════════════════════════
-          // SYSTEM PROMPT 5: Display billing modal immediately after update submission
-          // Requirements:
-          //   a. Show modal with message: "This update is linked to a billable activity.
-          //      Would you like to create a billing item for this activity?"
-          //   b. Options: "Yes, create billing item" / "No, skip billing"
-          //   c. CRITICAL: Choosing "No" must NOT disable future billing actions
-          //      (onSkip only logs audit event and resets UI state)
-          // Implementation: BillingPromptDialog component handles the modal UI
-          // ═══════════════════════════════════════════════════════════════════════════
-          
-          // SYSTEM PROMPT 11: Log billing prompt shown audit event
-          await logBillingAudit({
-            action: 'billing_prompt_shown',
-            organizationId: organizationId,
-            metadata: {
-              updateId: newUpdate?.id,
-              activityId: linkedActivityId,
-              caseServiceInstanceId: eligibilityResult.serviceInstanceId,
-              caseId: caseId,
-              serviceName: eligibilityResult.serviceName,
-              pricingModel: eligibilityResult.pricingModel,
-              quantity: eligibilityResult.quantity,
-              rate: eligibilityResult.serviceRate,
-            },
-          });
-          
-          // Store eligibility result and show billing prompt
-          setBillingEligibility(eligibilityResult);
-          setUpdateTitle(values.title); // Store update title for expense pre-fill
-          setBillingPromptOpen(true);
-          // Don't close the dialog yet - wait for billing decision
-          form.reset();
-          setSelectedAttachmentIds([]);
-          setIncludeTimeline(false);
-          setTimelineEntries([]);
-          // Keep dialog state but let billing prompt overlay
-          return; // Exit early - onSuccess will be called after billing decision
-        }
-      }
+      // Note: Billing prompts removed - billing now initiated only from Update Details page
 
       // No billing prompt needed - complete normally
       form.reset();
@@ -425,187 +337,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     }
   };
 
-  // Handle billing item creation from prompt with confirmed times (SYSTEM PROMPT 6 & 9)
-  const handleCreateBillingItem = async (confirmedTimes: ConfirmedTimes) => {
-    if (!billingEligibility || !billingEligibility.isEligible) return;
-    
-    // Recalculate quantity based on user-confirmed times for hourly/daily pricing
-    let quantity = billingEligibility.quantity!;
-    const pricingModel = billingEligibility.pricingModel;
-    
-    // SYSTEM PROMPT 9: Build ISO timestamps from confirmed times
-    let startTimeISO: string | undefined;
-    let endTimeISO: string | undefined;
-    
-    if ((pricingModel === 'hourly' || pricingModel === 'daily') && 
-        confirmedTimes.startDate && confirmedTimes.startTime && 
-        confirmedTimes.endDate && confirmedTimes.endTime) {
-      const start = new Date(`${confirmedTimes.startDate}T${confirmedTimes.startTime}`);
-      const end = new Date(`${confirmedTimes.endDate}T${confirmedTimes.endTime}`);
-      const diffMs = end.getTime() - start.getTime();
-      
-      // Build ISO timestamps for database
-      startTimeISO = start.toISOString();
-      endTimeISO = end.toISOString();
-      
-      if (diffMs > 0) {
-        if (pricingModel === 'hourly') {
-          quantity = Math.max(0.25, diffMs / (1000 * 60 * 60));
-        } else if (pricingModel === 'daily') {
-          quantity = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-        }
-      }
-    }
-    
-    // SYSTEM PROMPT 11: Log time confirmed audit event
-    await logBillingAudit({
-      action: 'time_confirmed',
-      organizationId: billingEligibility.organizationId!,
-      metadata: {
-        updateId: createdUpdateId || undefined,
-        activityId: billingEligibility.activityId,
-        caseServiceInstanceId: billingEligibility.serviceInstanceId,
-        caseId: billingEligibility.caseId,
-        pricingModel: billingEligibility.pricingModel,
-        confirmedTimes: confirmedTimes.startDate ? {
-          startDate: confirmedTimes.startDate,
-          startTime: confirmedTimes.startTime,
-          endDate: confirmedTimes.endDate,
-          endTime: confirmedTimes.endTime,
-        } : undefined,
-      },
-    });
-    
-    const result = await createBillingItem({
-      activityId: billingEligibility.activityId!,
-      caseServiceInstanceId: billingEligibility.serviceInstanceId!,
-      caseId: billingEligibility.caseId!,
-      organizationId: billingEligibility.organizationId!,
-      accountId: billingEligibility.accountId,
-      serviceName: billingEligibility.serviceName!,
-      pricingModel: billingEligibility.pricingModel!,
-      quantity: quantity,
-      rate: billingEligibility.serviceRate!,
-      pricingProfileId: billingEligibility.pricingProfileId,
-      pricingRuleSnapshot: billingEligibility.pricingRuleSnapshot,
-      // SYSTEM PROMPT 9: Pass update linkage and confirmed times
-      updateId: createdUpdateId || undefined,
-      startTime: startTimeISO,
-      endTime: endTimeISO,
-    });
-
-    if (result.success) {
-      toast({
-        title: "Billing Item Created",
-        description: `Pending billing item created for ${billingEligibility.serviceName}`,
-      });
-      
-      // Show budget warning if applicable (SYSTEM PROMPT 9)
-      if (result.budgetWarning?.isForecastWarning) {
-        toast({
-          title: result.budgetWarning.isForecastExceeded ? "Budget Warning" : "Budget Notice",
-          description: getBudgetForecastWarningMessage(
-            result.budgetWarning.isForecastExceeded,
-            result.budgetWarning.hardCap
-          ),
-          variant: result.budgetWarning.isForecastExceeded ? "destructive" : "default",
-        });
-      }
-    } else {
-      toast({
-        title: "Billing Error",
-        description: result.error || "Failed to create billing item",
-        variant: "destructive",
-      });
-    }
-
-    // Clean up and close
-    setBillingPromptOpen(false);
-    setBillingEligibility(null);
-    setCreatedUpdateId(null); // SYSTEM PROMPT 9: Clear update ID
-    resetBillingEligibility();
-    onOpenChange(false);
-    onSuccess();
-  };
-
-  // Handle skipping billing item creation
-  const handleSkipBilling = async () => {
-    // SYSTEM PROMPT 11: Log billing skipped audit event
-    if (billingEligibility) {
-      await logBillingAudit({
-        action: 'billing_skipped',
-        organizationId: billingEligibility.organizationId!,
-        metadata: {
-          updateId: createdUpdateId || undefined,
-          activityId: billingEligibility.activityId,
-          caseServiceInstanceId: billingEligibility.serviceInstanceId,
-          caseId: billingEligibility.caseId,
-          serviceName: billingEligibility.serviceName,
-          reason: 'user_declined',
-        },
-      });
-    }
-    
-    setBillingPromptOpen(false);
-    setBillingEligibility(null);
-    setCreatedUpdateId(null); // SYSTEM PROMPT 9: Clear update ID
-    setUpdateTitle('');
-    resetBillingEligibility();
-    onOpenChange(false);
-    onSuccess();
-  };
-
-  // Handle expense item creation from billing prompt
-  const handleCreateExpenseItem = async (expenseData: ExpenseData) => {
-    if (!billingEligibility || !createdUpdateId) return;
-
-    const result = await createExpenseItem({
-      updateId: createdUpdateId,
-      activityId: billingEligibility.activityId,
-      caseId: billingEligibility.caseId!,
-      organizationId: billingEligibility.organizationId!,
-      accountId: billingEligibility.accountId,
-      caseServiceInstanceId: billingEligibility.serviceInstanceId,
-      category: expenseData.category,
-      description: expenseData.description,
-      quantity: expenseData.quantity,
-      unitPrice: expenseData.unitPrice,
-    });
-
-    if (result.success) {
-      toast({
-        title: "Expense Created",
-        description: `Expense item created for $${(expenseData.quantity * expenseData.unitPrice).toFixed(2)}`,
-      });
-
-      // Show budget warning if applicable
-      if (result.budgetWarning?.isForecastWarning) {
-        toast({
-          title: result.budgetWarning.isForecastExceeded ? "Budget Warning" : "Budget Notice",
-          description: getBudgetForecastWarningMessage(
-            result.budgetWarning.isForecastExceeded,
-            result.budgetWarning.hardCap
-          ),
-          variant: result.budgetWarning.isForecastExceeded ? "destructive" : "default",
-        });
-      }
-    } else {
-      toast({
-        title: "Expense Error",
-        description: result.error || "Failed to create expense item",
-        variant: "destructive",
-      });
-    }
-
-    // Clean up and close
-    setBillingPromptOpen(false);
-    setBillingEligibility(null);
-    setCreatedUpdateId(null);
-    setUpdateTitle('');
-    resetBillingEligibility();
-    onOpenChange(false);
-    onSuccess();
-  };
+  // Note: Billing handlers removed - billing now initiated only from Update Details page
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -795,17 +527,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
           </form>
         </Form>
       </DialogContent>
-
-      {/* Billing Prompt Dialog - SYSTEM PROMPT 4 */}
-      <BillingPromptDialog
-        open={billingPromptOpen}
-        onOpenChange={setBillingPromptOpen}
-        eligibility={billingEligibility}
-        onCreateBillingItem={handleCreateBillingItem}
-        onCreateExpenseItem={handleCreateExpenseItem}
-        onSkip={handleSkipBilling}
-        updateDescription={updateTitle}
-      />
+      {/* Note: Billing Prompt Dialog removed - billing now initiated only from Update Details page */}
     </Dialog>
   );
 };
