@@ -50,10 +50,8 @@ export function EditInvoiceItemsDialog({
   useEffect(() => {
     if (open) {
       fetchAvailableItems();
-      // Pre-select current items
-      setSelectedIds(new Set(currentItems.map(item => item.id)));
     }
-  }, [open, currentItems]);
+  }, [open]);
 
   const fetchAvailableItems = async () => {
     try {
@@ -75,7 +73,14 @@ export function EditInvoiceItemsDialog({
 
       if (error) throw error;
 
-      setAvailableItems((itemsData || []) as BillableItem[]);
+      const items = (itemsData || []) as (BillableItem & { invoice_id?: string | null })[];
+      setAvailableItems(items);
+      
+      // Pre-select items that are already on this invoice
+      const preSelectedIds = items
+        .filter(item => item.invoice_id === invoiceId)
+        .map(item => item.id);
+      setSelectedIds(new Set(preSelectedIds));
     } catch (error) {
       console.error("Error fetching available items:", error);
       toast({

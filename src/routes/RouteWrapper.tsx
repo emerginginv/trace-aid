@@ -6,6 +6,7 @@ interface RouteWrapperProps {
   children: ReactNode;
   skipBillingGate?: boolean;
   blockVendors?: boolean;
+  blockInvestigators?: boolean;
   requiredRole?: "admin" | "investigator" | "manager" | "vendor";
   withLayout?: boolean;
 }
@@ -18,6 +19,7 @@ export function RouteWrapper({
   children,
   skipBillingGate = false,
   blockVendors = false,
+  blockInvestigators = false,
   requiredRole,
   withLayout = true,
 }: RouteWrapperProps) {
@@ -25,6 +27,7 @@ export function RouteWrapper({
     <ProtectedRoute
       skipBillingGate={skipBillingGate}
       blockVendors={blockVendors}
+      blockInvestigators={blockInvestigators}
       requiredRole={requiredRole}
     >
       {withLayout ? <DashboardLayout>{children}</DashboardLayout> : children}
