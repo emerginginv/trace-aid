@@ -4,6 +4,24 @@
  * Creates pending billing items for time/expense tracking.
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
+ * INVARIANT 1: CLIENT BILLING RATES LIVE ONLY ON THE ACCOUNT
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * RATE LOCKING:
+ * - The `rate` parameter is resolved from client_price_list BEFORE this hook
+ * - Rate is stored in `unit_price` column at billing item creation
+ * - Amount is calculated and frozen: rate * quantity
+ * - Invoices NEVER recalculate if rates change later
+ * - Invoice line items use the frozen rate from billing items
+ * 
+ * RESOLUTION ORDER (enforced by useBillingEligibility):
+ * 1. Identify Account → case.account_id
+ * 2. Identify Finance Item → case_service_id
+ * 3. Pull rate from client_price_list → account-specific only
+ * 4. Apply quantity → based on pricing model
+ * 5. Lock rate → stored in unit_price at creation
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
  * SYSTEM PROMPT 9 COMPLIANCE: CREATE BILLING ITEM (PENDING REVIEW ONLY)
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
@@ -19,8 +37,8 @@
  * - start_time
  * - end_time
  * - quantity
- * - rate (stored as unit_price)
- * - amount (calculated as rate * quantity)
+ * - rate (stored as unit_price) ← FROZEN AT CREATION PER INVARIANT 1
+ * - amount (calculated as rate * quantity) ← FROZEN AT CREATION
  * - status = 'pending_review'
  * - created_by (stored as user_id)
  * 

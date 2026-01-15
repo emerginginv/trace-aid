@@ -4,19 +4,25 @@
  * Evaluates whether an activity is eligible for billing based on multiple gates.
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
- * BILLING RATE RESOLUTION (POST PRICING PROFILE REMOVAL)
+ * INVARIANT 1: CLIENT BILLING RATES LIVE ONLY ON THE ACCOUNT
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * Pricing is resolved using the following priority order:
+ * BILLING RATE RESOLUTION ORDER:
+ * 1. Identify the Account (from case.account_id)
+ * 2. Identify the Finance Item (from case_service_id)
+ * 3. Pull rate from client_price_list (account-specific rate)
+ * 4. Apply quantity based on pricing model
+ * 5. Lock rate on invoice line item at invoice generation
  * 
- * 1. Account-specific rate via client_price_list
- * 2. Default rate from case_services table
+ * STRICT RULES:
+ * - Rates are resolved ONLY from client_price_list table
+ * - NO FALLBACK to organization defaults (finance_items.default_invoice_rate)
+ * - Billing is BLOCKED if no account-specific rate exists
+ * - Invoices NEVER recalculate if rates change later
+ * - Invoice line items store frozen/resolved rates at creation
  * 
- * CRITICAL RULE:
- * Do NOT prompt the user to select pricing. The system automatically resolves
- * the applicable rate based on the hierarchy above.
- * 
- * ═══════════════════════════════════════════════════════════════════════════════
+ * NOTE: finance_items.default_invoice_rate is for UI SUGGESTION ONLY
+ * (pre-populating forms when creating new account rates)
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
  * FLAT-FEE SAFEGUARD
