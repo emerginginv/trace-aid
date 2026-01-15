@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { useCasePricingProfile } from "@/hooks/useCasePricingProfile";
 import { FinancesTabSkeleton, ExpensesTabSkeleton, TimeTabSkeleton, InvoicesTabSkeleton, CreateInvoiceTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,7 +75,6 @@ const TIME_COLUMNS: ColumnDefinition[] = [
 
 export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
   const { organization } = useOrganization();
-  const { profileName, source: pricingSource, isLoading: pricingLoading } = useCasePricingProfile(caseId);
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const [finances, setFinances] = useState<Finance[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);

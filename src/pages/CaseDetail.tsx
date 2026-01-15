@@ -44,7 +44,7 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { getStatusStyleFromPicklist, isClosedStatus } from "@/lib/statusUtils";
 import { useCaseTypeQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
-import { useCasePricingProfile } from "@/hooks/useCasePricingProfile";
+import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
 
 interface Case {
   id: string;
@@ -148,8 +148,8 @@ const CaseDetail = () => {
   // Fetch case service instances
   const { data: serviceInstances = [] } = useCaseServiceInstances(id);
   
-  // Fetch pricing profile info
-  const { profileName: pricingProfileName, source: pricingSource, isLoading: pricingLoading } = useCasePricingProfile(id!);
+  // Fetch case service instances
+  const { data: serviceInstances = [] } = useCaseServiceInstances(id);
 
   // Set breadcrumbs based on case data
   useSetBreadcrumbs(

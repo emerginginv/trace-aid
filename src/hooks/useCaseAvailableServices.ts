@@ -11,8 +11,8 @@ export interface AvailableService {
 }
 
 /**
- * Fetches available services for a case based on its pricing profile.
- * This returns services that are defined in the case's pricing profile's service_pricing_rules.
+ * Fetches available services for a case.
+ * Now that pricing profiles are removed, this returns all active services for the organization.
  */
 export function useCaseAvailableServices(caseId: string | undefined) {
   return useQuery({
@@ -20,46 +20,38 @@ export function useCaseAvailableServices(caseId: string | undefined) {
     queryFn: async () => {
       if (!caseId) return [];
 
-      // First get the case's pricing profile
+      // First get the case's organization
       const { data: caseData, error: caseError } = await supabase
         .from("cases")
-        .select("pricing_profile_id")
+        .select("organization_id")
         .eq("id", caseId)
         .single();
 
-      if (caseError || !caseData?.pricing_profile_id) {
-        console.log("No pricing profile found for case:", caseId);
+      if (caseError || !caseData?.organization_id) {
+        console.log("No organization found for case:", caseId);
         return [];
       }
 
-      // Then get the services from service_pricing_rules for this pricing profile
+      // Fetch all active services for this organization
       const { data, error } = await supabase
-        .from("service_pricing_rules")
-        .select(`
-          case_service_id,
-          pricing_model,
-          default_rate,
-          is_billable,
-          case_services (
-            id,
-            name,
-            code
-          )
-        `)
-        .eq("pricing_profile_id", caseData.pricing_profile_id);
+        .from("case_services")
+        .select("id, name, code, default_rate, is_billable")
+        .eq("organization_id", caseData.organization_id)
+        .eq("is_active", true)
+        .order("display_order");
 
       if (error) {
         console.error("Error fetching available services:", error);
         throw error;
       }
 
-      return (data || []).map((rule) => ({
-        id: rule.case_services?.id || rule.case_service_id,
-        name: rule.case_services?.name || "Unknown Service",
-        code: rule.case_services?.code || null,
-        pricing_model: rule.pricing_model,
-        rate: rule.default_rate,
-        is_billable: rule.is_billable ?? true,
+      return (data || []).map((service) => ({
+        id: service.id,
+        name: service.name,
+        code: service.code || null,
+        pricing_model: "hourly", // Default pricing model
+        rate: service.default_rate,
+        is_billable: service.is_billable ?? true,
       })) as AvailableService[];
     },
     enabled: !!caseId,

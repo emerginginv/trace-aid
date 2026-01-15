@@ -24,12 +24,6 @@ interface Account {
   state: string;
   zip_code: string;
   notes: string;
-  default_pricing_profile_id: string | null;
-}
-
-interface PricingProfile {
-  id: string;
-  name: string;
 }
 
 interface Contact {
@@ -46,7 +40,6 @@ const AccountDetail = () => {
   const { organization } = useOrganization();
   const [account, setAccount] = useState<Account | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [pricingProfile, setPricingProfile] = useState<PricingProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useSetBreadcrumbs(
@@ -77,19 +70,6 @@ const AccountDetail = () => {
 
       if (accountError) throw accountError;
       setAccount(accountData);
-
-      // Fetch pricing profile if set
-      if (accountData.default_pricing_profile_id) {
-        const { data: profileData } = await supabase
-          .from("pricing_profiles")
-          .select("id, name")
-          .eq("id", accountData.default_pricing_profile_id)
-          .single();
-        
-        if (profileData) {
-          setPricingProfile(profileData);
-        }
-      }
 
       const { data: contactsData, error: contactsError } = await supabase
         .from("contacts")
@@ -159,13 +139,6 @@ const AccountDetail = () => {
                 <p className="text-base">{account.industry}</p>
               </div>
             )}
-
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-1">Default Pricing Profile</h3>
-              <p className="text-base">
-                {pricingProfile ? pricingProfile.name : "Organization Default"}
-              </p>
-            </div>
 
             {account.email && (
               <div>
