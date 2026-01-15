@@ -13,7 +13,6 @@ interface CaseService {
   name: string;
   code: string | null;
   description: string | null;
-  default_rate: number | null;
   is_billable: boolean | null;
   color: string | null;
 }
@@ -54,7 +53,7 @@ export function Step2Services({
       // Fetch all active services for the organization
       const { data, error: servicesError } = await supabase
         .from("case_services")
-        .select("id, name, code, description, default_rate, is_billable, color")
+        .select("id, name, code, description, is_billable, color")
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("display_order");
@@ -104,14 +103,8 @@ export function Step2Services({
     onContinue(servicesArray);
   };
 
-  const formatRate = (rate: number | null) => {
-    if (rate === null) return "—";
-    const formatted = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(rate);
-    return `${formatted}/hr`;
-  };
+  // Note: Rates are now configured per-account in Account Billing Rates
+  // Services no longer have default rates
 
   if (loading) {
     return (
@@ -195,14 +188,11 @@ export function Step2Services({
                       {service.description}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {formatRate(service.default_rate)}
-                    {service.is_billable === false && (
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        Non-billable
-                      </Badge>
-                    )}
-                  </p>
+                  {service.is_billable === false && (
+                    <Badge variant="secondary" className="mt-1 text-xs">
+                      Non-billable
+                    </Badge>
+                  )}
                 </div>
 
                 {isSelected && (

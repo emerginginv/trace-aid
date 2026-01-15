@@ -3,12 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { toast } from "sonner";
 
-export interface StaffPricingItem {
+/**
+ * INVARIANT 1: Client billing rates live ONLY on the Account
+ * This hook manages rates in client_price_list table
+ */
+
+export interface AccountBillingItem {
   id: string;
   name: string;
   description: string | null;
   rateType: "hourly" | "fixed" | "variable";
-  defaultRate: number | null;
   customRate: number | null;
   effectiveDate: string | null;
   endDate: string | null;
@@ -16,12 +20,12 @@ export interface StaffPricingItem {
   notes: string | null;
 }
 
-export interface EmployeePriceListEntry {
+export interface ClientPriceListEntry {
   id: string;
   finance_item_id: string;
-  user_id: string;
+  account_id: string;
   organization_id: string;
-  custom_expense_rate: number;
+  custom_invoice_rate: number;
   effective_date: string | null;
   end_date: string | null;
   notes: string | null;
@@ -29,40 +33,40 @@ export interface EmployeePriceListEntry {
   created_by: string | null;
 }
 
-// Fetch all finance items with resolved rates for a specific user
-export function useStaffPricingItems(userId: string | null) {
+// Fetch all invoice-eligible finance items with resolved rates for a specific account
+export function useAccountBillingItems(accountId: string | null) {
   const { organization } = useOrganization();
 
   return useQuery({
-    queryKey: ["staff-pricing-items", organization?.id, userId],
+    queryKey: ["account-billing-items", organization?.id, accountId],
     queryFn: async () => {
-      if (!organization?.id || !userId) return [];
+      if (!organization?.id || !accountId) return [];
 
-      // Fetch all expense-eligible finance items
+      // Fetch all invoice-eligible finance items
       const { data: financeItems, error: fiError } = await supabase
         .from("finance_items")
         .select("*")
         .eq("organization_id", organization.id)
-        .eq("is_expense_item", true)
+        .eq("is_invoice_item", true)
         .eq("is_active", true)
         .order("display_order", { ascending: true });
 
       if (fiError) throw fiError;
 
-      // Fetch employee overrides for this user
+      // Fetch account-specific rates from client_price_list
       const { data: overrides, error: ovError } = await supabase
-        .from("employee_price_list")
+        .from("client_price_list")
         .select("*")
         .eq("organization_id", organization.id)
-        .eq("user_id", userId);
+        .eq("account_id", accountId);
 
       if (ovError) throw ovError;
 
       const today = new Date().toISOString().split("T")[0];
 
       // Map finance items with resolved rates
-      // Note: default rates no longer exist - rates come only from employee_price_list
-      const items: StaffPricingItem[] = (financeItems || []).map((fi) => {
+      // INVARIANT 1: Billing rates come ONLY from client_price_list
+      const items: AccountBillingItem[] = (financeItems || []).map((fi) => {
         // Find active override for this finance item
         const override = overrides?.find(
           (ov) =>
@@ -76,8 +80,7 @@ export function useStaffPricingItems(userId: string | null) {
           name: fi.name,
           description: fi.description,
           rateType: fi.rate_type as "hourly" | "fixed" | "variable",
-          defaultRate: null, // No default rates - rates come only from employee_price_list
-          customRate: override?.custom_expense_rate ?? null,
+          customRate: override?.custom_invoice_rate ?? null,
           effectiveDate: override?.effective_date ?? null,
           endDate: override?.end_date ?? null,
           overrideId: override?.id ?? null,
@@ -87,42 +90,42 @@ export function useStaffPricingItems(userId: string | null) {
 
       return items;
     },
-    enabled: !!organization?.id && !!userId,
+    enabled: !!organization?.id && !!accountId,
   });
 }
 
-// Fetch all employee price list overrides for a user
-export function useEmployeePriceList(userId: string | null) {
+// Fetch all client price list entries for an account
+export function useClientPriceList(accountId: string | null) {
   const { organization } = useOrganization();
 
   return useQuery({
-    queryKey: ["employee-price-list", organization?.id, userId],
+    queryKey: ["client-price-list", organization?.id, accountId],
     queryFn: async () => {
-      if (!organization?.id || !userId) return [];
+      if (!organization?.id || !accountId) return [];
 
       const { data, error } = await supabase
-        .from("employee_price_list")
+        .from("client_price_list")
         .select("*")
         .eq("organization_id", organization.id)
-        .eq("user_id", userId)
+        .eq("account_id", accountId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as EmployeePriceListEntry[];
+      return data as ClientPriceListEntry[];
     },
-    enabled: !!organization?.id && !!userId,
+    enabled: !!organization?.id && !!accountId,
   });
 }
 
-// Create or update employee price list entry
-export function useUpsertEmployeeRate() {
+// Create or update client price list entry
+export function useUpsertAccountRate() {
   const queryClient = useQueryClient();
   const { organization } = useOrganization();
 
   return useMutation({
     mutationFn: async (input: {
       financeItemId: string;
-      userId: string;
+      accountId: string;
       customRate: number;
       effectiveDate?: string | null;
       endDate?: string | null;
@@ -136,9 +139,9 @@ export function useUpsertEmployeeRate() {
       if (input.existingId) {
         // Update existing
         const { data, error } = await supabase
-          .from("employee_price_list")
+          .from("client_price_list")
           .update({
-            custom_expense_rate: input.customRate,
+            custom_invoice_rate: input.customRate,
             effective_date: input.effectiveDate || new Date().toISOString().split("T")[0],
             end_date: input.endDate || null,
             notes: input.notes || null,
@@ -151,14 +154,14 @@ export function useUpsertEmployeeRate() {
         if (error) throw error;
         return data;
       } else {
-        // Insert new employee price list entry
+        // Insert new client price list entry
         const { data, error } = await supabase
-          .from("employee_price_list")
+          .from("client_price_list")
           .insert({
             finance_item_id: input.financeItemId,
-            user_id: input.userId,
+            account_id: input.accountId,
             organization_id: organization.id,
-            custom_expense_rate: input.customRate,
+            custom_invoice_rate: input.customRate,
             effective_date: input.effectiveDate || new Date().toISOString().split("T")[0],
             end_date: input.endDate || null,
             notes: input.notes || null,
@@ -172,79 +175,40 @@ export function useUpsertEmployeeRate() {
       }
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["staff-pricing-items"] });
-      queryClient.invalidateQueries({ queryKey: ["employee-price-list", organization?.id, variables.userId] });
-      toast.success("Staff rate saved successfully");
+      queryClient.invalidateQueries({ queryKey: ["account-billing-items"] });
+      queryClient.invalidateQueries({ queryKey: ["client-price-list", organization?.id, variables.accountId] });
+      toast.success("Billing rate saved successfully");
     },
     onError: (error) => {
-      console.error("Error saving staff rate:", error);
-      toast.error("Failed to save staff rate");
+      console.error("Error saving billing rate:", error);
+      toast.error("Failed to save billing rate");
     },
   });
 }
 
-// Delete employee price list entry (reset to default)
-export function useDeleteEmployeeRate() {
+// Delete client price list entry (remove rate configuration)
+export function useDeleteAccountRate() {
   const queryClient = useQueryClient();
   const { organization } = useOrganization();
 
   return useMutation({
-    mutationFn: async ({ id, userId }: { id: string; userId: string }) => {
+    mutationFn: async ({ id, accountId }: { id: string; accountId: string }) => {
       const { error } = await supabase
-        .from("employee_price_list")
+        .from("client_price_list")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
-      return { userId };
+      return { accountId };
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["staff-pricing-items"] });
-      queryClient.invalidateQueries({ queryKey: ["employee-price-list", organization?.id, variables.userId] });
-      toast.success("Rate reset to default");
+      queryClient.invalidateQueries({ queryKey: ["account-billing-items"] });
+      queryClient.invalidateQueries({ queryKey: ["client-price-list", organization?.id, variables.accountId] });
+      toast.success("Billing rate removed");
     },
     onError: (error) => {
-      console.error("Error deleting staff rate:", error);
-      toast.error("Failed to reset rate");
+      console.error("Error deleting billing rate:", error);
+      toast.error("Failed to remove billing rate");
     },
-  });
-}
-
-// Fetch all investigators/staff members
-export function useStaffMembers() {
-  const { organization } = useOrganization();
-
-  return useQuery({
-    queryKey: ["staff-members", organization?.id],
-    queryFn: async () => {
-      if (!organization?.id) return [];
-
-      const { data, error } = await supabase
-        .from("organization_members")
-        .select(`
-          user_id,
-          role,
-          profiles:user_id (
-            id,
-            full_name,
-            username,
-            avatar_url
-          )
-        `)
-        .eq("organization_id", organization.id);
-
-      if (error) throw error;
-
-      return (data || [])
-        .filter((m) => m.profiles)
-        .map((m) => ({
-          id: (m.profiles as any).id,
-          fullName: (m.profiles as any).full_name || (m.profiles as any).username || "Unknown",
-          username: (m.profiles as any).username,
-          avatarUrl: (m.profiles as any).avatar_url,
-          role: m.role,
-        }));
-    },
-    enabled: !!organization?.id,
   });
 }

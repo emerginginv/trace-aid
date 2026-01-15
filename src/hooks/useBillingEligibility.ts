@@ -99,7 +99,6 @@ export function useBillingEligibility() {
             id,
             name,
             is_billable,
-            default_rate,
             budget_unit
           )
         `)
@@ -166,8 +165,8 @@ export function useBillingEligibility() {
         return notEligible;
       }
 
-      // GATE 4: Resolve billing rate
-      // Priority: 1. client_price_list (account-specific), 2. case_services.default_rate
+      // GATE 4: Resolve billing rate from client_price_list (INVARIANT 1)
+      // Billing rates come ONLY from account-specific client_price_list - NO FALLBACK
       let billingRate: number | null = null;
       let pricingModel = "hourly"; // Default model
 
@@ -189,15 +188,11 @@ export function useBillingEligibility() {
         }
       }
 
-      // Fallback to service default rate
-      if (!billingRate && service?.default_rate) {
-        billingRate = service.default_rate;
-      }
-
+      // NO FALLBACK: If no account-specific rate, billing is not eligible
       if (!billingRate) {
         const notEligible: BillingEligibilityResult = {
           isEligible: false,
-          reason: "No billing rate configured for this service"
+          reason: `Missing billing rate: Configure rate for "${service?.name || 'this service'}" in Account > Billing Rates`
         };
         setResult(notEligible);
         return notEligible;
