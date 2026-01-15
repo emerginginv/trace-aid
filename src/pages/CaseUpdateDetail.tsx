@@ -40,6 +40,7 @@ import { CreateBillingItemButton } from "@/components/billing/CreateBillingItemB
 import { UpdateContextSection } from "@/components/update-detail/UpdateContextSection";
 import { UpdateAuditSection } from "@/components/update-detail/UpdateAuditSection";
 import { UpdateBillingSummary } from "@/components/update-detail/UpdateBillingSummary";
+import { UpdateTimeExpensesSection } from "@/components/update-detail/UpdateTimeExpensesSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -684,7 +685,16 @@ const CaseUpdateDetail = () => {
         </CardContent>
       </Card>
 
-      {/* ========== BILLING SECTION ========== */}
+      {/* ========== TIME & EXPENSES SECTION ========== */}
+      <UpdateTimeExpensesSection
+        updateId={update.id}
+        caseId={caseId!}
+        organizationId={organization?.id || ""}
+        canEdit={canEdit}
+        onDataChange={fetchData}
+      />
+
+      {/* ========== BILLING SECTION (Legacy) ========== */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
