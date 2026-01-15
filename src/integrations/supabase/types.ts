@@ -3373,6 +3373,7 @@ export type Database = {
           case_id: string
           created_at: string
           event_id: string | null
+          finance_item_id: string | null
           id: string
           item_type: string
           notes: string | null
@@ -3390,6 +3391,7 @@ export type Database = {
           case_id: string
           created_at?: string
           event_id?: string | null
+          finance_item_id?: string | null
           id?: string
           item_type: string
           notes?: string | null
@@ -3407,6 +3409,7 @@ export type Database = {
           case_id?: string
           created_at?: string
           event_id?: string | null
+          finance_item_id?: string | null
           id?: string
           item_type?: string
           notes?: string | null
@@ -3443,6 +3446,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "expense_entries_finance_item_id_fkey"
+            columns: ["finance_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "expense_entries_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -3461,6 +3471,90 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_items: {
+        Row: {
+          classification_code: string | null
+          created_at: string | null
+          default_expense_rate: number | null
+          default_invoice_rate: number | null
+          default_tax_rate_id: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          invoice_as_flat_rate: boolean | null
+          is_active: boolean | null
+          is_expense_item: boolean
+          is_invoice_item: boolean
+          item_code_id: string | null
+          name: string
+          organization_id: string
+          rate_type:
+            | Database["public"]["Enums"]["finance_item_rate_type"]
+            | null
+          reference_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          classification_code?: string | null
+          created_at?: string | null
+          default_expense_rate?: number | null
+          default_invoice_rate?: number | null
+          default_tax_rate_id?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          invoice_as_flat_rate?: boolean | null
+          is_active?: boolean | null
+          is_expense_item?: boolean
+          is_invoice_item?: boolean
+          item_code_id?: string | null
+          name: string
+          organization_id: string
+          rate_type?:
+            | Database["public"]["Enums"]["finance_item_rate_type"]
+            | null
+          reference_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          classification_code?: string | null
+          created_at?: string | null
+          default_expense_rate?: number | null
+          default_invoice_rate?: number | null
+          default_tax_rate_id?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          invoice_as_flat_rate?: boolean | null
+          is_active?: boolean | null
+          is_expense_item?: boolean
+          is_invoice_item?: boolean
+          item_code_id?: string | null
+          name?: string
+          organization_id?: string
+          rate_type?:
+            | Database["public"]["Enums"]["finance_item_rate_type"]
+            | null
+          reference_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_items_default_tax_rate_id_fkey"
+            columns: ["default_tax_rate_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -7152,6 +7246,7 @@ export type Database = {
           case_id: string
           created_at: string
           event_id: string | null
+          finance_item_id: string | null
           hours: number
           id: string
           item_type: string
@@ -7168,6 +7263,7 @@ export type Database = {
           case_id: string
           created_at?: string
           event_id?: string | null
+          finance_item_id?: string | null
           hours?: number
           id?: string
           item_type: string
@@ -7184,6 +7280,7 @@ export type Database = {
           case_id?: string
           created_at?: string
           event_id?: string | null
+          finance_item_id?: string | null
           hours?: number
           id?: string
           item_type?: string
@@ -7216,6 +7313,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "case_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_finance_item_id_fkey"
+            columns: ["finance_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_items"
             referencedColumns: ["id"]
           },
           {
@@ -9006,6 +9110,7 @@ export type Database = {
         | "committed"
         | "voided"
         | "paid"
+      finance_item_rate_type: "hourly" | "fixed" | "variable"
       health_risk_level: "healthy" | "watch" | "at_risk"
       incident_severity: "minor" | "major" | "critical"
       incident_status:
@@ -9224,6 +9329,7 @@ export const Constants = {
         "voided",
         "paid",
       ],
+      finance_item_rate_type: ["hourly", "fixed", "variable"],
       health_risk_level: ["healthy", "watch", "at_risk"],
       incident_severity: ["minor", "major", "critical"],
       incident_status: [
