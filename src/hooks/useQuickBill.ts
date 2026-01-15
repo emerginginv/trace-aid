@@ -43,6 +43,11 @@ export interface QuickBillEligibility extends BillingEligibilityResult {
   eventDescription?: string;
   eventDate?: string;
   isCompleted: boolean;
+  // Pre-populated time fields from event's scheduled times
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
 }
 
 export function useQuickBill() {
@@ -54,7 +59,7 @@ export function useQuickBill() {
    */
   const checkEligibility = useCallback(async (eventId: string): Promise<QuickBillEligibility | null> => {
     try {
-      // Fetch event details
+      // Fetch event details including time fields for pre-population
       const { data: event, error: eventError } = await supabase
         .from("case_activities")
         .select(`
@@ -62,6 +67,9 @@ export function useQuickBill() {
           title,
           description,
           due_date,
+          start_time,
+          end_time,
+          end_date,
           status,
           activity_type,
           case_service_instance_id,
@@ -96,12 +104,24 @@ export function useQuickBill() {
         return null;
       }
 
+      // Format time fields for HTML input (HH:MM format)
+      // Database stores as TIME type (e.g., "09:00:00"), strip seconds
+      const formatTimeForInput = (time: string | null): string | undefined => {
+        if (!time) return undefined;
+        return time.substring(0, 5); // "09:00:00" -> "09:00"
+      };
+
       return {
         ...eligibility,
         eventTitle: event.title,
         eventDescription: event.description || undefined,
         eventDate: event.due_date || undefined,
         isCompleted: event.status === "completed",
+        // Pre-populate time fields from event's scheduled times
+        startDate: event.due_date || undefined,
+        startTime: formatTimeForInput(event.start_time),
+        endDate: event.end_date || event.due_date || undefined,
+        endTime: formatTimeForInput(event.end_time),
       };
     } catch (error) {
       console.error("Error checking Quick Bill eligibility:", error);
