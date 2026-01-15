@@ -1,6 +1,16 @@
 import { format } from "date-fns";
+import DOMPurify from "dompurify";
 import { MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+// Sanitization config matching RichTextDisplay for consistency
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: [
+    "p", "br", "strong", "em", "u", "s", "h1", "h2", "h3",
+    "ul", "ol", "li", "a", "blockquote", "code", "pre"
+  ],
+  ALLOWED_ATTR: ["href", "target", "rel", "class"],
+};
 
 interface TimelineEntry {
   time: string;
@@ -58,7 +68,7 @@ export function PdfUpdatesSection({ updates, caseDescription }: PdfUpdatesSectio
           <h3 className="text-sm font-semibold mb-2 text-primary">Case Description / Instructions</h3>
           <div 
             className="text-sm prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: caseDescription }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(caseDescription, SANITIZE_CONFIG) }}
           />
         </div>
       )}
@@ -87,7 +97,7 @@ export function PdfUpdatesSection({ updates, caseDescription }: PdfUpdatesSectio
               {update.description && (
                 <div 
                   className="text-sm text-muted-foreground prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: update.description }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(update.description, SANITIZE_CONFIG) }}
                 />
               )}
               
