@@ -358,11 +358,19 @@ export const CaseTimeExpensesReview = ({
 
   return (
     <div className="space-y-6">
+      {/* Header with New Expense Entry Button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Time & Expense Entries</h3>
+        <Button onClick={() => navigate(`/cases/${caseId}/expenses/new`)}>
+          New Expense Entry
+        </Button>
+      </div>
+
       {/* Info Alert */}
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          To add time or expenses, create or edit an Update and check "Add time & expenses after saving"
+          Tip: You can create entries directly from a Case Update by checking "Add time & expenses after saving" — or use the New Expense Entry button above.
         </AlertDescription>
       </Alert>
 
