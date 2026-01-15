@@ -10,8 +10,7 @@ import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 import { useDashboardData, DashboardTask, DashboardEvent, DashboardUpdate, DashboardExpense } from "@/hooks/useDashboardData";
 import {
   DashboardStatsCards,
-  DashboardTasksPanel,
-  DashboardEventsPanel,
+  DashboardActivitiesPanel,
   DashboardUpdatesPanel,
   DashboardExpensesPanel,
 } from "@/components/dashboard";
@@ -25,8 +24,7 @@ const Dashboard = () => {
   const { organization } = useOrganization();
 
   // Filter states for each container
-  const [tasksFilter, setTasksFilter] = useState<'my' | 'all'>('my');
-  const [eventsFilter, setEventsFilter] = useState<'my' | 'all'>('my');
+  const [activitiesFilter, setActivitiesFilter] = useState<'my' | 'all'>('my');
   const [updatesFilter, setUpdatesFilter] = useState<'my' | 'all'>('my');
   const [expensesFilter, setExpensesFilter] = useState<'my' | 'all'>('my');
 
@@ -45,15 +43,36 @@ const Dashboard = () => {
     isLoading,
     handleTaskToggle,
   } = useDashboardData({
-    tasksFilter,
-    eventsFilter,
+    tasksFilter: activitiesFilter,
+    eventsFilter: activitiesFilter,
     updatesFilter,
     expensesFilter,
   });
+  
+  // Merge tasks and events into unified activities list
+  const unifiedActivities = [...dueTasks.map(t => ({
+    id: t.id,
+    title: t.title,
+    dueDate: t.dueDate,
+    status: t.taskStatus,
+    is_scheduled: false,
+    completed: t.status === 'completed',
+    caseId: t.caseId,
+    assignedUserName: t.assignedUserName,
+    activityData: t.activityData,
+  })), ...upcomingEvents.map(e => ({
+    id: e.id,
+    title: e.title,
+    dueDate: e.date,
+    status: e.eventStatus,
+    is_scheduled: true,
+    completed: e.eventStatus === 'completed' || e.eventStatus === 'done',
+    caseId: e.caseId,
+    assignedUserName: e.assignedUserName,
+    activityData: e.activityData,
+  }))].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
-  // Edit states
-  const [editingTask, setEditingTask] = useState<DashboardTask | null>(null);
-  const [editingEvent, setEditingEvent] = useState<DashboardEvent | null>(null);
+  const [editingActivity, setEditingActivity] = useState<(DashboardTask | DashboardEvent) | null>(null);
   const [editingUpdate, setEditingUpdate] = useState<DashboardUpdate | null>(null);
   const [editingExpense, setEditingExpense] = useState<DashboardExpense | null>(null);
   /**
@@ -177,23 +196,14 @@ const Dashboard = () => {
 
       {/* Main Dashboard Grid with Panel Components */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border border-border rounded-lg p-4">
-        {/* Due Tasks */}
-        <DashboardTasksPanel
-          tasks={dueTasks}
-          filter={tasksFilter}
-          onFilterChange={setTasksFilter}
+        {/* Unified Activities Panel */}
+        <DashboardActivitiesPanel
+          activities={unifiedActivities}
+          filter={activitiesFilter}
+          onFilterChange={setActivitiesFilter}
           canViewAll={canViewAll}
-          onTaskToggle={handleTaskToggle}
-          onTaskEdit={(task) => setEditingTask(task)}
-        />
-
-        {/* Calendar Events */}
-        <DashboardEventsPanel
-          events={upcomingEvents}
-          filter={eventsFilter}
-          onFilterChange={setEventsFilter}
-          canViewAll={canViewAll}
-          onEventClick={(event) => setEditingEvent(event)}
+          onActivityToggle={handleTaskToggle}
+          onActivityEdit={(activity) => setEditingActivity(activity as any)}
         />
 
         {/* Recent Updates */}
@@ -221,56 +231,19 @@ const Dashboard = () => {
       </div>
 
       {/* Edit Forms */}
-      {editingTask && (
+      {editingActivity && (
         <ActivityForm
-          caseId={editingTask.caseId}
-          activityType="task"
+          caseId={(editingActivity as any).caseId}
+          activityType={(editingActivity as any).is_scheduled ? "event" : "task"}
           users={users}
-          open={!!editingTask}
-          onOpenChange={(open) => !open && setEditingTask(null)}
+          open={!!editingActivity}
+          onOpenChange={(open) => !open && setEditingActivity(null)}
           onSuccess={() => {
-            setEditingTask(null);
+            setEditingActivity(null);
             window.location.reload();
           }}
-          editingActivity={editingTask.activityData}
+          editingActivity={(editingActivity as any).activityData}
           organizationId={organization?.id || ""}
-        />
-      )}
-
-      {editingEvent && (
-        <ActivityForm
-          caseId={editingEvent.caseId}
-          activityType="event"
-          users={users}
-          open={!!editingEvent}
-          onOpenChange={(open) => {
-            if (!open && !isDuplicatingEventRef.current) {
-              setEditingEvent(null);
-            }
-            isDuplicatingEventRef.current = false;
-          }}
-          onSuccess={() => {
-            setEditingEvent(null);
-            window.location.reload();
-          }}
-          editingActivity={editingEvent.activityData}
-          organizationId={organization?.id || ""}
-          onDuplicate={(duplicateData) => {
-            isDuplicatingEventRef.current = true;
-            const currentEvent = editingEvent;
-            setEditingEvent(null);
-            setTimeout(() => {
-              setEditingEvent({
-                ...currentEvent,
-                id: `duplicate-${Date.now()}`,
-                title: duplicateData.title,
-                activityData: {
-                  ...duplicateData,
-                  id: undefined,
-                },
-              });
-            }, 50);
-          }}
         />
       )}
 

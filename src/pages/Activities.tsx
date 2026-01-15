@@ -6,12 +6,11 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { useActivitiesQuery, isScheduledActivity } from "@/hooks/queries";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClipboardList, Clock, CheckCircle, Calendar, MoreVertical, Eye, ExternalLink, MapPin, CheckSquare } from "lucide-react";
+import { ClipboardList, Clock, CheckCircle, Calendar, MoreVertical, Eye, ExternalLink, MapPin } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -23,6 +22,8 @@ import { StatCardsGrid, StatCardConfig, StatCardsGridSkeleton } from "@/componen
 import { FilterToolbar } from "@/components/shared/FilterToolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { ActivityCard } from "@/components/shared/ActivityCard";
+import { ActivityStatusPill, deriveActivityDisplayStatus } from "@/components/shared/ActivityStatusPill";
 
 interface ActivityWithCase {
   id: string;
@@ -70,21 +71,7 @@ const TYPE_FILTER_OPTIONS = [
   { value: 'unscheduled', label: 'Unscheduled (Tasks)' },
 ];
 
-const getStatusBadgeStyles = (status: string) => {
-  switch (status) {
-    case 'completed': 
-    case 'done': 
-      return 'bg-green-500/10 text-green-600 border-green-500/20';
-    case 'in_progress': 
-      return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-    case 'cancelled': 
-      return 'bg-red-500/10 text-red-600 border-red-500/20';
-    case 'scheduled': 
-      return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
-    default: 
-      return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-  }
-};
+// Status badge styles removed - now using unified ActivityStatusPill
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { key: "title", label: "Title" },
@@ -292,20 +279,7 @@ export default function Activities() {
     setShowCaseSelector(true);
   };
 
-  const getActivityIcon = (activity: ActivityWithCase) => {
-    const scheduled = isScheduledActivity(activity as any);
-    return scheduled ? Calendar : CheckSquare;
-  };
-
-  const getActivityColor = (activity: ActivityWithCase) => {
-    const scheduled = isScheduledActivity(activity as any);
-    return scheduled ? 'text-green-500' : 'text-blue-500';
-  };
-
-  const getActivityBgColor = (activity: ActivityWithCase) => {
-    const scheduled = isScheduledActivity(activity as any);
-    return scheduled ? 'bg-green-500/10' : 'bg-blue-500/10';
-  };
+  // Removed type-based icon/color functions - using unified ActivityCard
 
   return (
     <div className="space-y-6">
@@ -330,7 +304,7 @@ export default function Activities() {
                   Scheduled Activity
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleAddActivity('task')}>
-                  <CheckSquare className="h-4 w-4 mr-2" />
+                  <ClipboardList className="h-4 w-4 mr-2" />
                   Task
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -385,7 +359,6 @@ export default function Activities() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px]">Title</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Case</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Due Date</TableHead>
@@ -396,29 +369,22 @@ export default function Activities() {
             </TableHeader>
             <TableBody>
               {filteredActivities.map((activity) => {
-                const overdue = isOverdue(activity.due_date, activity.status);
-                const ActivityIcon = getActivityIcon(activity);
-                const scheduled = isScheduledActivity(activity as any);
+                const displayStatus = deriveActivityDisplayStatus({
+                  status: activity.status,
+                  completed: activity.completed,
+                  is_scheduled: activity.is_scheduled,
+                  due_date: activity.due_date,
+                });
                 
                 return (
                   <TableRow key={activity.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigateToCase(activity.cases.id)}>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className={cn("h-9 w-9 rounded-full flex items-center justify-center", getActivityBgColor(activity))}>
-                          <ActivityIcon className={cn("h-4 w-4", getActivityColor(activity))} />
-                        </div>
-                        <div>
-                          <div className="font-medium">{activity.title}</div>
-                          {activity.description && (
-                            <div className="text-sm text-muted-foreground truncate max-w-[220px]">{activity.description}</div>
-                          )}
-                        </div>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="font-medium">{activity.title}</div>
+                        {activity.description && (
+                          <div className="text-sm text-muted-foreground truncate max-w-[280px]">{activity.description}</div>
+                        )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {scheduled ? 'Scheduled' : 'Task'}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
@@ -427,15 +393,12 @@ export default function Activities() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={getStatusBadgeStyles(activity.status)}>
-                        {STATUS_OPTIONS.find(s => s.value === activity.status)?.label || activity.status}
-                      </Badge>
+                      <ActivityStatusPill status={displayStatus} />
                     </TableCell>
                     <TableCell>
                       {activity.due_date ? (
-                        <div className={cn("text-sm", overdue && "text-red-500 font-medium")}>
+                        <div className={cn("text-sm", displayStatus === 'overdue' && "text-red-500 font-medium")}>
                           {format(new Date(activity.due_date), "MMM d, yyyy")}
-                          {overdue && <span className="ml-1">(Overdue)</span>}
                         </div>
                       ) : <span className="text-muted-foreground">-</span>}
                     </TableCell>
@@ -478,67 +441,28 @@ export default function Activities() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredActivities.map((activity) => {
-            const overdue = isOverdue(activity.due_date, activity.status);
-            const ActivityIcon = getActivityIcon(activity);
-            const scheduled = isScheduledActivity(activity as any);
-            const isCompleted = activity.status === 'completed' || activity.status === 'done';
-            
-            return (
-              <Card 
-                key={activity.id} 
-                className={cn(
-                  "relative overflow-hidden transition-shadow hover:shadow-md cursor-pointer group", 
-                  isCompleted && "opacity-70"
-                )} 
-                onClick={() => navigateToCase(activity.cases.id)}
-              >
-                <div className={cn("h-1", scheduled ? "bg-green-500" : "bg-blue-500")} />
-                <div className="absolute top-3 right-3 flex gap-2 z-10">
-                  <Badge variant="outline" className="text-xs">
-                    {scheduled ? 'Scheduled' : 'Task'}
-                  </Badge>
-                  <Badge variant="outline" className={cn("text-xs", getStatusBadgeStyles(activity.status))}>
-                    {STATUS_OPTIONS.find(s => s.value === activity.status)?.label || activity.status}
-                  </Badge>
-                </div>
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", getActivityBgColor(activity))}>
-                      <ActivityIcon className={cn("h-5 w-5", getActivityColor(activity))} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-foreground truncate pr-24">{activity.title}</h3>
-                    </div>
-                  </div>
-                  {activity.description && <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{activity.description}</p>}
-                  {activity.due_date && (
-                    <div className={cn("flex items-center gap-2 text-sm mb-3", overdue ? "text-red-500" : "text-muted-foreground")}>
-                      <Clock className="h-3 w-3" />
-                      <span>{format(new Date(activity.due_date), "MMM d, yyyy")}{overdue && " (Overdue)"}</span>
-                    </div>
-                  )}
-                  {activity.address && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate">{activity.address}</span>
-                    </div>
-                  )}
-                  <div className="pt-3 border-t">
-                    <p className="text-xs text-muted-foreground">Case</p>
-                    <p className="text-sm font-medium truncate">{activity.cases.case_number}</p>
-                    <p className="text-xs text-muted-foreground truncate">{activity.cases.title}</p>
-                  </div>
-                  {activity.assigned_user && (
-                    <div className="mt-3 pt-3 border-t flex items-center gap-2">
-                      <UserAvatar name={activity.assigned_user.full_name} avatarUrl={activity.assigned_user.avatar_url} size="sm" />
-                      <span className="text-sm text-muted-foreground">{activity.assigned_user.full_name}</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+          {filteredActivities.map((activity) => (
+            <ActivityCard
+              key={activity.id}
+              activity={{
+                id: activity.id,
+                title: activity.title,
+                due_date: activity.due_date,
+                start_time: activity.start_time,
+                end_time: activity.end_time,
+                status: activity.status,
+                is_scheduled: activity.is_scheduled,
+                completed: activity.completed,
+                address: activity.address,
+                case_number: activity.cases.case_number,
+                case_title: activity.cases.title,
+                assigned_user_name: activity.assigned_user?.full_name,
+                assigned_user_avatar: activity.assigned_user?.avatar_url,
+              }}
+              onClick={() => navigateToCase(activity.cases.id)}
+              showCase={true}
+            />
+          ))}
         </div>
       )}
 
