@@ -2095,6 +2095,77 @@ export type Database = {
         }
         Relationships: []
       }
+      client_price_list: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          created_by: string | null
+          custom_invoice_rate: number
+          effective_date: string | null
+          end_date: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          pricing_rule_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          created_by?: string | null
+          custom_invoice_rate: number
+          effective_date?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          pricing_rule_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          custom_invoice_rate?: number
+          effective_date?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          pricing_rule_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_price_list_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_price_list_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_price_list_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_price_list_pricing_rule_id_fkey"
+            columns: ["pricing_rule_id"]
+            isOneToOne: false
+            referencedRelation: "service_pricing_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_exports: {
         Row: {
           created_at: string | null
@@ -3042,6 +3113,77 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      employee_price_list: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          custom_expense_rate: number
+          effective_date: string | null
+          end_date: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          pricing_rule_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          custom_expense_rate: number
+          effective_date?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          pricing_rule_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          custom_expense_rate?: number
+          effective_date?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          pricing_rule_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_price_list_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_price_list_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_price_list_pricing_rule_id_fkey"
+            columns: ["pricing_rule_id"]
+            isOneToOne: false
+            referencedRelation: "service_pricing_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_price_list_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       enforcement_actions: {
         Row: {
@@ -6180,7 +6322,10 @@ export type Database = {
           case_service_id: string
           created_at: string | null
           created_by: string | null
+          default_rate: number
+          expense_rate: number | null
           id: string
+          invoice_rate: number | null
           is_billable: boolean | null
           maximum_units: number | null
           minimum_units: number | null
@@ -6188,14 +6333,17 @@ export type Database = {
           organization_id: string
           pricing_model: string
           pricing_profile_id: string
-          rate: number
+          rate_type: Database["public"]["Enums"]["rate_type"] | null
           updated_at: string | null
         }
         Insert: {
           case_service_id: string
           created_at?: string | null
           created_by?: string | null
+          default_rate: number
+          expense_rate?: number | null
           id?: string
+          invoice_rate?: number | null
           is_billable?: boolean | null
           maximum_units?: number | null
           minimum_units?: number | null
@@ -6203,14 +6351,17 @@ export type Database = {
           organization_id: string
           pricing_model: string
           pricing_profile_id: string
-          rate: number
+          rate_type?: Database["public"]["Enums"]["rate_type"] | null
           updated_at?: string | null
         }
         Update: {
           case_service_id?: string
           created_at?: string | null
           created_by?: string | null
+          default_rate?: number
+          expense_rate?: number | null
           id?: string
+          invoice_rate?: number | null
           is_billable?: boolean | null
           maximum_units?: number | null
           minimum_units?: number | null
@@ -6218,7 +6369,7 @@ export type Database = {
           organization_id?: string
           pricing_model?: string
           pricing_profile_id?: string
-          rate?: number
+          rate_type?: Database["public"]["Enums"]["rate_type"] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -7705,6 +7856,22 @@ export type Database = {
         }
         Returns: string
       }
+      calculate_profit_margin: {
+        Args: {
+          p_account_id: string
+          p_date?: string
+          p_organization_id: string
+          p_pricing_rule_id: string
+          p_quantity: number
+          p_user_id: string
+        }
+        Returns: {
+          expense_total: number
+          invoice_total: number
+          margin_percent: number
+          profit: number
+        }[]
+      }
       calculate_vulnerability_sla: {
         Args: { p_severity: string }
         Returns: string
@@ -8111,8 +8278,26 @@ export type Database = {
         }[]
       }
       get_dr_dashboard: { Args: never; Returns: Json }
+      get_expense_rate: {
+        Args: {
+          p_date?: string
+          p_organization_id: string
+          p_pricing_rule_id: string
+          p_user_id: string
+        }
+        Returns: number
+      }
       get_expiring_contracts: { Args: never; Returns: Json }
       get_identity_dashboard: { Args: { p_org_id: string }; Returns: Json }
+      get_invoice_rate: {
+        Args: {
+          p_account_id: string
+          p_date?: string
+          p_organization_id: string
+          p_pricing_rule_id: string
+        }
+        Returns: number
+      }
       get_invoice_with_status: { Args: { p_invoice_id: string }; Returns: Json }
       get_my_email_change_requests: {
         Args: never
@@ -8846,6 +9031,7 @@ export type Database = {
         | "api"
         | "mobile"
         | "social_engineering"
+      rate_type: "hourly" | "fixed" | "variable"
       report_status: "queued" | "generating" | "ready" | "failed"
       report_type:
         | "security"
@@ -9066,6 +9252,7 @@ export const Constants = {
         "mobile",
         "social_engineering",
       ],
+      rate_type: ["hourly", "fixed", "variable"],
       report_status: ["queued", "generating", "ready", "failed"],
       report_type: [
         "security",

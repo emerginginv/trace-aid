@@ -39,7 +39,9 @@ interface ServicePricingRule {
   pricing_profile_id: string;
   case_service_id: string;
   pricing_model: string;
-  rate: number;
+  default_rate: number;
+  expense_rate: number | null;
+  invoice_rate: number | null;
   minimum_units: number | null;
   maximum_units: number | null;
   is_billable: boolean;
@@ -161,7 +163,9 @@ export function ServicePricingRulesEditor({
         case_service_id: data.case_service_id,
         organization_id: organization.id,
         pricing_model: data.pricing_model,
-        rate: parseFloat(data.rate),
+        default_rate: parseFloat(data.rate),
+        expense_rate: parseFloat(data.rate),
+        invoice_rate: parseFloat(data.rate),
         minimum_units: data.minimum_units ? parseFloat(data.minimum_units) : null,
         maximum_units: data.maximum_units ? parseFloat(data.maximum_units) : null,
         is_billable: data.is_billable,
@@ -231,7 +235,7 @@ export function ServicePricingRulesEditor({
     setFormData({
       case_service_id: rule.case_service_id,
       pricing_model: rule.pricing_model,
-      rate: rule.rate.toString(),
+      rate: rule.default_rate.toString(),
       minimum_units: rule.minimum_units?.toString() || "",
       maximum_units: rule.maximum_units?.toString() || "",
       is_billable: rule.is_billable,
@@ -345,7 +349,7 @@ export function ServicePricingRulesEditor({
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {formatRate(rule.rate, rule.pricing_model)}
+                      {formatRate(rule.default_rate, rule.pricing_model)}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {rule.minimum_units ?? "—"}

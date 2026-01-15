@@ -89,7 +89,7 @@ export function Step2Services({
           .select(`
             id,
             case_service_id,
-            rate,
+            default_rate,
             pricing_model,
             case_services:case_service_id (
               id,
@@ -111,7 +111,7 @@ export function Step2Services({
           .map((r) => ({
             id: r.id,
             case_service_id: r.case_service_id,
-            rate: r.rate,
+            rate: r.default_rate,
             pricing_model: r.pricing_model,
             case_service: r.case_services as unknown as CaseService,
           }));

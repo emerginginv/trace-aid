@@ -241,14 +241,14 @@ export function useBillingEligibility() {
       if (profileIds.length > 0) {
         const { data: ruleData } = await supabase
           .from("service_pricing_rules")
-          .select("id, rate, pricing_model, pricing_profile_id")
+          .select("id, default_rate, pricing_model, pricing_profile_id")
           .eq("case_service_id", instanceData.case_service_id)
           .in("pricing_profile_id", profileIds)
           .limit(1)
           .maybeSingle();
           
         if (ruleData) {
-          pricingRule = ruleData;
+          pricingRule = { ...ruleData, rate: ruleData.default_rate };
         }
       }
 
