@@ -128,12 +128,15 @@ export function AccountRateDialog({
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* Organization Default Reference */}
+            {/* Organization Default Reference - UI SUGGESTION ONLY */}
             <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-              <span className="text-muted-foreground">Organization Default: </span>
+              <span className="text-muted-foreground">Suggested Rate: </span>
               <span className="font-mono font-medium">
                 {formatDefaultRate()}
               </span>
+              <p className="text-xs text-muted-foreground mt-1">
+                This is the organization default, used as a starting suggestion only.
+              </p>
             </div>
 
             <div className="grid gap-2">

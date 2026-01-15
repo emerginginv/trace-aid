@@ -304,7 +304,7 @@ export function AccountBillingRatesTab({
           )}
 
           <p className="text-xs text-muted-foreground mt-4">
-            Account rates override organization defaults. If no account rate is set, the organization default is used.
+            <strong>INVARIANT 1:</strong> Account rates are required for billing. Organization defaults are shown as suggestions only—actual billing uses account-specific rates exclusively. If no account rate is set, billing will be blocked.
           </p>
         </>
       )}

@@ -1,3 +1,21 @@
+/**
+ * Unified Pricing Hooks
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * INVARIANT 1: CLIENT BILLING RATES LIVE ONLY ON THE ACCOUNT
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Invoice rates are resolved ONLY from client_price_list table.
+ * - NO FALLBACK to organization defaults (finance_items.default_invoice_rate)
+ * - Throws error if no account-specific rate exists when accountId is provided
+ * - finance_items.default_invoice_rate is for UI SUGGESTION ONLY
+ * 
+ * Expense rates are resolved from employee_price_list table.
+ * - Similar logic: no fallback to org defaults
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
