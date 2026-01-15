@@ -11,8 +11,7 @@ import {
   Paperclip,
   ChevronDown,
   Menu,
-  History,
-  ScrollText
+  History
 } from "lucide-react";
 import {
   Collapsible,
@@ -33,7 +32,6 @@ const navItems: CaseDetailNavItem[] = [
   { value: "budget", label: "Budget", icon: Clock, vendorVisible: false },
   { value: "subjects", label: "Subjects", icon: Users, vendorVisible: false },
   { value: "updates", label: "Updates", icon: FilePenLine, vendorVisible: true },
-  { value: "work-log", label: "Work Log", icon: ScrollText, vendorVisible: false },
   { value: "activities", label: "Activities", icon: ClipboardList, vendorVisible: false },
   { value: "calendar", label: "Calendar", icon: Calendar, vendorVisible: false },
   { value: "finances", label: "Finances", icon: DollarSign, vendorVisible: false },

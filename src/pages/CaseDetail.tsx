@@ -34,7 +34,6 @@ import { GenerateReportDialog } from "@/components/templates/GenerateReportDialo
 import { CaseSummaryPdfDialog } from "@/components/case-detail/CaseSummaryPdfDialog";
 import { CaseReports } from "@/components/case-detail/CaseReports";
 import { CaseTimeline } from "@/components/case-detail/CaseTimeline";
-import { CaseWorkLog } from "@/components/case-detail/CaseWorkLog";
 
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -114,7 +113,7 @@ const CaseDetail = () => {
   const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
   const [reportsRefreshKey, setReportsRefreshKey] = useState(0);
   
-  const validTabs = ['info', 'budget', 'subjects', 'updates', 'work-log', 'activities', 'calendar', 'finances', 'time-expense', 'attachments', 'timeline', 'reports'];
+  const validTabs = ['info', 'budget', 'subjects', 'updates', 'activities', 'calendar', 'finances', 'time-expense', 'attachments', 'timeline', 'reports'];
   const getInitialTab = () => {
     const tabFromUrl = searchParams.get('tab');
     if (tabFromUrl && validTabs.includes(tabFromUrl)) {
@@ -903,13 +902,6 @@ const CaseDetail = () => {
             <TabsContent value="updates" className="mt-0">
               <CaseUpdates caseId={id!} isClosedCase={isClosed} />
             </TabsContent>
-
-            {/* Work Log Tab - Unified timeline view */}
-            {!isVendor && (
-              <TabsContent value="work-log" className="mt-0">
-                <CaseWorkLog caseId={id!} isClosedCase={isClosed} />
-              </TabsContent>
-            )}
 
             {/* Activities Tab */}
             {!isVendor && (
