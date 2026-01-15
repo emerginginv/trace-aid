@@ -44,7 +44,9 @@ export function AccountRateDialog({
   // Reset form when item changes
   useEffect(() => {
     if (item) {
-      setCustomRate(item.customRate?.toString() || "");
+      // If no custom rate exists, pre-fill with org default if available
+      const initialRate = item.customRate ?? item.defaultRate;
+      setCustomRate(initialRate?.toString() || "");
       setEffectiveDate(item.effectiveDate || new Date().toISOString().split("T")[0]);
       setEndDate(item.endDate || "");
       setNotes(item.notes || "");
@@ -80,13 +82,28 @@ export function AccountRateDialog({
     }
   };
 
+  const formatDefaultRate = () => {
+    if (item?.defaultRate === null) return "Not set";
+    const formatted = `$${item.defaultRate.toFixed(2)}`;
+    switch (item?.rateType) {
+      case "hourly":
+        return `${formatted}/hr`;
+      case "variable":
+        return `${formatted}/unit`;
+      case "fixed":
+        return formatted;
+      default:
+        return formatted;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              {item?.customRate !== null ? "Edit" : "Configure"} Billing Rate
+              {item?.customRate !== null ? "Edit" : "Set"} Account Rate
             </DialogTitle>
             <DialogDescription>
               Set the billing rate for "{item?.name}" for {accountName}.
@@ -94,6 +111,14 @@ export function AccountRateDialog({
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            {/* Organization Default Reference */}
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Organization Default: </span>
+              <span className="font-mono font-medium">
+                {formatDefaultRate()}
+              </span>
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="customRate">{getRateLabel()}</Label>
               <Input
@@ -106,6 +131,9 @@ export function AccountRateDialog({
                 placeholder="0.00"
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                This rate will override the organization default for this account only.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

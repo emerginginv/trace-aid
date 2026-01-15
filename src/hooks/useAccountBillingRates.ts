@@ -13,7 +13,8 @@ export interface AccountBillingItem {
   name: string;
   description: string | null;
   rateType: "hourly" | "fixed" | "variable";
-  customRate: number | null;
+  defaultRate: number | null;  // Organization default from finance_items
+  customRate: number | null;   // Account-specific from client_price_list
   effectiveDate: string | null;
   endDate: string | null;
   overrideId: string | null;
@@ -80,6 +81,7 @@ export function useAccountBillingItems(accountId: string | null) {
           name: fi.name,
           description: fi.description,
           rateType: fi.rate_type as "hourly" | "fixed" | "variable",
+          defaultRate: fi.default_invoice_rate ?? null,  // Org default
           customRate: override?.custom_invoice_rate ?? null,
           effectiveDate: override?.effective_date ?? null,
           endDate: override?.end_date ?? null,

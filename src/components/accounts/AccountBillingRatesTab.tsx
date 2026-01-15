@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Pencil, Trash2, DollarSign, Clock, Hash, AlertCircle } from "lucide-react";
+import { Loader2, Pencil, RotateCcw, DollarSign, Clock, Hash, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import {
   useAccountBillingItems,
@@ -65,8 +65,10 @@ export function AccountBillingRatesTab({
   const upsertRate = useUpsertAccountRate();
   const deleteRate = useDeleteAccountRate();
 
-  // Count items without rates configured
-  const unconfiguredCount = billingItems?.filter(item => item.customRate === null).length || 0;
+  // Count items without any rate (neither custom nor default)
+  const unconfiguredCount = billingItems?.filter(
+    item => item.customRate === null && item.defaultRate === null
+  ).length || 0;
 
   const handleEditRate = (item: AccountBillingItem) => {
     setEditingItem(item);
@@ -100,12 +102,12 @@ export function AccountBillingRatesTab({
     );
   };
 
-  const handleDeleteRate = (item: AccountBillingItem) => {
+  const handleResetRate = (item: AccountBillingItem) => {
     setItemToDelete(item);
     setDeleteDialogOpen(true);
   };
 
-  const confirmDeleteRate = () => {
+  const confirmResetRate = () => {
     if (!itemToDelete?.overrideId) return;
 
     deleteRate.mutate(
@@ -160,6 +162,16 @@ export function AccountBillingRatesTab({
     }
   };
 
+  const getEffectiveStatus = (item: AccountBillingItem) => {
+    if (item.customRate !== null) {
+      return { label: "Custom", variant: "default" as const, className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" };
+    }
+    if (item.defaultRate !== null) {
+      return { label: "Default", variant: "secondary" as const, className: "" };
+    }
+    return { label: "Not Set", variant: "destructive" as const, className: "" };
+  };
+
   const content = (
     <>
       {/* Warning for unconfigured rates */}
@@ -168,8 +180,8 @@ export function AccountBillingRatesTab({
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Missing Billing Rates</AlertTitle>
           <AlertDescription>
-            {unconfiguredCount} item{unconfiguredCount !== 1 ? 's' : ''} without billing rates configured. 
-            Work cannot be billed until rates are set.
+            {unconfiguredCount} item{unconfiguredCount !== 1 ? 's' : ''} without any billing rate configured. 
+            Configure an account rate or set an organization default in Invoice & Expense Items settings.
           </AlertDescription>
         </Alert>
       )}
@@ -193,92 +205,106 @@ export function AccountBillingRatesTab({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Billing Rate</TableHead>
-                    <TableHead>Effective</TableHead>
+                    <TableHead>Service / Expense Item</TableHead>
+                    <TableHead>Billing Type</TableHead>
+                    <TableHead className="text-right">Org Default Rate</TableHead>
+                    <TableHead className="text-right">Account Rate</TableHead>
+                    <TableHead>Status</TableHead>
                     {canEdit && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {billingItems.map((item) => (
-                    <TableRow key={item.id} className={item.customRate === null ? "bg-destructive/5" : ""}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          {item.description && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                              {item.description}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="gap-1">
-                          {getRateTypeIcon(item.rateType)}
-                          {getRateTypeLabel(item.rateType)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.customRate !== null ? (
-                          <span className="font-mono font-medium text-primary">
-                            {formatRate(item.customRate, item.rateType)}
-                          </span>
-                        ) : (
-                          <Badge variant="destructive" className="font-normal">
-                            Not configured
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {item.effectiveDate ? (
-                          <span className="text-sm">
-                            {format(new Date(item.effectiveDate), "MMM d, yyyy")}
-                            {item.endDate && (
-                              <span className="text-muted-foreground">
-                                {" "}
-                                — {format(new Date(item.endDate), "MMM d, yyyy")}
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      {canEdit && (
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditRate(item)}
-                              title={item.customRate !== null ? "Edit rate" : "Configure rate"}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {item.overrideId && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteRate(item)}
-                                title="Remove rate"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                  {billingItems.map((item) => {
+                    const status = getEffectiveStatus(item);
+                    const hasCustomRate = item.customRate !== null;
+                    const hasNoRates = item.customRate === null && item.defaultRate === null;
+                    
+                    return (
+                      <TableRow 
+                        key={item.id} 
+                        className={hasNoRates ? "bg-destructive/5" : ""}
+                      >
+                        {/* Service / Expense Item Name */}
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            {item.description && (
+                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                {item.description}
+                              </p>
                             )}
                           </div>
                         </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
+
+                        {/* Billing Type */}
+                        <TableCell>
+                          <Badge variant="secondary" className="gap-1">
+                            {getRateTypeIcon(item.rateType)}
+                            {getRateTypeLabel(item.rateType)}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Org Default Rate (read-only) */}
+                        <TableCell className="text-right font-mono text-muted-foreground">
+                          {formatRate(item.defaultRate, item.rateType)}
+                        </TableCell>
+
+                        {/* Account Custom Rate */}
+                        <TableCell className="text-right">
+                          {hasCustomRate ? (
+                            <span className="font-mono font-medium text-primary">
+                              {formatRate(item.customRate, item.rateType)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground italic">—</span>
+                          )}
+                        </TableCell>
+
+                        {/* Effective Status */}
+                        <TableCell>
+                          <Badge 
+                            variant={status.variant} 
+                            className={status.className}
+                          >
+                            {status.label}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Actions */}
+                        {canEdit && (
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditRate(item)}
+                                title={hasCustomRate ? "Edit rate" : "Set custom rate"}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              {item.overrideId && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleResetRate(item)}
+                                  title="Reset to default"
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           )}
 
           <p className="text-xs text-muted-foreground mt-4">
-            These rates determine what this client is charged for work. 
-            Services without configured rates cannot be billed.
+            Account rates override organization defaults. If no account rate is set, the organization default is used.
           </p>
         </>
       )}
@@ -293,30 +319,32 @@ export function AccountBillingRatesTab({
         isSaving={upsertRate.isPending}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* Reset Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Billing Rate?</AlertDialogTitle>
+            <AlertDialogTitle>Reset to Default Rate?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the billing rate for "{itemToDelete?.name}". 
-              Work using this item will not be billable until a new rate is configured.
+              This will remove the custom rate for "{itemToDelete?.name}" and revert to the organization default
+              {itemToDelete?.defaultRate !== null 
+                ? ` (${formatRate(itemToDelete.defaultRate, itemToDelete.rateType)}).`
+                : ". Note: No organization default is configured for this item."
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDeleteRate}
+              onClick={confirmResetRate}
               disabled={deleteRate.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteRate.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Removing...
+                  Resetting...
                 </>
               ) : (
-                "Remove Rate"
+                "Reset to Default"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -334,10 +362,10 @@ export function AccountBillingRatesTab({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5" />
-          Billing Rates
+          Client Pricing
         </CardTitle>
         <CardDescription>
-          Manage billing rates for this client. These rates determine what the client is charged for services.
+          All billing rates for this client. Account rates override organization defaults.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
