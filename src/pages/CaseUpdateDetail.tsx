@@ -41,6 +41,7 @@ import { UpdateContextSection } from "@/components/update-detail/UpdateContextSe
 import { UpdateAuditSection } from "@/components/update-detail/UpdateAuditSection";
 import { UpdateBillingSummary } from "@/components/update-detail/UpdateBillingSummary";
 import { UpdateTimeExpensesSection } from "@/components/update-detail/UpdateTimeExpensesSection";
+import { TimeExpensesPanel } from "@/components/case-detail/TimeExpensesPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -141,6 +142,7 @@ const CaseUpdateDetail = () => {
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [showTimeExpensesPanel, setShowTimeExpensesPanel] = useState(false);
 
   // Centralized editability logic
   const {
@@ -787,7 +789,13 @@ const CaseUpdateDetail = () => {
         caseId={caseId!}
         open={editFormOpen}
         onOpenChange={setEditFormOpen}
-        onSuccess={() => fetchData()}
+        onSuccess={(options) => {
+          fetchData();
+          // Handle "Add time & expenses after saving" checkbox
+          if (options?.addTimeExpenses && options?.updateId) {
+            setShowTimeExpensesPanel(true);
+          }
+        }}
         editingUpdate={{
           id: update.id,
           title: update.title,
@@ -833,6 +841,18 @@ const CaseUpdateDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Time & Expenses Panel */}
+      <TimeExpensesPanel
+        open={showTimeExpensesPanel}
+        onOpenChange={setShowTimeExpensesPanel}
+        updateId={update.id}
+        caseId={caseId!}
+        organizationId={organization?.id || ""}
+        onSaveComplete={() => {
+          fetchData();
+        }}
+      />
     </div>
   );
 };
