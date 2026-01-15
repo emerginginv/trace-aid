@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Building2, Search, LayoutGrid, List, Edit, Trash2, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { AccountCard } from "@/components/shared/AccountCard";
+import { EntityStatusPill, deriveAccountStatus } from "@/components/shared/EntityStatusPill";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { toast } from "sonner";
@@ -42,6 +44,9 @@ interface Account {
   phone: string;
   city: string;
   state: string;
+  status?: string | null;
+  primary_contact_name?: string | null;
+  case_count?: number;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -83,14 +88,54 @@ const Accounts = () => {
         return;
       }
 
-      const { data, error } = await supabase
+      // Fetch accounts with primary contact and case count
+      const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
-        .select("*")
+        .select("id, name, industry, email, phone, city, state, status")
         .eq("organization_id", organization.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setAccounts(data || []);
+      if (accountsError) throw accountsError;
+
+      // Fetch primary contacts for each account
+      const accountIds = accountsData?.map(a => a.id) || [];
+      
+      const { data: contactsData } = await supabase
+        .from("contacts")
+        .select("account_id, first_name, last_name")
+        .in("account_id", accountIds)
+        .order("created_at", { ascending: true });
+
+      // Fetch case counts per account
+      const { data: caseCounts } = await supabase
+        .from("cases")
+        .select("account_id")
+        .in("account_id", accountIds);
+
+      // Build primary contact map (first contact per account)
+      const primaryContactMap: Record<string, string> = {};
+      contactsData?.forEach(c => {
+        if (c.account_id && !primaryContactMap[c.account_id]) {
+          primaryContactMap[c.account_id] = `${c.first_name} ${c.last_name}`;
+        }
+      });
+
+      // Build case count map
+      const caseCountMap: Record<string, number> = {};
+      caseCounts?.forEach(c => {
+        if (c.account_id) {
+          caseCountMap[c.account_id] = (caseCountMap[c.account_id] || 0) + 1;
+        }
+      });
+
+      // Merge data
+      const enrichedAccounts = accountsData?.map(account => ({
+        ...account,
+        primary_contact_name: primaryContactMap[account.id] || null,
+        case_count: caseCountMap[account.id] || 0,
+      })) || [];
+
+      setAccounts(enrichedAccounts);
     } catch (error) {
       toast.error("Error fetching accounts");
     } finally {
@@ -356,74 +401,21 @@ const Accounts = () => {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {sortedAccounts.map((account) => (
-            <Card 
-              key={account.id} 
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/accounts/${account.id}`)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  navigate(`/accounts/${account.id}`);
-                }
+            <AccountCard
+              key={account.id}
+              account={{
+                id: account.id,
+                name: account.name,
+                status: account.status,
+                industry: account.industry,
+                phone: account.phone,
+                email: account.email,
+                primary_contact_name: account.primary_contact_name,
+                case_count: account.case_count,
               }}
-            >
-              <CardHeader>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  {account.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  {account.industry && (
-                    <p className="text-sm text-muted-foreground">{account.industry}</p>
-                  )}
-                  {account.email && (
-                    <p className="text-sm">{account.email}</p>
-                  )}
-                  {account.phone && (
-                    <p className="text-sm">{account.phone}</p>
-                  )}
-                  {(account.city || account.state) && (
-                    <p className="text-sm text-muted-foreground">
-                      {[account.city, account.state].filter(Boolean).join(", ")}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-2 pt-2">
-                  {hasPermission('edit_accounts') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/accounts/${account.id}/edit`);
-                      }}
-                      className="flex-1"
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  )}
-                  {hasPermission('delete_accounts') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAccountToDelete(account.id);
-                        setDeleteDialogOpen(true);
-                      }}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              onClick={() => navigate(`/accounts/${account.id}`)}
+              showCaseCount={true}
+            />
           ))}
         </div>
       ) : (

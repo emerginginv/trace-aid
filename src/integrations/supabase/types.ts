@@ -136,6 +136,7 @@ export type Database = {
           organization_id: string
           phone: string | null
           state: string | null
+          status: string | null
           updated_at: string | null
           user_id: string
           zip_code: string | null
@@ -157,6 +158,7 @@ export type Database = {
           organization_id: string
           phone?: string | null
           state?: string | null
+          status?: string | null
           updated_at?: string | null
           user_id: string
           zip_code?: string | null
@@ -178,6 +180,7 @@ export type Database = {
           organization_id?: string
           phone?: string | null
           state?: string | null
+          status?: string | null
           updated_at?: string | null
           user_id?: string
           zip_code?: string | null
@@ -2223,7 +2226,9 @@ export type Database = {
           notes: string | null
           organization_id: string
           phone: string | null
+          role: string | null
           state: string | null
+          status: string | null
           updated_at: string | null
           user_id: string
           zip_code: string | null
@@ -2244,7 +2249,9 @@ export type Database = {
           notes?: string | null
           organization_id: string
           phone?: string | null
+          role?: string | null
           state?: string | null
+          status?: string | null
           updated_at?: string | null
           user_id: string
           zip_code?: string | null
@@ -2265,7 +2272,9 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           phone?: string | null
+          role?: string | null
           state?: string | null
+          status?: string | null
           updated_at?: string | null
           user_id?: string
           zip_code?: string | null
