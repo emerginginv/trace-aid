@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
@@ -6,18 +6,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// Note: Dialog removed - billing now initiated only from Update Details page
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Pencil, Trash2, Check, X, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, LayoutGrid, List, Clock } from "lucide-react";
+import { Search, Trash2, Check, X, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, Clock } from "lucide-react";
 import { ImportTemplateDropdown } from "@/components/ui/import-template-button";
 
-// Note: FinanceForm removed - billing now initiated only from Update Details page
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import html2pdf from "html2pdf.js";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 
@@ -33,11 +32,12 @@ interface TimeEntry {
   case_title: string;
   case_number: string;
   description: string;
-  hours: number | null;
-  hourly_rate: number | null;
-  amount: number;
-  status: string | null;
-  invoiced: boolean;
+  hours: number;
+  pay_rate: number;
+  pay_total: number;
+  status: string;
+  user_id: string;
+  user_name: string | null;
 }
 
 interface Case {
@@ -46,34 +46,23 @@ interface Case {
   case_number: string;
 }
 
-const COLUMNS: ColumnDefinition[] = [
-  { key: "select", label: "Select", hideable: false },
-  { key: "date", label: "Date" },
-  { key: "case", label: "Case" },
-  { key: "description", label: "Description" },
-  { key: "hours", label: "Hours" },
-  { key: "rate", label: "Rate" },
-  { key: "amount", label: "Amount" },
-  { key: "status", label: "Status" },
-  { key: "actions", label: "Actions", hideable: false },
-];
-
 const TimeEntries = () => {
   useSetBreadcrumbs([{ label: "Time Entries" }]);
   
   const navigate = useNavigate();
   const { organization } = useOrganization();
+  const { isAdmin, isManager, isInvestigator, loading: roleLoading } = useUserRole();
+  const canViewRates = isAdmin || isManager;
+  
   const [loading, setLoading] = useState(true);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   
   // Filter states
   const [timeSearch, setTimeSearch] = useState("");
   const [timeStatusFilter, setTimeStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
-  // Note: Add Time Entry removed - billing now initiated only from Update Details page
   
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("time-entries", "date", "desc");
@@ -82,7 +71,32 @@ const TimeEntries = () => {
   const [selectedTimeEntries, setSelectedTimeEntries] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
-  // Note: Add time dialog removed - billing now initiated only from Update Details page
+  // Dynamic columns based on role
+  const COLUMNS: ColumnDefinition[] = useMemo(() => {
+    const baseColumns: ColumnDefinition[] = [
+      { key: "select", label: "Select", hideable: false },
+      { key: "date", label: "Date" },
+      { key: "case", label: "Case" },
+      { key: "investigator", label: "Investigator" },
+      { key: "description", label: "Description" },
+      { key: "hours", label: "Hours" },
+    ];
+    
+    // Only show pay rate/total columns to admin/manager
+    if (canViewRates) {
+      baseColumns.push(
+        { key: "rate", label: "Pay Rate" },
+        { key: "amount", label: "Pay Total" }
+      );
+    }
+    
+    baseColumns.push(
+      { key: "status", label: "Status" },
+      { key: "actions", label: "Actions", hideable: false }
+    );
+    
+    return baseColumns;
+  }, [canViewRates]);
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("time-entries-columns", COLUMNS);
 
@@ -117,32 +131,45 @@ const TimeEntries = () => {
       setCases(casesData || []);
       const casesMap = new Map(casesData?.map(c => [c.id, c]) || []);
 
-      // Fetch all time entries
+      // Fetch all time entries from the canonical time_entries table
       const { data: timeData, error: timeError } = await supabase
-        .from("case_finances")
-        .select("id, case_id, date, amount, description, status, invoiced, hours, hourly_rate")
+        .from("time_entries")
+        .select("id, case_id, user_id, notes, hours, rate, total, status, created_at")
         .eq("organization_id", orgId)
-        .eq("finance_type", "time")
-        .order("date", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (timeError) throw timeError;
 
-      const formattedTimeEntries: TimeEntry[] = timeData?.map((entry: any) => {
+      // Fetch user profiles for display names
+      const userIds = [...new Set((timeData || []).map(e => e.user_id))];
+      let profilesMap = new Map<string, string | null>();
+      
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", userIds);
+        
+        profilesMap = new Map((profilesData || []).map(p => [p.id, p.full_name]));
+      }
+
+      const formattedTimeEntries: TimeEntry[] = (timeData || []).map((entry: any) => {
         const caseInfo = casesMap.get(entry.case_id);
         return {
           id: entry.id,
           case_id: entry.case_id,
-          date: entry.date,
+          date: entry.created_at,
           case_title: caseInfo?.title || "Unknown",
           case_number: caseInfo?.case_number || "N/A",
-          description: entry.description || "",
-          hours: entry.hours ? parseFloat(entry.hours) : null,
-          hourly_rate: entry.hourly_rate ? parseFloat(entry.hourly_rate) : null,
-          amount: parseFloat(entry.amount),
-          status: entry.status,
-          invoiced: entry.invoiced,
+          description: entry.notes || "",
+          hours: parseFloat(entry.hours) || 0,
+          pay_rate: parseFloat(entry.rate) || 0,
+          pay_total: parseFloat(entry.total) || 0,
+          status: entry.status || "draft",
+          user_id: entry.user_id,
+          user_name: profilesMap.get(entry.user_id) || null,
         };
-      }) || [];
+      });
 
       setTimeEntries(formattedTimeEntries);
     } catch (error: any) {
@@ -159,14 +186,15 @@ const TimeEntries = () => {
     const matchesSearch =
       entry.case_title.toLowerCase().includes(searchLower) ||
       entry.case_number.toLowerCase().includes(searchLower) ||
-      entry.description.toLowerCase().includes(searchLower);
+      entry.description.toLowerCase().includes(searchLower) ||
+      (entry.user_name?.toLowerCase().includes(searchLower) ?? false);
     
     const matchesStatus =
       timeStatusFilter === "all" ||
-      (timeStatusFilter === "invoiced" && entry.invoiced) ||
-      (timeStatusFilter === "approved" && !entry.invoiced && entry.status === "approved") ||
-      (timeStatusFilter === "rejected" && entry.status === "rejected") ||
-      (timeStatusFilter === "pending" && !entry.invoiced && entry.status === "pending");
+      (timeStatusFilter === "pending" && (entry.status === "pending" || entry.status === "draft")) ||
+      (timeStatusFilter === "approved" && entry.status === "approved") ||
+      (timeStatusFilter === "declined" && (entry.status === "declined" || entry.status === "rejected")) ||
+      (timeStatusFilter === "paid" && entry.status === "paid");
     
     // Date range filter
     const entryDate = new Date(entry.date);
@@ -188,8 +216,16 @@ const TimeEntries = () => {
       bVal = b.case_title;
     }
     if (sortColumn === "rate") {
-      aVal = a.hourly_rate;
-      bVal = b.hourly_rate;
+      aVal = a.pay_rate;
+      bVal = b.pay_rate;
+    }
+    if (sortColumn === "amount") {
+      aVal = a.pay_total;
+      bVal = b.pay_total;
+    }
+    if (sortColumn === "investigator") {
+      aVal = a.user_name || "";
+      bVal = b.user_name || "";
     }
     
     if (aVal == null) return sortDirection === "asc" ? 1 : -1;
@@ -215,10 +251,9 @@ const TimeEntries = () => {
   });
 
   // Get pending time entries for bulk selection
-  const pendingTimeEntries = sortedTimeEntries.filter(entry => entry.status === "pending" && !entry.invoiced);
+  const pendingTimeEntries = sortedTimeEntries.filter(entry => entry.status === "pending" || entry.status === "draft");
   const allPendingSelected = pendingTimeEntries.length > 0 && 
     pendingTimeEntries.every(entry => selectedTimeEntries.has(entry.id));
-  const somePendingSelected = pendingTimeEntries.some(entry => selectedTimeEntries.has(entry.id));
 
   const handleSelectAll = (checked: boolean) => {
     const newSelected = new Set(selectedTimeEntries);
@@ -249,7 +284,7 @@ const TimeEntries = () => {
     try {
       const ids = Array.from(selectedTimeEntries);
       const { error } = await supabase
-        .from("case_finances")
+        .from("time_entries")
         .update({ status: "approved" })
         .in("id", ids);
 
@@ -273,8 +308,8 @@ const TimeEntries = () => {
     try {
       const ids = Array.from(selectedTimeEntries);
       const { error } = await supabase
-        .from("case_finances")
-        .update({ status: "rejected" })
+        .from("time_entries")
+        .update({ status: "declined" })
         .in("id", ids);
 
       if (error) throw error;
@@ -290,19 +325,32 @@ const TimeEntries = () => {
     }
   };
 
-  // Export functions
+  // Export functions - only include rate/amount if user can view them
   const exportToCSV = () => {
-    const headers = ["Date", "Case Number", "Case Title", "Description", "Hours", "Rate", "Amount", "Status"];
-    const rows = filteredTimeEntries.map(entry => [
-      format(new Date(entry.date), "yyyy-MM-dd"),
-      entry.case_number,
-      entry.case_title,
-      entry.description || "",
-      entry.hours || "",
-      entry.hourly_rate ? `$${entry.hourly_rate.toFixed(2)}` : "",
-      entry.amount.toFixed(2),
-      entry.invoiced ? "Invoiced" : (entry.status || "Pending")
-    ]);
+    const headers = ["Date", "Case Number", "Case Title", "Investigator", "Description", "Hours"];
+    if (canViewRates) {
+      headers.push("Pay Rate", "Pay Total");
+    }
+    headers.push("Status");
+    
+    const rows = filteredTimeEntries.map(entry => {
+      const row = [
+        format(new Date(entry.date), "yyyy-MM-dd"),
+        entry.case_number,
+        entry.case_title,
+        entry.user_name || "Unknown",
+        entry.description || "",
+        entry.hours?.toFixed(1) || "",
+      ];
+      if (canViewRates) {
+        row.push(
+          entry.pay_rate ? `$${entry.pay_rate.toFixed(2)}` : "",
+          entry.pay_total.toFixed(2)
+        );
+      }
+      row.push(entry.status);
+      return row;
+    });
     
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${cell}"`).join(","))
@@ -320,20 +368,33 @@ const TimeEntries = () => {
 
   const exportToPDF = () => {
     const totalHours = filteredTimeEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
+    const totalPayTotal = filteredTimeEntries.reduce((sum, e) => sum + e.pay_total, 0);
+    
+    const rateHeaders = canViewRates ? `
+      <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Pay Rate</th>
+      <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Pay Total</th>
+    ` : '';
+    
+    const rateTotals = canViewRates ? `
+      <td style="border: 1px solid #ddd; padding: 8px;"></td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${totalPayTotal.toFixed(2)}</td>
+    ` : '';
+    
     const printContent = document.createElement("div");
     printContent.innerHTML = `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h1 style="margin-bottom: 8px; font-size: 24px;">Time Entries Report</h1>
+        <p style="margin-bottom: 4px; color: #666; font-size: 14px;">Internal cost tracking for investigator compensation</p>
         <p style="margin-bottom: 20px; color: #666; font-size: 14px;">Generated: ${format(new Date(), "MMMM d, yyyy")}</p>
         <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
           <thead>
             <tr style="background: #f3f4f6;">
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Case</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Investigator</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Description</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Hours</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rate</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Amount</th>
+              ${rateHeaders}
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Status</th>
             </tr>
           </thead>
@@ -342,20 +403,22 @@ const TimeEntries = () => {
               <tr>
                 <td style="border: 1px solid #ddd; padding: 8px;">${format(new Date(entry.date), "MMM d, yyyy")}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${entry.case_number} - ${entry.case_title}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${entry.user_name || "Unknown"}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${entry.description || "-"}</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${entry.hours || "-"}</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${entry.hourly_rate ? `$${entry.hourly_rate.toFixed(2)}` : "-"}</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${entry.amount.toFixed(2)}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${entry.invoiced ? "Invoiced" : (entry.status || "Pending")}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${entry.hours?.toFixed(1) || "-"}</td>
+                ${canViewRates ? `
+                  <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${entry.pay_rate ? `$${entry.pay_rate.toFixed(2)}` : "-"}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${entry.pay_total.toFixed(2)}</td>
+                ` : ''}
+                <td style="border: 1px solid #ddd; padding: 8px;">${entry.status}</td>
               </tr>
             `).join("")}
           </tbody>
           <tfoot>
             <tr style="background: #f3f4f6; font-weight: bold;">
-              <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Totals:</td>
+              <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Totals:</td>
               <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalHours.toFixed(1)} hrs</td>
-              <td style="border: 1px solid #ddd; padding: 8px;"></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${filteredTimeEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}</td>
+              ${rateTotals}
               <td style="border: 1px solid #ddd; padding: 8px;"></td>
             </tr>
           </tfoot>
@@ -376,14 +439,12 @@ const TimeEntries = () => {
     toast.success("Time entries exported to PDF");
   };
 
-  // Note: Add time functions removed - billing now initiated only from Update Details page
-
   const handleDeleteTimeEntry = async (id: string) => {
     if (!confirm("Are you sure you want to delete this time entry?")) return;
     
     try {
       const { error } = await supabase
-        .from("case_finances")
+        .from("time_entries")
         .delete()
         .eq("id", id);
 
@@ -400,7 +461,7 @@ const TimeEntries = () => {
   const handleApprove = async (id: string) => {
     try {
       const { error } = await supabase
-        .from("case_finances")
+        .from("time_entries")
         .update({ status: "approved" })
         .eq("id", id);
 
@@ -417,8 +478,8 @@ const TimeEntries = () => {
   const handleReject = async (id: string) => {
     try {
       const { error } = await supabase
-        .from("case_finances")
-        .update({ status: "rejected" })
+        .from("time_entries")
+        .update({ status: "declined" })
         .eq("id", id);
 
       if (error) throw error;
@@ -432,14 +493,14 @@ const TimeEntries = () => {
   };
 
   const getStatusBadge = (entry: TimeEntry) => {
-    if (entry.invoiced) {
-      return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">Invoiced</span>;
-    }
     switch (entry.status) {
       case "approved":
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">Approved</span>;
+      case "declined":
       case "rejected":
-        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">Rejected</span>;
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">Declined</span>;
+      case "paid":
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">Paid</span>;
       default:
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">Pending</span>;
     }
@@ -447,11 +508,11 @@ const TimeEntries = () => {
 
   // Calculate summary stats
   const totalHours = timeEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
-  const totalAmount = timeEntries.reduce((sum, e) => sum + e.amount, 0);
-  const pendingCount = timeEntries.filter(e => e.status === "pending" && !e.invoiced).length;
-  const approvedAmount = timeEntries.filter(e => e.status === "approved" && !e.invoiced).reduce((sum, e) => sum + e.amount, 0);
+  const totalPayTotal = timeEntries.reduce((sum, e) => sum + e.pay_total, 0);
+  const pendingCount = timeEntries.filter(e => e.status === "pending" || e.status === "draft").length;
+  const approvedPayTotal = timeEntries.filter(e => e.status === "approved").reduce((sum, e) => sum + e.pay_total, 0);
 
-  if (loading) {
+  if (loading || roleLoading) {
     return <ExpensesPageSkeleton />;
   }
 
@@ -459,42 +520,46 @@ const TimeEntries = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Time Entries</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Clock className="h-8 w-8" />
+            Time Entries
+          </h1>
           <p className="text-muted-foreground mt-2">
-            Manage time entries across all cases
+            Internal cost tracking for investigator compensation
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Note: Add Time Entry button removed - billing now initiated only from Update Details page */}
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid gap-4 ${canViewRates ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2'}`}>
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold">{totalHours.toFixed(1)}</div>
             <p className="text-xs text-muted-foreground">Total Hours</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <p className="text-xs text-muted-foreground">Total Amount</p>
-          </CardContent>
-        </Card>
+        {canViewRates && (
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">${totalPayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <p className="text-xs text-muted-foreground">Total Pay</p>
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold">{pendingCount}</div>
             <p className="text-xs text-muted-foreground">Pending Approval</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-emerald-600">${approvedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <p className="text-xs text-muted-foreground">Approved (Unbilled)</p>
-          </CardContent>
-        </Card>
+        {canViewRates && (
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-emerald-600">${approvedPayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <p className="text-xs text-muted-foreground">Approved (Ready for Billing)</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Bulk Action Toolbar */}
@@ -542,7 +607,7 @@ const TimeEntries = () => {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-[0.625rem] h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by case, description..."
+            placeholder="Search by case, investigator, description..."
             value={timeSearch}
             onChange={(e) => setTimeSearch(e.target.value)}
             className="pl-9"
@@ -556,8 +621,8 @@ const TimeEntries = () => {
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="invoiced">Invoiced</SelectItem>
+            <SelectItem value="declined">Declined</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
           </SelectContent>
         </Select>
         <Popover>
@@ -652,6 +717,15 @@ const TimeEntries = () => {
                     onSort={handleSort}
                   />
                 )}
+                {isVisible("investigator") && (
+                  <SortableTableHead
+                    column="investigator"
+                    label="Investigator"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
                 {isVisible("description") && (
                   <SortableTableHead
                     column="description"
@@ -671,20 +745,20 @@ const TimeEntries = () => {
                     className="text-right"
                   />
                 )}
-                {isVisible("rate") && (
+                {canViewRates && isVisible("rate") && (
                   <SortableTableHead
                     column="rate"
-                    label="Rate"
+                    label="Pay Rate"
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSort={handleSort}
                     className="text-right"
                   />
                 )}
-                {isVisible("amount") && (
+                {canViewRates && isVisible("amount") && (
                   <SortableTableHead
                     column="amount"
-                    label="Amount"
+                    label="Pay Total"
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSort={handleSort}
@@ -706,7 +780,7 @@ const TimeEntries = () => {
             <TableBody>
               {sortedTimeEntries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canViewRates ? 10 : 8} className="text-center py-8 text-muted-foreground">
                     No time entries found
                   </TableCell>
                 </TableRow>
@@ -718,11 +792,11 @@ const TimeEntries = () => {
                     onClick={() => navigate(`/time-entries/${entry.id}`)}
                   >
                     {isVisible("select") && (
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedTimeEntries.has(entry.id)}
                           onCheckedChange={(checked) => handleSelectTimeEntry(entry.id, !!checked)}
-                          disabled={entry.status !== "pending" || entry.invoiced}
+                          disabled={entry.status !== "pending" && entry.status !== "draft"}
                           aria-label={`Select ${entry.description}`}
                         />
                       </TableCell>
@@ -736,29 +810,32 @@ const TimeEntries = () => {
                         <div className="text-xs text-muted-foreground truncate max-w-[200px]">{entry.case_title}</div>
                       </TableCell>
                     )}
+                    {isVisible("investigator") && (
+                      <TableCell>{entry.user_name || "Unknown"}</TableCell>
+                    )}
                     {isVisible("description") && (
                       <TableCell className="max-w-[200px] truncate">{entry.description || "-"}</TableCell>
                     )}
                     {isVisible("hours") && (
                       <TableCell className="text-right">{entry.hours?.toFixed(1) || "-"}</TableCell>
                     )}
-                    {isVisible("rate") && (
+                    {canViewRates && isVisible("rate") && (
                       <TableCell className="text-right">
-                        {entry.hourly_rate ? `$${entry.hourly_rate.toFixed(2)}` : "-"}
+                        {entry.pay_rate ? `$${entry.pay_rate.toFixed(2)}` : "-"}
                       </TableCell>
                     )}
-                    {isVisible("amount") && (
+                    {canViewRates && isVisible("amount") && (
                       <TableCell className="text-right font-medium">
-                        ${entry.amount.toFixed(2)}
+                        ${entry.pay_total.toFixed(2)}
                       </TableCell>
                     )}
                     {isVisible("status") && (
                       <TableCell>{getStatusBadge(entry)}</TableCell>
                     )}
                     {isVisible("actions") && (
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
-                          {entry.status === "pending" && !entry.invoiced && (
+                          {(entry.status === "pending" || entry.status === "draft") && (
                             <>
                               <Button
                                 variant="ghost"
@@ -799,8 +876,6 @@ const TimeEntries = () => {
           </Table>
         </CardContent>
       </Card>
-
-      {/* Note: Case Selection and Time Entry Form dialogs removed - billing now initiated only from Update Details page */}
     </div>
   );
 };
