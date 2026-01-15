@@ -17,6 +17,7 @@ import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { useBillingItemApproval } from "@/hooks/useBillingItemApproval";
 import { CaseTimeExpensesReview } from "./finances/CaseTimeExpensesReview";
+import { CaseBillingTab } from "./finances/CaseBillingTab";
 
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -519,11 +520,10 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   return (
     <>
       <Tabs defaultValue="time-expenses" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 gap-1">
+        <TabsList className="grid w-full grid-cols-3 gap-1">
           <TabsTrigger value="time-expenses" className="text-xs sm:text-sm px-2 sm:px-3">Time & Expenses</TabsTrigger>
+          <TabsTrigger value="billing" className="text-xs sm:text-sm px-2 sm:px-3">Billing</TabsTrigger>
           <TabsTrigger value="financial-summary" className="text-xs sm:text-sm px-2 sm:px-3">Financial Summary</TabsTrigger>
-          <TabsTrigger value="create-invoice" className="text-xs sm:text-sm px-2 sm:px-3">Invoice (Services)</TabsTrigger>
-          <TabsTrigger value="create-invoice-legacy" className="text-xs sm:text-sm px-2 sm:px-3">Invoice (Items)</TabsTrigger>
         </TabsList>
 
         {/* TIME & EXPENSES - Aggregation and Review View */}
@@ -545,6 +545,18 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
                 canApprove={canEditFinances}
               />
             </>
+          )}
+        </TabsContent>
+
+        {/* BILLING - Invoice History and Unbilled Items */}
+        <TabsContent value="billing" className="space-y-6 animate-fade-in">
+          {isLoading ? (
+            <InvoicesTabSkeleton />
+          ) : (
+            <CaseBillingTab
+              caseId={caseId}
+              organizationId={organization?.id || ""}
+            />
           )}
         </TabsContent>
 
@@ -767,22 +779,6 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
               </Card>
             )}
             </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="create-invoice" className="animate-fade-in">
-          {isLoading ? (
-            <CreateInvoiceTabSkeleton />
-          ) : (
-            <InvoiceFromServices caseId={caseId} onSuccess={fetchFinances} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="create-invoice-legacy" className="animate-fade-in">
-          {isLoading ? (
-            <CreateInvoiceTabSkeleton />
-          ) : (
-            <InvoiceFromExpenses caseId={caseId} />
           )}
         </TabsContent>
       </Tabs>
