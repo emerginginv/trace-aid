@@ -21,6 +21,8 @@ import { useBillingEligibility, BillingEligibilityResult } from "@/hooks/useBill
 import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
 import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
 import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
+import { useBudgetConsumption } from "@/hooks/useBudgetConsumption";
+import { BudgetBlockedDialog } from "./BudgetBlockedDialog";
 
 const taskSchema = z.object({
   activity_type: z.literal("task"),
@@ -92,9 +94,12 @@ export function ActivityForm({
   const [subjectAddresses, setSubjectAddresses] = useState<SubjectAddress[]>([]);
   const [billingPromptOpen, setBillingPromptOpen] = useState(false);
   const [billingEligibility, setBillingEligibility] = useState<BillingEligibilityResult | null>(null);
+  const [budgetBlockedDialogOpen, setBudgetBlockedDialogOpen] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<any | null>(null);
   const navigate = useNavigate();
   const { evaluate: evaluateBillingEligibility } = useBillingEligibility();
   const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
+  const { consumption } = useBudgetConsumption(caseId);
   
   // Fetch available services from the case's pricing profile
   const { data: availableServices = [], isLoading: servicesLoading } = useCaseAvailableServices(caseId);
@@ -264,7 +269,8 @@ export function ActivityForm({
     initializeForm();
   }, [open, editingActivity, activityType, prefilledDate, form]);
 
-  const onSubmit = async (values: any) => {
+  // Core save function that handles the actual database operations
+  const saveActivityData = async (values: any, forceNonBillable: boolean = false) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -276,27 +282,32 @@ export function ActivityForm({
         return;
       }
 
+      // If forceNonBillable, clear the service selection
+      const effectiveValues = forceNonBillable 
+        ? { ...values, case_service_id: undefined } 
+        : values;
+
       // Format date and time for saving
       let dueDate = null;
       let startTime = null;
       let endTime = null;
       let endDate = null;
       
-      if (values.activity_type === "event") {
+      if (effectiveValues.activity_type === "event") {
         // Save start date as date-only string
-        const d = values.start_date;
+        const d = effectiveValues.start_date;
         dueDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         
         // Save times in HH:mm format (TIME column)
-        startTime = values.start_time;
-        endTime = values.end_time;
+        startTime = effectiveValues.start_time;
+        endTime = effectiveValues.end_time;
         
         // Save end date as date-only string
-        const ed = values.end_date;
+        const ed = effectiveValues.end_date;
         endDate = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
-      } else if (values.due_date) {
+      } else if (effectiveValues.due_date) {
         // Use local date parts to avoid timezone shift
-        const d = values.due_date;
+        const d = effectiveValues.due_date;
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
@@ -305,7 +316,7 @@ export function ActivityForm({
 
       // If a service is selected, create or find a service instance
       let caseServiceInstanceId: string | null = null;
-      const selectedServiceId = values.case_service_id;
+      const selectedServiceId = effectiveValues.case_service_id;
       
       if (selectedServiceId && selectedServiceId !== "none") {
         // Check if a service instance already exists for this case and service
@@ -341,21 +352,21 @@ export function ActivityForm({
       }
 
       const activityData: any = {
-        activity_type: values.activity_type,
-        title: values.title,
-        description: values.description || null,
+        activity_type: effectiveValues.activity_type,
+        title: effectiveValues.title,
+        description: effectiveValues.description || null,
         case_id: caseId,
         user_id: user.id,
         due_date: dueDate,
-        status: values.status,
-        assigned_user_id: values.assigned_user_id === "unassigned" ? null : (values.assigned_user_id || null),
-        completed: values.status === "done" || values.status === "completed",
+        status: effectiveValues.status,
+        assigned_user_id: effectiveValues.assigned_user_id === "unassigned" ? null : (effectiveValues.assigned_user_id || null),
+        completed: effectiveValues.status === "done" || effectiveValues.status === "completed",
         case_service_instance_id: caseServiceInstanceId,
       };
 
       // Add event-specific fields
-      if (values.activity_type === "event") {
-        activityData.address = values.address || null;
+      if (effectiveValues.activity_type === "event") {
+        activityData.address = effectiveValues.address || null;
         activityData.start_time = startTime;
         activityData.end_time = endTime;
         activityData.end_date = endDate;
@@ -384,7 +395,7 @@ export function ActivityForm({
       // Update case_service_instances with scheduled times (for planning purposes only)
       // NOTE: Events no longer update quantity_actual - that is derived from approved billing items
       const serviceInstanceId = editingActivity?.case_service_instance_id || caseServiceInstanceId;
-      if (serviceInstanceId && values.activity_type === "event") {
+      if (serviceInstanceId && effectiveValues.activity_type === "event") {
         const parseTimeParts = (t: string) => {
           const [hh, mm, ss] = String(t).split(":");
           return {
@@ -394,13 +405,13 @@ export function ActivityForm({
           };
         };
 
-        const startParts = parseTimeParts(values.start_time);
-        const endParts = parseTimeParts(values.end_time);
+        const startParts = parseTimeParts(effectiveValues.start_time);
+        const endParts = parseTimeParts(effectiveValues.end_time);
 
-        const startDt = new Date(values.start_date);
+        const startDt = new Date(effectiveValues.start_date);
         startDt.setHours(startParts.h, startParts.m, startParts.s, 0);
 
-        const endDt = new Date(values.end_date);
+        const endDt = new Date(effectiveValues.end_date);
         endDt.setHours(endParts.h, endParts.m, endParts.s, 0);
 
         const scheduledStart = startDt.toISOString();
@@ -422,26 +433,26 @@ export function ActivityForm({
       }
 
       // Create notification for assigned user (only for new tasks)
-      if (!editingActivity && insertedActivity && values.assigned_user_id && values.assigned_user_id !== 'unassigned') {
+      if (!editingActivity && insertedActivity && effectiveValues.assigned_user_id && effectiveValues.assigned_user_id !== 'unassigned') {
         // Get assigned user's organization_id
         const { data: assignedUserOrg } = await supabase
           .from('organization_members')
           .select('organization_id')
-          .eq('user_id', values.assigned_user_id)
+          .eq('user_id', effectiveValues.assigned_user_id)
           .limit(1)
           .single();
 
         if (assignedUserOrg) {
           const notificationData = {
-            user_id: values.assigned_user_id,
+            user_id: effectiveValues.assigned_user_id,
             organization_id: assignedUserOrg.organization_id,
             type: 'task',
-            title: values.activity_type === 'task' ? 'New Task Assigned' : 'New Event Scheduled',
-            message: `You have been assigned: ${values.title}`,
+            title: effectiveValues.activity_type === 'task' ? 'New Task Assigned' : 'New Event Scheduled',
+            message: `You have been assigned: ${effectiveValues.title}`,
             related_id: insertedActivity.id,
             related_type: 'case_activity',
             link: `/cases/${caseId}`,
-            priority: values.due_date && new Date(values.due_date) < new Date(Date.now() + 86400000 * 3) ? 'high' : 'medium',
+            priority: effectiveValues.due_date && new Date(effectiveValues.due_date) < new Date(Date.now() + 86400000 * 3) ? 'high' : 'medium',
             read: false,
           };
 
@@ -462,7 +473,7 @@ export function ActivityForm({
 
       // Check billing eligibility if activity was completed and has a service instance
       // NOTE: Billing moved to Updates - Events no longer trigger billing prompts
-      const isCompleted = values.status === "done" || values.status === "completed";
+      const isCompleted = effectiveValues.status === "done" || effectiveValues.status === "completed";
       const activityIdToCheck = editingActivity?.id || insertedActivity?.id;
       
       // Only trigger billing prompt for TASKS, not events
@@ -512,6 +523,39 @@ export function ActivityForm({
         });
       }
     }
+  };
+
+  // Handle saving as non-billable when budget is blocked
+  const handleSaveAsNonBillable = async () => {
+    if (!pendingSubmitData) return;
+    
+    setBudgetBlockedDialogOpen(false);
+    
+    // Proceed with save, forcing non-billable
+    await saveActivityData(pendingSubmitData, true);
+    
+    toast({
+      title: "Saved as non-billable",
+      description: "The activity was saved without a billing service.",
+    });
+    
+    setPendingSubmitData(null);
+  };
+
+  // Main submit handler - checks for budget blocks before saving
+  const onSubmit = async (values: any) => {
+    // Check if this is a billable activity on a blocked budget
+    const hasService = values.case_service_id && values.case_service_id !== "none";
+    
+    if (hasService && consumption?.isBlocked) {
+      // Store the pending data and show dialog
+      setPendingSubmitData(values);
+      setBudgetBlockedDialogOpen(true);
+      return;
+    }
+    
+    // Normal save flow
+    await saveActivityData(values, false);
   };
 
   return (
@@ -1018,6 +1062,22 @@ export function ActivityForm({
         onSuccess();
       }}
     />
+    
+    {/* Budget blocked dialog for smart handling */}
+    {consumption && (
+      <BudgetBlockedDialog
+        open={budgetBlockedDialogOpen}
+        onOpenChange={(open) => {
+          setBudgetBlockedDialogOpen(open);
+          if (!open) {
+            setPendingSubmitData(null);
+          }
+        }}
+        consumption={consumption}
+        onSaveAsNonBillable={handleSaveAsNonBillable}
+        activityTitle={pendingSubmitData?.title}
+      />
+    )}
     </>
   );
 }
