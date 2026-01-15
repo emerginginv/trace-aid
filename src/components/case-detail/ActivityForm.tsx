@@ -24,12 +24,23 @@ import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
 import { useBudgetConsumption } from "@/hooks/useBudgetConsumption";
 import { BudgetBlockedDialog } from "./BudgetBlockedDialog";
 
+// Unified status values for all activity types
+const UNIFIED_STATUSES = [
+  "to_do", 
+  "scheduled", 
+  "in_progress", 
+  "blocked", 
+  "done", 
+  "completed", 
+  "cancelled"
+] as const;
+
 const taskSchema = z.object({
   activity_type: z.literal("task"),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   due_date: z.date().optional(),
-  status: z.enum(["to_do", "in_progress", "blocked", "done", "cancelled"]),
+  status: z.enum(UNIFIED_STATUSES),
   assigned_user_id: z.string().optional(),
   case_service_id: z.string().optional(), // Service from pricing profile
 });
@@ -42,7 +53,7 @@ const eventSchema = z.object({
   start_time: z.string().min(1, "Start time is required"),
   end_date: z.date(),
   end_time: z.string().min(1, "End time is required"),
-  status: z.enum(["scheduled", "cancelled", "completed"]),
+  status: z.enum(UNIFIED_STATUSES),
   assigned_user_id: z.string().optional(),
   address: z.string().optional(),
   case_service_id: z.string().optional(), // Service from pricing profile
