@@ -777,7 +777,7 @@ const CaseUpdateDetail = () => {
         caseId={caseId!}
         open={editFormOpen}
         onOpenChange={setEditFormOpen}
-        onSuccess={fetchData}
+        onSuccess={() => fetchData()}
         editingUpdate={{
           id: update.id,
           title: update.title,
