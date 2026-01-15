@@ -326,7 +326,7 @@ export function AccountBillingRatesTab({
             <AlertDialogTitle>Reset to Default Rate?</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove the custom rate for "{itemToDelete?.name}" and revert to the organization default
-              {itemToDelete?.defaultRate !== null 
+              {itemToDelete && itemToDelete.defaultRate !== null 
                 ? ` (${formatRate(itemToDelete.defaultRate, itemToDelete.rateType)}).`
                 : ". Note: No organization default is configured for this item."
               }
