@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import * as pdfjsLib from "pdfjs-dist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,11 +11,11 @@ import {
   ChevronUp,
   ChevronDown,
   Maximize2,
+  FileWarning,
+  Download,
 } from "lucide-react";
-
-// Configure the worker source
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+import { loadPdfJs, isPreviewEnvironment } from "@/lib/dynamicImports";
+import type * as PdfJsLib from "pdfjs-dist";
 
 interface SearchResult {
   pageNum: number;
@@ -39,12 +38,14 @@ export function FullscreenPdfViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
+  const [pdfjsLib, setPdfjsLib] = useState<typeof PdfJsLib | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<PdfJsLib.PDFDocumentProxy | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [scale, setScale] = useState(1.5);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPreview, setIsPreview] = useState(false);
 
   // Search state
   const [showSearch, setShowSearch] = useState(false);
@@ -56,8 +57,27 @@ export function FullscreenPdfViewer({
   // Page jump input
   const [pageInputValue, setPageInputValue] = useState("");
 
+  // Check for preview environment and load PDF.js
+  useEffect(() => {
+    if (isPreviewEnvironment()) {
+      setIsPreview(true);
+      setLoading(false);
+      return;
+    }
+
+    loadPdfJs()
+      .then(setPdfjsLib)
+      .catch((err) => {
+        console.error("Failed to load PDF.js:", err);
+        setError(err.message || "Failed to load PDF viewer");
+        setLoading(false);
+      });
+  }, []);
+
   // Load PDF document
   useEffect(() => {
+    if (!pdfjsLib) return;
+    
     let cancelled = false;
 
     const loadPdf = async () => {
@@ -91,7 +111,7 @@ export function FullscreenPdfViewer({
     return () => {
       cancelled = true;
     };
-  }, [pdfData]);
+  }, [pdfjsLib, pdfData]);
 
   // Render current page
   const renderPage = useCallback(async () => {
@@ -231,6 +251,25 @@ export function FullscreenPdfViewer({
     e.preventDefault();
     performSearch();
   };
+
+  // Preview environment message
+  if (isPreview) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-muted/30">
+        <FileWarning className="h-12 w-12 text-muted-foreground mb-4" />
+        <p className="text-lg font-medium mb-2">PDF Preview Unavailable</p>
+        <p className="text-muted-foreground text-center max-w-md mb-4">
+          PDF preview is available in production builds only.
+        </p>
+        {onDownload && (
+          <Button onClick={onDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import html2pdf from "html2pdf.js";
-import { Loader2, FileDown, Printer, FileText } from "lucide-react";
+import { Loader2, FileDown, Printer, FileText, FileWarning } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -15,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { fetchCaseSummaryData, type CaseSummaryData } from "@/lib/caseSummaryData";
 import { CaseSummaryContent } from "./CaseSummaryContent";
+import { loadHtml2Pdf, isPreviewEnvironment } from "@/lib/dynamicImports";
 
 // Base document width in pixels (8.5in at 96dpi)
 const BASE_DOC_WIDTH = 816;
@@ -36,6 +36,7 @@ export function CaseSummaryPdfDialog({
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [data, setData] = useState<CaseSummaryData | null>(null);
+  const [isPreview, setIsPreview] = useState(false);
   const [sections, setSections] = useState({
     generalInfo: true,
     clientContact: true,
@@ -47,6 +48,11 @@ export function CaseSummaryPdfDialog({
     attachments: true,
     relatedCases: true,
   });
+
+  // Check for preview environment
+  useEffect(() => {
+    setIsPreview(isPreviewEnvironment());
+  }, []);
 
   const loadData = async () => {
     if (data) return; // Already loaded
@@ -112,8 +118,17 @@ export function CaseSummaryPdfDialog({
   const generatePdf = async () => {
     if (!contentRef.current || !data) return;
 
+    // Check for preview environment
+    if (isPreview) {
+      toast.error("PDF export is available in production builds only.");
+      return;
+    }
+
     setGenerating(true);
     try {
+      // Load html2pdf dynamically
+      const html2pdf = await loadHtml2Pdf();
+
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
         filename: `${caseNumber}-summary.pdf`,
@@ -136,7 +151,7 @@ export function CaseSummaryPdfDialog({
       toast.success("PDF downloaded successfully");
     } catch (error) {
       console.error("Failed to generate PDF:", error);
-      toast.error("Failed to generate PDF");
+      toast.error(error instanceof Error ? error.message : "Failed to generate PDF");
     } finally {
       setGenerating(false);
     }
@@ -202,6 +217,16 @@ export function CaseSummaryPdfDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Preview environment warning */}
+        {isPreview && (
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-md mb-2">
+            <FileWarning className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              PDF download is available in production builds only. Print preview is still available.
+            </p>
+          </div>
+        )}
+
         {/* Offscreen export DOM - unscaled, used by generatePdf and handlePrint */}
         {data && (
           <div 
@@ -262,7 +287,7 @@ export function CaseSummaryPdfDialog({
           <div className="space-y-2">
             <Button
               onClick={generatePdf}
-              disabled={loading || generating || !data}
+              disabled={loading || generating || !data || isPreview}
               className="w-full"
             >
               {generating ? (

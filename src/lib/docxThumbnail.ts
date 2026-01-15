@@ -3,7 +3,7 @@
  * Generates a first-page preview for DOCX files using mammoth.js
  */
 
-import mammoth from 'mammoth';
+import { loadMammoth, isPreviewEnvironment } from './dynamicImports';
 
 export interface ThumbnailOptions {
   width?: number;
@@ -18,6 +18,11 @@ export async function generateDocxThumbnail(
   source: Blob | File,
   options: ThumbnailOptions = {}
 ): Promise<Blob> {
+  // Skip thumbnail generation in preview environments
+  if (isPreviewEnvironment()) {
+    throw new Error('DOCX thumbnails are available in production builds only.');
+  }
+
   const {
     width = 320,
     height = 240,
@@ -31,6 +36,9 @@ export async function generateDocxThumbnail(
     }, 5000);
 
     try {
+      // Load mammoth dynamically
+      const mammoth = await loadMammoth();
+      
       // Convert Blob to ArrayBuffer
       const arrayBuffer = await source.arrayBuffer();
       
