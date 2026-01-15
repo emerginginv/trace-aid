@@ -13,6 +13,7 @@ import CaseUpdateDetail from "@/pages/CaseUpdateDetail";
 import Calendar from "@/pages/Calendar";
 import NewExpenseEntry from "@/pages/NewExpenseEntry";
 import ExpenseEntryDetail from "@/pages/ExpenseEntryDetail";
+import EditExpenseEntry from "@/pages/EditExpenseEntry";
 import NewCaseUpdate from "@/pages/NewCaseUpdate";
 
 /**
@@ -73,6 +74,14 @@ export const caseRoutes = (
       element={
         <RouteWrapper>
           <NewExpenseEntry />
+        </RouteWrapper>
+      }
+    />
+    <Route
+      path="/cases/:caseId/expenses/:expenseId/edit"
+      element={
+        <RouteWrapper>
+          <EditExpenseEntry />
         </RouteWrapper>
       }
     />
