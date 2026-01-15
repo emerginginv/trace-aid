@@ -395,8 +395,8 @@ export function FinanceItemDialog({
                     <FormItem>
                       <FormLabel>Default Tax Rate</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
+                        onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+                        value={field.value || "none"}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -404,7 +404,7 @@ export function FinanceItemDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No tax</SelectItem>
+                          <SelectItem value="none">No tax</SelectItem>
                           {taxRates.map((rate) => (
                             <SelectItem key={rate.id} value={rate.id}>
                               {rate.name} ({rate.rate}%)
