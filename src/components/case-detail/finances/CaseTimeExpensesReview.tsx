@@ -544,6 +544,16 @@ export const CaseTimeExpensesReview = ({
                                     {entry.notes}
                                   </p>
                                 )}
+                                {entry.update_id && (
+                                  <Button
+                                    variant="link"
+                                    size="sm"
+                                    className="h-auto p-0 text-xs text-muted-foreground hover:text-primary"
+                                    onClick={() => navigateToUpdate(entry.update_id!)}
+                                  >
+                                    (view related case updates)
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell className="text-right font-mono">
