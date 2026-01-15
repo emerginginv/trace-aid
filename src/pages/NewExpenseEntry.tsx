@@ -51,6 +51,7 @@ interface TimeEntry {
   id: string;
   itemId: string;
   itemName: string;
+  financeItemId: string | null;
   notes: string;
   hours: number;
   rate: number;
@@ -59,6 +60,7 @@ interface TimeEntry {
 interface ExpenseEntry {
   id: string;
   category: string;
+  financeItemId: string | null;
   notes: string;
   quantity: number;
   rate: number;
@@ -69,7 +71,8 @@ interface RateScheduleItem {
   id: string;
   name: string;
   rate: number;
-  pricingModel: string;
+  rateType: string;
+  financeItemId: string;
 }
 
 interface CaseActivity {
@@ -215,44 +218,42 @@ const NewExpenseEntry = () => {
 
   const fetchRateSchedule = async (pricingProfileId: string | null) => {
     try {
-      if (!pricingProfileId) {
+      // Fetch finance items that are expense items for this organization
+      const { data: financeItems, error } = await supabase
+        .from("finance_items")
+        .select("*")
+        .eq("organization_id", organization?.id)
+        .eq("is_expense_item", true)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching finance items:", error);
         setRateScheduleItems([
-          { id: "hourly_default", name: "Hourly Rate", rate: 75, pricingModel: "hourly" },
+          { id: "hourly_default", name: "Hourly Rate", rate: 75, rateType: "hourly", financeItemId: "" },
         ]);
         return;
       }
 
-      const { data: rules } = await supabase
-        .from("service_pricing_rules")
-        .select(`
-          id,
-          default_rate,
-          expense_rate,
-          pricing_model,
-          case_services:case_service_id (
-            id,
-            name
-          )
-        `)
-        .eq("pricing_profile_id", pricingProfileId);
-
-      if (rules && rules.length > 0) {
-        const items: RateScheduleItem[] = rules.map((rule: any) => ({
-          id: rule.case_services?.id || rule.id,
-          name: rule.case_services?.name || "Service",
-          rate: rule.expense_rate ?? rule.default_rate,
-          pricingModel: rule.pricing_model,
+      if (financeItems && financeItems.length > 0) {
+        const items: RateScheduleItem[] = financeItems.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          rate: item.default_expense_rate || 0,
+          rateType: item.rate_type || "hourly",
+          financeItemId: item.id,
         }));
         setRateScheduleItems(items);
       } else {
+        // Fallback to default
         setRateScheduleItems([
-          { id: "hourly_default", name: "Hourly Rate", rate: 75, pricingModel: "hourly" },
+          { id: "hourly_default", name: "Hourly Rate", rate: 75, rateType: "hourly", financeItemId: "" },
         ]);
       }
     } catch (error) {
       console.error("Error fetching rate schedule:", error);
       setRateScheduleItems([
-        { id: "hourly_default", name: "Hourly Rate", rate: 75, pricingModel: "hourly" },
+        { id: "hourly_default", name: "Hourly Rate", rate: 75, rateType: "hourly", financeItemId: "" },
       ]);
     }
   };
@@ -266,6 +267,7 @@ const NewExpenseEntry = () => {
         id: crypto.randomUUID(),
         itemId: defaultItem?.id || "",
         itemName: defaultItem?.name || "",
+        financeItemId: defaultItem?.financeItemId || null,
         notes: "",
         hours: 0,
         rate: defaultItem?.rate || 0,
@@ -289,6 +291,7 @@ const NewExpenseEntry = () => {
       updateTimeEntry(entryId, {
         itemId: item.id,
         itemName: item.name,
+        financeItemId: item.financeItemId,
         rate: item.rate,
       });
     }
@@ -302,6 +305,7 @@ const NewExpenseEntry = () => {
       {
         id: crypto.randomUUID(),
         category: defaultCategory.value,
+        financeItemId: null,
         notes: "",
         quantity: 1,
         rate: defaultCategory.defaultRate || 0,
@@ -382,6 +386,7 @@ const NewExpenseEntry = () => {
             organization_id: organization.id,
             user_id: selectedStaffId,
             event_id: activityId,
+            finance_item_id: entry.financeItemId || null,
             item_type: entry.itemName,
             notes: entry.notes || null,
             hours: entry.hours,
@@ -431,6 +436,7 @@ const NewExpenseEntry = () => {
             organization_id: organization.id,
             user_id: selectedStaffId,
             event_id: activityId,
+            finance_item_id: entry.financeItemId || null,
             item_type: categoryLabel,
             notes: entry.notes || null,
             quantity: entry.quantity,
@@ -701,7 +707,7 @@ const NewExpenseEntry = () => {
                             </SelectTrigger>
                             <SelectContent>
                               {rateScheduleItems
-                                .filter((i) => i.pricingModel === "hourly")
+                                .filter((i) => i.rateType === "hourly")
                                 .map((item) => (
                                   <SelectItem key={item.id} value={item.id}>
                                     {item.name}
