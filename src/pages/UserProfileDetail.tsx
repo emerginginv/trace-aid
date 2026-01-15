@@ -19,8 +19,9 @@ import { toast } from "sonner";
 import { 
   ArrowLeft, Mail, Shield, User, Calendar, Phone, Building2, MapPin, 
   Edit, UserX, Trash2, KeyRound, Eye, Loader2, CheckCircle2, XCircle,
-  AlertTriangle, Camera, X
+  AlertTriangle, Camera, X, DollarSign
 } from "lucide-react";
+import { UserCompensationTab } from "@/components/users/UserCompensationTab";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import { format } from "date-fns";
 
@@ -872,6 +873,15 @@ const UserProfileDetail = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Compensation Section - Visible to Admin/Manager or own profile */}
+        {(isAdmin || currentUserRole === 'manager' || isOwnProfile) && userRole !== 'vendor' && id && (
+          <UserCompensationTab
+            userId={id}
+            userName={userProfile.full_name || userProfile.email}
+            canEdit={isAdmin || currentUserRole === 'manager'}
+          />
+        )}
 
         {/* Admin Actions */}
         {canManageUser && (

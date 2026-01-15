@@ -7,14 +7,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Mail, Shield, User } from "lucide-react";
+import { Edit, Mail, Shield, User, DollarSign } from "lucide-react";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
+import { UserCompensationTab } from "@/components/users/UserCompensationTab";
 
 const UserProfile = () => {
   useSetBreadcrumbs([{ label: "My Profile" }]);
   
   const navigate = useNavigate();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null;
     email: string;
@@ -36,6 +38,8 @@ const UserProfile = () => {
         navigate("/auth");
         return;
       }
+
+      setCurrentUserId(user.id);
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
@@ -221,6 +225,15 @@ const UserProfile = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Compensation Section - Read-only for investigators */}
+        {currentUserId && userProfile.role !== 'vendor' && (
+          <UserCompensationTab
+            userId={currentUserId}
+            userName={userProfile.full_name || userProfile.email}
+            canEdit={false}
+          />
+        )}
 
         {/* Additional Info Card */}
         <Card>
