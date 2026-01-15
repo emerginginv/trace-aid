@@ -46,6 +46,7 @@ const navItems: SettingsNavItem[] = [
   { value: "case-services", label: "Case Services", icon: Briefcase, roles: ['admin', 'manager'] },
   { value: "pricing-profiles", label: "Pricing Profiles", icon: DollarSign, roles: ['admin', 'manager'] },
   { value: "finance-items", label: "Invoice & Expense Items", icon: Receipt, roles: ['admin', 'manager'] },
+  { value: "staff-pricing", label: "Staff Price List", icon: Users, roles: ['admin', 'manager', 'investigator'] },
   { value: "picklists", label: "Picklists", icon: List, roles: ['admin', 'manager'] },
   { value: "templates", label: "Templates", icon: FileText, roles: ['admin', 'manager'] },
   { value: "email", label: "Email", icon: Mail, roles: ['admin', 'manager'] },

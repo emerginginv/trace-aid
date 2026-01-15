@@ -35,6 +35,7 @@ import { PricingProfilesTab } from "@/components/settings/PricingProfilesTab";
 import { CaseTypesTab } from "@/components/settings/CaseTypesTab";
 import { SubjectTypesTab } from "@/components/settings/SubjectTypesTab";
 import { FinanceItemsTab } from "@/components/settings/FinanceItemsTab";
+import { StaffPriceListTab } from "@/components/settings/StaffPriceListTab";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -703,6 +704,16 @@ const Settings = () => {
             {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
               <TabsContent value="finance-items" className="space-y-6">
                 <FinanceItemsTab />
+              </TabsContent>
+            )}
+
+            {/* Staff Price List Tab */}
+            {(currentUserRole === 'admin' || currentUserRole === 'manager' || currentUserRole === 'investigator') && (
+              <TabsContent value="staff-pricing" className="space-y-6">
+                <StaffPriceListTab
+                  currentUserId={currentUserId}
+                  currentUserRole={currentUserRole}
+                />
               </TabsContent>
             )}
 
