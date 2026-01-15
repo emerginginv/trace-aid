@@ -1,7 +1,7 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Bell, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { Bell, CheckCircle2, AlertCircle } from 'lucide-react';
 import { DashboardUpdate } from '@/hooks/useDashboardData';
 import { BasePanel, PanelListItem } from '@/components/shared/Panel';
 import { UserAvatar } from '@/components/shared/UserAvatar';
@@ -12,8 +12,20 @@ interface DashboardUpdatesPanelProps {
   onFilterChange: (filter: 'my' | 'all') => void;
   canViewAll: boolean;
   onUpdateClick: (update: DashboardUpdate) => void;
-  expandedId: string | null;
-  onExpandedChange: (id: string | null) => void;
+  /**
+   * @deprecated Since: 2026-01-15
+   * Reason: Inline expand replaced with dedicated Update Details page
+   * Migration: Navigate to /cases/:caseId/updates/:updateId
+   * Remove after: Next major release
+   */
+  expandedId?: string | null;
+  /**
+   * @deprecated Since: 2026-01-15
+   * Reason: Inline expand replaced with dedicated Update Details page
+   * Migration: Navigate to /cases/:caseId/updates/:updateId
+   * Remove after: Next major release
+   */
+  onExpandedChange?: (id: string | null) => void;
   updateTypePicklists: { value: string; color: string | null }[];
   isLoading?: boolean;
 }
@@ -34,12 +46,18 @@ export function DashboardUpdatesPanel({
   filter,
   onFilterChange,
   canViewAll,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onUpdateClick,
+  // @deprecated - Props kept for backwards compatibility, no longer used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   expandedId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onExpandedChange,
   updateTypePicklists,
   isLoading = false,
 }: DashboardUpdatesPanelProps) {
+  const navigate = useNavigate();
+
   const filterOptions = canViewAll
     ? [
         { value: 'my', label: 'My Updates' },
@@ -61,6 +79,15 @@ export function DashboardUpdatesPanel({
     );
   };
 
+  /**
+   * Navigate to the dedicated Update Details page
+   * @deprecated Previous behavior: Inline expand to show description
+   * New behavior: Navigate to /cases/:caseId/updates/:updateId
+   */
+  const handleUpdateClick = (update: DashboardUpdate) => {
+    navigate(`/cases/${update.caseId}/updates/${update.id}`);
+  };
+
   return (
     <BasePanel
       title="Recent Updates"
@@ -75,13 +102,11 @@ export function DashboardUpdatesPanel({
       isLoading={isLoading}
     >
       {updates.map((update) => {
-        const isExpanded = expandedId === update.id;
-
         return (
           <PanelListItem
             key={update.id}
-            onClick={() => onExpandedChange(isExpanded ? null : update.id)}
-            isExpanded={isExpanded}
+            onClick={() => handleUpdateClick(update)}
+            isExpanded={false}
           >
             <div className="flex items-start gap-3">
               <div className="shrink-0 mt-0.5">{getUpdateIcon(update.type)}</div>
@@ -90,19 +115,6 @@ export function DashboardUpdatesPanel({
                   <span className="text-sm font-medium leading-tight truncate">
                     {update.message}
                   </span>
-                  {isExpanded && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onExpandedChange(null);
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
                 </div>
                 <div className="flex items-center gap-3 mt-1.5">
                   <span className="text-xs text-muted-foreground">
@@ -113,24 +125,23 @@ export function DashboardUpdatesPanel({
                     <UserAvatar name={update.authorName} size="xs" showName />
                   )}
                 </div>
-                {isExpanded && update.updateData?.description && (
-                  <div className="mt-3 pt-3 border-t">
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {update.updateData.description as string}
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onUpdateClick(update);
-                      }}
-                    >
-                      Edit Update
-                    </Button>
-                  </div>
-                )}
+                {/**
+                 * @deprecated Since: 2026-01-15
+                 * Previous behavior: Inline expanded content showing description and Edit button
+                 * This content block has been removed in favor of the dedicated Update Details page.
+                 * The following JSX was removed:
+                 * 
+                 * {isExpanded && update.updateData?.description && (
+                 *   <div className="mt-3 pt-3 border-t">
+                 *     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                 *       {update.updateData.description as string}
+                 *     </p>
+                 *     <Button variant="outline" size="sm" className="mt-2" onClick={(e) => { ... }}>
+                 *       Edit Update
+                 *     </Button>
+                 *   </div>
+                 * )}
+                 */}
               </div>
             </div>
           </PanelListItem>
