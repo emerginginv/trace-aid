@@ -74,6 +74,11 @@ import NotFound from "./pages/NotFound";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
+import CaseUpdateDetail from "./pages/CaseUpdateDetail";
+import NewCaseUpdate from "./pages/NewCaseUpdate";
+import NewExpenseEntry from "./pages/NewExpenseEntry";
+import EditExpenseEntry from "./pages/EditExpenseEntry";
+import ExpenseEntryDetail from "./pages/ExpenseEntryDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -161,6 +166,58 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <CaseWizard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Case Update Routes - must be before /cases/:id */}
+        <Route
+          path="/cases/:caseId/updates/new"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <NewCaseUpdate />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/:caseId/updates/:updateId"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <CaseUpdateDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Case Expense Routes - must be before /cases/:id */}
+        <Route
+          path="/cases/:caseId/expenses/new"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <NewExpenseEntry />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/:caseId/expenses/:expenseId/edit"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <EditExpenseEntry />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/:caseId/expenses/:expenseId"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <ExpenseEntryDetail />
               </DashboardLayout>
             </ProtectedRoute>
           }
