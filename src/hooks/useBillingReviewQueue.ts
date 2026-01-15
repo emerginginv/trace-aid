@@ -73,7 +73,7 @@ export function useBillingReviewQueue(
         .in("finance_type", ["time", "expense", "billing_item"]);
 
       // Apply status filter (default to pending_review)
-      const statusFilter = filter?.status || 'pending_review';
+      const statusFilter = filter?.status || 'pending';
       if (statusFilter !== 'all') {
         query = query.eq("status", statusFilter);
       }

@@ -47,7 +47,7 @@ export interface BillingEvaluationDiagnostics {
 /**
  * Status values for billing items
  */
-export type BillingItemStatus = 'pending_review' | 'approved' | 'rejected' | 'invoiced';
+export type BillingItemStatus = 'pending' | 'approved' | 'declined' | 'committed' | 'voided' | 'paid';
 
 /**
  * Billing item in the review queue

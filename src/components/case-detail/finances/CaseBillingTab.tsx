@@ -114,20 +114,20 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
       if (expenseError) throw expenseError;
       setExpenseEntries(expenseData || []);
 
-      // Count pending review entries
+      // Count pending entries
       const { count: pendingTimeCount } = await supabase
         .from("time_entries")
         .select("*", { count: "exact", head: true })
         .eq("case_id", caseId)
         .eq("organization_id", organizationId)
-        .eq("status", "pending_review");
+        .eq("status", "pending");
 
       const { count: pendingExpenseCount } = await supabase
         .from("expense_entries")
         .select("*", { count: "exact", head: true })
         .eq("case_id", caseId)
         .eq("organization_id", organizationId)
-        .eq("status", "pending_review");
+        .eq("status", "pending");
 
       setPendingReviewCount((pendingTimeCount || 0) + (pendingExpenseCount || 0));
 
@@ -279,13 +279,13 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
       if (selectedTimeIds.length > 0) {
         const { error: timeUpdateError } = await supabase
           .from("time_entries")
-          .update({ status: "billed" })
+          .update({ status: "committed" })
           .in("id", selectedTimeIds);
         
         if (timeUpdateError) throw timeUpdateError;
       }
 
-      // Update expense entries to billed status
+      // Update expense entries to committed status
       const selectedExpenseIds = selectedEntries
         .filter(e => e.entryType === "expense")
         .map(e => e.id);
@@ -293,7 +293,7 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
       if (selectedExpenseIds.length > 0) {
         const { error: expenseUpdateError } = await supabase
           .from("expense_entries")
-          .update({ status: "billed" })
+          .update({ status: "committed" })
           .in("id", selectedExpenseIds);
         
         if (expenseUpdateError) throw expenseUpdateError;

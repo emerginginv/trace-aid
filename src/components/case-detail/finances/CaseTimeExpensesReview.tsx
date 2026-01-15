@@ -81,23 +81,12 @@ interface CaseTimeExpensesReviewProps {
   canApprove: boolean;
 }
 
-type EntryStatus = "all" | "draft" | "pending_review" | "approved" | "declined" | "billed";
-
-const getStatusColor = (status: string): string => {
-  switch (status) {
-    case "pending_review":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "approved":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "declined":
-      return "bg-red-100 text-red-800 border-red-200";
-    case "billed":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "draft":
-    default:
-      return "bg-muted text-muted-foreground border-border";
-  }
-};
+import { 
+  EntryStatusFilter,
+  getStatusColor,
+  getStatusLabel,
+  ENTRY_STATUS_OPTIONS
+} from "@/utils/entryStatusConfig";
 
 const formatStatusLabel = (status: string) => {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -125,7 +114,7 @@ export const CaseTimeExpensesReview = ({
   const [loading, setLoading] = useState(true);
 
   // Filter state
-  const [statusFilter, setStatusFilter] = useState<EntryStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<EntryStatusFilter>("all");
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState<string>("");
@@ -381,17 +370,16 @@ export const CaseTimeExpensesReview = ({
       <div className="flex flex-wrap gap-4 items-end">
         <div className="space-y-1">
           <Label className="text-xs">Status</Label>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as EntryStatus)}>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as EntryStatusFilter)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="pending_review">Pending Review</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="declined">Declined</SelectItem>
-              <SelectItem value="billed">Billed</SelectItem>
+              {ENTRY_STATUS_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -576,9 +564,9 @@ export const CaseTimeExpensesReview = ({
                             <TableCell>
                               <Badge
                                 variant="outline"
-                                className={`text-xs ${getStatusColor(entry.status)}`}
+                                className={`text-xs ${getStatusColor(entry.status)} ${entry.status === 'voided' ? 'line-through' : ''}`}
                               >
-                                {formatStatusLabel(entry.status)}
+                                {entry.status === 'paid' ? '✓ ' : ''}{getStatusLabel(entry.status)}
                               </Badge>
                             </TableCell>
                             <TableCell>

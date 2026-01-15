@@ -271,7 +271,7 @@ export function useQuickBill() {
           quantity: quantity,
           unit_price: rate,
           amount: amount,
-          status: "pending_review",
+          status: "pending",
           user_id: user.id,
           organization_id: organizationId,
           finance_type: "time",
