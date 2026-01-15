@@ -163,6 +163,21 @@ export const RetainerPaymentForm = ({
 
       if (updateError) throw updateError;
 
+      // Log retainer application to invoice audit log
+      await supabase.from("invoice_audit_log").insert({
+        invoice_id: invoiceId,
+        case_id: caseId,
+        organization_id: organizationId,
+        user_id: user.id,
+        action: "retainer_applied",
+        metadata: {
+          amount: amountNum,
+          previous_balance: remainingBalance,
+          new_balance: newBalanceDue,
+          retainer_balance_after: retainerBalance - amountNum
+        }
+      });
+
       toast({
         title: "Success",
         description: `$${amountNum.toFixed(2)} applied from retainer funds`,

@@ -32,11 +32,12 @@ interface InvoiceItem {
   id: string;
   description: string;
   amount: number;
-  date: string;
-  finance_type: 'expense' | 'time';
-  hours?: number;
-  hourly_rate?: number;
-  category?: string;
+  quantity: number;
+  rate: number;
+  service_name: string | null;
+  service_code: string | null;
+  pricing_model: string | null;
+  unit_label: string | null;
 }
 
 interface CaseInfo {
@@ -178,13 +179,12 @@ export default function InvoiceDetail() {
         }
       }
 
-      // Fetch invoice items
+      // Fetch invoice line items (frozen billing snapshots)
       const { data: itemsData, error: itemsError } = await supabase
-        .from("case_finances")
-        .select("id, description, amount, date, finance_type, hours, hourly_rate, category")
+        .from("invoice_line_items")
+        .select("id, description, amount, quantity, rate, service_name, service_code, pricing_model, unit_label")
         .eq("invoice_id", id)
-        .eq("organization_id", orgMember.organization_id)
-        .order("date", { ascending: true });
+        .order("created_at", { ascending: true });
 
       if (itemsError) throw itemsError;
       setItems((itemsData || []) as InvoiceItem[]);
@@ -388,17 +388,15 @@ export default function InvoiceDetail() {
                   <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="py-3 px-2">
                       <div className="font-medium">{item.description}</div>
-                      {item.category && (
-                        <div className="text-xs text-gray-500">{item.category}</div>
+                      {item.service_name && (
+                        <div className="text-xs text-gray-500">{item.service_name}</div>
                       )}
                     </td>
                     <td className="py-3 px-2 text-center">
-                      {item.finance_type === 'time' && item.hours ? item.hours : 1}
+                      {item.quantity || 1}
                     </td>
                     <td className="py-3 px-2 text-right">
-                      ${item.finance_type === 'time' && item.hourly_rate 
-                        ? Number(item.hourly_rate).toFixed(2) 
-                        : Number(item.amount).toFixed(2)}
+                      ${Number(item.rate || 0).toFixed(2)}
                     </td>
                     <td className="py-3 px-2 text-right font-medium">
                       ${Number(item.amount).toFixed(2)}
@@ -467,14 +465,14 @@ export default function InvoiceDetail() {
         )}
       </div>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog - uses case_finances to select billable items */}
       {invoice && (
         <EditInvoiceItemsDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           invoiceId={invoice.id}
           caseId={invoice.case_id}
-          currentItems={items}
+          currentItems={[]}
           onSuccess={fetchInvoiceData}
         />
       )}

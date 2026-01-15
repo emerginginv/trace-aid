@@ -80,7 +80,7 @@ export const financeRoutes = (
     <Route
       path="/invoices"
       element={
-        <RouteWrapper blockVendors>
+        <RouteWrapper blockVendors blockInvestigators>
           <AllInvoices />
         </RouteWrapper>
       }
@@ -88,7 +88,7 @@ export const financeRoutes = (
     <Route
       path="/invoices/:id"
       element={
-        <RouteWrapper blockVendors>
+        <RouteWrapper blockVendors blockInvestigators>
           <InvoiceDetail />
         </RouteWrapper>
       }
