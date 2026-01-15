@@ -8366,6 +8366,20 @@ export type Database = {
         }
         Returns: string
       }
+      resolve_organization_by_subdomain: {
+        Args: { p_subdomain: string }
+        Returns: {
+          is_active: boolean
+          login_accent_color: string
+          login_brand_name: string
+          login_branding_enabled: boolean
+          login_logo_url: string
+          logo_url: string
+          organization_id: string
+          organization_name: string
+          subdomain: string
+        }[]
+      }
       resolve_security_incident: {
         Args: { p_id: string; p_resolution: string }
         Returns: Json

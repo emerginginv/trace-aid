@@ -73,29 +73,65 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
   /**
    * Fetch organization by subdomain (for multi-tenant routing)
+   * Uses a secure RPC that only returns safe/public data for initial resolution,
+   * then fetches full details after membership is verified via RLS.
    */
   const fetchOrganizationBySubdomain = async (subdomain: string): Promise<Organization | null> => {
     console.log(`${LOG_PREFIX} Resolving organization for subdomain:`, subdomain);
     
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("*")
-      .eq("subdomain", subdomain)
-      .limit(1)
+    // Step 1: Use secure RPC for initial subdomain resolution (returns only public data)
+    const { data: resolvedOrg, error: resolveError } = await supabase
+      .rpc('resolve_organization_by_subdomain', { p_subdomain: subdomain })
       .maybeSingle();
 
-    if (error) {
-      console.error(`${LOG_PREFIX} Error fetching organization by subdomain:`, error);
+    if (resolveError) {
+      console.error(`${LOG_PREFIX} Error resolving organization by subdomain:`, resolveError);
       return null;
     }
 
-    if (!data) {
+    if (!resolvedOrg) {
       console.warn(`${LOG_PREFIX} No organization found for subdomain:`, subdomain);
       return null;
     }
 
-    console.log(`${LOG_PREFIX} Organization loaded for subdomain:`, subdomain);
-    return data as Organization;
+    console.log(`${LOG_PREFIX} Organization resolved for subdomain:`, subdomain, resolvedOrg.organization_id);
+    
+    // Step 2: Fetch full organization details (will be allowed by RLS after membership verification)
+    // This query will fail if user is not a member due to RLS policies
+    const { data: fullOrg, error: fullError } = await supabase
+      .from("organizations")
+      .select("*")
+      .eq("id", resolvedOrg.organization_id)
+      .maybeSingle();
+
+    if (fullError || !fullOrg) {
+      // This means user is not a member - return just the basic info for error messaging
+      console.warn(`${LOG_PREFIX} User cannot access full org details (not a member?):`, fullError);
+      // Return minimal org info for error handling
+      return {
+        id: resolvedOrg.organization_id,
+        name: resolvedOrg.organization_name,
+        subdomain: resolvedOrg.subdomain,
+        logo_url: resolvedOrg.logo_url,
+        is_active: resolvedOrg.is_active,
+        // Set defaults for fields we don't have access to
+        slug: null,
+        subscription_tier: "free",
+        subscription_status: "inactive",
+        max_users: 0,
+        billing_email: null,
+        stripe_subscription_id: null,
+        trial_ends_at: null,
+        subscription_product_id: null,
+        current_users_count: 0,
+        storage_used_gb: 0,
+        plan_key: "solo",
+        plan_features: {},
+      } as Organization;
+    }
+
+    console.log(`${LOG_PREFIX} Full organization loaded for subdomain:`, subdomain);
+    return fullOrg as Organization;
   };
 
   /**
