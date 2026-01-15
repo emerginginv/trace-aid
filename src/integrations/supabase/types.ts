@@ -3468,6 +3468,7 @@ export type Database = {
         Row: {
           classification_code: string | null
           created_at: string | null
+          default_expense_rate: number | null
           default_invoice_rate: number | null
           default_tax_rate_id: string | null
           description: string | null
@@ -3489,6 +3490,7 @@ export type Database = {
         Insert: {
           classification_code?: string | null
           created_at?: string | null
+          default_expense_rate?: number | null
           default_invoice_rate?: number | null
           default_tax_rate_id?: string | null
           description?: string | null
@@ -3510,6 +3512,7 @@ export type Database = {
         Update: {
           classification_code?: string | null
           created_at?: string | null
+          default_expense_rate?: number | null
           default_invoice_rate?: number | null
           default_tax_rate_id?: string | null
           description?: string | null
