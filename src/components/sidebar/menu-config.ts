@@ -10,7 +10,7 @@ import {
   Receipt,
   BarChart3,
   UserSearch,
-  ListTodo,
+  ClipboardList,
   FileEdit,
   Clock,
 } from "lucide-react";
@@ -45,15 +45,9 @@ export const menuGroups: MenuGroup[] = [
         roles: ["admin", "manager", "investigator"],
       },
       {
-        title: "Tasks",
-        icon: ListTodo,
-        url: "/tasks",
-        roles: ["admin", "manager", "investigator"],
-      },
-      {
-        title: "Events",
-        icon: Calendar,
-        url: "/events",
+        title: "Activities",
+        icon: ClipboardList,
+        url: "/activities",
         roles: ["admin", "manager", "investigator"],
       },
       {
