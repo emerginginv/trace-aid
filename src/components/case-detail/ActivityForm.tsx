@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ExternalLink, Copy, User, MapPin, Link } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { CalendarIcon, ExternalLink, Copy, User, MapPin, Link, Clock } from "lucide-react";
 import { useCaseAvailableServices } from "@/hooks/useCaseAvailableServices";
-import { format, formatISO } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -35,29 +36,33 @@ const UNIFIED_STATUSES = [
   "cancelled"
 ] as const;
 
-const taskSchema = z.object({
-  activity_type: z.literal("task"),
+// Unified schema that handles both scheduled and unscheduled activities
+const unifiedActivitySchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  due_date: z.date().optional(),
   status: z.enum(UNIFIED_STATUSES),
   assigned_user_id: z.string().optional(),
-  case_service_id: z.string().optional(), // Service from pricing profile
+  case_service_id: z.string().optional(),
+  // Date/time fields - optional based on isScheduled toggle
+  due_date: z.date().optional(),
+  start_date: z.date().optional(),
+  start_time: z.string().optional(),
+  end_date: z.date().optional(),
+  end_time: z.string().optional(),
+  address: z.string().optional(),
+}).refine((data) => {
+  // If any time field is set, require all time fields
+  const hasAnyScheduledField = data.start_date || data.start_time || data.end_date || data.end_time;
+  if (hasAnyScheduledField) {
+    return data.start_date && data.start_time && data.end_date && data.end_time;
+  }
+  return true;
+}, {
+  message: "If scheduling, all date/time fields are required",
+  path: ["start_time"],
 });
 
-const eventSchema = z.object({
-  activity_type: z.literal("event"),
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  start_date: z.date(),
-  start_time: z.string().min(1, "Start time is required"),
-  end_date: z.date(),
-  end_time: z.string().min(1, "End time is required"),
-  status: z.enum(UNIFIED_STATUSES),
-  assigned_user_id: z.string().optional(),
-  address: z.string().optional(),
-  case_service_id: z.string().optional(), // Service from pricing profile
-});
+type UnifiedActivityFormValues = z.infer<typeof unifiedActivitySchema>;
 
 interface SubjectAddress {
   id: string;
@@ -65,7 +70,6 @@ interface SubjectAddress {
   address: string;
   type: 'person' | 'location';
 }
-
 
 interface User {
   id: string;
@@ -75,7 +79,7 @@ interface User {
 
 interface ActivityFormProps {
   caseId: string;
-  activityType: "task" | "event";
+  activityType: "task" | "event"; // Used as initial hint for scheduling toggle
   users: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -85,6 +89,29 @@ interface ActivityFormProps {
   organizationId: string;
   onDuplicate?: (activityData: any) => void;
 }
+
+// Helper to get status options based on whether activity is scheduled
+const getStatusOptions = (isScheduled: boolean) => {
+  if (isScheduled) {
+    // Scheduled activities - event-like statuses first
+    return [
+      { value: 'scheduled', label: 'Scheduled' },
+      { value: 'in_progress', label: 'In Progress' },
+      { value: 'blocked', label: 'Blocked' },
+      { value: 'completed', label: 'Completed' },
+      { value: 'cancelled', label: 'Cancelled' },
+    ];
+  } else {
+    // Unscheduled activities - task-like statuses first
+    return [
+      { value: 'to_do', label: 'To Do' },
+      { value: 'in_progress', label: 'In Progress' },
+      { value: 'blocked', label: 'Blocked' },
+      { value: 'done', label: 'Done' },
+      { value: 'cancelled', label: 'Cancelled' },
+    ];
+  }
+};
 
 export function ActivityForm({
   caseId,
@@ -107,6 +134,10 @@ export function ActivityForm({
   const [billingEligibility, setBillingEligibility] = useState<BillingEligibilityResult | null>(null);
   const [budgetBlockedDialogOpen, setBudgetBlockedDialogOpen] = useState(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<any | null>(null);
+  
+  // Phase 2: Unified form toggle - determines if activity has scheduled times
+  const [isScheduled, setIsScheduled] = useState(activityType === "event");
+  
   const navigate = useNavigate();
   const { evaluate: evaluateBillingEligibility } = useBillingEligibility();
   const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
@@ -114,32 +145,33 @@ export function ActivityForm({
   
   // Fetch available services from the case's pricing profile
   const { data: availableServices = [], isLoading: servicesLoading } = useCaseAvailableServices(caseId);
-  const schema = activityType === "task" ? taskSchema : eventSchema;
-  const form = useForm<z.infer<typeof schema>>({
-    resolver: zodResolver(schema),
+  
+  const form = useForm<UnifiedActivityFormValues>({
+    resolver: zodResolver(unifiedActivitySchema),
     defaultValues: {
-      activity_type: activityType,
       title: "",
       description: "",
-      due_date: activityType === "task" ? prefilledDate || undefined : undefined,
-      start_date: activityType === "event" ? prefilledDate || new Date() : undefined,
-        start_time: activityType === "event" ? "09:00" : undefined,
-        end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
-        end_time: activityType === "event" ? "10:00" : undefined,
-        status: activityType === "task" ? "to_do" : "scheduled",
+      status: activityType === "event" ? "scheduled" : "to_do",
       assigned_user_id: undefined,
-      case_service_instance_id: undefined,
-    } as any,
+      case_service_id: undefined,
+      due_date: prefilledDate || undefined,
+      start_date: activityType === "event" ? prefilledDate || new Date() : undefined,
+      start_time: activityType === "event" ? "09:00" : undefined,
+      end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
+      end_time: activityType === "event" ? "10:00" : undefined,
+      address: "",
+    },
   });
+
+  // Derive activity_type from isScheduled toggle
+  const derivedActivityType = isScheduled ? "event" : "task";
 
   useEffect(() => {
     if (caseId && open) {
       fetchCaseTitle();
-      if (activityType === "event") {
-        fetchSubjectAddresses();
-      }
+      fetchSubjectAddresses(); // Always fetch for potential scheduling
     }
-  }, [caseId, open, activityType]);
+  }, [caseId, open]);
 
   const fetchSubjectAddresses = async () => {
     try {
@@ -197,20 +229,22 @@ export function ActivityForm({
   };
 
   useEffect(() => {
-    if (!open) return; // Only reset when dialog is open
+    if (!open) return;
     
     const initializeForm = async () => {
       if (editingActivity) {
+        // Determine if this is a scheduled activity based on existing data
+        const hasScheduledTimes = !!(editingActivity.start_time && editingActivity.due_date);
+        setIsScheduled(hasScheduledTimes || editingActivity.activity_type === "event");
+        
         // Parse existing due_date - handle timezone correctly
         let dueDate: Date | undefined = undefined;
         if (editingActivity.due_date) {
           const dateStr = editingActivity.due_date;
-          // If it's just a date string (YYYY-MM-DD), parse as local date
           if (dateStr.length === 10) {
             const [year, month, day] = dateStr.split('-').map(Number);
             dueDate = new Date(year, month - 1, day);
           } else {
-            // It's a full ISO timestamp (for events)
             dueDate = new Date(dateStr);
           }
         }
@@ -218,7 +252,6 @@ export function ActivityForm({
         // Get the case_service_id from the linked instance (if any)
         let caseServiceId: string | undefined = undefined;
         if (editingActivity.case_service_instance_id) {
-          // Fetch the service instance to get the case_service_id
           const { data: instanceData } = await supabase
             .from("case_service_instances")
             .select("case_service_id")
@@ -240,48 +273,81 @@ export function ActivityForm({
         }
 
         form.reset({
-          activity_type: editingActivity.activity_type,
           title: editingActivity.title,
           description: editingActivity.description || "",
-          due_date: editingActivity.activity_type === "task" ? dueDate : undefined,
-          start_date: editingActivity.activity_type === "event" ? dueDate : undefined,
-          start_time: editingActivity.activity_type === "event" 
-            ? ((editingActivity.start_time ? String(editingActivity.start_time).slice(0, 5) : null) || "09:00") 
-            : "09:00",
-          end_date: editingActivity.activity_type === "event" 
-            ? (endDate || dueDate) 
-            : undefined,
-          end_time: editingActivity.activity_type === "event" 
-            ? ((editingActivity.end_time ? String(editingActivity.end_time).slice(0, 5) : null) || "10:00") 
-            : "10:00",
           status: editingActivity.status,
           assigned_user_id: editingActivity.assigned_user_id || undefined,
-          address: editingActivity.address || "",
           case_service_id: caseServiceId,
-        } as any);
+          due_date: dueDate,
+          start_date: hasScheduledTimes ? dueDate : undefined,
+          start_time: hasScheduledTimes 
+            ? ((editingActivity.start_time ? String(editingActivity.start_time).slice(0, 5) : null) || "09:00") 
+            : undefined,
+          end_date: hasScheduledTimes ? (endDate || dueDate) : undefined,
+          end_time: hasScheduledTimes 
+            ? ((editingActivity.end_time ? String(editingActivity.end_time).slice(0, 5) : null) || "10:00") 
+            : undefined,
+          address: editingActivity.address || "",
+        });
       } else {
+        // New activity - use activityType prop as initial hint
+        const shouldSchedule = activityType === "event";
+        setIsScheduled(shouldSchedule);
+        
         form.reset({
-          activity_type: activityType,
           title: "",
           description: "",
-          due_date: activityType === "task" ? prefilledDate || undefined : undefined,
-          start_date: activityType === "event" ? prefilledDate || new Date() : undefined,
-          start_time: activityType === "event" ? "09:00" : undefined,
-          end_date: activityType === "event" ? prefilledDate || new Date() : undefined,
-          end_time: activityType === "event" ? "10:00" : undefined,
-          status: activityType === "task" ? "to_do" : "scheduled",
+          status: shouldSchedule ? "scheduled" : "to_do",
           assigned_user_id: undefined,
-          address: "",
           case_service_id: undefined,
-        } as any);
+          due_date: prefilledDate || undefined,
+          start_date: shouldSchedule ? prefilledDate || new Date() : undefined,
+          start_time: shouldSchedule ? "09:00" : undefined,
+          end_date: shouldSchedule ? prefilledDate || new Date() : undefined,
+          end_time: shouldSchedule ? "10:00" : undefined,
+          address: "",
+        });
       }
     };
     
     initializeForm();
   }, [open, editingActivity, activityType, prefilledDate, form]);
 
+  // Handle scheduling toggle change
+  const handleScheduleToggle = (checked: boolean) => {
+    setIsScheduled(checked);
+    
+    const currentValues = form.getValues();
+    
+    if (checked) {
+      // Switching to scheduled - set default times if not already set
+      const baseDate = currentValues.due_date || prefilledDate || new Date();
+      form.setValue("start_date", baseDate);
+      form.setValue("start_time", currentValues.start_time || "09:00");
+      form.setValue("end_date", baseDate);
+      form.setValue("end_time", currentValues.end_time || "10:00");
+      
+      // Update status to scheduled if currently to_do
+      if (currentValues.status === "to_do") {
+        form.setValue("status", "scheduled");
+      }
+    } else {
+      // Switching to unscheduled - clear time fields
+      form.setValue("start_date", undefined);
+      form.setValue("start_time", undefined);
+      form.setValue("end_date", undefined);
+      form.setValue("end_time", undefined);
+      form.setValue("address", "");
+      
+      // Update status to to_do if currently scheduled
+      if (currentValues.status === "scheduled") {
+        form.setValue("status", "to_do");
+      }
+    }
+  };
+
   // Core save function that handles the actual database operations
-  const saveActivityData = async (values: any, forceNonBillable: boolean = false) => {
+  const saveActivityData = async (values: UnifiedActivityFormValues, forceNonBillable: boolean = false) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -304,7 +370,7 @@ export function ActivityForm({
       let endTime = null;
       let endDate = null;
       
-      if (effectiveValues.activity_type === "event") {
+      if (isScheduled && effectiveValues.start_date) {
         // Save start date as date-only string
         const d = effectiveValues.start_date;
         dueDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -314,8 +380,10 @@ export function ActivityForm({
         endTime = effectiveValues.end_time;
         
         // Save end date as date-only string
-        const ed = effectiveValues.end_date;
-        endDate = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
+        if (effectiveValues.end_date) {
+          const ed = effectiveValues.end_date;
+          endDate = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
+        }
       } else if (effectiveValues.due_date) {
         // Use local date parts to avoid timezone shift
         const d = effectiveValues.due_date;
@@ -330,7 +398,6 @@ export function ActivityForm({
       const selectedServiceId = effectiveValues.case_service_id;
       
       if (selectedServiceId && selectedServiceId !== "none") {
-        // Check if a service instance already exists for this case and service
         const { data: existingInstance } = await supabase
           .from("case_service_instances")
           .select("id")
@@ -341,7 +408,6 @@ export function ActivityForm({
         if (existingInstance) {
           caseServiceInstanceId = existingInstance.id;
         } else {
-          // Create a new service instance
           const { data: newInstance, error: instanceError } = await supabase
             .from("case_service_instances")
             .insert({
@@ -363,7 +429,7 @@ export function ActivityForm({
       }
 
       const activityData: any = {
-        activity_type: effectiveValues.activity_type,
+        activity_type: derivedActivityType, // Derived from isScheduled toggle
         title: effectiveValues.title,
         description: effectiveValues.description || null,
         case_id: caseId,
@@ -375,12 +441,18 @@ export function ActivityForm({
         case_service_instance_id: caseServiceInstanceId,
       };
 
-      // Add event-specific fields
-      if (effectiveValues.activity_type === "event") {
+      // Add scheduled activity fields
+      if (isScheduled) {
         activityData.address = effectiveValues.address || null;
         activityData.start_time = startTime;
         activityData.end_time = endTime;
         activityData.end_date = endDate;
+      } else {
+        // Clear scheduled fields for unscheduled activities
+        activityData.address = null;
+        activityData.start_time = null;
+        activityData.end_time = null;
+        activityData.end_date = null;
       }
 
       let error;
@@ -404,9 +476,8 @@ export function ActivityForm({
       if (error) throw error;
 
       // Update case_service_instances with scheduled times (for planning purposes only)
-      // NOTE: Events no longer update quantity_actual - that is derived from approved billing items
       const serviceInstanceId = editingActivity?.case_service_instance_id || caseServiceInstanceId;
-      if (serviceInstanceId && effectiveValues.activity_type === "event") {
+      if (serviceInstanceId && isScheduled && effectiveValues.start_time && effectiveValues.end_time) {
         const parseTimeParts = (t: string) => {
           const [hh, mm, ss] = String(t).split(":");
           return {
@@ -419,16 +490,15 @@ export function ActivityForm({
         const startParts = parseTimeParts(effectiveValues.start_time);
         const endParts = parseTimeParts(effectiveValues.end_time);
 
-        const startDt = new Date(effectiveValues.start_date);
+        const startDt = new Date(effectiveValues.start_date!);
         startDt.setHours(startParts.h, startParts.m, startParts.s, 0);
 
-        const endDt = new Date(effectiveValues.end_date);
+        const endDt = new Date(effectiveValues.end_date!);
         endDt.setHours(endParts.h, endParts.m, endParts.s, 0);
 
         const scheduledStart = startDt.toISOString();
         const scheduledEnd = endDt.toISOString();
 
-        // Only update scheduled times for planning - quantity_actual is now derived from approved billing items
         const { error: serviceUpdateError } = await supabase
           .from("case_service_instances")
           .update({
@@ -443,9 +513,8 @@ export function ActivityForm({
         }
       }
 
-      // Create notification for assigned user (only for new tasks)
+      // Create notification for assigned user (only for new activities)
       if (!editingActivity && insertedActivity && effectiveValues.assigned_user_id && effectiveValues.assigned_user_id !== 'unassigned') {
-        // Get assigned user's organization_id
         const { data: assignedUserOrg } = await supabase
           .from('organization_members')
           .select('organization_id')
@@ -458,7 +527,7 @@ export function ActivityForm({
             user_id: effectiveValues.assigned_user_id,
             organization_id: assignedUserOrg.organization_id,
             type: 'task',
-            title: effectiveValues.activity_type === 'task' ? 'New Task Assigned' : 'New Event Scheduled',
+            title: isScheduled ? 'New Event Scheduled' : 'New Task Assigned',
             message: `You have been assigned: ${effectiveValues.title}`,
             related_id: insertedActivity.id,
             related_type: 'case_activity',
@@ -479,17 +548,18 @@ export function ActivityForm({
 
       toast({
         title: "Success",
-        description: editingActivity ? `${activityType === "task" ? "Task" : "Event"} updated successfully` : `${activityType === "task" ? "Task" : "Event"} added successfully`,
+        description: editingActivity 
+          ? `${isScheduled ? "Event" : "Task"} updated successfully` 
+          : `${isScheduled ? "Event" : "Task"} added successfully`,
       });
 
       // Check billing eligibility if activity was completed and has a service instance
-      // NOTE: Billing moved to Updates - Events no longer trigger billing prompts
+      // NOTE: Billing via tasks only, scheduled events use Updates workflow
       const isCompleted = effectiveValues.status === "done" || effectiveValues.status === "completed";
       const activityIdToCheck = editingActivity?.id || insertedActivity?.id;
       
-      // Only trigger billing prompt for TASKS, not events
-      // Events (activity_type = 'event') billing is handled via Updates workflow
-      if (isCompleted && caseServiceInstanceId && activityIdToCheck && activityType === "task") {
+      // Only trigger billing prompt for unscheduled activities (tasks)
+      if (isCompleted && caseServiceInstanceId && activityIdToCheck && !isScheduled) {
         const eligibility = await evaluateBillingEligibility({
           activityId: activityIdToCheck,
           caseServiceInstanceId: caseServiceInstanceId,
@@ -498,10 +568,8 @@ export function ActivityForm({
         if (eligibility.isEligible) {
           setBillingEligibility(eligibility);
           setBillingPromptOpen(true);
-          // Don't close the form yet - wait for billing prompt response
           return;
         } else if (eligibility.reason?.includes("flat-fee")) {
-          // Show warning toast for flat-fee services that are already billed
           toast({
             title: "Flat-Fee Service Already Billed",
             description: eligibility.reason,
@@ -514,7 +582,6 @@ export function ActivityForm({
     } catch (error) {
       console.error("Error saving activity:", error);
       
-      // Check for budget hard-cap errors and show user-friendly message
       const errorMessage = error instanceof Error ? error.message : String(error);
       const isBudgetError = errorMessage.toLowerCase().includes('budget exceeded') || 
                            errorMessage.toLowerCase().includes('hard budget cap') ||
@@ -523,7 +590,7 @@ export function ActivityForm({
       if (isBudgetError) {
         toast({
           title: "Budget hard cap reached",
-          description: "This case is over its hard cap. To save a task, leave the Service field empty (non-billable), or increase the case budget.",
+          description: "This case is over its hard cap. To save, leave the Service field empty (non-billable), or increase the case budget.",
           variant: "destructive",
         });
       } else {
@@ -541,8 +608,6 @@ export function ActivityForm({
     if (!pendingSubmitData) return;
     
     setBudgetBlockedDialogOpen(false);
-    
-    // Proceed with save, forcing non-billable
     await saveActivityData(pendingSubmitData, true);
     
     toast({
@@ -554,20 +619,19 @@ export function ActivityForm({
   };
 
   // Main submit handler - checks for budget blocks before saving
-  const onSubmit = async (values: any) => {
-    // Check if this is a billable activity on a blocked budget
+  const onSubmit = async (values: UnifiedActivityFormValues) => {
     const hasService = values.case_service_id && values.case_service_id !== "none";
     
     if (hasService && consumption?.isBlocked) {
-      // Store the pending data and show dialog
       setPendingSubmitData(values);
       setBudgetBlockedDialogOpen(true);
       return;
     }
     
-    // Normal save flow
     await saveActivityData(values, false);
   };
+
+  const statusOptions = getStatusOptions(isScheduled);
 
   return (
     <>
@@ -575,7 +639,7 @@ export function ActivityForm({
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {editingActivity ? `Edit ${activityType === "task" ? "Task" : "Event"}` : `Add New ${activityType === "task" ? "Task" : "Event"}`}
+            {editingActivity ? `Edit Activity` : `Add New Activity`}
           </DialogTitle>
           {caseTitle && (
             <button
@@ -623,6 +687,25 @@ export function ActivityForm({
               )}
             />
 
+            {/* Schedule Toggle - Phase 2 Unified Form */}
+            <div className="flex items-center justify-between rounded-lg border border-border p-4 bg-muted/30">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Clock className="h-4 w-4" />
+                  Schedule this activity
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {isScheduled 
+                    ? "This activity will appear on the calendar" 
+                    : "Add specific date/time to show on calendar"}
+                </p>
+              </div>
+              <Switch
+                checked={isScheduled}
+                onCheckedChange={handleScheduleToggle}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="status"
@@ -639,21 +722,11 @@ export function ActivityForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {activityType === "task" ? (
-                        <>
-                          <SelectItem value="to_do">To Do</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="blocked">Blocked</SelectItem>
-                          <SelectItem value="done">Done</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </>
-                      ) : (
-                        <>
-                          <SelectItem value="scheduled">Scheduled</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                        </>
-                      )}
+                      {statusOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -690,8 +763,8 @@ export function ActivityForm({
               )}
             />
 
-            {/* Link to Service - for budget tracking and invoicing */}
-            {activityType === "task" ? (
+            {/* Service Selection - available for all activities now */}
+            {!isScheduled ? (
               <FormField
                 control={form.control}
                 name="case_service_id"
@@ -743,16 +816,16 @@ export function ActivityForm({
                 )}
               />
             ) : (
-              /* Events: Show info that costs are derived from updates */
               <div className="rounded-lg border border-muted bg-muted/30 p-3">
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Link className="h-4 w-4 shrink-0" />
-                  <span>Costs shown are derived from updates. Create an update after this event to log time and expenses.</span>
+                  <span>Costs for scheduled activities are derived from updates. Create an update after this activity to log time and expenses.</span>
                 </p>
               </div>
             )}
 
-            {activityType === "task" ? (
+            {/* Due Date - shown when NOT scheduled */}
+            {!isScheduled && (
               <FormField
                 control={form.control}
                 name="due_date"
@@ -795,7 +868,10 @@ export function ActivityForm({
                   </FormItem>
                 )}
               />
-            ) : (
+            )}
+
+            {/* Scheduled Date/Time Fields - shown when scheduled */}
+            {isScheduled && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4">
                   <FormField
@@ -848,7 +924,7 @@ export function ActivityForm({
                       <FormItem className="flex flex-col space-y-2">
                         <FormLabel>Start Time</FormLabel>
                         <FormControl>
-                          <Input type="time" className="w-full h-9" {...field} />
+                          <Input type="time" className="w-full h-9" {...field} value={field.value || ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -907,7 +983,7 @@ export function ActivityForm({
                       <FormItem className="flex flex-col space-y-2">
                         <FormLabel>End Time</FormLabel>
                         <FormControl>
-                          <Input type="time" className="w-full h-9" {...field} />
+                          <Input type="time" className="w-full h-9" {...field} value={field.value || ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -915,7 +991,7 @@ export function ActivityForm({
                   />
                 </div>
 
-                {/* Address field for events */}
+                {/* Address field for scheduled activities */}
                 <FormField
                   control={form.control}
                   name="address"
@@ -980,7 +1056,7 @@ export function ActivityForm({
                 Cancel
               </Button>
               <div className="flex flex-col-reverse sm:flex-row gap-3">
-                {editingActivity && activityType === "event" && onDuplicate && (
+                {editingActivity && isScheduled && onDuplicate && (
                   <Button
                     type="button"
                     variant="outline"
@@ -1000,7 +1076,9 @@ export function ActivityForm({
                   </Button>
                 )}
                 <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
-                  {editingActivity ? `Update ${activityType === "task" ? "Task" : "Event"}` : `Add ${activityType === "task" ? "Task" : "Event"}`}
+                  {editingActivity 
+                    ? `Update ${isScheduled ? "Event" : "Task"}` 
+                    : `Add ${isScheduled ? "Event" : "Task"}`}
                 </Button>
               </div>
             </div>
@@ -1015,7 +1093,6 @@ export function ActivityForm({
       onOpenChange={(open) => {
         setBillingPromptOpen(open);
         if (!open) {
-          // When dialog closes, close the activity form and trigger success
           onOpenChange(false);
           onSuccess();
         }
@@ -1029,7 +1106,7 @@ export function ActivityForm({
           caseServiceInstanceId: billingEligibility.serviceInstanceId!,
           caseId: billingEligibility.caseId!,
           organizationId: billingEligibility.organizationId!,
-          accountId: billingEligibility.accountId,  // Required per SYSTEM PROMPT 8
+          accountId: billingEligibility.accountId,
           serviceName: billingEligibility.serviceName!,
           pricingModel: billingEligibility.pricingModel!,
           quantity: billingEligibility.quantity!,
@@ -1039,7 +1116,6 @@ export function ActivityForm({
         });
         
         if (result.success) {
-          // SYSTEM PROMPT 9: Show budget forecast warning if pending item triggers it
           if (result.budgetWarning?.isForecastWarning) {
             toast({
               title: result.budgetWarning.isForecastExceeded ? "Budget Warning" : "Budget Notice",
