@@ -1,0 +1,7 @@
+external_record_id,external_case_id,activity_type,title,description,status,due_date,start_time,end_time,is_scheduled,address,assigned_to_email,created_at
+ACT-001,CASE-001,task,Review surveillance footage,Review and annotate video from Day 1,completed,2024-01-21,,,,inv1@company.com,2024-01-20T17:00:00Z
+ACT-002,CASE-001,event,Client status call,Weekly status update with adjuster,completed,2024-01-22,09:00,10:00,true,,manager@ourcompany.com,2024-01-20T08:00:00Z
+ACT-003,CASE-001,task,Prepare final report,Compile all findings into final report,to_do,2024-02-15,,,,manager@ourcompany.com,2024-01-15T09:00:00Z
+ACT-004,CASE-002,task,Background check,Complete background verification on subject,in_progress,2024-02-05,,,,inv2@company.com,2024-02-01T09:00:00Z
+ACT-005,CASE-002,event,Site inspection,Inspect property at claim location,scheduled,2024-02-15,10:00,12:00,true,123 Main St City ST 12345,inv1@company.com,2024-01-15T09:00:00Z
+ACT-006,CASE-002,event,Surveillance day 1,Conduct field surveillance,pending,2024-02-10,06:00,14:00,true,456 Oak Ave City ST 67890,inv2@company.com,2024-02-05T10:00:00Z

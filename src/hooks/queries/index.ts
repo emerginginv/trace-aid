@@ -8,10 +8,10 @@
  * - Background refetching
  * 
  * @example
- * import { useCasesQuery, useContactsQuery, useAccountsQuery } from '@/hooks/queries';
+ * import { useCasesQuery, useContactsQuery, useAccountsQuery, useActivitiesQuery } from '@/hooks/queries';
  * 
  * function MyComponent() {
- *   const { data: cases, isLoading } = useCasesQuery({ status: 'active' });
+ *   const { data: activities, isLoading } = useActivitiesQuery({ status: 'pending' });
  *   // ...
  * }
  */
@@ -54,18 +54,23 @@ export {
 } from './useAccountsQuery';
 export type { Account, AccountInput } from './useAccountsQuery';
 
-// Activities (Tasks & Events)
+// Activities (Unified - replaces separate Tasks & Events)
 export {
   useActivitiesQuery,
-  useTasksQuery,
-  useEventsQuery,
-  usePendingTasksQuery,
+  usePendingActivitiesQuery,
   useCreateActivity,
   useUpdateActivity,
   useToggleActivityComplete,
   useDeleteActivity,
+  // Helper functions
+  isScheduledActivity,
+  getActivityDisplayType,
+  // Deprecated - kept for backwards compatibility
+  useTasksQuery,
+  useEventsQuery,
+  usePendingTasksQuery,
 } from './useActivitiesQuery';
-export type { Activity, ActivityInput } from './useActivitiesQuery';
+export type { Activity, ActivityInput, ActivityType } from './useActivitiesQuery';
 
 // Expenses & Time Entries
 export {

@@ -4,15 +4,21 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from 'sonner';
 import type { ActivityStatus } from '@/types/import';
 
+/**
+ * Activity type values - all activities use activity_type as a classification label
+ */
+export type ActivityType = 'task' | 'event' | 'meeting' | 'call' | 'deadline' | 'surveillance' | 'site_visit';
+
 export interface Activity {
   id: string;
   title: string;
   description?: string;
-  activity_type: 'task' | 'event';
+  activity_type: ActivityType;
   status: ActivityStatus;
   due_date?: string;
   start_time?: string;
   end_time?: string;
+  end_date?: string;
   completed?: boolean;
   completed_at?: string;
   case_id: string;
@@ -20,30 +26,67 @@ export interface Activity {
   user_id: string;
   created_at: string;
   updated_at?: string;
-  is_scheduled?: boolean; // Computed column
+  is_scheduled?: boolean;
+  address?: string | null;
+  case_service_instance_id?: string | null;
+  organization_id?: string;
 }
 
 export type ActivityInput = Omit<Activity, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 
+/**
+ * Unified options for querying activities
+ */
 interface UseActivitiesQueryOptions {
   caseId?: string;
+  /** Filter by specific activity types */
+  activityTypes?: ActivityType[];
+  /** Legacy: Single activity type filter (deprecated, use activityTypes instead) */
   activityType?: 'task' | 'event';
-  status?: string;
+  status?: string | string[];
   completed?: boolean;
   assignedUserId?: string;
+  /** Filter by whether activity has scheduled times */
+  hasScheduledTime?: boolean;
+  /** Only return activities with a due_date */
+  hasDueDate?: boolean;
   limit?: number;
   enabled?: boolean;
 }
 
 /**
- * React Query hook for fetching activities (tasks/events) with caching.
+ * Helper functions for activity classification
+ */
+export const isScheduledActivity = (activity: Activity): boolean => {
+  return activity.is_scheduled === true || 
+    (activity.start_time != null && activity.end_time != null);
+};
+
+export const getActivityDisplayType = (activity: Activity): 'Scheduled' | 'Task' => {
+  return isScheduledActivity(activity) ? 'Scheduled' : 'Task';
+};
+
+/**
+ * React Query hook for fetching activities with flexible filtering.
+ * This is the canonical hook for all activity queries.
  */
 export function useActivitiesQuery(options: UseActivitiesQueryOptions = {}) {
   const { organization } = useOrganization();
-  const { caseId, activityType, status, completed, assignedUserId, limit = 100, enabled = true } = options;
+  const { 
+    caseId, 
+    activityTypes, 
+    activityType, // Legacy support
+    status, 
+    completed, 
+    assignedUserId, 
+    hasScheduledTime,
+    hasDueDate,
+    limit = 100, 
+    enabled = true 
+  } = options;
 
   return useQuery({
-    queryKey: ['activities', organization?.id, caseId, activityType, status, completed, assignedUserId, limit],
+    queryKey: ['activities', organization?.id, caseId, activityTypes, activityType, status, completed, assignedUserId, hasScheduledTime, hasDueDate, limit],
     queryFn: async () => {
       if (!organization?.id) return [];
 
@@ -57,12 +100,19 @@ export function useActivitiesQuery(options: UseActivitiesQueryOptions = {}) {
         query = query.eq('case_id', caseId);
       }
 
-      if (activityType) {
+      // Support both new activityTypes array and legacy activityType string
+      if (activityTypes && activityTypes.length > 0) {
+        query = query.in('activity_type', activityTypes);
+      } else if (activityType) {
         query = query.eq('activity_type', activityType);
       }
 
       if (status) {
-        query = query.eq('status', status);
+        if (Array.isArray(status)) {
+          query = query.in('status', status);
+        } else {
+          query = query.eq('status', status);
+        }
       }
 
       if (completed !== undefined) {
@@ -71,6 +121,18 @@ export function useActivitiesQuery(options: UseActivitiesQueryOptions = {}) {
 
       if (assignedUserId) {
         query = query.eq('assigned_user_id', assignedUserId);
+      }
+
+      // Filter by scheduled vs unscheduled
+      if (hasScheduledTime === true) {
+        query = query.not('start_time', 'is', null);
+      } else if (hasScheduledTime === false) {
+        query = query.is('start_time', null);
+      }
+
+      // Filter by has due date
+      if (hasDueDate === true) {
+        query = query.not('due_date', 'is', null);
       }
 
       if (limit) {
@@ -87,23 +149,35 @@ export function useActivitiesQuery(options: UseActivitiesQueryOptions = {}) {
 }
 
 /**
- * Convenience hook for fetching tasks only.
+ * @deprecated Use useActivitiesQuery with activityTypes filter instead
+ * Kept for backwards compatibility - will be removed in next major release
  */
-export function useTasksQuery(options: Omit<UseActivitiesQueryOptions, 'activityType'> = {}) {
+export function useTasksQuery(options: Omit<UseActivitiesQueryOptions, 'activityType' | 'activityTypes'> = {}) {
+  console.warn('useTasksQuery is deprecated. Use useActivitiesQuery({ activityTypes: ["task"] }) instead.');
   return useActivitiesQuery({ ...options, activityType: 'task' });
 }
 
 /**
- * Convenience hook for fetching events only.
+ * @deprecated Use useActivitiesQuery with activityTypes filter instead
+ * Kept for backwards compatibility - will be removed in next major release
  */
-export function useEventsQuery(options: Omit<UseActivitiesQueryOptions, 'activityType'> = {}) {
+export function useEventsQuery(options: Omit<UseActivitiesQueryOptions, 'activityType' | 'activityTypes'> = {}) {
+  console.warn('useEventsQuery is deprecated. Use useActivitiesQuery({ activityTypes: ["event"] }) instead.');
   return useActivitiesQuery({ ...options, activityType: 'event' });
 }
 
 /**
- * Hook for pending tasks (uncompleted).
+ * Hook for pending activities (uncompleted tasks and events)
+ */
+export function usePendingActivitiesQuery(options: Omit<UseActivitiesQueryOptions, 'completed'> = {}) {
+  return useActivitiesQuery({ ...options, completed: false });
+}
+
+/**
+ * @deprecated Use usePendingActivitiesQuery instead
  */
 export function usePendingTasksQuery(options: Omit<UseActivitiesQueryOptions, 'activityType' | 'completed'> = {}) {
+  console.warn('usePendingTasksQuery is deprecated. Use usePendingActivitiesQuery instead.');
   return useActivitiesQuery({ ...options, activityType: 'task', completed: false });
 }
 

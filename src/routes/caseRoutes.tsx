@@ -1,12 +1,11 @@
-import { Route } from "react-router-dom";
+import { Route, Navigate } from "react-router-dom";
 import { RouteWrapper } from "./RouteWrapper";
 import Cases from "@/pages/Cases";
 import CaseDetail from "@/pages/CaseDetail";
 import { CaseWizard } from "@/components/case-wizard";
 import SubjectDetail from "@/pages/SubjectDetail";
 import Subjects from "@/pages/Subjects";
-import Tasks from "@/pages/Tasks";
-import Events from "@/pages/Events";
+import Activities from "@/pages/Activities";
 import Updates from "@/pages/Updates";
 import UpdateDetail from "@/pages/UpdateDetail";
 import CaseUpdateDetail from "@/pages/CaseUpdateDetail";
@@ -101,21 +100,23 @@ export const caseRoutes = (
         </RouteWrapper>
       }
     />
+    {/* Unified Activities route */}
     <Route
-      path="/tasks"
+      path="/activities"
       element={
         <RouteWrapper blockVendors>
-          <Tasks />
+          <Activities />
         </RouteWrapper>
       }
     />
+    {/* Backwards compatibility redirects */}
+    <Route
+      path="/tasks"
+      element={<Navigate to="/activities?type=task" replace />}
+    />
     <Route
       path="/events"
-      element={
-        <RouteWrapper blockVendors>
-          <Events />
-        </RouteWrapper>
-      }
+      element={<Navigate to="/activities?type=event" replace />}
     />
     <Route
       path="/updates"
