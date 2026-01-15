@@ -3226,6 +3226,103 @@ export type Database = {
           },
         ]
       }
+      expense_entries: {
+        Row: {
+          case_id: string
+          created_at: string
+          event_id: string | null
+          id: string
+          item_type: string
+          notes: string | null
+          organization_id: string
+          quantity: number
+          rate: number
+          receipt_url: string | null
+          status: Database["public"]["Enums"]["entry_status"]
+          total: number | null
+          update_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          item_type: string
+          notes?: string | null
+          organization_id: string
+          quantity?: number
+          rate?: number
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["entry_status"]
+          total?: number | null
+          update_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          item_type?: string
+          notes?: string | null
+          organization_id?: string
+          quantity?: number
+          rate?: number
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["entry_status"]
+          total?: number | null
+          update_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_entries_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_entries_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "case_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_entries_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "case_updates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_reports: {
         Row: {
           case_id: string
@@ -6899,6 +6996,100 @@ export type Database = {
           },
         ]
       }
+      time_entries: {
+        Row: {
+          case_id: string
+          created_at: string
+          event_id: string | null
+          hours: number
+          id: string
+          item_type: string
+          notes: string | null
+          organization_id: string
+          rate: number
+          status: Database["public"]["Enums"]["entry_status"]
+          total: number | null
+          update_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          event_id?: string | null
+          hours?: number
+          id?: string
+          item_type: string
+          notes?: string | null
+          organization_id: string
+          rate?: number
+          status?: Database["public"]["Enums"]["entry_status"]
+          total?: number | null
+          update_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          event_id?: string | null
+          hours?: number
+          id?: string
+          item_type?: string
+          notes?: string | null
+          organization_id?: string
+          rate?: number
+          status?: Database["public"]["Enums"]["entry_status"]
+          total?: number | null
+          update_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "case_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "case_updates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trust_center_config: {
         Row: {
           content_markdown: string
@@ -8620,6 +8811,12 @@ export type Database = {
       contract_type: "msa" | "sow" | "order_form" | "dpa" | "nda" | "other"
       data_region: "us" | "eu"
       disaster_severity: "minor" | "major" | "critical"
+      entry_status:
+        | "draft"
+        | "pending_review"
+        | "approved"
+        | "declined"
+        | "billed"
       health_risk_level: "healthy" | "watch" | "at_risk"
       incident_severity: "minor" | "major" | "critical"
       incident_status:
@@ -8826,6 +9023,13 @@ export const Constants = {
       contract_type: ["msa", "sow", "order_form", "dpa", "nda", "other"],
       data_region: ["us", "eu"],
       disaster_severity: ["minor", "major", "critical"],
+      entry_status: [
+        "draft",
+        "pending_review",
+        "approved",
+        "declined",
+        "billed",
+      ],
       health_risk_level: ["healthy", "watch", "at_risk"],
       incident_severity: ["minor", "major", "critical"],
       incident_status: [
