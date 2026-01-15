@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Building2, Mail, Phone, MapPin, Edit, Users } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, Building2, Mail, Phone, MapPin, Edit, Users, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AccountDetailSkeleton } from "@/components/ui/detail-page-skeleton";
@@ -14,6 +15,7 @@ import { RelatedCasesWidget } from "@/components/shared/RelatedCasesWidget";
 import { RelatedInvoicesWidget } from "@/components/shared/RelatedInvoicesWidget";
 import { EntityActivityWidget } from "@/components/shared/EntityActivityWidget";
 import { AccountBillingRatesTab } from "@/components/accounts/AccountBillingRatesTab";
+import { useAccountPricingStatus } from "@/hooks/useAccountPricingStatus";
 
 interface Account {
   id: string;
@@ -39,11 +41,20 @@ interface Contact {
 const AccountDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { organization } = useOrganization();
   const { isAdmin, isManager } = useUserRole();
   const [account, setAccount] = useState<Account | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Check if we're in pricing setup mode
+  const isSetupMode = searchParams.get('setup') === 'pricing';
+  
+  // Fetch pricing status for admin/manager
+  const { data: pricingStatus } = useAccountPricingStatus(
+    (isAdmin || isManager) ? id || null : null
+  );
 
   useSetBreadcrumbs(
     account
@@ -114,6 +125,42 @@ const AccountDetail = () => {
 
   return (
     <div className="space-y-6">
+      {/* Pricing Status Alert */}
+      {(isAdmin || isManager) && pricingStatus && pricingStatus.unconfigured > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Missing Client Pricing</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              {pricingStatus.unconfigured} of {pricingStatus.total} billing items have no rate configured. 
+              Invoicing will be blocked until rates are set.
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-4 whitespace-nowrap"
+              onClick={() => {
+                const element = document.getElementById('billing-rates-section');
+                element?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Configure Rates →
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Setup Mode Alert */}
+      {isSetupMode && pricingStatus && pricingStatus.unconfigured === 0 && (
+        <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800">
+          <AlertCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <AlertTitle className="text-green-800 dark:text-green-200">Pricing Configured</AlertTitle>
+          <AlertDescription className="text-green-700 dark:text-green-300">
+            All billing items have rates configured. This account is ready for invoicing.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate("/accounts")}>
@@ -237,11 +284,13 @@ const AccountDetail = () => {
 
       {/* Billing Rates - Admin/Manager only (INVARIANT 1) */}
       {(isAdmin || isManager) && id && (
-        <AccountBillingRatesTab
-          accountId={id}
-          accountName={account.name}
-          canEdit={isAdmin || isManager}
-        />
+        <div id="billing-rates-section">
+          <AccountBillingRatesTab
+            accountId={id}
+            accountName={account.name}
+            canEdit={isAdmin || isManager}
+          />
+        </div>
       )}
 
       <EntityActivityWidget entityType="account" entityId={account.id} />
