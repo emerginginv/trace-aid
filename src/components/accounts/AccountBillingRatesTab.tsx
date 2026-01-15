@@ -147,8 +147,8 @@ export function AccountBillingRatesTab({
     }
   };
 
-  const formatRate = (rate: number | null, rateType: string) => {
-    if (rate === null) return "—";
+  const formatRate = (rate: number | null | undefined, rateType: string) => {
+    if (rate === null || rate === undefined) return "—";
     const formatted = `$${rate.toFixed(2)}`;
     switch (rateType) {
       case "hourly":
