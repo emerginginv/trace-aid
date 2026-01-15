@@ -111,8 +111,8 @@ export function AdminBillingDiagnosticsBanner({
             value={diagnostics.service_billable} 
           />
           <DiagnosticItem 
-            label="Pricing rule found" 
-            value={diagnostics.pricing_rule_found} 
+            label="Rate found" 
+            value={diagnostics.rate_found} 
           />
           <DiagnosticItem 
             label="Not already billed" 

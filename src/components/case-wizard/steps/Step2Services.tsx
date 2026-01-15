@@ -27,7 +27,6 @@ export interface SelectedService {
 interface Step2ServicesProps {
   caseId: string;
   organizationId: string;
-  pricingProfileId: string | null; // Deprecated - kept for interface compatibility
   onBack: () => void;
   onContinue: (selectedServices: SelectedService[]) => void;
 }

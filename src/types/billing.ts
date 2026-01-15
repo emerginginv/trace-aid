@@ -18,8 +18,8 @@ export interface BillingEvaluationDiagnostics {
   /** Whether the service is marked as billable */
   service_billable: boolean;
   
-  /** Whether a pricing rule was found for the service */
-  pricing_rule_found: boolean;
+  /** Whether a rate was found for the service (from price lists) */
+  rate_found: boolean;
   
   /** Whether this activity has already produced a billing item */
   already_billed: boolean;
