@@ -7,21 +7,38 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { DollarSign, Plus, Loader2 } from "lucide-react";
+import { DollarSign, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { useOnlyExpensesQuery, useCreateExpense } from "@/hooks/queries/useExpensesQuery";
 import { useCasesQuery } from "@/hooks/queries/useCasesQuery";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+interface MyExpenseEntry {
+  id: string;
+  case_id: string;
+  item_type: string;
+  notes: string | null;
+  quantity: number;
+  rate: number;
+  total: number;
+  status: string;
+  created_at: string;
+  receipt_url: string | null;
+  case_number?: string;
+  case_title?: string;
+}
 
 export default function Expenses() {
   useSetBreadcrumbs([{ label: "My Expenses" }]);
   
   const { organization } = useOrganization();
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Form state
@@ -31,10 +48,93 @@ export default function Expenses() {
   const [category, setCategory] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Use React Query hooks
-  const { data: expenses = [], isLoading } = useOnlyExpensesQuery();
+  // Query expense_entries for current user
+  const { data: expenses = [], isLoading } = useQuery({
+    queryKey: ["my-expense-entries", organization?.id],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !organization?.id) return [];
+
+      const { data, error } = await supabase
+        .from("expense_entries")
+        .select(`
+          id,
+          case_id,
+          item_type,
+          notes,
+          quantity,
+          rate,
+          total,
+          status,
+          created_at,
+          receipt_url,
+          cases!inner (
+            case_number,
+            title
+          )
+        `)
+        .eq("organization_id", organization.id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((entry: any) => ({
+        id: entry.id,
+        case_id: entry.case_id,
+        item_type: entry.item_type,
+        notes: entry.notes,
+        quantity: entry.quantity,
+        rate: entry.rate,
+        total: entry.total,
+        status: entry.status,
+        created_at: entry.created_at,
+        receipt_url: entry.receipt_url,
+        case_number: entry.cases?.case_number,
+        case_title: entry.cases?.title,
+      })) as MyExpenseEntry[];
+    },
+    enabled: !!organization?.id,
+  });
+
   const { data: cases = [] } = useCasesQuery();
-  const createExpense = useCreateExpense();
+
+  // Create expense mutation - insert into expense_entries
+  const createExpenseMutation = useMutation({
+    mutationFn: async (expenseData: {
+      case_id: string;
+      item_type: string;
+      quantity: number;
+      rate: number;
+      notes: string | null;
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !organization?.id) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from("expense_entries")
+        .insert({
+          case_id: expenseData.case_id,
+          organization_id: organization.id,
+          user_id: user.id,
+          item_type: expenseData.item_type,
+          quantity: expenseData.quantity,
+          rate: expenseData.rate,
+          total: expenseData.quantity * expenseData.rate,
+          notes: expenseData.notes,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-expense-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["expense-entries"] });
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,15 +144,12 @@ export default function Expenses() {
     }
 
     try {
-      await createExpense.mutateAsync({
+      await createExpenseMutation.mutateAsync({
         case_id: selectedCaseId,
-        finance_type: "expense",
-        description,
-        amount: parseFloat(amount),
-        category: category || null,
-        notes: notes || null,
-        date: new Date().toISOString().split('T')[0],
-        status: "pending",
+        item_type: category || "other",
+        quantity: 1,
+        rate: parseFloat(amount),
+        notes: description + (notes ? `\n${notes}` : ""),
       });
 
       toast.success("Expense submitted successfully");
@@ -73,16 +170,17 @@ export default function Expenses() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      pending: { variant: "secondary" },
-      approved: { variant: "default" },
-      rejected: { variant: "destructive" },
+    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+      pending: { variant: "secondary", label: "Pending" },
+      approved: { variant: "default", label: "Approved" },
+      declined: { variant: "destructive", label: "Declined" },
+      committed: { variant: "outline", label: "Billed" },
     };
 
-    const variant = variants[status] || variants.pending;
+    const config = variants[status] || variants.pending;
     return (
-      <Badge variant={variant.variant}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <Badge variant={config.variant}>
+        {config.label}
       </Badge>
     );
   };
@@ -99,7 +197,7 @@ export default function Expenses() {
     <div className="space-y-6">
       <PageHeader
         title="My Expenses"
-        description="Submit and track your case-related expenses"
+        description="Submit and track your case-related expenses for reimbursement"
         addButton={{
           label: "New Expense",
           onClick: () => setDialogOpen(true),
@@ -189,8 +287,8 @@ export default function Expenses() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createExpense.isPending}>
-                {createExpense.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit"}
+              <Button type="submit" disabled={createExpenseMutation.isPending}>
+                {createExpenseMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit"}
               </Button>
             </div>
           </form>
@@ -219,7 +317,7 @@ export default function Expenses() {
                   <TableHead>Date</TableHead>
                   <TableHead>Case</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -227,7 +325,7 @@ export default function Expenses() {
               <TableBody>
                 {expenses.map((expense) => (
                   <TableRow key={expense.id}>
-                    <TableCell>{format(new Date(expense.date), "MMM d, yyyy")}</TableCell>
+                    <TableCell>{format(new Date(expense.created_at), "MMM d, yyyy")}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{expense.case_number}</span>
@@ -236,18 +334,18 @@ export default function Expenses() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>{expense.description}</TableCell>
+                    <TableCell>{expense.notes || "-"}</TableCell>
                     <TableCell>
-                      {expense.category ? (
+                      {expense.item_type ? (
                         <Badge variant="outline" className="capitalize">
-                          {expense.category}
+                          {expense.item_type}
                         </Badge>
                       ) : (
                         "-"
                       )}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${expense.amount.toFixed(2)}
+                      ${expense.total.toFixed(2)}
                     </TableCell>
                     <TableCell>{getStatusBadge(expense.status || "pending")}</TableCell>
                   </TableRow>
