@@ -2,13 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from 'sonner';
+import type { ActivityStatus } from '@/types/import';
 
 export interface Activity {
   id: string;
   title: string;
   description?: string;
   activity_type: 'task' | 'event';
-  status: string;
+  status: ActivityStatus;
   due_date?: string;
   start_time?: string;
   end_time?: string;
@@ -19,6 +20,7 @@ export interface Activity {
   user_id: string;
   created_at: string;
   updated_at?: string;
+  is_scheduled?: boolean; // Computed column
 }
 
 export type ActivityInput = Omit<Activity, 'id' | 'user_id' | 'created_at' | 'updated_at'>;

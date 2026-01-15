@@ -118,7 +118,7 @@ export const updateImportSchema = z.object({
 });
 
 const activityTypeSchema = z.enum(['task', 'event', 'call', 'meeting', 'deadline']);
-const activityStatusSchema = z.enum(['to_do', 'in_progress', 'completed']);
+const activityStatusSchema = z.enum(['to_do', 'scheduled', 'in_progress', 'blocked', 'done', 'completed', 'cancelled']);
 
 export const activityImportSchema = z.object({
   external_record_id: z.string().min(1, 'External record ID is required'),

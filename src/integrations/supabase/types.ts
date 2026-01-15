@@ -668,6 +668,7 @@ export type Database = {
           id: string
           import_batch_id: string | null
           import_timestamp: string | null
+          is_scheduled: boolean | null
           locked_at: string | null
           locked_by_invoice_id: string | null
           organization_id: string | null
@@ -695,6 +696,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
+          is_scheduled?: boolean | null
           locked_at?: string | null
           locked_by_invoice_id?: string | null
           organization_id?: string | null
@@ -722,6 +724,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
+          is_scheduled?: boolean | null
           locked_at?: string | null
           locked_by_invoice_id?: string | null
           organization_id?: string | null

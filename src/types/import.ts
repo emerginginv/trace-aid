@@ -217,7 +217,7 @@ export interface UpdateImport {
 }
 
 export type ActivityType = 'task' | 'event' | 'call' | 'meeting' | 'deadline';
-export type ActivityStatus = 'to_do' | 'in_progress' | 'completed';
+export type ActivityStatus = 'to_do' | 'scheduled' | 'in_progress' | 'blocked' | 'done' | 'completed' | 'cancelled';
 
 /**
  * Activity Import (maps to case_activities)
