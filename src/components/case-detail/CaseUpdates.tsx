@@ -5,7 +5,7 @@ import { CaseTabSkeleton } from "./CaseTabSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, ShieldAlert, Download, Sparkles, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ShieldAlert, Download, Sparkles } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { toast } from "@/hooks/use-toast";
@@ -450,7 +450,6 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                         <div className="flex items-center gap-2">
                           {update.title}
                           {update.is_ai_summary && <AIBadge size="sm" />}
-                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
                         </div>
                       </TableCell>
                     )}
@@ -468,17 +467,12 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
                     {isVisible("actions") && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRowClick(update.id);
-                            }}
-                            title="View details"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
+                          {/**
+                           * @deprecated Since: 2026-01-15
+                           * Removed: "View details" ExternalLink button
+                           * Reason: Row click now handles navigation to dedicated Update Details page
+                           * The entire row is clickable, so a separate "View details" button is redundant
+                           */}
                           {canEditUpdates && (
                             <Button 
                               variant="ghost" 

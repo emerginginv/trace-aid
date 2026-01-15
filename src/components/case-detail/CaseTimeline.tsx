@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { History, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ interface CaseTimelineProps {
 
 export function CaseTimeline({ caseId }: CaseTimelineProps) {
   const [, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [entryTypeFilter, setEntryTypeFilter] = useState<'all' | TimelineEntryType>('all');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -24,13 +25,18 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
   });
 
   const handleNavigate = useCallback((entry: TimelineEntry) => {
-    // Navigate to the source record's tab
+    // Navigate to the source record's tab or detail page
     switch (entry.sourceTable) {
       case 'case_subjects':
         setSearchParams({ tab: 'subjects' }, { replace: true });
         break;
       case 'case_updates':
-        setSearchParams({ tab: 'updates' }, { replace: true });
+        /**
+         * @deprecated Since: 2026-01-15
+         * Previous behavior: setSearchParams({ tab: 'updates' }, { replace: true });
+         * New behavior: Navigate directly to dedicated Update Details page
+         */
+        navigate(`/cases/${caseId}/updates/${entry.sourceId}`);
         break;
       case 'case_activities':
         setSearchParams({ tab: 'activities' }, { replace: true });
@@ -44,7 +50,7 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
       default:
         break;
     }
-  }, [setSearchParams]);
+  }, [setSearchParams, navigate, caseId]);
 
   return (
     <Card>

@@ -56,6 +56,12 @@ const Dashboard = () => {
   const [editingEvent, setEditingEvent] = useState<DashboardEvent | null>(null);
   const [editingUpdate, setEditingUpdate] = useState<DashboardUpdate | null>(null);
   const [editingExpense, setEditingExpense] = useState<DashboardExpense | null>(null);
+  /**
+   * @deprecated Since: 2026-01-15
+   * Reason: Inline expand replaced with dedicated Update Details page
+   * This state is kept for backwards compatibility but is no longer used
+   * Remove after: Next major release
+   */
   const [expandedUpdate, setExpandedUpdate] = useState<string | null>(null);
   const [expandedExpense, setExpandedExpense] = useState<string | null>(null);
   const isDuplicatingEventRef = useRef(false);
