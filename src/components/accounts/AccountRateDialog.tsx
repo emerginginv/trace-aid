@@ -83,9 +83,12 @@ export function AccountRateDialog({
   };
 
   const formatDefaultRate = () => {
-    if (item?.defaultRate === null) return "Not set";
+    // Guard against null/undefined item
+    if (!item) return "—";
+    if (item.defaultRate === null || item.defaultRate === undefined) return "Not set";
+    
     const formatted = `$${item.defaultRate.toFixed(2)}`;
-    switch (item?.rateType) {
+    switch (item.rateType) {
       case "hourly":
         return `${formatted}/hr`;
       case "variable":
@@ -96,6 +99,20 @@ export function AccountRateDialog({
         return formatted;
     }
   };
+
+  // Guard: Show loading state if item data is not available
+  if (!item) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-muted-foreground">Loading...</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
