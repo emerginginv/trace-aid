@@ -116,7 +116,6 @@ export function CaseWizard() {
           <Step2Services
             caseId={state.draftCaseId!}
             organizationId={organizationId}
-            pricingProfileId={state.caseData?.pricing_profile_id || null}
             onBack={goBack}
             onContinue={(services) => {
               setSelectedServices(services);

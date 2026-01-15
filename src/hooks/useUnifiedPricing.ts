@@ -57,8 +57,9 @@ export function useUnifiedPricingItems(options: UseUnifiedPricingItemsOptions = 
       // Resolve rates for each item
       const resolvedItems: UnifiedPricingItem[] = await Promise.all(
         (items || []).map(async (item: FinanceItem) => {
-          let expenseRate = item.default_expense_rate || 0;
-          let invoiceRate = item.default_invoice_rate || item.default_expense_rate || 0;
+          // NO FALLBACK: Start with null rates, resolve from price lists only
+          let expenseRate: number | null = null;
+          let invoiceRate: number | null = null;
 
           // Resolve employee-specific expense rate if userId provided
           if (options.userId) {
@@ -74,7 +75,7 @@ export function useUnifiedPricingItems(options: UseUnifiedPricingItemsOptions = 
               .limit(1)
               .maybeSingle();
 
-            if (employeeRate?.custom_expense_rate) {
+            if (employeeRate?.custom_expense_rate != null) {
               expenseRate = employeeRate.custom_expense_rate;
             }
           }
@@ -93,9 +94,17 @@ export function useUnifiedPricingItems(options: UseUnifiedPricingItemsOptions = 
               .limit(1)
               .maybeSingle();
 
-            if (clientRate?.custom_invoice_rate) {
+            if (clientRate?.custom_invoice_rate != null) {
               invoiceRate = clientRate.custom_invoice_rate;
             }
+          }
+
+          // Validation: Throw error if rate is required but missing
+          if (options.userId && expenseRate === null) {
+            throw new Error(`Missing pay rate: No expense rate configured for user on "${item.name}". Configure rate in User Profile > Compensation.`);
+          }
+          if (options.accountId && invoiceRate === null) {
+            throw new Error(`Missing billing rate: No invoice rate configured for account on "${item.name}". Configure rate in Account > Billing Rates.`);
           }
 
           return {
@@ -103,8 +112,8 @@ export function useUnifiedPricingItems(options: UseUnifiedPricingItemsOptions = 
             name: item.name,
             description: item.description,
             rateType: item.rate_type as "hourly" | "fixed" | "variable",
-            expenseRate,
-            invoiceRate,
+            expenseRate: expenseRate ?? 0,
+            invoiceRate: invoiceRate ?? 0,
             isExpenseItem: item.is_expense_item,
             isInvoiceItem: item.is_invoice_item,
             financeItemId: item.id,
@@ -144,16 +153,16 @@ export function useResolveExpenseRate() {
 
       if (error) {
         console.error("Error resolving expense rate:", error);
-        // Fallback to fetching from finance_items directly
-        const { data: item } = await supabase
-          .from("finance_items")
-          .select("default_expense_rate")
-          .eq("id", financeItemId)
-          .single();
-        return item?.default_expense_rate || 0;
+        // NO FALLBACK: Return null to indicate missing rate
+        return null;
       }
 
-      return data || 0;
+      // NO FALLBACK: Return null if no rate found
+      if (data === null) {
+        return null;
+      }
+
+      return data;
     },
   });
 }
@@ -184,16 +193,16 @@ export function useResolveInvoiceRate() {
 
       if (error) {
         console.error("Error resolving invoice rate:", error);
-        // Fallback to fetching from finance_items directly
-        const { data: item } = await supabase
-          .from("finance_items")
-          .select("default_invoice_rate, default_expense_rate")
-          .eq("id", financeItemId)
-          .single();
-        return item?.default_invoice_rate || item?.default_expense_rate || 0;
+        // NO FALLBACK: Return null to indicate missing rate
+        return null;
       }
 
-      return data || 0;
+      // NO FALLBACK: Return null if no rate found
+      if (data === null) {
+        return null;
+      }
+
+      return data;
     },
   });
 }
@@ -239,15 +248,12 @@ export function useBatchResolveInvoiceRates() {
         });
 
         if (error) {
-          // Fallback
-          const { data: item } = await supabase
-            .from("finance_items")
-            .select("default_invoice_rate, default_expense_rate")
-            .eq("id", entry.financeItemId)
-            .single();
-          results.set(entry.id, item?.default_invoice_rate || item?.default_expense_rate || 0);
+          // NO FALLBACK: Set null to indicate missing rate
+          results.set(entry.id, 0); // Use 0 as sentinel for missing rate
+          console.warn(`Missing invoice rate for entry ${entry.id}, finance item ${entry.financeItemId}`);
         } else {
-          results.set(entry.id, data || 0);
+          // NO FALLBACK: Use 0 as sentinel if rate is null
+          results.set(entry.id, data ?? 0);
         }
       }
 

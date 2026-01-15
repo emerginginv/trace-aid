@@ -375,10 +375,10 @@ export function CaseServicesTab() {
           <div className="flex items-start gap-3">
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <div className="text-sm text-blue-800 dark:text-blue-200">
-              <p className="font-medium">Services define work, not pricing</p>
+              <p className="font-medium">Services define types of work</p>
               <p className="text-blue-700 dark:text-blue-300 mt-1">
                 Case Services represent types of work performed on cases (e.g., Surveillance, Background Check). 
-                Pricing is configured separately per client in Pricing Profiles.
+                Client billing rates are configured per Account. Staff pay rates are configured per User.
               </p>
             </div>
           </div>

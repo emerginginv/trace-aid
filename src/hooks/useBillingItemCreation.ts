@@ -53,8 +53,6 @@ export interface CreateBillingItemParams {
   pricingModel: string;
   quantity: number;
   rate: number;
-  pricingProfileId?: string;
-  pricingRuleSnapshot?: Record<string, unknown>;
   // SYSTEM PROMPT 9: New required fields
   updateId?: string;    // Links billing item to case_updates.id
   startTime?: string;   // ISO timestamp from confirmation
@@ -104,8 +102,6 @@ export function useBillingItemCreation() {
       pricingModel,
       quantity,
       rate,
-      pricingProfileId,
-      pricingRuleSnapshot,
       // SYSTEM PROMPT 9: New fields
       updateId,
       startTime,
@@ -225,9 +221,7 @@ export function useBillingItemCreation() {
           hours: pricingModel === "hourly" ? quantity : null,
           date: new Date().toISOString().split('T')[0],
           category: pricingModel,                           // Keep for backwards compatibility
-          notes: pricingProfileId 
-            ? `Pricing Profile: ${pricingProfileId}. ${pricingRuleSnapshot ? JSON.stringify(pricingRuleSnapshot) : ''}`
-            : null,
+          notes: null,
           // SYSTEM PROMPT 9 Rules:
           // - Do not approve automatically (status: 'pending_review')
           // - Do not invoice automatically (invoiced: false is default, invoice_id: null)

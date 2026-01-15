@@ -70,7 +70,7 @@ export function useUpdateBillingEligibility() {
       has_linked_activity: false,
       has_service_instance: false,
       service_billable: false,
-      pricing_rule_found: false,
+      rate_found: false,
       already_billed: false,
       eligible_for_billing: false,
       evaluated_at: new Date().toISOString(),
@@ -177,7 +177,7 @@ export function useUpdateBillingEligibility() {
 
       // Update diagnostics based on base result
       diagnostics.service_billable = baseResult.isEligible || !baseResult.reason?.includes("not billable");
-      diagnostics.pricing_rule_found = baseResult.isEligible || !baseResult.reason?.includes("pricing rule");
+      diagnostics.rate_found = baseResult.isEligible || !baseResult.reason?.includes("rate");
       diagnostics.eligible_for_billing = baseResult.isEligible;
       diagnostics.context!.serviceName = baseResult.serviceName;
       diagnostics.context!.pricingModel = baseResult.pricingModel;
