@@ -9,9 +9,11 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AccountDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { RelatedCasesWidget } from "@/components/shared/RelatedCasesWidget";
 import { RelatedInvoicesWidget } from "@/components/shared/RelatedInvoicesWidget";
 import { EntityActivityWidget } from "@/components/shared/EntityActivityWidget";
+import { AccountBillingRatesTab } from "@/components/accounts/AccountBillingRatesTab";
 
 interface Account {
   id: string;
@@ -38,6 +40,7 @@ const AccountDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { organization } = useOrganization();
+  const { isAdmin, isManager } = useUserRole();
   const [account, setAccount] = useState<Account | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,6 +234,15 @@ const AccountDetail = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Billing Rates - Admin/Manager only (INVARIANT 1) */}
+      {(isAdmin || isManager) && id && (
+        <AccountBillingRatesTab
+          accountId={id}
+          accountName={account.name}
+          canEdit={isAdmin || isManager}
+        />
+      )}
 
       <EntityActivityWidget entityType="account" entityId={account.id} />
 

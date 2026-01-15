@@ -1439,7 +1439,6 @@ export type Database = {
           created_by: string | null
           default_budget_amount: number | null
           default_duration_minutes: number | null
-          default_rate: number | null
           description: string | null
           display_order: number
           id: string
@@ -1470,7 +1469,6 @@ export type Database = {
           created_by?: string | null
           default_budget_amount?: number | null
           default_duration_minutes?: number | null
-          default_rate?: number | null
           description?: string | null
           display_order?: number
           id?: string
@@ -1501,7 +1499,6 @@ export type Database = {
           created_by?: string | null
           default_budget_amount?: number | null
           default_duration_minutes?: number | null
-          default_rate?: number | null
           description?: string | null
           display_order?: number
           id?: string
@@ -3471,8 +3468,6 @@ export type Database = {
         Row: {
           classification_code: string | null
           created_at: string | null
-          default_expense_rate: number | null
-          default_invoice_rate: number | null
           default_tax_rate_id: string | null
           description: string | null
           display_order: number | null
@@ -3493,8 +3488,6 @@ export type Database = {
         Insert: {
           classification_code?: string | null
           created_at?: string | null
-          default_expense_rate?: number | null
-          default_invoice_rate?: number | null
           default_tax_rate_id?: string | null
           description?: string | null
           display_order?: number | null
@@ -3515,8 +3508,6 @@ export type Database = {
         Update: {
           classification_code?: string | null
           created_at?: string | null
-          default_expense_rate?: number | null
-          default_invoice_rate?: number | null
           default_tax_rate_id?: string | null
           description?: string | null
           display_order?: number | null
@@ -8119,7 +8110,6 @@ export type Database = {
           created_by: string | null
           default_budget_amount: number | null
           default_duration_minutes: number | null
-          default_rate: number | null
           description: string | null
           display_order: number
           id: string

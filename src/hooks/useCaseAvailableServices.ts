@@ -6,7 +6,6 @@ export interface AvailableService {
   name: string;
   code: string | null;
   pricing_model: string | null;
-  rate: number | null;
   is_billable: boolean;
 }
 
@@ -33,9 +32,10 @@ export function useCaseAvailableServices(caseId: string | undefined) {
       }
 
       // Fetch all active services for this organization
+      // Note: Rates are now account-specific (client_price_list), not service-level
       const { data, error } = await supabase
         .from("case_services")
-        .select("id, name, code, default_rate, is_billable")
+        .select("id, name, code, is_billable")
         .eq("organization_id", caseData.organization_id)
         .eq("is_active", true)
         .order("display_order");
@@ -50,7 +50,6 @@ export function useCaseAvailableServices(caseId: string | undefined) {
         name: service.name,
         code: service.code || null,
         pricing_model: "hourly", // Default pricing model
-        rate: service.default_rate,
         is_billable: service.is_billable ?? true,
       })) as AvailableService[];
     },
