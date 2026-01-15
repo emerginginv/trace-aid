@@ -20,8 +20,7 @@ import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import { CaseWizard } from "./components/case-wizard";
 import Subjects from "./pages/Subjects";
-import Tasks from "./pages/Tasks";
-import Events from "./pages/Events";
+import Activities from "./pages/Activities";
 import Updates from "./pages/Updates";
 import SubjectDetail from "./pages/SubjectDetail";
 import Calendar from "./pages/Calendar";
@@ -253,25 +252,18 @@ const App = () => {
           }
         />
         <Route
-          path="/tasks"
+          path="/activities"
           element={
             <ProtectedRoute blockVendors={true}>
               <DashboardLayout>
-                <Tasks />
+                <Activities />
               </DashboardLayout>
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/events"
-          element={
-            <ProtectedRoute blockVendors={true}>
-              <DashboardLayout>
-                <Events />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+        {/* Redirects for backwards compatibility */}
+        <Route path="/tasks" element={<Navigate to="/activities?filter=unscheduled" replace />} />
+        <Route path="/events" element={<Navigate to="/activities?filter=scheduled" replace />} />
         <Route
           path="/updates"
           element={
