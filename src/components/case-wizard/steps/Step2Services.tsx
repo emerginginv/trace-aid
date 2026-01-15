@@ -18,14 +18,6 @@ interface CaseService {
   color: string | null;
 }
 
-interface ServicePricingRule {
-  id: string;
-  case_service_id: string;
-  rate: number | null;
-  pricing_model: string | null;
-  case_service: CaseService;
-}
-
 export interface SelectedService {
   serviceId: string;
   serviceName: string;
@@ -35,7 +27,7 @@ export interface SelectedService {
 interface Step2ServicesProps {
   caseId: string;
   organizationId: string;
-  pricingProfileId: string | null;
+  pricingProfileId: string | null; // Deprecated - kept for interface compatibility
   onBack: () => void;
   onContinue: (selectedServices: SelectedService[]) => void;
 }
@@ -43,81 +35,34 @@ interface Step2ServicesProps {
 export function Step2Services({
   caseId,
   organizationId,
-  pricingProfileId,
   onBack,
   onContinue,
 }: Step2ServicesProps) {
-  const [services, setServices] = useState<ServicePricingRule[]>([]);
+  const [services, setServices] = useState<CaseService[]>([]);
   const [selectedServices, setSelectedServices] = useState<Map<string, SelectedService>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchServices();
-  }, [pricingProfileId, organizationId]);
+  }, [organizationId]);
 
   const fetchServices = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      if (!pricingProfileId) {
-        // Fetch all active services if no pricing profile
-        const { data, error: servicesError } = await supabase
-          .from("case_services")
-          .select("id, name, code, description, default_rate, is_billable, color")
-          .eq("organization_id", organizationId)
-          .eq("is_active", true)
-          .order("display_order");
+      // Fetch all active services for the organization
+      const { data, error: servicesError } = await supabase
+        .from("case_services")
+        .select("id, name, code, description, default_rate, is_billable, color")
+        .eq("organization_id", organizationId)
+        .eq("is_active", true)
+        .order("display_order");
 
-        if (servicesError) throw servicesError;
+      if (servicesError) throw servicesError;
 
-        // Convert to pricing rule format for consistent UI
-        const asRules: ServicePricingRule[] = (data || []).map(s => ({
-          id: s.id,
-          case_service_id: s.id,
-          rate: s.default_rate,
-          pricing_model: "hourly",
-          case_service: s,
-        }));
-
-        setServices(asRules);
-      } else {
-        // Fetch services from pricing profile
-        const { data, error: rulesError } = await supabase
-          .from("service_pricing_rules")
-          .select(`
-            id,
-            case_service_id,
-            default_rate,
-            pricing_model,
-            case_services:case_service_id (
-              id,
-              name,
-              code,
-              description,
-              default_rate,
-              is_billable,
-              color
-            )
-          `)
-          .eq("pricing_profile_id", pricingProfileId);
-
-        if (rulesError) throw rulesError;
-
-        // Map and filter out any null case_services entries
-        const validRules: ServicePricingRule[] = (data || [])
-          .filter((r) => r.case_services !== null)
-          .map((r) => ({
-            id: r.id,
-            case_service_id: r.case_service_id,
-            rate: r.default_rate,
-            pricing_model: r.pricing_model,
-            case_service: r.case_services as unknown as CaseService,
-          }));
-
-        setServices(validRules);
-      }
+      setServices(data || []);
     } catch (err) {
       console.error("Error fetching services:", err);
       setError("Failed to load services");
@@ -126,15 +71,15 @@ export function Step2Services({
     }
   };
 
-  const toggleService = (rule: ServicePricingRule) => {
+  const toggleService = (service: CaseService) => {
     const newSelected = new Map(selectedServices);
     
-    if (newSelected.has(rule.case_service_id)) {
-      newSelected.delete(rule.case_service_id);
+    if (newSelected.has(service.id)) {
+      newSelected.delete(service.id);
     } else {
-      newSelected.set(rule.case_service_id, {
-        serviceId: rule.case_service_id,
-        serviceName: rule.case_service.name,
+      newSelected.set(service.id, {
+        serviceId: service.id,
+        serviceName: service.name,
         estimatedQuantity: undefined,
       });
     }
@@ -160,23 +105,13 @@ export function Step2Services({
     onContinue(servicesArray);
   };
 
-  const formatRate = (rate: number | null, pricingModel: string | null) => {
+  const formatRate = (rate: number | null) => {
     if (rate === null) return "—";
     const formatted = new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
     }).format(rate);
-    
-    switch (pricingModel) {
-      case "hourly":
-        return `${formatted}/hr`;
-      case "flat":
-        return `${formatted} flat`;
-      case "per_unit":
-        return `${formatted}/ea`;
-      default:
-        return formatted;
-    }
+    return `${formatted}/hr`;
   };
 
   if (loading) {
@@ -213,27 +148,19 @@ export function Step2Services({
         </div>
       )}
 
-      {!pricingProfileId && (
-        <div className="flex items-center gap-2 text-amber-600 text-sm p-3 border border-amber-300 rounded-lg bg-amber-50 dark:bg-amber-900/20">
-          <AlertCircle className="h-4 w-4" />
-          No pricing profile selected. Showing all available services with default rates.
-        </div>
-      )}
-
       {services.length === 0 && !error ? (
         <div className="text-center py-8 text-muted-foreground">
-          <p>No services configured{pricingProfileId ? " for this pricing profile" : ""}.</p>
+          <p>No services configured.</p>
           <p className="text-sm mt-1">You can add services later from the case detail page.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {services.map((rule) => {
-            const isSelected = selectedServices.has(rule.case_service_id);
-            const service = rule.case_service;
+          {services.map((service) => {
+            const isSelected = selectedServices.has(service.id);
 
             return (
               <div
-                key={rule.id}
+                key={service.id}
                 className={`flex items-start gap-4 p-4 border rounded-lg transition-colors ${
                   isSelected
                     ? "border-primary bg-primary/5"
@@ -241,14 +168,14 @@ export function Step2Services({
                 }`}
               >
                 <Checkbox
-                  id={`service-${rule.case_service_id}`}
+                  id={`service-${service.id}`}
                   checked={isSelected}
-                  onCheckedChange={() => toggleService(rule)}
+                  onCheckedChange={() => toggleService(service)}
                   className="mt-1"
                 />
                 <div className="flex-1 min-w-0">
                   <Label
-                    htmlFor={`service-${rule.case_service_id}`}
+                    htmlFor={`service-${service.id}`}
                     className="font-medium cursor-pointer flex items-center gap-2"
                   >
                     {service.color && (
@@ -270,7 +197,7 @@ export function Step2Services({
                     </p>
                   )}
                   <p className="text-sm text-muted-foreground mt-1">
-                    {formatRate(rule.rate, rule.pricing_model)}
+                    {formatRate(service.default_rate)}
                     {service.is_billable === false && (
                       <Badge variant="secondary" className="ml-2 text-xs">
                         Non-billable
@@ -288,10 +215,10 @@ export function Step2Services({
                       step="0.5"
                       placeholder="—"
                       className="h-8 text-sm"
-                      value={selectedServices.get(rule.case_service_id)?.estimatedQuantity || ""}
+                      value={selectedServices.get(service.id)?.estimatedQuantity || ""}
                       onChange={(e) => {
                         const val = e.target.value ? parseFloat(e.target.value) : undefined;
-                        updateEstimatedQuantity(rule.case_service_id, val);
+                        updateEstimatedQuantity(service.id, val);
                       }}
                     />
                   </div>

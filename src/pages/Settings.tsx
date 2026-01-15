@@ -31,7 +31,6 @@ import { CaseNumberingSection } from "@/components/settings/CaseNumberingSection
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
 import { LoginBrandingSection } from "@/components/settings/LoginBrandingSection";
 import { CaseServicesTab } from "@/components/settings/CaseServicesTab";
-import { PricingProfilesTab } from "@/components/settings/PricingProfilesTab";
 import { CaseTypesTab } from "@/components/settings/CaseTypesTab";
 import { SubjectTypesTab } from "@/components/settings/SubjectTypesTab";
 import { FinanceItemsTab } from "@/components/settings/FinanceItemsTab";
@@ -677,14 +676,7 @@ const Settings = () => {
               <TabsContent value="case-services" className="space-y-6">
                 <CaseServicesTab />
               </TabsContent>
-            )}
-
-            {/* Pricing Profiles Tab - Admin and Manager Only */}
-            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
-              <TabsContent value="pricing-profiles" className="space-y-6">
-                <PricingProfilesTab />
-              </TabsContent>
-            )}
+            {/* Picklists Tab */}
 
             {/* Picklists Tab */}
             <TabsContent value="picklists">

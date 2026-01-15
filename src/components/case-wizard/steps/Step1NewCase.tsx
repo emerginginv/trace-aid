@@ -289,7 +289,6 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         case_manager_2_id: null,
         investigator_ids: data.assign_myself_as === "investigator" ? [currentUserId] : [],
         reference_number: data.reference_number || null,
-        pricing_profile_id: newCase.pricing_profile_id || null, // Get from created case (set by trigger)
       };
 
       toast.success("Draft case created");

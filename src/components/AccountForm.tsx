@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -8,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,22 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
-
-interface PricingProfile {
-  id: string;
-  name: string;
-  is_default: boolean;
-}
 
 const accountSchema = z.object({
   name: z.string().min(1, "Account name is required").max(100),
@@ -48,7 +33,6 @@ const accountSchema = z.object({
   state: z.string().max(50).optional(),
   zip_code: z.string().max(10).optional(),
   notes: z.string().max(1000).optional(),
-  default_pricing_profile_id: z.string().optional().nullable(),
 });
 
 type AccountFormData = z.infer<typeof accountSchema>;
@@ -61,8 +45,6 @@ interface AccountFormProps {
 }
 
 export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: AccountFormProps) {
-  const [pricingProfiles, setPricingProfiles] = useState<PricingProfile[]>([]);
-
   const form = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
     defaultValues: {
@@ -75,32 +57,8 @@ export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: A
       state: "",
       zip_code: "",
       notes: "",
-      default_pricing_profile_id: null,
     },
   });
-
-  useEffect(() => {
-    if (open && organizationId) {
-      fetchPricingProfiles();
-    }
-  }, [open, organizationId]);
-
-  const fetchPricingProfiles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("pricing_profiles")
-        .select("id, name, is_default")
-        .eq("organization_id", organizationId)
-        .eq("is_active", true)
-        .order("is_default", { ascending: false })
-        .order("name");
-
-      if (error) throw error;
-      setPricingProfiles(data || []);
-    } catch (error) {
-      console.error("Error fetching pricing profiles:", error);
-    }
-  };
 
   const onSubmit = async (data: AccountFormData) => {
     try {
@@ -121,7 +79,6 @@ export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: A
         state: data.state,
         zip_code: data.zip_code,
         notes: data.notes,
-        default_pricing_profile_id: data.default_pricing_profile_id || null,
         user_id: user.id,
         organization_id: organizationId,
       }]);
@@ -269,40 +226,6 @@ export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: A
                 )}
               />
             </div>
-
-            {/* Default Pricing Profile */}
-            <FormField
-              control={form.control}
-              name="default_pricing_profile_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Pricing Profile</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(value === "none" ? null : value)}
-                    value={field.value || "none"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Use organization default" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Use organization default</SelectItem>
-                      {pricingProfiles.map((profile) => (
-                        <SelectItem key={profile.id} value={profile.id}>
-                          {profile.name}
-                          {profile.is_default && " (Org Default)"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Cases created for this client will use this pricing profile by default
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}

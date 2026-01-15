@@ -123,7 +123,6 @@ export type Database = {
           address: string | null
           city: string | null
           created_at: string | null
-          default_pricing_profile_id: string | null
           email: string | null
           external_record_id: string | null
           external_system_name: string | null
@@ -145,7 +144,6 @@ export type Database = {
           address?: string | null
           city?: string | null
           created_at?: string | null
-          default_pricing_profile_id?: string | null
           email?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
@@ -167,7 +165,6 @@ export type Database = {
           address?: string | null
           city?: string | null
           created_at?: string | null
-          default_pricing_profile_id?: string | null
           email?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
@@ -186,13 +183,6 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "accounts_default_pricing_profile_id_fkey"
-            columns: ["default_pricing_profile_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "accounts_import_batch_id_fkey"
             columns: ["import_batch_id"]
@@ -1874,7 +1864,6 @@ export type Database = {
           is_draft: boolean | null
           organization_id: string | null
           parent_case_id: string | null
-          pricing_profile_id: string | null
           purpose_of_request: string | null
           reference_number: string | null
           reference_number_2: string | null
@@ -1922,7 +1911,6 @@ export type Database = {
           is_draft?: boolean | null
           organization_id?: string | null
           parent_case_id?: string | null
-          pricing_profile_id?: string | null
           purpose_of_request?: string | null
           reference_number?: string | null
           reference_number_2?: string | null
@@ -1970,7 +1958,6 @@ export type Database = {
           is_draft?: boolean | null
           organization_id?: string | null
           parent_case_id?: string | null
-          pricing_profile_id?: string | null
           purpose_of_request?: string | null
           reference_number?: string | null
           reference_number_2?: string | null
@@ -2050,13 +2037,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cases_pricing_profile_id_fkey"
-            columns: ["pricing_profile_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "cases_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -2110,7 +2090,6 @@ export type Database = {
           id: string
           notes: string | null
           organization_id: string
-          pricing_rule_id: string
           updated_at: string | null
         }
         Insert: {
@@ -2124,7 +2103,6 @@ export type Database = {
           id?: string
           notes?: string | null
           organization_id: string
-          pricing_rule_id: string
           updated_at?: string | null
         }
         Update: {
@@ -2138,7 +2116,6 @@ export type Database = {
           id?: string
           notes?: string | null
           organization_id?: string
-          pricing_rule_id?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -2168,13 +2145,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_price_list_pricing_rule_id_fkey"
-            columns: ["pricing_rule_id"]
-            isOneToOne: false
-            referencedRelation: "service_pricing_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -3196,13 +3166,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_price_list_pricing_rule_id_fkey"
-            columns: ["pricing_rule_id"]
-            isOneToOne: false
-            referencedRelation: "service_pricing_rules"
             referencedColumns: ["id"]
           },
           {
@@ -4362,7 +4325,6 @@ export type Database = {
           invoice_id: string
           organization_id: string
           pricing_model: string
-          pricing_profile_id: string | null
           pricing_rule_snapshot: Json | null
           quantity: number
           rate: number
@@ -4386,7 +4348,6 @@ export type Database = {
           invoice_id: string
           organization_id: string
           pricing_model: string
-          pricing_profile_id?: string | null
           pricing_rule_snapshot?: Json | null
           quantity?: number
           rate?: number
@@ -4410,7 +4371,6 @@ export type Database = {
           invoice_id?: string
           organization_id?: string
           pricing_model?: string
-          pricing_profile_id?: string | null
           pricing_rule_snapshot?: Json | null
           quantity?: number
           rate?: number
@@ -5723,57 +5683,6 @@ export type Database = {
         }
         Relationships: []
       }
-      pricing_profiles: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          is_default: boolean | null
-          name: string
-          organization_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_default?: boolean | null
-          name: string
-          organization_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_default?: boolean | null
-          name?: string
-          organization_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pricing_profiles_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pricing_profiles_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           address: string | null
@@ -6439,102 +6348,6 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      service_pricing_rules: {
-        Row: {
-          case_service_id: string
-          created_at: string | null
-          created_by: string | null
-          default_rate: number
-          expense_rate: number | null
-          finance_item_id: string | null
-          id: string
-          invoice_rate: number | null
-          is_billable: boolean | null
-          maximum_units: number | null
-          minimum_units: number | null
-          notes: string | null
-          organization_id: string
-          pricing_model: string
-          pricing_profile_id: string
-          rate_type: Database["public"]["Enums"]["rate_type"] | null
-          updated_at: string | null
-        }
-        Insert: {
-          case_service_id: string
-          created_at?: string | null
-          created_by?: string | null
-          default_rate: number
-          expense_rate?: number | null
-          finance_item_id?: string | null
-          id?: string
-          invoice_rate?: number | null
-          is_billable?: boolean | null
-          maximum_units?: number | null
-          minimum_units?: number | null
-          notes?: string | null
-          organization_id: string
-          pricing_model: string
-          pricing_profile_id: string
-          rate_type?: Database["public"]["Enums"]["rate_type"] | null
-          updated_at?: string | null
-        }
-        Update: {
-          case_service_id?: string
-          created_at?: string | null
-          created_by?: string | null
-          default_rate?: number
-          expense_rate?: number | null
-          finance_item_id?: string | null
-          id?: string
-          invoice_rate?: number | null
-          is_billable?: boolean | null
-          maximum_units?: number | null
-          minimum_units?: number | null
-          notes?: string | null
-          organization_id?: string
-          pricing_model?: string
-          pricing_profile_id?: string
-          rate_type?: Database["public"]["Enums"]["rate_type"] | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "service_pricing_rules_case_service_id_fkey"
-            columns: ["case_service_id"]
-            isOneToOne: false
-            referencedRelation: "case_services"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_pricing_rules_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_pricing_rules_finance_item_id_fkey"
-            columns: ["finance_item_id"]
-            isOneToOne: false
-            referencedRelation: "finance_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_pricing_rules_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_pricing_rules_pricing_profile_id_fkey"
-            columns: ["pricing_profile_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_profiles"
             referencedColumns: ["id"]
           },
         ]

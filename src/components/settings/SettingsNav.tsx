@@ -44,7 +44,6 @@ const navItems: SettingsNavItem[] = [
   { value: "case-types", label: "Case Types", icon: FolderKanban, roles: ['admin', 'manager'] },
   { value: "subject-types", label: "Subject Types", icon: Users, roles: ['admin', 'manager'] },
   { value: "case-services", label: "Case Services", icon: Briefcase, roles: ['admin', 'manager'] },
-  { value: "pricing-profiles", label: "Pricing Profiles", icon: DollarSign, roles: ['admin', 'manager'] },
   { value: "finance-items", label: "Invoice & Expense Items", icon: Receipt, roles: ['admin', 'manager'] },
   { value: "picklists", label: "Picklists", icon: List, roles: ['admin', 'manager'] },
   { value: "templates", label: "Templates", icon: FileText, roles: ['admin', 'manager'] },
