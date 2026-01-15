@@ -1,6 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { User, Calendar, History, AlertTriangle, Bot, CheckCircle } from "lucide-react";
+import { User, AlertTriangle, Bot, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 
 interface UserProfile {
@@ -29,73 +27,53 @@ export const UpdateAuditSection = ({
   const wasEdited = updatedAt && new Date(updatedAt) > new Date(createdAt);
 
   return (
-    <Card>
-      <CardContent className="pt-6 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <History className="h-4 w-4" />
-          Activity & Audit
-        </div>
+    <div className="border-t pt-4 mt-6">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {/* Created by */}
+        <span className="flex items-center gap-1">
+          <User className="h-3 w-3" />
+          Created by {createdBy?.full_name || createdBy?.email || "Unknown"} on{" "}
+          {format(new Date(createdAt), "MMM d, yyyy 'at' h:mm a")}
+        </span>
 
-        {/* Created Info */}
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Created</p>
-          <div className="flex items-center gap-2 text-sm">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">
-              {createdBy?.full_name || createdBy?.email || "Unknown user"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>{format(new Date(createdAt), "MMMM d, yyyy 'at' h:mm:ss a")}</span>
-          </div>
-        </div>
-
-        {/* Last Edited (only if edited after creation) */}
+        {/* Last edited */}
         {wasEdited && (
-          <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Last Edited</p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>{format(new Date(updatedAt!), "MMMM d, yyyy 'at' h:mm:ss a")}</span>
-            </div>
-          </div>
+          <>
+            <span>•</span>
+            <span>
+              Last edited {format(new Date(updatedAt!), "MMM d, yyyy 'at' h:mm a")}
+            </span>
+          </>
         )}
 
-        {/* Flags */}
-        {(isLegacyBilling || isAiSummary) && (
-          <div className="space-y-2 pt-2 border-t">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Flags</p>
-            <div className="flex flex-wrap gap-3">
-              {isLegacyBilling && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <div className="text-sm">
-                    <p className="font-medium text-amber-700">Legacy Billing</p>
-                    <p className="text-xs text-amber-600/80">Imported from legacy system</p>
-                  </div>
-                </div>
-              )}
-              {isAiSummary && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <Bot className="h-4 w-4 text-blue-600" />
-                  <div className="text-sm">
-                    <p className="font-medium text-blue-700">AI Generated</p>
-                    {aiApprovedBy ? (
-                      <p className="text-xs text-blue-600/80 flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" />
-                        Approved by: {aiApprovedBy.full_name || aiApprovedBy.email}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-blue-600/80">Pending approval</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Legacy Billing flag */}
+        {isLegacyBilling && (
+          <>
+            <span>•</span>
+            <span className="flex items-center gap-1 text-amber-600">
+              <AlertTriangle className="h-3 w-3" />
+              Legacy Billing
+            </span>
+          </>
         )}
-      </CardContent>
-    </Card>
+
+        {/* AI Generated flag */}
+        {isAiSummary && (
+          <>
+            <span>•</span>
+            <span className="flex items-center gap-1 text-blue-600">
+              <Bot className="h-3 w-3" />
+              AI Generated
+              {aiApprovedBy && (
+                <span className="flex items-center gap-0.5 ml-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Approved by {aiApprovedBy.full_name || aiApprovedBy.email}
+                </span>
+              )}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
   );
 };

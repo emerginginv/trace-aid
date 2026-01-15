@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Clock, Receipt, Plus, Pencil, FileImage, ExternalLink } from "lucide-react";
+import { Clock, Receipt, Plus, FileImage } from "lucide-react";
 import { format } from "date-fns";
 import { TimeExpensesPanel } from "@/components/case-detail/TimeExpensesPanel";
 
@@ -39,12 +39,7 @@ interface UpdateTimeExpensesSectionProps {
   onDataChange?: () => void;
 }
 
-import { 
-  getStatusColor,
-  getStatusLabel,
-  getBadgeVariant,
-  getStatusConfig
-} from "@/utils/entryStatusConfig";
+import { getStatusColor } from "@/utils/entryStatusConfig";
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -79,14 +74,12 @@ export const UpdateTimeExpensesSection = ({
     try {
       setLoading(true);
 
-      // Fetch time entries
       const { data: timeData } = await supabase
         .from("time_entries")
         .select("*")
         .eq("update_id", updateId)
         .order("created_at", { ascending: false });
 
-      // Fetch expense entries
       const { data: expenseData } = await supabase
         .from("expense_entries")
         .select("*")
@@ -122,7 +115,6 @@ export const UpdateTimeExpensesSection = ({
     onDataChange?.();
   };
 
-  // Calculate totals
   const timeSubtotal = timeEntries.reduce((sum, e) => sum + (e.total || 0), 0);
   const totalHours = timeEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
   const expenseSubtotal = expenseEntries.reduce((sum, e) => sum + (e.total || 0), 0);
@@ -133,14 +125,13 @@ export const UpdateTimeExpensesSection = ({
   if (loading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
+        <CardHeader className="pb-3">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Time & Expenses
-          </CardTitle>
+          </h2>
         </CardHeader>
         <CardContent>
-          <div className="h-24 flex items-center justify-center text-muted-foreground">
+          <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">
             Loading...
           </div>
         </CardContent>
@@ -151,17 +142,18 @@ export const UpdateTimeExpensesSection = ({
   return (
     <>
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Time & Expenses
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                Time & Expenses
+              </h2>
               {hasEntries && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {timeEntries.length + expenseEntries.length}
                 </Badge>
               )}
-            </CardTitle>
+            </div>
             {canEdit && hasEntries && (
               <Button
                 variant="outline"
@@ -174,21 +166,20 @@ export const UpdateTimeExpensesSection = ({
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           {!hasEntries ? (
-            // Empty state
-            <div className="text-center py-8">
-              <div className="flex justify-center mb-4">
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                  <Receipt className="h-6 w-6 text-muted-foreground" />
+            <div className="text-center py-6">
+              <div className="flex justify-center mb-3">
+                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                  <Receipt className="h-5 w-5 text-muted-foreground" />
                 </div>
               </div>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-3">
                 No time or expenses logged
               </p>
               {canEdit && (
-                <Button onClick={() => setShowPanel(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button size="sm" onClick={() => setShowPanel(true)}>
+                  <Plus className="h-4 w-4 mr-1" />
                   Add Time & Expenses
                 </Button>
               )}
@@ -197,49 +188,47 @@ export const UpdateTimeExpensesSection = ({
             <>
               {/* Time Entries Table */}
               {timeEntries.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Clock className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
                     Time Entries
                   </div>
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-md overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
-                          <TableHead className="w-[100px]">Date</TableHead>
-                          <TableHead>Item</TableHead>
-                          <TableHead className="text-right w-[80px]">Hours</TableHead>
-                          <TableHead className="text-right w-[100px]">Pay Rate</TableHead>
-                          <TableHead className="text-right w-[100px]">Pay</TableHead>
-                          <TableHead className="w-[110px]">Status</TableHead>
+                          <TableHead className="h-8 text-xs w-[80px]">Date</TableHead>
+                          <TableHead className="h-8 text-xs">Item</TableHead>
+                          <TableHead className="h-8 text-xs text-right w-[60px]">Hours</TableHead>
+                          <TableHead className="h-8 text-xs text-right w-[80px]">Rate</TableHead>
+                          <TableHead className="h-8 text-xs text-right w-[80px]">Pay</TableHead>
+                          <TableHead className="h-8 text-xs w-[90px]">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {timeEntries.map((entry) => (
-                          <TableRow key={entry.id}>
-                            <TableCell className="text-sm text-muted-foreground">
+                          <TableRow key={entry.id} className="text-sm">
+                            <TableCell className="py-2 text-muted-foreground">
                               {format(new Date(entry.created_at), "MMM d")}
                             </TableCell>
-                            <TableCell>
-                              <div>
-                                <span className="font-medium">{entry.item_type}</span>
-                                {entry.notes && (
-                                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                    {entry.notes}
-                                  </p>
-                                )}
-                              </div>
+                            <TableCell className="py-2">
+                              <span className="font-medium">{entry.item_type}</span>
+                              {entry.notes && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                  {entry.notes}
+                                </p>
+                              )}
                             </TableCell>
-                            <TableCell className="text-right font-mono">
+                            <TableCell className="py-2 text-right font-mono text-xs">
                               {entry.hours.toFixed(2)}
                             </TableCell>
-                            <TableCell className="text-right font-mono">
+                            <TableCell className="py-2 text-right font-mono text-xs">
                               {formatCurrency(entry.rate)}
                             </TableCell>
-                            <TableCell className="text-right font-mono font-medium">
+                            <TableCell className="py-2 text-right font-mono text-xs font-medium">
                               {formatCurrency(entry.total)}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-2">
                               <Badge
                                 variant="outline"
                                 className={`text-xs ${getStatusColor(entry.status)}`}
@@ -249,16 +238,15 @@ export const UpdateTimeExpensesSection = ({
                             </TableCell>
                           </TableRow>
                         ))}
-                        {/* Subtotal row */}
-                        <TableRow className="bg-muted/30 font-medium">
-                          <TableCell colSpan={2} className="text-right">
+                        <TableRow className="bg-muted/30 font-medium text-sm">
+                          <TableCell colSpan={2} className="py-2 text-right">
                             Time Pay
                           </TableCell>
-                          <TableCell className="text-right font-mono">
+                          <TableCell className="py-2 text-right font-mono text-xs">
                             {totalHours.toFixed(2)} hrs
                           </TableCell>
                           <TableCell />
-                          <TableCell className="text-right font-mono">
+                          <TableCell className="py-2 text-right font-mono text-xs">
                             {formatCurrency(timeSubtotal)}
                           </TableCell>
                           <TableCell />
@@ -271,64 +259,62 @@ export const UpdateTimeExpensesSection = ({
 
               {/* Expense Entries Table */}
               {expenseEntries.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Receipt className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <Receipt className="h-3.5 w-3.5" />
                     Expense Entries
                   </div>
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-md overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
-                          <TableHead className="w-[100px]">Date</TableHead>
-                          <TableHead>Item</TableHead>
-                          <TableHead className="text-right w-[60px]">Qty</TableHead>
-                          <TableHead className="text-right w-[100px]">Pay Rate</TableHead>
-                          <TableHead className="text-right w-[100px]">Pay</TableHead>
-                          <TableHead className="w-[60px]">Receipt</TableHead>
-                          <TableHead className="w-[110px]">Status</TableHead>
+                          <TableHead className="h-8 text-xs w-[80px]">Date</TableHead>
+                          <TableHead className="h-8 text-xs">Item</TableHead>
+                          <TableHead className="h-8 text-xs text-right w-[50px]">Qty</TableHead>
+                          <TableHead className="h-8 text-xs text-right w-[80px]">Rate</TableHead>
+                          <TableHead className="h-8 text-xs text-right w-[80px]">Pay</TableHead>
+                          <TableHead className="h-8 text-xs w-[50px]"></TableHead>
+                          <TableHead className="h-8 text-xs w-[90px]">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {expenseEntries.map((entry) => (
-                          <TableRow key={entry.id}>
-                            <TableCell className="text-sm text-muted-foreground">
+                          <TableRow key={entry.id} className="text-sm">
+                            <TableCell className="py-2 text-muted-foreground">
                               {format(new Date(entry.created_at), "MMM d")}
                             </TableCell>
-                            <TableCell>
-                              <div>
-                                <span className="font-medium">{entry.item_type}</span>
-                                {entry.notes && (
-                                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                    {entry.notes}
-                                  </p>
-                                )}
-                              </div>
+                            <TableCell className="py-2">
+                              <span className="font-medium">{entry.item_type}</span>
+                              {entry.notes && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                  {entry.notes}
+                                </p>
+                              )}
                             </TableCell>
-                            <TableCell className="text-right font-mono">
+                            <TableCell className="py-2 text-right font-mono text-xs">
                               {entry.quantity}
                             </TableCell>
-                            <TableCell className="text-right font-mono">
+                            <TableCell className="py-2 text-right font-mono text-xs">
                               {formatCurrency(entry.rate)}
                             </TableCell>
-                            <TableCell className="text-right font-mono font-medium">
+                            <TableCell className="py-2 text-right font-mono text-xs font-medium">
                               {formatCurrency(entry.total)}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-2">
                               {entry.receipt_url ? (
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-6 w-6"
                                   onClick={() => handleViewReceipt(entry.receipt_url!)}
                                 >
-                                  <FileImage className="h-4 w-4" />
+                                  <FileImage className="h-3.5 w-3.5" />
                                 </Button>
                               ) : (
                                 <span className="text-muted-foreground text-xs">—</span>
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-2">
                               <Badge
                                 variant="outline"
                                 className={`text-xs ${getStatusColor(entry.status)}`}
@@ -338,12 +324,11 @@ export const UpdateTimeExpensesSection = ({
                             </TableCell>
                           </TableRow>
                         ))}
-                        {/* Subtotal row */}
-                        <TableRow className="bg-muted/30 font-medium">
-                          <TableCell colSpan={4} className="text-right">
+                        <TableRow className="bg-muted/30 font-medium text-sm">
+                          <TableCell colSpan={4} className="py-2 text-right">
                             Expense Pay
                           </TableCell>
-                          <TableCell className="text-right font-mono">
+                          <TableCell className="py-2 text-right font-mono text-xs">
                             {formatCurrency(expenseSubtotal)}
                           </TableCell>
                           <TableCell colSpan={2} />
@@ -357,10 +342,10 @@ export const UpdateTimeExpensesSection = ({
               {/* Grand Total */}
               <div className="flex justify-end pt-2 border-t">
                 <div className="text-right">
-                  <span className="text-sm text-muted-foreground mr-4">
+                  <span className="text-xs text-muted-foreground mr-3">
                     Total Pay:
                   </span>
-                  <span className="text-lg font-bold">
+                  <span className="text-base font-semibold font-mono">
                     {formatCurrency(grandTotal)}
                   </span>
                 </div>
@@ -370,7 +355,6 @@ export const UpdateTimeExpensesSection = ({
         </CardContent>
       </Card>
 
-      {/* Time & Expenses Panel */}
       <TimeExpensesPanel
         open={showPanel}
         onOpenChange={setShowPanel}

@@ -5,7 +5,7 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { useUpdateEditability } from "@/hooks/useUpdateEditability";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,6 @@ import {
   ArrowLeft, 
   Calendar, 
   User, 
-  FileText, 
   Paperclip, 
   Download, 
   ExternalLink, 
@@ -21,10 +20,8 @@ import {
   Trash2, 
   Link2, 
   X,
-  ListTodo,
-  CalendarDays,
-  FolderOpen,
-  Lock
+  Lock,
+  Plus
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -34,7 +31,7 @@ import { ActivityTimelineDisplay } from "@/components/case-detail/ActivityTimeli
 import { AIBadge } from "@/components/ui/ai-badge";
 import { UpdateForm } from "@/components/case-detail/UpdateForm";
 import { AttachmentPickerDialog } from "@/components/case-detail/AttachmentPicker";
-import { UpdateContextSection } from "@/components/update-detail/UpdateContextSection";
+import { UpdateSidebar } from "@/components/update-detail/UpdateSidebar";
 import { UpdateAuditSection } from "@/components/update-detail/UpdateAuditSection";
 import { UpdateTimeExpensesSection } from "@/components/update-detail/UpdateTimeExpensesSection";
 import { TimeExpensesPanel } from "@/components/case-detail/TimeExpensesPanel";
@@ -92,7 +89,6 @@ interface LinkedActivity {
   address: string | null;
   is_scheduled: boolean;
 }
-
 
 interface UserProfile {
   id: string;
@@ -158,7 +154,6 @@ const CaseUpdateDetail = () => {
     try {
       setLoading(true);
 
-      // Fetch update with all fields
       const { data: updateData, error: updateError } = await supabase
         .from("case_updates")
         .select("*")
@@ -183,7 +178,7 @@ const CaseUpdateDetail = () => {
         title: updateData.title,
         description: updateData.description,
         created_at: updateData.created_at,
-        updated_at: updateData.created_at, // case_updates doesn't have updated_at, use created_at as fallback
+        updated_at: updateData.created_at,
         update_type: updateData.update_type,
         user_id: updateData.user_id,
         case_id: updateData.case_id,
@@ -195,13 +190,9 @@ const CaseUpdateDetail = () => {
       };
       setUpdate(mappedUpdate);
 
-      // Fetch case info with account name
       const { data: caseData } = await supabase
         .from("cases")
-        .select(`
-          id, title, case_number, status,
-          accounts(name)
-        `)
+        .select(`id, title, case_number, status, accounts(name)`)
         .eq("id", caseId)
         .maybeSingle();
 
@@ -215,7 +206,6 @@ const CaseUpdateDetail = () => {
         });
       }
 
-      // Fetch user profile
       const { data: profileData } = await supabase
         .from("profiles")
         .select("id, full_name, email")
@@ -226,7 +216,6 @@ const CaseUpdateDetail = () => {
         setUserProfile(profileData);
       }
 
-      // Fetch AI approver if exists
       if (updateData.ai_approved_by) {
         const { data: approverData } = await supabase
           .from("profiles")
@@ -241,7 +230,6 @@ const CaseUpdateDetail = () => {
         setAiApprover(null);
       }
 
-      // Fetch linked activity if exists
       if (updateData.linked_activity_id) {
         const { data: activityData } = await supabase
           .from("case_activities")
@@ -256,7 +244,6 @@ const CaseUpdateDetail = () => {
         setLinkedActivity(null);
       }
 
-      // Fetch linked attachments
       const { data: linksData } = await supabase
         .from("update_attachment_links")
         .select(`
@@ -280,7 +267,6 @@ const CaseUpdateDetail = () => {
           }))
         );
       }
-
     } catch (error) {
       console.error("Error fetching update details:", error);
       toast({
@@ -373,13 +359,11 @@ const CaseUpdateDetail = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Get display title - use first line of description if title is generic
   const getDisplayTitle = (): string => {
     if (update?.title && update.title.toLowerCase() !== "update" && update.title.toLowerCase() !== "case update") {
       return update.title;
     }
     if (update?.description) {
-      // Strip HTML and get first line
       const plainText = update.description.replace(/<[^>]*>/g, "").trim();
       const firstLine = plainText.split("\n")[0].substring(0, 100);
       return firstLine || update.title;
@@ -389,17 +373,18 @@ const CaseUpdateDetail = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
         <Skeleton className="h-10 w-48" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-3/4" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-6 w-1/2" />
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+          <div className="space-y-6">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -409,21 +394,7 @@ const CaseUpdateDetail = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* ========== CASE CONTEXT HEADER ========== */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground border-b pb-3">
-        <FolderOpen className="h-4 w-4" />
-        <span>Case: {caseInfo.case_number} — {caseInfo.title}</span>
-        <Button 
-          variant="link" 
-          size="sm" 
-          className="h-auto p-0 text-muted-foreground hover:text-foreground ml-1"
-          onClick={() => navigate(`/cases/${caseId}`)}
-        >
-          View Case →
-        </Button>
-      </div>
-
+    <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
       {/* ========== READ-ONLY BANNER ========== */}
       {readOnlyReason && (
         <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200">
@@ -433,217 +404,201 @@ const CaseUpdateDetail = () => {
         </div>
       )}
 
-      {/* ========== HEADER SECTION ========== */}
-      <div className="space-y-4">
-        {/* Navigation and Actions */}
-        <div className="flex items-center justify-between">
+      {/* ========== UNIFIED HEADER ========== */}
+      <div className="flex items-start justify-between gap-4 pb-4 border-b">
+        {/* Left: Back + Title + Metadata */}
+        <div className="flex items-start gap-4 min-w-0">
           <Button
             variant="ghost"
+            size="icon"
+            className="shrink-0 mt-0.5"
             onClick={() => navigateBack(navigate, `/cases/${caseId}?tab=updates`)}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {getBackButtonLabel()}
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-
-          <div className="flex items-center gap-2">
-            {canEdit && (
-              <Button variant="outline" onClick={() => setEditFormOpen(true)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            )}
-            {canDelete && (
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(true)}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            )}
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold leading-tight">{getDisplayTitle()}</h1>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5 text-sm text-muted-foreground">
+              <Badge variant="outline">{update.update_type}</Badge>
+              {update.is_ai_summary && <AIBadge />}
+              {isOwner && (
+                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800">
+                  Your Update
+                </Badge>
+              )}
+              <span className="hidden sm:inline">•</span>
+              <span className="flex items-center gap-1">
+                <User className="h-3.5 w-3.5" />
+                {userProfile?.full_name || userProfile?.email || "Unknown"}
+              </span>
+              <span className="hidden sm:inline">•</span>
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                {format(new Date(update.created_at), "PPP")}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Title and Badges */}
-        <div className="space-y-3">
-          <h1 className="text-2xl font-bold tracking-tight">{getDisplayTitle()}</h1>
-          
-          {/* Status Badges Row */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{update.update_type}</Badge>
-            {update.is_ai_summary && <AIBadge />}
-            {isOwner && (
-              <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800">
-                <User className="h-3 w-3 mr-1" />
-                Your Update
-              </Badge>
-            )}
-            {linkedActivity && (
-              <Badge variant="secondary">
-                {linkedActivity.activity_type === "task" ? (
-                  <ListTodo className="h-3 w-3 mr-1" />
-                ) : (
-                  <CalendarDays className="h-3 w-3 mr-1" />
-                )}
-                {linkedActivity.activity_type}
-              </Badge>
-            )}
-          </div>
-
-          {/* Author and Date */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            {userProfile && (
-              <span className="flex items-center gap-1.5">
-                <User className="h-4 w-4" />
-                {userProfile.full_name || userProfile.email}
-              </span>
-            )}
-            <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4" />
-              {format(new Date(update.created_at), "PPP 'at' p")}
-            </span>
-          </div>
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={() => setEditFormOpen(true)}>
+              <Pencil className="h-4 w-4 mr-1.5" />
+              Edit
+            </Button>
+          )}
+          {canDelete && (
+            <Button variant="outline" size="sm" onClick={() => setDeleteDialogOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Delete
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* ========== CONTEXT SECTION ========== */}
-      <UpdateContextSection
-        caseInfo={caseInfo}
-        linkedActivity={linkedActivity}
-        onViewCase={() => navigate(`/cases/${caseId}`)}
-      />
+      {/* ========== TWO-COLUMN LAYOUT ========== */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+        {/* Left Column - Primary Content */}
+        <div className="space-y-6">
+          {/* ========== NARRATIVE SECTION (DOMINANT) ========== */}
+          <Card className="border-primary/10">
+            <CardHeader className="pb-3">
+              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                Narrative
+              </h2>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <RichTextDisplay
+                html={update.description}
+                fallback="No description provided."
+                className="[&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 prose prose-sm max-w-none min-h-[120px]"
+              />
 
-      {/* ========== NARRATIVE SECTION (PRIMARY) ========== */}
-      <Card className="ring-1 ring-primary/10 bg-primary/[0.02]">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <CardTitle>Narrative</CardTitle>
-            </div>
-            <Badge variant="secondary" className="text-xs">Primary</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Description */}
-          <RichTextDisplay
-            html={update.description}
-            fallback="No description provided."
-            className="[&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 prose prose-sm max-w-none"
-          />
-
-          {/* Activity Timeline (if exists) */}
-          {update.activity_timeline && update.activity_timeline.length > 0 && (
-            <div className="pt-4 border-t">
-              <ActivityTimelineDisplay timeline={update.activity_timeline} />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ========== ATTACHMENTS SECTION ========== */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Paperclip className="h-5 w-5" />
-              <CardTitle>Attachments</CardTitle>
-              {linkedAttachments.length > 0 && (
-                <Badge variant="secondary">{linkedAttachments.length}</Badge>
+              {update.activity_timeline && update.activity_timeline.length > 0 && (
+                <div className="pt-4 border-t">
+                  <ActivityTimelineDisplay timeline={update.activity_timeline} />
+                </div>
               )}
-            </div>
-            {canLinkAttachments && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLinkDialogOpen(true)}
-              >
-                <Link2 className="h-4 w-4 mr-1" />
-                Link Attachment
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {linkedAttachments.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {linkedAttachments.map((attachment) => (
-                <div
-                  key={attachment.id}
-                  className="flex items-start gap-3 p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors group relative"
-                >
-                  <div
-                    className="cursor-pointer shrink-0"
-                    onClick={() => handleViewAttachment(attachment.attachment_id)}
-                  >
-                    <AttachmentPreviewThumbnail
-                      filePath={attachment.file_path}
-                      fileName={attachment.file_name}
-                      fileType={attachment.file_type}
-                      previewPath={attachment.preview_path}
-                      previewStatus={attachment.preview_status}
-                      size="md"
-                      className="rounded"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-sm font-medium truncate cursor-pointer hover:text-primary"
-                      onClick={() => handleViewAttachment(attachment.attachment_id)}
-                    >
-                      {attachment.file_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatFileSize(attachment.file_size)}
-                    </p>
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => handleViewAttachment(attachment.attachment_id)}
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        View
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => handleDownload(attachment)}
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        Download
-                      </Button>
-                    </div>
-                  </div>
-                  {canLinkAttachments && (
-                    <button
-                      onClick={() => handleUnlinkAttachment(attachment.id)}
-                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Unlink attachment"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+            </CardContent>
+          </Card>
+
+          {/* ========== ATTACHMENTS SECTION ========== */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                    Attachments
+                  </h2>
+                  {linkedAttachments.length > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {linkedAttachments.length}
+                    </Badge>
                   )}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No attachments linked to this update.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+                {canLinkAttachments && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLinkDialogOpen(true)}
+                  >
+                    <Link2 className="h-4 w-4 mr-1" />
+                    Link
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {linkedAttachments.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {linkedAttachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-start gap-2 p-2 border rounded-md bg-card hover:bg-muted/30 transition-colors group relative"
+                    >
+                      <div
+                        className="cursor-pointer shrink-0"
+                        onClick={() => handleViewAttachment(attachment.attachment_id)}
+                      >
+                        <AttachmentPreviewThumbnail
+                          filePath={attachment.file_path}
+                          fileName={attachment.file_name}
+                          fileType={attachment.file_type}
+                          previewPath={attachment.preview_path}
+                          previewStatus={attachment.preview_status}
+                          size="sm"
+                          className="rounded"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-xs font-medium truncate cursor-pointer hover:text-primary"
+                          onClick={() => handleViewAttachment(attachment.attachment_id)}
+                        >
+                          {attachment.file_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(attachment.file_size)}
+                        </p>
+                        <div className="flex gap-1 mt-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1.5 text-xs"
+                            onClick={() => handleViewAttachment(attachment.attachment_id)}
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1.5 text-xs"
+                            onClick={() => handleDownload(attachment)}
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      {canLinkAttachments && (
+                        <button
+                          onClick={() => handleUnlinkAttachment(attachment.id)}
+                          className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Unlink attachment"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground py-2">
+                  No attachments linked to this update.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* ========== TIME & EXPENSES SECTION ========== */}
-      <UpdateTimeExpensesSection
-        updateId={update.id}
-        caseId={caseId!}
-        organizationId={organization?.id || ""}
-        canEdit={canEdit}
-        onDataChange={fetchData}
-      />
+          {/* ========== TIME & EXPENSES SECTION ========== */}
+          <UpdateTimeExpensesSection
+            updateId={update.id}
+            caseId={caseId!}
+            organizationId={organization?.id || ""}
+            canEdit={canEdit}
+            onDataChange={fetchData}
+          />
+        </div>
 
-      {/* ========== ACTIVITY / AUDIT SECTION ========== */}
+        {/* Right Column - Sidebar */}
+        <UpdateSidebar
+          caseInfo={caseInfo}
+          linkedActivity={linkedActivity}
+          onViewCase={() => navigate(`/cases/${caseId}`)}
+        />
+      </div>
+
+      {/* ========== AUDIT SECTION (BOTTOM, MUTED) ========== */}
       <UpdateAuditSection
         createdAt={update.created_at}
         updatedAt={update.updated_at}
@@ -660,7 +615,6 @@ const CaseUpdateDetail = () => {
         onOpenChange={setEditFormOpen}
         onSuccess={(options) => {
           fetchData();
-          // Handle "Add time & expenses after saving" checkbox
           if (options?.addTimeExpenses && options?.updateId) {
             setShowTimeExpensesPanel(true);
           }
