@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, User, Search, LayoutGrid, List, Edit, Trash2, Mail, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { ContactCard } from "@/components/shared/ContactCard";
+import { EntityStatusPill, deriveContactStatus } from "@/components/shared/EntityStatusPill";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { toast } from "sonner";
@@ -46,6 +48,9 @@ interface Contact {
   phone: string;
   city: string;
   state: string;
+  status?: string;
+  role?: string;
+  account?: { name: string } | null;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -287,95 +292,23 @@ const Contacts = () => {
           </CardContent>
         </Card>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {sortedContacts.map((contact) => (
-            <Card 
-              key={contact.id} 
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/contacts/${contact.id}`)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  navigate(`/contacts/${contact.id}`);
-                }
+            <ContactCard
+              key={contact.id}
+              contact={{
+                id: contact.id,
+                first_name: contact.first_name,
+                last_name: contact.last_name,
+                status: contact.status,
+                role: contact.role,
+                organization_name: contact.account?.name || null,
+                phone: contact.phone,
+                email: contact.email,
               }}
-            >
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {getInitials(contact.first_name, contact.last_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <CardTitle className="text-lg">
-                    {contact.first_name} {contact.last_name}
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  {contact.email && (
-                    <p className="text-sm">{contact.email}</p>
-                  )}
-                  {contact.phone && (
-                    <p className="text-sm">{contact.phone}</p>
-                  )}
-                  {(contact.city || contact.state) && (
-                    <p className="text-sm text-muted-foreground">
-                      {[contact.city, contact.state].filter(Boolean).join(", ")}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-2 pt-2">
-                  {contact.email && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedContactEmail(contact.email);
-                        setEmailSubject(`Message for ${contact.first_name} ${contact.last_name}`);
-                        setEmailComposerOpen(true);
-                      }}
-                      className="flex-1"
-                    >
-                      <Mail className="w-4 h-4 mr-1" />
-                      Email
-                    </Button>
-                  )}
-                  {hasPermission('edit_contacts') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/contacts/${contact.id}/edit`);
-                      }}
-                      className="flex-1"
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  )}
-                  {hasPermission('delete_contacts') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setContactToDelete(contact.id);
-                        setDeleteDialogOpen(true);
-                      }}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              onClick={() => navigate(`/contacts/${contact.id}`)}
+              showFooter={false}
+            />
           ))}
         </div>
       ) : (

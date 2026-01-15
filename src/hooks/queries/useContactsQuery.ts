@@ -15,8 +15,11 @@ export interface Contact {
   zip_code?: string;
   account_id?: string;
   notes?: string;
+  status?: string;
+  role?: string;
   created_at: string;
   updated_at?: string;
+  account?: { name: string } | null;
 }
 
 interface UseContactsQueryOptions {
@@ -43,7 +46,7 @@ export function useContactsQuery(options: UseContactsQueryOptions = {}) {
 
       let query = supabase
         .from('contacts')
-        .select('*')
+        .select('*, accounts:account_id(name)')
         .eq('organization_id', organization.id)
         .order('last_name', { ascending: true });
 
