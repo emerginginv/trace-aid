@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays, Link } from "lucide-react";
+import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays, Link, Zap } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +21,8 @@ import { useSortPreference } from "@/hooks/use-sort-preference";
 import { useBillingEligibility, BillingEligibilityResult } from "@/hooks/useBillingEligibility";
 import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
 import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
+import { QuickBillDialog } from "@/components/billing/QuickBillDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Activity {
   id: string;
@@ -64,6 +66,10 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const [billingEligibility, setBillingEligibility] = useState<BillingEligibilityResult | null>(null);
   const { evaluate: evaluateBillingEligibility } = useBillingEligibility();
   const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
+
+  // Quick Bill state
+  const [quickBillDialogOpen, setQuickBillDialogOpen] = useState(false);
+  const [selectedEventForQuickBill, setSelectedEventForQuickBill] = useState<Activity | null>(null);
 
   // Separate state for tasks panel
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
@@ -757,6 +763,30 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                           </TableCell>
                           <TableCell className="align-top">
                             <div className="flex gap-1">
+                              {/* Quick Bill Button - only for events with linked services that aren't completed */}
+                              {event.case_service_instance_id && event.status !== "completed" && canEditActivities && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSelectedEventForQuickBill(event);
+                                          setQuickBillDialogOpen(true);
+                                        }}
+                                        disabled={isClosedCase}
+                                        className="h-7 w-7 text-primary hover:text-primary"
+                                      >
+                                        <Zap className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Quick Bill</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                               {canEditActivities && (
                                 <Button
                                   variant="ghost"
@@ -865,6 +895,25 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
           setBillingEligibility(null);
         }}
       />
+
+      {/* Quick Bill Dialog */}
+      {selectedEventForQuickBill && (
+        <QuickBillDialog
+          open={quickBillDialogOpen}
+          onOpenChange={(open) => {
+            setQuickBillDialogOpen(open);
+            if (!open) setSelectedEventForQuickBill(null);
+          }}
+          eventId={selectedEventForQuickBill.id}
+          caseId={caseId}
+          organizationId={organization?.id || ""}
+          onSuccess={() => {
+            fetchActivities();
+            setQuickBillDialogOpen(false);
+            setSelectedEventForQuickBill(null);
+          }}
+        />
+      )}
     </>
   );
 }

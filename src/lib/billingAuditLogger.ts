@@ -6,11 +6,14 @@ export type BillingAuditAction =
   | 'time_confirmed'
   | 'billing_item_created'
   | 'billing_skipped'
-  | 'event_billing_blocked';
+  | 'event_billing_blocked'
+  | 'quick_bill_completed'
+  | 'quick_bill_skipped';
 
 export interface BillingAuditMetadata {
   updateId?: string;
   activityId?: string;
+  eventId?: string;
   caseServiceInstanceId?: string;
   billingItemId?: string;
   caseId?: string;
@@ -26,7 +29,7 @@ export interface BillingAuditMetadata {
     endTime: string;
   };
   reason?: string;
-  /** Source of the billing action (e.g., 'update_form', 'create_billing_later') */
+  /** Source of the billing action (e.g., 'update_form', 'create_billing_later', 'quick_bill') */
   source?: string;
   /** Severity level for audit events */
   severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
