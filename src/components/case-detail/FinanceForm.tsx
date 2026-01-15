@@ -103,14 +103,15 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
   useEffect(() => {
     if (editingFinance) {
       const quantity = editingFinance.quantity || 1;
-      const unitPrice = editingFinance.amount / quantity;
+      const amount = editingFinance.amount ?? 0;
+      const unitPrice = amount / quantity;
       
       form.reset({
         finance_type: editingFinance.finance_type,
-        amount: editingFinance.amount.toString(),
-        description: editingFinance.description,
-        date: new Date(editingFinance.date),
-        status: editingFinance.status,
+        amount: amount.toString(),
+        description: editingFinance.description || "",
+        date: editingFinance.date ? new Date(editingFinance.date) : undefined,
+        status: editingFinance.status || "pending",
         subject_id: editingFinance.subject_id || undefined,
         activity_id: editingFinance.activity_id || undefined,
         category: editingFinance.category || undefined,
