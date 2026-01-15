@@ -525,9 +525,9 @@ export const TimeExpensesPanel = ({
                       />
                     </div>
 
-                    {/* Rate (read-only) */}
+                    {/* Cost Rate (read-only) */}
                     <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground mb-1 block">Rate</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Cost Rate</Label>
                       <Input
                         value={formatCurrency(entry.rate)}
                         readOnly
@@ -547,9 +547,9 @@ export const TimeExpensesPanel = ({
                       </Button>
                     </div>
 
-                    {/* Total display */}
+                    {/* Cost display */}
                     <div className="col-span-12 text-right text-sm font-medium">
-                      Total: {formatCurrency(entry.hours * entry.rate)}
+                      Cost: {formatCurrency(entry.hours * entry.rate)}
                     </div>
                   </div>
                 ))}
@@ -639,9 +639,9 @@ export const TimeExpensesPanel = ({
                       />
                     </div>
 
-                    {/* Rate */}
+                    {/* Cost Rate */}
                     <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground mb-1 block">Rate</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Cost Rate</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -695,10 +695,10 @@ export const TimeExpensesPanel = ({
                           📎 {entry.receiptFile.name}
                         </span>
                       ) : (
-                        <span />
+                        <span className="text-xs text-muted-foreground" />
                       )}
                       <span className="font-medium">
-                        Total: {formatCurrency(entry.quantity * entry.rate)}
+                        Cost: {formatCurrency(entry.quantity * entry.rate)}
                       </span>
                     </div>
                   </div>
@@ -725,15 +725,15 @@ export const TimeExpensesPanel = ({
                 <div className="text-lg font-semibold">{totalHours.toFixed(2)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Time Total</div>
+                <div className="text-xs text-muted-foreground">Time Cost</div>
                 <div className="text-lg font-semibold">{formatCurrency(timeSubtotal)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Expenses Total</div>
+                <div className="text-xs text-muted-foreground">Expense Cost</div>
                 <div className="text-lg font-semibold">{formatCurrency(expenseSubtotal)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Grand Total</div>
+                <div className="text-xs text-muted-foreground">Total Internal Cost</div>
                 <div className="text-lg font-bold text-primary">{formatCurrency(grandTotal)}</div>
               </div>
             </div>

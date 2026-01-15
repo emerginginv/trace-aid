@@ -477,8 +477,8 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
                     <TableHead>Employee</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead className="text-center">Hrs/Qty</TableHead>
-                    <TableHead className="text-right">Rate</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Cost Rate</TableHead>
+                    <TableHead className="text-right">Cost</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
