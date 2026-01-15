@@ -311,7 +311,7 @@ export const TimeExpensesPanel = ({
     onOpenChange(false);
   };
 
-  // Save all entries
+  // Save all entries to the new time_entries and expense_entries tables
   const handleSave = async () => {
     setIsSaving(true);
 
@@ -321,29 +321,21 @@ export const TimeExpensesPanel = ({
 
       const errors: string[] = [];
 
-      // Save time entries
+      // Save time entries to time_entries table
       for (const entry of timeEntries.filter(e => e.hours > 0)) {
-        const amount = entry.hours * entry.rate;
         const { error } = await supabase
-          .from("case_finances")
+          .from("time_entries")
           .insert({
             case_id: caseId,
             organization_id: organizationId,
             user_id: user.id,
-            account_id: accountId,
+            event_id: linkedActivityId,
             update_id: updateId,
-            activity_id: linkedActivityId,
-            finance_type: "time",
-            billing_type: "time",
-            description: entry.itemName + (entry.notes ? ` - ${entry.notes}` : ""),
-            hours: entry.hours,
-            hourly_rate: entry.rate,
-            quantity: entry.hours,
-            unit_price: entry.rate,
-            amount: amount,
-            status: "pending_review",
-            date: new Date().toISOString().split("T")[0],
+            item_type: entry.itemName,
             notes: entry.notes || null,
+            hours: entry.hours,
+            rate: entry.rate,
+            status: "draft",
           });
 
         if (error) {
@@ -352,58 +344,48 @@ export const TimeExpensesPanel = ({
         }
       }
 
-      // Save expense entries
+      // Save expense entries to expense_entries table
       for (const entry of expenseEntries.filter(e => e.quantity > 0)) {
-        const amount = entry.quantity * entry.rate;
         const categoryLabel = EXPENSE_CATEGORIES.find(c => c.value === entry.category)?.label || entry.category;
-        const categoryUnit = EXPENSE_CATEGORIES.find(c => c.value === entry.category)?.unit;
-
-        let description = entry.notes || categoryLabel;
-        if (entry.category === "mileage" && entry.quantity > 0) {
-          description = `${entry.notes || "Mileage"} - ${entry.quantity} ${categoryUnit || "mile"}${entry.quantity !== 1 ? "s" : ""} @ $${entry.rate.toFixed(2)}/${categoryUnit || "mile"}`;
-        }
-
-        const { error } = await supabase
-          .from("case_finances")
-          .insert({
-            case_id: caseId,
-            organization_id: organizationId,
-            user_id: user.id,
-            account_id: accountId,
-            update_id: updateId,
-            activity_id: linkedActivityId,
-            finance_type: "expense",
-            billing_type: "expense",
-            category: entry.category,
-            description: description,
-            quantity: entry.quantity,
-            unit_price: entry.rate,
-            amount: amount,
-            status: "pending_review",
-            date: new Date().toISOString().split("T")[0],
-            notes: entry.notes || null,
-          });
-
-        if (error) {
-          console.error("Error saving expense entry:", error);
-          errors.push(`Expense "${categoryLabel}": ${error.message}`);
-        }
 
         // Handle receipt upload if present
+        let receiptUrl: string | null = null;
         if (entry.receiptFile) {
           try {
             const fileExt = entry.receiptFile.name.split(".").pop();
             const filePath = `${user.id}/${caseId}/receipts/${crypto.randomUUID()}.${fileExt}`;
 
-            await supabase.storage
+            const { error: uploadError } = await supabase.storage
               .from("case-attachments")
               .upload(filePath, entry.receiptFile);
 
-            // Note: Receipt linking to specific expense would require additional DB structure
-            // For now, receipts are stored at case level
+            if (!uploadError) {
+              receiptUrl = filePath;
+            }
           } catch (uploadError) {
             console.error("Error uploading receipt:", uploadError);
           }
+        }
+
+        const { error } = await supabase
+          .from("expense_entries")
+          .insert({
+            case_id: caseId,
+            organization_id: organizationId,
+            user_id: user.id,
+            event_id: linkedActivityId,
+            update_id: updateId,
+            item_type: categoryLabel,
+            notes: entry.notes || null,
+            quantity: entry.quantity,
+            rate: entry.rate,
+            receipt_url: receiptUrl,
+            status: "draft",
+          });
+
+        if (error) {
+          console.error("Error saving expense entry:", error);
+          errors.push(`Expense "${categoryLabel}": ${error.message}`);
         }
       }
 
