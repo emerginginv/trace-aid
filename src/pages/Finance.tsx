@@ -57,7 +57,7 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 const Finance = () => {
-  useSetBreadcrumbs([{ label: "Retainers" }]);
+  useSetBreadcrumbs([{ label: "Client Retainers" }]);
   
   const navigate = useNavigate();
   const { organization } = useOrganization();
@@ -398,9 +398,9 @@ const Finance = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Retainers</h1>
+          <h1 className="text-3xl font-bold">Client Retainers</h1>
           <p className="text-muted-foreground mt-2">
-            Manage retainer funds across all cases
+            Manage client pre-payment funds across all cases
           </p>
         </div>
         <Button onClick={() => setShowAddDialog(true)}>

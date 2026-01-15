@@ -19,7 +19,7 @@ import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useNavigate } from "react-router-dom";
 
 const formSchema = z.object({
-  finance_type: z.enum(["retainer", "expense", "time"]),
+  finance_type: z.enum(["expense", "time"]),
   amount: z.string().min(1, "Amount is required").refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     "Amount must be a positive number"
@@ -63,7 +63,7 @@ interface FinanceFormProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   editingFinance?: any;
-  defaultFinanceType?: "retainer" | "expense" | "time";
+  defaultFinanceType?: "expense" | "time";
   organizationId: string;
 }
 
@@ -308,7 +308,7 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingFinance ? "Edit" : "Add"} Financial Transaction</DialogTitle>
-          <DialogDescription>Record a retainer, expense, or invoice</DialogDescription>
+          <DialogDescription>Record an expense or time entry</DialogDescription>
           {caseTitle && (
             <button
               onClick={() => {

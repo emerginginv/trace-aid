@@ -131,9 +131,9 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Retainer Funds */}
               <div className="p-3 rounded-xl bg-card/80 border border-border">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                   <Wallet className="w-3.5 h-3.5" />
-                  <span>Retainer Funds</span>
+                  <span>Client Retainers</span>
                 </div>
                 <p className="text-xl font-bold text-emerald-500">
                   ${financialSummary.totalRetainerFunds.toLocaleString('en-US', {

@@ -152,19 +152,17 @@ export function useGenerateInvoiceFromBillingItems() {
 
       const typedResult = result as unknown as GenerateInvoiceResult;
 
-      // Handle retainer if applicable
+      // Handle retainer if applicable - insert directly into retainer_funds table
       if (retainerToApply > 0) {
-        // Deduct from retainer balance
-        await supabase.from("case_finances").insert({
+        const { data: userData } = await supabase.auth.getUser();
+        // Deduct from retainer balance by inserting a negative amount
+        await supabase.from("retainer_funds").insert({
           case_id: caseId,
           organization_id: organizationId,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          finance_type: "retainer_usage",
-          description: `Retainer applied to invoice ${invoiceNumber}`,
-          amount: -retainerToApply,
-          date: new Date().toISOString().split("T")[0],
+          user_id: userData.user?.id,
+          amount: -retainerToApply, // Negative amount for deduction
+          note: `Applied to invoice ${invoiceNumber}`,
           invoice_id: invoice.id,
-          status: "approved",
         });
       }
 

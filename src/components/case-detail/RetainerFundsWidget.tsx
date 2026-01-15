@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, History, DollarSign, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, History, Wallet, Pencil, Trash2, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface RetainerFund {
   id: string;
@@ -25,6 +26,9 @@ interface RetainerFundsWidgetProps {
 }
 
 export function RetainerFundsWidget({ caseId, organizationId }: RetainerFundsWidgetProps) {
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const canViewRetainers = hasPermission('view_retainers');
+  const canManageRetainers = hasPermission('manage_retainers');
   const [balance, setBalance] = useState<number>(0);
   const [funds, setFunds] = useState<RetainerFund[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,13 +189,14 @@ export function RetainerFundsWidget({ caseId, organizationId }: RetainerFundsWid
     setDeleteDialogOpen(true);
   };
 
-  if (loading) {
+  // Show loading state
+  if (loading || permissionsLoading) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Retainer Funds
+            <Wallet className="h-5 w-5" />
+            Client Retainer
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -203,18 +208,26 @@ export function RetainerFundsWidget({ caseId, organizationId }: RetainerFundsWid
     );
   }
 
+  // Show access restricted message for users without permission
+  if (!canViewRetainers) {
+    return null; // Hide widget entirely for investigators/vendors
+  }
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <DollarSign className="h-5 w-5" />
-          Retainer Funds
+          <Wallet className="h-5 w-5 text-emerald-500" />
+          Client Retainer
         </CardTitle>
+        <CardDescription className="text-xs">
+          Client pre-payment funds applied to invoices
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Current Balance</p>
-          <p className="text-2xl font-bold text-primary">
+          <p className="text-xs text-muted-foreground mb-0.5">Available Balance</p>
+          <p className="text-2xl font-bold text-emerald-500">
             ${balance.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2
@@ -223,38 +236,40 @@ export function RetainerFundsWidget({ caseId, organizationId }: RetainerFundsWid
         </div>
 
         <div className="flex gap-2">
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="flex-1 h-8">
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Funds
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Retainer Funds</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddFunds} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount *</Label>
-                  <Input id="amount" type="number" step="0.01" min="0.01" placeholder="5000.00" value={amount} onChange={e => setAmount(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="note">Note (Optional)</Label>
-                  <Textarea id="note" placeholder="Add any relevant notes..." value={note} onChange={e => setNote(e.target.value)} rows={3} />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)} disabled={submitting}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={submitting}>
-                    {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Add Funds
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          {canManageRetainers && (
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="flex-1 h-8">
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add Client Funds
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Client Retainer</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleAddFunds} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Amount *</Label>
+                    <Input id="amount" type="number" step="0.01" min="0.01" placeholder="5000.00" value={amount} onChange={e => setAmount(e.target.value)} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="note">Note (Optional)</Label>
+                    <Textarea id="note" placeholder="Add any relevant notes..." value={note} onChange={e => setNote(e.target.value)} rows={3} />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)} disabled={submitting}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={submitting}>
+                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Add Funds
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
 
           <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
             <DialogTrigger asChild>
@@ -265,7 +280,7 @@ export function RetainerFundsWidget({ caseId, organizationId }: RetainerFundsWid
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Retainer Funds History</DialogTitle>
+                <DialogTitle>Client Retainer History</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
                 {funds.length === 0 ? (
@@ -295,7 +310,7 @@ export function RetainerFundsWidget({ caseId, organizationId }: RetainerFundsWid
                               </p>
                             )}
                           </div>
-                          {!isLinkedToInvoice && (
+                          {!isLinkedToInvoice && canManageRetainers && (
                             <div className="flex gap-1">
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => {
                                 e.stopPropagation();
@@ -333,7 +348,7 @@ export function RetainerFundsWidget({ caseId, organizationId }: RetainerFundsWid
         }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Retainer Fund</DialogTitle>
+              <DialogTitle>Edit Client Retainer</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleEditFund} className="space-y-4">
               <div className="space-y-2">
