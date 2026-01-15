@@ -5,6 +5,7 @@ import { Bell, CheckCircle2, AlertCircle } from 'lucide-react';
 import { DashboardUpdate } from '@/hooks/useDashboardData';
 import { BasePanel, PanelListItem } from '@/components/shared/Panel';
 import { UserAvatar } from '@/components/shared/UserAvatar';
+import { useNavigationSource } from '@/hooks/useNavigationSource';
 
 interface DashboardUpdatesPanelProps {
   updates: DashboardUpdate[];
@@ -57,6 +58,7 @@ export function DashboardUpdatesPanel({
   isLoading = false,
 }: DashboardUpdatesPanelProps) {
   const navigate = useNavigate();
+  const { navigateWithSource } = useNavigationSource();
 
   const filterOptions = canViewAll
     ? [
@@ -80,12 +82,15 @@ export function DashboardUpdatesPanel({
   };
 
   /**
-   * Navigate to the dedicated Update Details page
-   * @deprecated Previous behavior: Inline expand to show description
-   * New behavior: Navigate to /cases/:caseId/updates/:updateId
+   * Navigate to the dedicated Update Details page with source tracking
    */
   const handleUpdateClick = (update: DashboardUpdate) => {
-    navigate(`/cases/${update.caseId}/updates/${update.id}`);
+    navigateWithSource(
+      navigate,
+      `/cases/${update.caseId}/updates/${update.id}`,
+      'dashboard-updates',
+      { filter }
+    );
   };
 
   return (

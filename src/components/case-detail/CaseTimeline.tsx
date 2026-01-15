@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TimelineEntryComponent, TimelineFilters } from "./timeline";
 import { useCaseTimeline } from "@/hooks/use-case-timeline";
 import { TimelineEntry, TimelineEntryType } from "@/types/timeline";
+import { useNavigationSource } from "@/hooks/useNavigationSource";
 
 interface CaseTimelineProps {
   caseId: string;
@@ -14,6 +15,7 @@ interface CaseTimelineProps {
 export function CaseTimeline({ caseId }: CaseTimelineProps) {
   const [, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { navigateWithSource } = useNavigationSource();
   const [entryTypeFilter, setEntryTypeFilter] = useState<'all' | TimelineEntryType>('all');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -31,12 +33,13 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
         setSearchParams({ tab: 'subjects' }, { replace: true });
         break;
       case 'case_updates':
-        /**
-         * @deprecated Since: 2026-01-15
-         * Previous behavior: setSearchParams({ tab: 'updates' }, { replace: true });
-         * New behavior: Navigate directly to dedicated Update Details page
-         */
-        navigate(`/cases/${caseId}/updates/${entry.sourceId}`);
+        // Navigate to dedicated Update Details page with source tracking
+        navigateWithSource(
+          navigate,
+          `/cases/${caseId}/updates/${entry.sourceId}`,
+          'case-timeline',
+          { entryTypeFilter, sortDirection }
+        );
         break;
       case 'case_activities':
         setSearchParams({ tab: 'activities' }, { replace: true });
@@ -50,7 +53,7 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
       default:
         break;
     }
-  }, [setSearchParams, navigate, caseId]);
+  }, [setSearchParams, navigate, caseId, navigateWithSource, entryTypeFilter, sortDirection]);
 
   return (
     <Card>

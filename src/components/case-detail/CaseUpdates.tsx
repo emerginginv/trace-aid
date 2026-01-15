@@ -22,6 +22,7 @@ import { ContextualHelp } from "@/components/help-center";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AIBadge } from "@/components/ui/ai-badge";
 import { AISummaryDialog } from "./AISummaryDialog";
+import { useNavigationSource } from "@/hooks/useNavigationSource";
 
 interface TimelineEntry {
   time: string;
@@ -57,6 +58,7 @@ const COLUMNS: ColumnDefinition[] = [
 
 export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
   const navigate = useNavigate();
+  const { navigateWithSource } = useNavigationSource();
   const { organization } = useOrganization();
   const [updates, setUpdates] = useState<Update[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,7 +171,18 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   };
 
   const handleRowClick = (updateId: string) => {
-    navigate(`/cases/${caseId}/updates/${updateId}`);
+    // Capture current filter state for back navigation
+    const filters: Record<string, string> = {};
+    if (searchQuery) filters.searchQuery = searchQuery;
+    if (sortColumn) filters.sortColumn = sortColumn;
+    if (sortDirection) filters.sortDirection = sortDirection;
+    
+    navigateWithSource(
+      navigate,
+      `/cases/${caseId}/updates/${updateId}`,
+      'case-updates',
+      filters
+    );
   };
 
   // Selection handlers for AI Summary

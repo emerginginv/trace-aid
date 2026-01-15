@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,8 @@ import {
   X,
   CheckCircle,
   ListTodo,
-  CalendarDays
+  CalendarDays,
+  FolderOpen
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -123,6 +125,7 @@ const CaseUpdateDetail = () => {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { hasPermission } = usePermissions();
+  const { navigateBack, getBackButtonLabel } = useNavigationSource();
 
   const [update, setUpdate] = useState<Update | null>(null);
   const [caseInfo, setCaseInfo] = useState<CaseInfo | null>(null);
@@ -435,16 +438,30 @@ const CaseUpdateDetail = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* ========== CASE CONTEXT HEADER ========== */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground border-b pb-3">
+        <FolderOpen className="h-4 w-4" />
+        <span>Case: {caseInfo.case_number} — {caseInfo.title}</span>
+        <Button 
+          variant="link" 
+          size="sm" 
+          className="h-auto p-0 text-muted-foreground hover:text-foreground ml-1"
+          onClick={() => navigate(`/cases/${caseId}`)}
+        >
+          View Case →
+        </Button>
+      </div>
+
       {/* ========== HEADER SECTION ========== */}
       <div className="space-y-4">
         {/* Navigation and Actions */}
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/cases/${caseId}?tab=updates`)}
+            onClick={() => navigateBack(navigate, `/cases/${caseId}?tab=updates`)}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Updates
+            {getBackButtonLabel()}
           </Button>
 
           <div className="flex items-center gap-2">
