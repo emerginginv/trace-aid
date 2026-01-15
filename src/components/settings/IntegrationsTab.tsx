@@ -126,7 +126,7 @@ export function IntegrationsTab() {
       if (!organization?.id) return [];
       const { data, error } = await supabase
         .from("webhooks")
-        .select("*")
+        .select("id, name, event_types, endpoint_url, enabled, failure_count, last_triggered_at, created_at")
         .eq("organization_id", organization.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
