@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays, Link, Zap } from "lucide-react";
+import { Plus, Edit, Trash2, Search, ShieldAlert, Download, CheckSquare, CalendarDays, Link, Zap, Clock, List } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,6 +23,7 @@ import { BillingPromptDialog } from "@/components/billing/BillingPromptDialog";
 import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
 import { QuickBillDialog } from "@/components/billing/QuickBillDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface Activity {
   id: string;
@@ -30,6 +31,8 @@ interface Activity {
   title: string;
   description: string | null;
   due_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   completed: boolean;
   completed_at: string | null;
   created_at: string;
@@ -39,6 +42,7 @@ interface Activity {
   event_subtype: string | null;
   case_service_instance_id: string | null;
   service_name?: string;
+  is_scheduled?: boolean; // Computed column from Phase 1
 }
 
 interface User {
@@ -52,6 +56,9 @@ interface CaseActivitiesProps {
   isClosedCase?: boolean;
 }
 
+// View filter types for unified display
+type ViewFilter = "all" | "scheduled" | "unscheduled";
+
 export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesProps) {
   const { organization } = useOrganization();
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -60,6 +67,9 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const [formOpen, setFormOpen] = useState(false);
   const [formType, setFormType] = useState<"task" | "event">("task");
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  
+  // Phase 3: Unified view filter
+  const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
   
   // Billing eligibility state
   const [billingPromptOpen, setBillingPromptOpen] = useState(false);
@@ -71,15 +81,10 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   const [quickBillDialogOpen, setQuickBillDialogOpen] = useState(false);
   const [selectedEventForQuickBill, setSelectedEventForQuickBill] = useState<Activity | null>(null);
 
-  // Separate state for tasks panel
-  const [taskSearchQuery, setTaskSearchQuery] = useState("");
-  const [taskFilterStatus, setTaskFilterStatus] = useState<string>("all");
-  const { sortColumn: taskSortColumn, sortDirection: taskSortDirection, handleSort: handleTaskSort } = useSortPreference("case-activities-tasks", "due_date", "asc");
-
-  // Separate state for events panel
-  const [eventSearchQuery, setEventSearchQuery] = useState("");
-  const [eventFilterStatus, setEventFilterStatus] = useState<string>("all");
-  const { sortColumn: eventSortColumn, sortDirection: eventSortDirection, handleSort: handleEventSort } = useSortPreference("case-activities-events", "due_date", "asc");
+  // Unified state for single activities panel
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const { sortColumn, sortDirection, handleSort } = useSortPreference("case-activities-unified", "due_date", "asc");
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewActivities = hasPermission("view_activities");
@@ -167,7 +172,9 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   };
 
   const handleEdit = (activity: Activity) => {
-    setFormType(activity.activity_type as "task" | "event");
+    // Determine form type based on is_scheduled or activity_type
+    const isScheduled = activity.is_scheduled || activity.activity_type === "event";
+    setFormType(isScheduled ? "event" : "task");
     setEditingActivity(activity);
     setFormOpen(true);
   };
@@ -198,11 +205,16 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
     }
   };
 
-  const handleToggleComplete = async (activity: Activity, type: "task" | "event") => {
+  const handleToggleComplete = async (activity: Activity) => {
     try {
-      const newStatus = type === "task" 
-        ? (activity.status === "done" ? "to_do" : "done")
-        : (activity.status === "completed" ? "scheduled" : "completed");
+      // Determine if this is a scheduled activity
+      const isScheduled = activity.is_scheduled || activity.activity_type === "event";
+      
+      // Use unified status logic
+      const isCurrentlyDone = activity.status === "done" || activity.status === "completed";
+      const newStatus = isCurrentlyDone 
+        ? (isScheduled ? "scheduled" : "to_do")
+        : (isScheduled ? "completed" : "done");
       
       const isCompleting = newStatus === "done" || newStatus === "completed";
       
@@ -230,13 +242,12 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
 
       toast({
         title: "Success",
-        description: `${type === "task" ? "Task" : "Event"} updated successfully`,
+        description: "Activity updated successfully",
       });
 
       // Check billing eligibility if completing and has service instance
-      // NOTE: Billing moved to Updates - Events no longer trigger billing prompts
-      // Only trigger billing prompt for TASKS, not events
-      if (isCompleting && activity.case_service_instance_id && type === "task") {
+      // Only trigger billing prompt for unscheduled activities (tasks)
+      if (isCompleting && activity.case_service_instance_id && !isScheduled) {
         const eligibility = await evaluateBillingEligibility({
           activityId: activity.id,
           caseServiceInstanceId: activity.case_service_instance_id,
@@ -247,12 +258,11 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
           setBillingPromptOpen(true);
         }
       }
-      // Events (type === "event") billing is now handled via the Updates workflow
     } catch (error) {
       console.error('Error updating activity:', error);
       toast({
         title: "Error",
-        description: `Failed to update ${type === "task" ? "task" : "event"}`,
+        description: "Failed to update activity",
         variant: "destructive",
       });
     }
@@ -296,24 +306,41 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
     return format(new Date(dateStr), "MMM dd, yyyy");
   };
 
-  // Split activities into tasks and events
-  const allTasks = activities.filter(a => a.activity_type === 'task');
-  const allEvents = activities.filter(a => a.activity_type === 'event');
+  // Helper to check if activity is scheduled
+  const isActivityScheduled = (activity: Activity) => {
+    return activity.is_scheduled || activity.activity_type === "event";
+  };
 
-  // Filter and sort tasks
-  const filteredTasks = allTasks
+  // Count activities by type
+  const scheduledCount = activities.filter(a => isActivityScheduled(a)).length;
+  const unscheduledCount = activities.filter(a => !isActivityScheduled(a)).length;
+
+  // Filter activities based on view filter, search, and status
+  const filteredActivities = activities
     .filter(activity => {
+      // View filter (scheduled vs unscheduled)
+      if (viewFilter === "scheduled" && !isActivityScheduled(activity)) return false;
+      if (viewFilter === "unscheduled" && isActivityScheduled(activity)) return false;
+      
+      // Search filter
       const matchesSearch =
-        activity.title.toLowerCase().includes(taskSearchQuery.toLowerCase()) ||
-        activity.description?.toLowerCase().includes(taskSearchQuery.toLowerCase());
-      const matchesStatus = taskFilterStatus === "all" || activity.status === taskFilterStatus;
+        activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        activity.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Status filter
+      const matchesStatus = filterStatus === "all" || activity.status === filterStatus;
+      
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      if (!taskSortColumn) return 0;
+      if (!sortColumn) return 0;
       let aVal: any, bVal: any;
-      switch (taskSortColumn) {
+      switch (sortColumn) {
         case "title": aVal = a.title; bVal = b.title; break;
+        case "type": 
+          aVal = isActivityScheduled(a) ? 1 : 0; 
+          bVal = isActivityScheduled(b) ? 1 : 0; 
+          break;
         case "status": aVal = a.status; bVal = b.status; break;
         case "due_date":
           aVal = a.due_date ? new Date(a.due_date).getTime() : 0;
@@ -321,60 +348,58 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
           break;
         default: return 0;
       }
-      if (aVal == null) return taskSortDirection === "asc" ? 1 : -1;
-      if (bVal == null) return taskSortDirection === "asc" ? -1 : 1;
+      if (aVal == null) return sortDirection === "asc" ? 1 : -1;
+      if (bVal == null) return sortDirection === "asc" ? -1 : 1;
       if (typeof aVal === "string" && typeof bVal === "string") {
-        return taskSortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       }
-      return taskSortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
     });
 
-  // Filter and sort events
-  const filteredEvents = allEvents
-    .filter(activity => {
-      const matchesSearch =
-        activity.title.toLowerCase().includes(eventSearchQuery.toLowerCase()) ||
-        activity.description?.toLowerCase().includes(eventSearchQuery.toLowerCase());
-      const matchesStatus = eventFilterStatus === "all" || activity.status === eventFilterStatus;
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      if (!eventSortColumn) return 0;
-      let aVal: any, bVal: any;
-      switch (eventSortColumn) {
-        case "title": aVal = a.title; bVal = b.title; break;
-        case "status": aVal = a.status; bVal = b.status; break;
-        case "event_subtype": aVal = a.event_subtype || ''; bVal = b.event_subtype || ''; break;
-        case "due_date":
-          aVal = a.due_date ? new Date(a.due_date).getTime() : 0;
-          bVal = b.due_date ? new Date(b.due_date).getTime() : 0;
-          break;
-        default: return 0;
-      }
-      if (aVal == null) return eventSortDirection === "asc" ? 1 : -1;
-      if (bVal == null) return eventSortDirection === "asc" ? -1 : 1;
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        return eventSortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      }
-      return eventSortDirection === "asc" ? aVal - bVal : bVal - aVal;
-    });
+  // Get status options based on current view filter
+  const getStatusOptions = () => {
+    const allStatuses = [
+      { value: "all", label: "All" },
+      { value: "to_do", label: "To Do" },
+      { value: "scheduled", label: "Scheduled" },
+      { value: "in_progress", label: "In Progress" },
+      { value: "blocked", label: "Blocked" },
+      { value: "done", label: "Done" },
+      { value: "completed", label: "Completed" },
+      { value: "cancelled", label: "Cancelled" },
+    ];
+    
+    if (viewFilter === "scheduled") {
+      return allStatuses.filter(s => ["all", "scheduled", "in_progress", "blocked", "completed", "cancelled"].includes(s.value));
+    }
+    if (viewFilter === "unscheduled") {
+      return allStatuses.filter(s => ["all", "to_do", "in_progress", "blocked", "done", "cancelled"].includes(s.value));
+    }
+    return allStatuses;
+  };
 
-  const handleExport = (type: "task" | "event", format: "csv" | "pdf") => {
-    const data = type === "task" ? filteredTasks : filteredEvents;
+  const handleExport = (format: "csv" | "pdf") => {
     const exportColumns: ExportColumn[] = [
       { key: "title", label: "Title" },
+      { key: "activity_type", label: "Type", format: (v) => v === "event" ? "Scheduled" : "Task" },
       { key: "service_name", label: "Linked Service", format: (v) => v || "-" },
-      ...(type === "event" ? [{ key: "event_subtype", label: "Event Type", format: (v: any) => v || "-" }] : []),
       { key: "status", label: "Status", format: (v) => v?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '-' },
       { key: "assigned_user_id", label: "Assigned To", format: (v) => getUserName(v) },
       { key: "due_date", label: "Due Date", format: (v) => formatDueDate(v) },
       { key: "description", label: "Description", format: (v) => v || "-" },
     ];
     
+    const fileName = viewFilter === "all" ? "case-activities" : `case-${viewFilter}-activities`;
+    
     if (format === "csv") {
-      exportToCSV(data, exportColumns, `case-${type}s`);
+      exportToCSV(filteredActivities, exportColumns, fileName);
     } else {
-      exportToPDF(data, exportColumns, `Case ${type === "task" ? "Tasks" : "Events"}`, `case-${type}s`);
+      const title = viewFilter === "all" 
+        ? "Case Activities" 
+        : viewFilter === "scheduled" 
+          ? "Scheduled Activities" 
+          : "Tasks";
+      exportToPDF(filteredActivities, exportColumns, title, fileName);
     }
   };
 
@@ -399,43 +424,53 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
   return (
     <>
       <div className="space-y-6">
-        {/* Header with both Add buttons */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold">Case Activities</h2>
+            <h2 className="text-2xl font-bold">Activities</h2>
             <p className="text-muted-foreground">
-              {allTasks.length} task{allTasks.length !== 1 ? 's' : ''}, {allEvents.length} event{allEvents.length !== 1 ? 's' : ''}
+              {unscheduledCount} task{unscheduledCount !== 1 ? 's' : ''}, {scheduledCount} scheduled event{scheduledCount !== 1 ? 's' : ''}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => openForm("task")} 
-              disabled={!canAddActivities || isClosedCase}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Task
-            </Button>
-            <Button 
-              onClick={() => openForm("event")} 
-              disabled={!canAddActivities || isClosedCase}
-              variant="outline"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Event
-            </Button>
-          </div>
+          <Button 
+            onClick={() => openForm("task")} 
+            disabled={!canAddActivities || isClosedCase}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Activity
+          </Button>
         </div>
 
-        {/* Side-by-side panels */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Tasks Panel */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CheckSquare className="h-5 w-5" />
-                  Tasks ({filteredTasks.length})
-                </CardTitle>
+        {/* Unified Activities Panel */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <List className="h-5 w-5" />
+                All Activities ({filteredActivities.length})
+              </CardTitle>
+              
+              <div className="flex items-center gap-2">
+                {/* View Toggle */}
+                <ToggleGroup 
+                  type="single" 
+                  value={viewFilter} 
+                  onValueChange={(value) => value && setViewFilter(value as ViewFilter)}
+                  className="border rounded-md"
+                >
+                  <ToggleGroupItem value="all" aria-label="Show all" className="text-xs px-3">
+                    All
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="unscheduled" aria-label="Show tasks" className="text-xs px-3">
+                    <CheckSquare className="h-3.5 w-3.5 mr-1" />
+                    Tasks
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="scheduled" aria-label="Show scheduled" className="text-xs px-3">
+                    <CalendarDays className="h-3.5 w-3.5 mr-1" />
+                    Scheduled
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm">
@@ -443,190 +478,24 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleExport("task", "csv")}>
+                    <DropdownMenuItem onClick={() => handleExport("csv")}>
                       Export to CSV
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("task", "pdf")}>
+                    <DropdownMenuItem onClick={() => handleExport("pdf")}>
                       Export to PDF
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Task filters */}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search tasks..."
-                    value={taskSearchQuery}
-                    onChange={(e) => setTaskSearchQuery(e.target.value)}
-                    className="pl-9 h-9"
-                  />
-                </div>
-                <Select value={taskFilterStatus} onValueChange={setTaskFilterStatus}>
-                  <SelectTrigger className="w-[120px] h-9">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="to_do">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
-                    <SelectItem value="done">Done</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Tasks table */}
-              {filteredTasks.length === 0 ? (
-                <div className="text-center py-8 border rounded-lg bg-muted/50">
-                  <CheckSquare className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground text-sm">
-                    {taskSearchQuery || taskFilterStatus !== "all"
-                      ? "No tasks match your filters"
-                      : "No tasks yet"}
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <th className="w-[40px] p-2"></th>
-                        <SortableTableHead
-                          column="title"
-                          label="Title"
-                          sortColumn={taskSortColumn}
-                          sortDirection={taskSortDirection}
-                          onSort={handleTaskSort}
-                          className="min-w-[150px]"
-                        />
-                        <SortableTableHead
-                          column="status"
-                          label="Status"
-                          sortColumn={taskSortColumn}
-                          sortDirection={taskSortDirection}
-                          onSort={handleTaskSort}
-                          className="w-[100px]"
-                        />
-                        <SortableTableHead
-                          column="due_date"
-                          label="Due"
-                          sortColumn={taskSortColumn}
-                          sortDirection={taskSortDirection}
-                          onSort={handleTaskSort}
-                          className="w-[100px]"
-                        />
-                        <th className="w-[80px] p-2"></th>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTasks.map((task) => (
-                        <TableRow key={task.id}>
-                          <TableCell className="align-top">
-                            <Checkbox
-                              checked={task.status === "done"}
-                              onCheckedChange={() => handleToggleComplete(task, "task")}
-                              disabled={isClosedCase || !canEditActivities}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium align-top">
-                            <div className="flex flex-col gap-0.5">
-                              <span 
-                                className={`line-clamp-1 ${task.status === "done" ? "line-through text-muted-foreground" : ""}`}
-                                title={task.title}
-                              >
-                                {task.title}
-                              </span>
-                              {task.service_name && (
-                                <span className="text-xs text-primary flex items-center gap-1" title={`Linked to: ${task.service_name}`}>
-                                  <Link className="h-3 w-3" />
-                                  {task.service_name}
-                                </span>
-                              )}
-                              {task.description && !task.service_name && (
-                                <span className="text-xs text-muted-foreground line-clamp-1" title={task.description}>
-                                  {task.description}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <Badge variant="outline" className={`${getStatusColor(task.status)} text-xs`}>
-                              {getStatusLabel(task.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="align-top text-sm whitespace-nowrap">
-                            {formatDueDate(task.due_date)}
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <div className="flex gap-1">
-                              {canEditActivities && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEdit(task)}
-                                  disabled={isClosedCase}
-                                  className="h-7 w-7"
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                              {canDeleteActivities && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDelete(task.id)}
-                                  disabled={isClosedCase}
-                                  className="h-7 w-7"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Events Panel */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5" />
-                  Events ({filteredEvents.length})
-                </CardTitle>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleExport("event", "csv")}>
-                      Export to CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("event", "pdf")}>
-                      Export to PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              {/* Info banner about event billing */}
+            </div>
+            
+            {/* Info banner for scheduled activities */}
+            {viewFilter === "scheduled" && (
               <div className="rounded-md border border-muted bg-muted/30 px-3 py-2 mt-2">
                 <p className="text-xs text-muted-foreground flex items-center gap-2">
                   <Link className="h-3.5 w-3.5 shrink-0" />
                   <span>
-                    Costs are derived from updates.{" "}
+                    Costs for scheduled activities are derived from updates.{" "}
                     <a 
                       href={`/cases/${caseId}?tab=updates`}
                       className="text-primary hover:underline font-medium"
@@ -636,135 +505,155 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                   </span>
                 </p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Event filters */}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search events..."
-                    value={eventSearchQuery}
-                    onChange={(e) => setEventSearchQuery(e.target.value)}
-                    className="pl-9 h-9"
-                  />
-                </div>
-                <Select value={eventFilterStatus} onValueChange={setEventFilterStatus}>
-                  <SelectTrigger className="w-[120px] h-9">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
+            )}
+          </CardHeader>
+          
+          <CardContent className="space-y-4">
+            {/* Filters */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search activities..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9"
+                />
               </div>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[130px] h-9">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getStatusOptions().map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Events table */}
-              {filteredEvents.length === 0 ? (
-                <div className="text-center py-8 border rounded-lg bg-muted/50">
-                  <CalendarDays className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground text-sm">
-                    {eventSearchQuery || eventFilterStatus !== "all"
-                      ? "No events match your filters"
-                      : "No events yet"}
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <th className="w-[40px] p-2"></th>
+            {/* Activities table */}
+            {filteredActivities.length === 0 ? (
+              <div className="text-center py-8 border rounded-lg bg-muted/50">
+                <List className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground text-sm">
+                  {searchQuery || filterStatus !== "all"
+                    ? "No activities match your filters"
+                    : viewFilter === "scheduled"
+                      ? "No scheduled activities yet"
+                      : viewFilter === "unscheduled"
+                        ? "No tasks yet"
+                        : "No activities yet"}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <th className="w-[40px] p-2"></th>
+                      <SortableTableHead
+                        column="title"
+                        label="Title"
+                        sortColumn={sortColumn}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                        className="min-w-[150px]"
+                      />
+                      {viewFilter === "all" && (
                         <SortableTableHead
-                          column="title"
-                          label="Title"
-                          sortColumn={eventSortColumn}
-                          sortDirection={eventSortDirection}
-                          onSort={handleEventSort}
-                          className="min-w-[150px]"
-                        />
-                        <SortableTableHead
-                          column="event_subtype"
+                          column="type"
                           label="Type"
-                          sortColumn={eventSortColumn}
-                          sortDirection={eventSortDirection}
-                          onSort={handleEventSort}
-                          className="w-[90px]"
-                        />
-                        <SortableTableHead
-                          column="status"
-                          label="Status"
-                          sortColumn={eventSortColumn}
-                          sortDirection={eventSortDirection}
-                          onSort={handleEventSort}
+                          sortColumn={sortColumn}
+                          sortDirection={sortDirection}
+                          onSort={handleSort}
                           className="w-[100px]"
                         />
-                        <SortableTableHead
-                          column="due_date"
-                          label="Date"
-                          sortColumn={eventSortColumn}
-                          sortDirection={eventSortDirection}
-                          onSort={handleEventSort}
-                          className="w-[100px]"
-                        />
-                        <th className="w-[80px] p-2"></th>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredEvents.map((event) => (
-                        <TableRow key={event.id}>
+                      )}
+                      <SortableTableHead
+                        column="status"
+                        label="Status"
+                        sortColumn={sortColumn}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                        className="w-[100px]"
+                      />
+                      <SortableTableHead
+                        column="due_date"
+                        label="Date"
+                        sortColumn={sortColumn}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                        className="w-[100px]"
+                      />
+                      <th className="w-[100px] p-2"></th>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredActivities.map((activity) => {
+                      const isScheduled = isActivityScheduled(activity);
+                      const isDone = activity.status === "done" || activity.status === "completed";
+                      
+                      return (
+                        <TableRow key={activity.id}>
                           <TableCell className="align-top">
                             <Checkbox
-                              checked={event.status === "completed"}
-                              onCheckedChange={() => handleToggleComplete(event, "event")}
+                              checked={isDone}
+                              onCheckedChange={() => handleToggleComplete(activity)}
                               disabled={isClosedCase || !canEditActivities}
                             />
                           </TableCell>
                           <TableCell className="font-medium align-top">
                             <div className="flex flex-col gap-0.5">
                               <span 
-                                className={`line-clamp-1 ${event.status === "completed" ? "line-through text-muted-foreground" : ""}`}
-                                title={event.title}
+                                className={`line-clamp-1 ${isDone ? "line-through text-muted-foreground" : ""}`}
+                                title={activity.title}
                               >
-                                {event.title}
+                                {activity.title}
                               </span>
-                              {event.service_name && (
-                                <span className="text-xs text-primary flex items-center gap-1" title={`Linked to: ${event.service_name}`}>
+                              {activity.service_name && (
+                                <span className="text-xs text-primary flex items-center gap-1" title={`Linked to: ${activity.service_name}`}>
                                   <Link className="h-3 w-3" />
-                                  {event.service_name}
+                                  {activity.service_name}
                                 </span>
                               )}
-                              {event.description && !event.service_name && (
-                                <span className="text-xs text-muted-foreground line-clamp-1" title={event.description}>
-                                  {event.description}
+                              {activity.description && !activity.service_name && (
+                                <span className="text-xs text-muted-foreground line-clamp-1" title={activity.description}>
+                                  {activity.description}
                                 </span>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="align-top">
-                            {event.event_subtype ? (
-                              <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                                {event.event_subtype}
+                          {viewFilter === "all" && (
+                            <TableCell className="align-top">
+                              <Badge 
+                                variant="secondary" 
+                                className={`text-xs ${isScheduled 
+                                  ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" 
+                                  : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"}`}
+                              >
+                                {isScheduled ? (
+                                  <><Clock className="h-3 w-3 mr-1" /> Event</>
+                                ) : (
+                                  <><CheckSquare className="h-3 w-3 mr-1" /> Task</>
+                                )}
                               </Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">-</span>
-                            )}
-                          </TableCell>
+                            </TableCell>
+                          )}
                           <TableCell className="align-top">
-                            <Badge variant="outline" className={`${getStatusColor(event.status)} text-xs`}>
-                              {getStatusLabel(event.status)}
+                            <Badge variant="outline" className={`${getStatusColor(activity.status)} text-xs`}>
+                              {getStatusLabel(activity.status)}
                             </Badge>
                           </TableCell>
                           <TableCell className="align-top text-sm whitespace-nowrap">
-                            {formatDueDate(event.due_date)}
+                            {formatDueDate(activity.due_date)}
                           </TableCell>
                           <TableCell className="align-top">
                             <div className="flex gap-1">
-                              {/* Quick Bill Button - only for events with linked services that aren't completed */}
-                              {event.case_service_instance_id && event.status !== "completed" && canEditActivities && (
+                              {/* Quick Bill Button - only for scheduled activities with linked services */}
+                              {isScheduled && activity.case_service_instance_id && !isDone && canEditActivities && (
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -772,7 +661,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => {
-                                          setSelectedEventForQuickBill(event);
+                                          setSelectedEventForQuickBill(activity);
                                           setQuickBillDialogOpen(true);
                                         }}
                                         disabled={isClosedCase}
@@ -791,7 +680,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleEdit(event)}
+                                  onClick={() => handleEdit(activity)}
                                   disabled={isClosedCase}
                                   className="h-7 w-7"
                                 >
@@ -802,7 +691,7 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleDelete(event.id)}
+                                  onClick={() => handleDelete(activity.id)}
                                   disabled={isClosedCase}
                                   className="h-7 w-7"
                                 >
@@ -812,14 +701,14 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <ActivityForm
