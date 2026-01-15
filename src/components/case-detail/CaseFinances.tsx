@@ -90,7 +90,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   const [retainerTotal, setRetainerTotal] = useState<number>(0);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
-  const [defaultFinanceType, setDefaultFinanceType] = useState<"retainer" | "expense" | "time">("expense");
+  const [defaultFinanceType, setDefaultFinanceType] = useState<"expense" | "time">("expense");
   const [financialEntryOpen, setFinancialEntryOpen] = useState(false);
   
   // Sorting states
@@ -487,7 +487,7 @@ export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string;
   });
 
   const expenseFinances = filteredFinances.filter(
-    (f) => f.finance_type === "retainer" || f.finance_type === "expense"
+    (f) => f.finance_type === "expense"
   );
 
   const timeFinances = filteredFinances.filter(

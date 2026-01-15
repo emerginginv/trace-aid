@@ -1049,7 +1049,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
             <div className="border-t pt-4 space-y-4">
               <h3 className="text-sm font-semibold">Budget Authorization</h3>
               <p className="text-xs text-muted-foreground">
-                Set authorization limits for this case. This is NOT a retainer or payment.
+                Set authorization limits for this case. This is an internal budget authorization, not a client payment.
                 {budgetConfig.required && <span className="text-destructive ml-1">*Required</span>}
               </p>
               
