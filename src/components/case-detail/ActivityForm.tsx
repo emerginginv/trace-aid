@@ -491,11 +491,26 @@ export function ActivityForm({
       onSuccess();
     } catch (error) {
       console.error("Error saving activity:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save activity",
-        variant: "destructive",
-      });
+      
+      // Check for budget hard-cap errors and show user-friendly message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isBudgetError = errorMessage.toLowerCase().includes('budget exceeded') || 
+                           errorMessage.toLowerCase().includes('hard budget cap') ||
+                           errorMessage.toLowerCase().includes('hard cap');
+      
+      if (isBudgetError) {
+        toast({
+          title: "Budget hard cap reached",
+          description: "This case is over its hard cap. To save a task, leave the Service field empty (non-billable), or increase the case budget.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage || "Failed to save activity",
+          variant: "destructive",
+        });
+      }
     }
   };
 
