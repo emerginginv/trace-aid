@@ -46,6 +46,19 @@ import {
 import { format } from "date-fns";
 import { EXPENSE_CATEGORIES } from "@/hooks/useExpenseBillingItemCreation";
 
+/**
+ * INVARIANT 2: Pay rates come from User Profile (employee_price_list)
+ *
+ * Time/Expense entries track INTERNAL COSTS only:
+ * - "Pay Rate" = rate paid to investigator (internal compensation)
+ * - "Pay" = total internal cost (hours/qty × pay rate)
+ *
+ * Client billing happens separately in CaseBillingTab using
+ * Account Client Pricing (client_price_list) - see INVARIANT 1.
+ *
+ * Investigators should NOT see billing rates in this interface.
+ */
+
 // Types
 interface TimeEntry {
   id: string;
@@ -688,8 +701,8 @@ const NewExpenseEntry = () => {
                       <TableHead className="w-[200px]">Item</TableHead>
                       <TableHead>Notes</TableHead>
                       <TableHead className="w-[80px] text-right">Hrs</TableHead>
-                      <TableHead className="w-[100px] text-right">Cost Rate</TableHead>
-                      <TableHead className="w-[100px] text-right">Cost</TableHead>
+                      <TableHead className="w-[100px] text-right">Pay Rate</TableHead>
+                      <TableHead className="w-[100px] text-right">Pay</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -777,7 +790,7 @@ const NewExpenseEntry = () => {
                   Add More Time
                 </Button>
                 <div className="text-sm font-medium">
-                  Time Cost: {formatCurrency(timeSubtotal)}
+                  Time Pay: {formatCurrency(timeSubtotal)}
                 </div>
               </div>
             </CardContent>
@@ -816,8 +829,8 @@ const NewExpenseEntry = () => {
                       <TableHead className="w-[200px]">Item</TableHead>
                       <TableHead>Notes</TableHead>
                       <TableHead className="w-[80px] text-right">Qty</TableHead>
-                      <TableHead className="w-[100px] text-right">Cost Rate</TableHead>
-                      <TableHead className="w-[100px] text-right">Cost</TableHead>
+                      <TableHead className="w-[100px] text-right">Pay Rate</TableHead>
+                      <TableHead className="w-[100px] text-right">Pay</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -905,7 +918,7 @@ const NewExpenseEntry = () => {
                   Add More Expenses
                 </Button>
                 <div className="text-sm font-medium">
-                  Expense Cost: {formatCurrency(expenseSubtotal)}
+                  Expense Pay: {formatCurrency(expenseSubtotal)}
                 </div>
               </div>
             </CardContent>
