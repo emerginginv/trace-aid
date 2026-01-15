@@ -3,8 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
+import { useUpdateEditability } from "@/hooks/useUpdateEditability";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,8 @@ import {
   CheckCircle,
   ListTodo,
   CalendarDays,
-  FolderOpen
+  FolderOpen,
+  Lock
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -124,7 +125,6 @@ const CaseUpdateDetail = () => {
   const { caseId, updateId } = useParams<{ caseId: string; updateId: string }>();
   const navigate = useNavigate();
   const { organization } = useOrganization();
-  const { hasPermission } = usePermissions();
   const { navigateBack, getBackButtonLabel } = useNavigationSource();
 
   const [update, setUpdate] = useState<Update | null>(null);
@@ -141,9 +141,15 @@ const CaseUpdateDetail = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
 
-  const canEditUpdates = hasPermission("edit_updates");
-  const canDeleteUpdates = hasPermission("delete_updates");
-  const isClosedCase = caseInfo?.status === "closed";
+  // Centralized editability logic
+  const {
+    canEdit,
+    canDelete,
+    canManageBilling,
+    canLinkAttachments,
+    readOnlyReason,
+    isOwner,
+  } = useUpdateEditability(update, caseInfo?.status);
 
   useSetBreadcrumbs(
     caseInfo && update
@@ -452,6 +458,15 @@ const CaseUpdateDetail = () => {
         </Button>
       </div>
 
+      {/* ========== READ-ONLY BANNER ========== */}
+      {readOnlyReason && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200">
+          <Lock className="h-4 w-4 shrink-0" />
+          <span className="text-sm font-medium">Read-Only:</span>
+          <span className="text-sm">{readOnlyReason}</span>
+        </div>
+      )}
+
       {/* ========== HEADER SECTION ========== */}
       <div className="space-y-4">
         {/* Navigation and Actions */}
@@ -465,13 +480,13 @@ const CaseUpdateDetail = () => {
           </Button>
 
           <div className="flex items-center gap-2">
-            {canEditUpdates && !isClosedCase && (
+            {canEdit && (
               <Button variant="outline" onClick={() => setEditFormOpen(true)}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </Button>
             )}
-            {canDeleteUpdates && !isClosedCase && (
+            {canDelete && (
               <Button variant="outline" onClick={() => setDeleteDialogOpen(true)}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
@@ -502,6 +517,12 @@ const CaseUpdateDetail = () => {
             {update.is_legacy_billing && (
               <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
                 Legacy
+              </Badge>
+            )}
+            {isOwner && (
+              <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800">
+                <User className="h-3 w-3 mr-1" />
+                Your Update
               </Badge>
             )}
             {linkedActivity && (
@@ -578,7 +599,7 @@ const CaseUpdateDetail = () => {
                 <Badge variant="secondary">{linkedAttachments.length}</Badge>
               )}
             </div>
-            {canEditUpdates && !isClosedCase && (
+            {canLinkAttachments && (
               <Button
                 variant="outline"
                 size="sm"
@@ -643,7 +664,7 @@ const CaseUpdateDetail = () => {
                       </Button>
                     </div>
                   </div>
-                  {canEditUpdates && !isClosedCase && (
+                  {canLinkAttachments && (
                     <button
                       onClick={() => handleUnlinkAttachment(attachment.id)}
                       className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -674,7 +695,7 @@ const CaseUpdateDetail = () => {
                 <Badge variant="secondary">{billingEntries.length}</Badge>
               )}
             </div>
-            {update.linked_activity_id && !isClosedCase && (
+            {update.linked_activity_id && canManageBilling && (
               <CreateBillingItemButton
                 activityId={update.linked_activity_id}
                 updateId={update.id}

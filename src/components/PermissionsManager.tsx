@@ -66,8 +66,10 @@ const featureGroups: FeatureGroup[] = [
     features: [
       { key: "view_updates", label: "View Updates" },
       { key: "add_updates", label: "Add Updates" },
-      { key: "edit_updates", label: "Edit Updates" },
-      { key: "delete_updates", label: "Delete Updates" },
+      { key: "edit_updates", label: "Edit All Updates", description: "Edit any update in the organization" },
+      { key: "edit_own_updates", label: "Edit Own Updates", description: "Edit updates you created" },
+      { key: "delete_updates", label: "Delete All Updates", description: "Delete any update in the organization" },
+      { key: "delete_own_updates", label: "Delete Own Updates", description: "Delete updates you created" },
     ],
   },
   {
