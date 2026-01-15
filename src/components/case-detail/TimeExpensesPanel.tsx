@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Sheet,
@@ -25,6 +25,7 @@ import {
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import { EXPENSE_CATEGORIES } from "@/hooks/useExpenseBillingItemCreation";
+import { useStaffPricingItems } from "@/hooks/useStaffPricing";
 
 interface TimeEntry {
   id: string;
@@ -78,8 +79,27 @@ export const TimeExpensesPanel = ({
   const [linkedActivityId, setLinkedActivityId] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
 
-  // Rate schedule items from pricing rules
-  const [rateScheduleItems, setRateScheduleItems] = useState<RateScheduleItem[]>([]);
+  // Current user ID for staff pricing lookup
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUserId(user?.id || null);
+    });
+  }, []);
+
+  // Use staff pricing hook to get rates resolved for current user
+  const { data: staffPricingItems = [] } = useStaffPricingItems(currentUserId);
+
+  // Map staff pricing items to rate schedule format
+  const rateScheduleItems: RateScheduleItem[] = staffPricingItems.map((item) => ({
+    id: item.id,
+    name: item.name,
+    rate: item.customRate ?? item.defaultRate ?? 0,
+    rateType: item.rateType,
+    financeItemId: item.id,
+  }));
 
   // Section states
   const [timeExpanded, setTimeExpanded] = useState(true);
@@ -97,7 +117,6 @@ export const TimeExpensesPanel = ({
   useEffect(() => {
     if (open && updateId && caseId) {
       fetchContextData();
-      fetchRateSchedule();
     }
   }, [open, updateId, caseId]);
 
@@ -141,49 +160,6 @@ export const TimeExpensesPanel = ({
       }
     } catch (error) {
       console.error("Error fetching context data:", error);
-    }
-  };
-
-  const fetchRateSchedule = async () => {
-    try {
-      // Fetch finance items that are expense items for this organization
-      const { data: financeItems, error } = await supabase
-        .from("finance_items")
-        .select("*")
-        .eq("organization_id", organizationId)
-        .eq("is_expense_item", true)
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching finance items:", error);
-        setRateScheduleItems([
-          { id: "hourly_default", name: "Hourly Rate", rate: 75, rateType: "hourly", financeItemId: "" },
-        ]);
-        return;
-      }
-
-      if (financeItems && financeItems.length > 0) {
-        const items: RateScheduleItem[] = financeItems.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          rate: item.default_expense_rate || 0,
-          rateType: item.rate_type || "hourly",
-          financeItemId: item.id,
-        }));
-        setRateScheduleItems(items);
-      } else {
-        // Fallback to default
-        setRateScheduleItems([
-          { id: "hourly_default", name: "Hourly Rate", rate: 75, rateType: "hourly", financeItemId: "" },
-        ]);
-      }
-    } catch (error) {
-      console.error("Error fetching rate schedule:", error);
-      // Fallback
-      setRateScheduleItems([
-        { id: "hourly_default", name: "Hourly Rate", rate: 75, rateType: "hourly", financeItemId: "" },
-      ]);
     }
   };
 
@@ -514,9 +490,9 @@ export const TimeExpensesPanel = ({
                       />
                     </div>
 
-                    {/* Cost Rate (read-only) */}
+                    {/* Pay Rate (read-only) */}
                     <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground mb-1 block">Cost Rate</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Pay Rate</Label>
                       <Input
                         value={formatCurrency(entry.rate)}
                         readOnly
@@ -536,9 +512,9 @@ export const TimeExpensesPanel = ({
                       </Button>
                     </div>
 
-                    {/* Cost display */}
+                    {/* Pay display */}
                     <div className="col-span-12 text-right text-sm font-medium">
-                      Cost: {formatCurrency(entry.hours * entry.rate)}
+                      Pay: {formatCurrency(entry.hours * entry.rate)}
                     </div>
                   </div>
                 ))}
@@ -628,9 +604,9 @@ export const TimeExpensesPanel = ({
                       />
                     </div>
 
-                    {/* Cost Rate */}
+                    {/* Pay Rate */}
                     <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground mb-1 block">Cost Rate</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Pay Rate</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -687,7 +663,7 @@ export const TimeExpensesPanel = ({
                         <span className="text-xs text-muted-foreground" />
                       )}
                       <span className="font-medium">
-                        Cost: {formatCurrency(entry.quantity * entry.rate)}
+                        Pay: {formatCurrency(entry.quantity * entry.rate)}
                       </span>
                     </div>
                   </div>
@@ -714,15 +690,15 @@ export const TimeExpensesPanel = ({
                 <div className="text-lg font-semibold">{totalHours.toFixed(2)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Time Cost</div>
+                <div className="text-xs text-muted-foreground">Time Pay</div>
                 <div className="text-lg font-semibold">{formatCurrency(timeSubtotal)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Expense Cost</div>
+                <div className="text-xs text-muted-foreground">Expense Pay</div>
                 <div className="text-lg font-semibold">{formatCurrency(expenseSubtotal)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Total Internal Cost</div>
+                <div className="text-xs text-muted-foreground">Total Pay</div>
                 <div className="text-lg font-bold text-primary">{formatCurrency(grandTotal)}</div>
               </div>
             </div>
