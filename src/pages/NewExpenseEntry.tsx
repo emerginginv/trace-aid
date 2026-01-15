@@ -683,8 +683,8 @@ const NewExpenseEntry = () => {
                       <TableHead className="w-[200px]">Item</TableHead>
                       <TableHead>Notes</TableHead>
                       <TableHead className="w-[80px] text-right">Hrs</TableHead>
-                      <TableHead className="w-[100px] text-right">Rate</TableHead>
-                      <TableHead className="w-[100px] text-right">Total</TableHead>
+                      <TableHead className="w-[100px] text-right">Cost Rate</TableHead>
+                      <TableHead className="w-[100px] text-right">Cost</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -772,7 +772,7 @@ const NewExpenseEntry = () => {
                   Add More Time
                 </Button>
                 <div className="text-sm font-medium">
-                  Time Total: {formatCurrency(timeSubtotal)}
+                  Time Cost: {formatCurrency(timeSubtotal)}
                 </div>
               </div>
             </CardContent>
@@ -811,8 +811,8 @@ const NewExpenseEntry = () => {
                       <TableHead className="w-[200px]">Item</TableHead>
                       <TableHead>Notes</TableHead>
                       <TableHead className="w-[80px] text-right">Qty</TableHead>
-                      <TableHead className="w-[100px] text-right">Rate</TableHead>
-                      <TableHead className="w-[100px] text-right">Total</TableHead>
+                      <TableHead className="w-[100px] text-right">Cost Rate</TableHead>
+                      <TableHead className="w-[100px] text-right">Cost</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -900,7 +900,7 @@ const NewExpenseEntry = () => {
                   Add More Expenses
                 </Button>
                 <div className="text-sm font-medium">
-                  Expense Total: {formatCurrency(expenseSubtotal)}
+                  Expense Cost: {formatCurrency(expenseSubtotal)}
                 </div>
               </div>
             </CardContent>
@@ -917,17 +917,17 @@ const NewExpenseEntry = () => {
               <p className="text-lg font-semibold">{totalHours.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Time</p>
+              <p className="text-xs text-muted-foreground mb-1">Time Cost</p>
               <p className="text-lg font-semibold">{formatCurrency(timeSubtotal)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Expenses</p>
+              <p className="text-xs text-muted-foreground mb-1">Expense Cost</p>
               <p className="text-lg font-semibold">
                 {formatCurrency(expenseSubtotal)}
               </p>
             </div>
             <div className="border-l">
-              <p className="text-xs text-muted-foreground mb-1">Total</p>
+              <p className="text-xs text-muted-foreground mb-1">Total Internal Cost</p>
               <p className="text-lg font-bold text-primary">
                 {formatCurrency(grandTotal)}
               </p>

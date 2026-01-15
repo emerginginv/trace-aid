@@ -209,8 +209,8 @@ export const UpdateTimeExpensesSection = ({
                           <TableHead className="w-[100px]">Date</TableHead>
                           <TableHead>Item</TableHead>
                           <TableHead className="text-right w-[80px]">Hours</TableHead>
-                          <TableHead className="text-right w-[100px]">Rate</TableHead>
-                          <TableHead className="text-right w-[100px]">Total</TableHead>
+                          <TableHead className="text-right w-[100px]">Cost Rate</TableHead>
+                          <TableHead className="text-right w-[100px]">Cost</TableHead>
                           <TableHead className="w-[110px]">Status</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -252,7 +252,7 @@ export const UpdateTimeExpensesSection = ({
                         {/* Subtotal row */}
                         <TableRow className="bg-muted/30 font-medium">
                           <TableCell colSpan={2} className="text-right">
-                            Time Subtotal
+                            Time Cost
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             {totalHours.toFixed(2)} hrs
@@ -283,8 +283,8 @@ export const UpdateTimeExpensesSection = ({
                           <TableHead className="w-[100px]">Date</TableHead>
                           <TableHead>Item</TableHead>
                           <TableHead className="text-right w-[60px]">Qty</TableHead>
-                          <TableHead className="text-right w-[100px]">Rate</TableHead>
-                          <TableHead className="text-right w-[100px]">Total</TableHead>
+                          <TableHead className="text-right w-[100px]">Cost Rate</TableHead>
+                          <TableHead className="text-right w-[100px]">Cost</TableHead>
                           <TableHead className="w-[60px]">Receipt</TableHead>
                           <TableHead className="w-[110px]">Status</TableHead>
                         </TableRow>
@@ -341,7 +341,7 @@ export const UpdateTimeExpensesSection = ({
                         {/* Subtotal row */}
                         <TableRow className="bg-muted/30 font-medium">
                           <TableCell colSpan={4} className="text-right">
-                            Expenses Subtotal
+                            Expense Cost
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             {formatCurrency(expenseSubtotal)}
@@ -358,7 +358,7 @@ export const UpdateTimeExpensesSection = ({
               <div className="flex justify-end pt-2 border-t">
                 <div className="text-right">
                   <span className="text-sm text-muted-foreground mr-4">
-                    Grand Total:
+                    Total Internal Cost:
                   </span>
                   <span className="text-lg font-bold">
                     {formatCurrency(grandTotal)}
