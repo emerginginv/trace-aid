@@ -20,7 +20,8 @@ import { ActivityTimelineEditor, TimelineEntry } from "./ActivityTimelineEditor"
 import { format } from "date-fns";
 import { useUpdateBillingEligibility, UpdateBillingEligibilityResult } from "@/hooks/useUpdateBillingEligibility";
 import { useBillingItemCreation } from "@/hooks/useBillingItemCreation";
-import { BillingPromptDialog, ConfirmedTimes } from "@/components/billing/BillingPromptDialog";
+import { useExpenseBillingItemCreation, CreateExpenseParams } from "@/hooks/useExpenseBillingItemCreation";
+import { BillingPromptDialog, ConfirmedTimes, ExpenseData } from "@/components/billing/BillingPromptDialog";
 import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
 import { logBillingAudit } from "@/lib/billingAuditLogger";
 
@@ -65,6 +66,8 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
   const [createdUpdateId, setCreatedUpdateId] = useState<string | null>(null); // SYSTEM PROMPT 9: Track created update ID
   const { evaluate: evaluateBillingEligibility, reset: resetBillingEligibility } = useUpdateBillingEligibility();
   const { createBillingItem, isCreating: isCreatingBillingItem } = useBillingItemCreation();
+  const { createExpenseItem, isCreating: isCreatingExpense } = useExpenseBillingItemCreation();
+  const [updateTitle, setUpdateTitle] = useState<string>(''); // Track update title for expense pre-fill
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -391,6 +394,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
           
           // Store eligibility result and show billing prompt
           setBillingEligibility(eligibilityResult);
+          setUpdateTitle(values.title); // Store update title for expense pre-fill
           setBillingPromptOpen(true);
           // Don't close the dialog yet - wait for billing decision
           form.reset();
@@ -545,6 +549,59 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
     setBillingPromptOpen(false);
     setBillingEligibility(null);
     setCreatedUpdateId(null); // SYSTEM PROMPT 9: Clear update ID
+    setUpdateTitle('');
+    resetBillingEligibility();
+    onOpenChange(false);
+    onSuccess();
+  };
+
+  // Handle expense item creation from billing prompt
+  const handleCreateExpenseItem = async (expenseData: ExpenseData) => {
+    if (!billingEligibility || !createdUpdateId) return;
+
+    const result = await createExpenseItem({
+      updateId: createdUpdateId,
+      activityId: billingEligibility.activityId,
+      caseId: billingEligibility.caseId!,
+      organizationId: billingEligibility.organizationId!,
+      accountId: billingEligibility.accountId,
+      caseServiceInstanceId: billingEligibility.serviceInstanceId,
+      category: expenseData.category,
+      description: expenseData.description,
+      quantity: expenseData.quantity,
+      unitPrice: expenseData.unitPrice,
+    });
+
+    if (result.success) {
+      toast({
+        title: "Expense Created",
+        description: `Expense item created for $${(expenseData.quantity * expenseData.unitPrice).toFixed(2)}`,
+      });
+
+      // Show budget warning if applicable
+      if (result.budgetWarning?.isForecastWarning) {
+        toast({
+          title: result.budgetWarning.isForecastExceeded ? "Budget Warning" : "Budget Notice",
+          description: getBudgetForecastWarningMessage(
+            result.budgetWarning.isForecastExceeded,
+            result.budgetWarning.hardCap
+          ),
+          variant: result.budgetWarning.isForecastExceeded ? "destructive" : "default",
+        });
+      }
+    } else {
+      toast({
+        title: "Expense Error",
+        description: result.error || "Failed to create expense item",
+        variant: "destructive",
+      });
+    }
+
+    // Clean up and close
+    setBillingPromptOpen(false);
+    setBillingEligibility(null);
+    setCreatedUpdateId(null);
+    setUpdateTitle('');
     resetBillingEligibility();
     onOpenChange(false);
     onSuccess();
@@ -745,7 +802,9 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
         onOpenChange={setBillingPromptOpen}
         eligibility={billingEligibility}
         onCreateBillingItem={handleCreateBillingItem}
+        onCreateExpenseItem={handleCreateExpenseItem}
         onSkip={handleSkipBilling}
+        updateDescription={updateTitle}
       />
     </Dialog>
   );

@@ -5,6 +5,7 @@ export type BillingAuditAction =
   | 'billing_prompt_shown'
   | 'time_confirmed'
   | 'billing_item_created'
+  | 'expense_billing_item_created'
   | 'billing_skipped'
   | 'event_billing_blocked'
   | 'quick_bill_completed'
@@ -33,6 +34,8 @@ export interface BillingAuditMetadata {
   source?: string;
   /** Severity level for audit events */
   severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  /** Expense-specific: category of the expense */
+  expenseCategory?: string;
 }
 
 export interface BillingAuditLogEntry {

@@ -43,8 +43,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DollarSign, Clock, Receipt, Calculator, ArrowLeft, AlertCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { DollarSign, Clock, Receipt, Calculator, ArrowLeft, AlertCircle, Wallet } from "lucide-react";
 import { UpdateBillingEligibilityResult } from "@/hooks/useUpdateBillingEligibility";
+import { EXPENSE_CATEGORIES } from "@/hooks/useExpenseBillingItemCreation";
 
 export interface ConfirmedTimes {
   startDate: string;
@@ -57,12 +60,22 @@ export interface ConfirmedTimes {
   billTask?: boolean;
 }
 
+export interface ExpenseData {
+  category: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 interface BillingPromptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   eligibility: UpdateBillingEligibilityResult | null;
   onCreateBillingItem: (confirmedTimes: ConfirmedTimes) => void;
+  onCreateExpenseItem?: (expenseData: ExpenseData) => void;
   onSkip: () => void;
+  /** Optional: pre-fill expense description from update title/description */
+  updateDescription?: string;
 }
 
 export function BillingPromptDialog({
@@ -70,9 +83,11 @@ export function BillingPromptDialog({
   onOpenChange,
   eligibility,
   onCreateBillingItem,
+  onCreateExpenseItem,
   onSkip,
+  updateDescription,
 }: BillingPromptDialogProps) {
-  const [step, setStep] = useState<'confirm' | 'time' | 'task'>('confirm');
+  const [step, setStep] = useState<'confirm' | 'time' | 'task' | 'expense'>('confirm');
   const [editedTimes, setEditedTimes] = useState<ConfirmedTimes>({
     startDate: '',
     startTime: '',
@@ -85,6 +100,13 @@ export function BillingPromptDialog({
   const [billTask, setBillTask] = useState(false);
   const [taskHours, setTaskHours] = useState<string>('');
   const [taskHoursError, setTaskHoursError] = useState<string | null>(null);
+
+  // Expense billing state
+  const [expenseCategory, setExpenseCategory] = useState<string>('');
+  const [expenseDescription, setExpenseDescription] = useState<string>('');
+  const [expenseQuantity, setExpenseQuantity] = useState<string>('1');
+  const [expenseUnitPrice, setExpenseUnitPrice] = useState<string>('');
+  const [expenseError, setExpenseError] = useState<string | null>(null);
 
   // Reset state when dialog opens/closes or eligibility changes
   useEffect(() => {
@@ -100,8 +122,14 @@ export function BillingPromptDialog({
       setBillTask(false);
       setTaskHours('');
       setTaskHoursError(null);
+      // Reset expense state
+      setExpenseCategory('');
+      setExpenseDescription(updateDescription || '');
+      setExpenseQuantity('1');
+      setExpenseUnitPrice('');
+      setExpenseError(null);
     }
-  }, [open, eligibility]);
+  }, [open, eligibility, updateDescription]);
 
   if (!eligibility || !eligibility.isEligible) return null;
 
@@ -217,6 +245,36 @@ export function BillingPromptDialog({
     return eligibility.serviceRate * hours;
   };
 
+  const getExpenseTotal = () => {
+    const qty = parseFloat(expenseQuantity);
+    const price = parseFloat(expenseUnitPrice);
+    if (isNaN(qty) || isNaN(price) || qty <= 0 || price <= 0) return null;
+    return qty * price;
+  };
+
+  const validateExpense = (): boolean => {
+    if (!expenseCategory) {
+      setExpenseError("Please select an expense category");
+      return false;
+    }
+    if (!expenseDescription.trim()) {
+      setExpenseError("Description is required");
+      return false;
+    }
+    const qty = parseFloat(expenseQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      setExpenseError("Quantity must be greater than 0");
+      return false;
+    }
+    const price = parseFloat(expenseUnitPrice);
+    if (isNaN(price) || price <= 0) {
+      setExpenseError("Unit price must be greater than 0");
+      return false;
+    }
+    setExpenseError(null);
+    return true;
+  };
+
   const handleProceedToTime = () => {
     setStep('time');
   };
@@ -225,10 +283,15 @@ export function BillingPromptDialog({
     setStep('task');
   };
 
+  const handleProceedToExpense = () => {
+    setStep('expense');
+  };
+
   const handleBack = () => {
     setStep('confirm');
     setTimeError(null);
     setTaskHoursError(null);
+    setExpenseError(null);
   };
 
   const handleConfirmAndCreate = () => {
@@ -252,6 +315,28 @@ export function BillingPromptDialog({
       if (validateTimes()) {
         onCreateBillingItem(editedTimes);
       }
+    }
+  };
+
+  const handleCreateExpense = () => {
+    if (!validateExpense()) return;
+    if (onCreateExpenseItem) {
+      onCreateExpenseItem({
+        category: expenseCategory,
+        description: expenseDescription.trim(),
+        quantity: parseFloat(expenseQuantity),
+        unitPrice: parseFloat(expenseUnitPrice),
+      });
+    }
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setExpenseCategory(category);
+    setExpenseError(null);
+    // Auto-populate default rate if available
+    const categoryConfig = EXPENSE_CATEGORIES.find(c => c.value === category);
+    if (categoryConfig?.defaultRate) {
+      setExpenseUnitPrice(categoryConfig.defaultRate.toString());
     }
   };
 
@@ -336,13 +421,28 @@ export function BillingPromptDialog({
               </p>
             </div>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={onSkip} className="w-full sm:w-auto">
-                No, Skip Billing
-              </Button>
-              <Button onClick={handleYesClick} className="w-full sm:w-auto">
-                <Receipt className="h-4 w-4 mr-2" />
-                Yes, Create Billing Item
+            <DialogFooter className="flex-col gap-3">
+              {/* Primary billing actions */}
+              <div className="grid grid-cols-2 gap-2 w-full">
+                <Button onClick={handleYesClick} className="w-full">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Add Time
+                </Button>
+                {onCreateExpenseItem && (
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleProceedToExpense}
+                    className="w-full"
+                  >
+                    <Wallet className="h-4 w-4 mr-2" />
+                    Add Expense
+                  </Button>
+                )}
+              </div>
+              
+              {/* Skip option */}
+              <Button variant="ghost" onClick={onSkip} className="w-full text-muted-foreground">
+                Skip Billing
               </Button>
             </DialogFooter>
           </>
@@ -537,6 +637,138 @@ export function BillingPromptDialog({
               <Button onClick={handleConfirmAndCreate} className="w-full sm:w-auto">
                 <Receipt className="h-4 w-4 mr-2" />
                 {billTask ? "Create Billing Item" : "Skip Billing"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {step === 'expense' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-primary" />
+                Add Expense
+              </DialogTitle>
+              <DialogDescription>
+                Enter the expense details for this activity.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Category */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Category *</Label>
+                <Select value={expenseCategory} onValueChange={handleCategoryChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select expense category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXPENSE_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                        {cat.defaultRate && (
+                          <span className="text-muted-foreground ml-2">
+                            (${cat.defaultRate.toFixed(2)}/{cat.unit || 'unit'})
+                          </span>
+                        )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Description *</Label>
+                <Textarea
+                  placeholder="e.g., Drove to courthouse for witness meeting"
+                  value={expenseDescription}
+                  onChange={(e) => {
+                    setExpenseDescription(e.target.value);
+                    setExpenseError(null);
+                  }}
+                  rows={2}
+                />
+              </div>
+
+              {/* Quantity and Unit Price */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Quantity *
+                    {expenseCategory && EXPENSE_CATEGORIES.find(c => c.value === expenseCategory)?.unit && (
+                      <span className="text-muted-foreground font-normal ml-1">
+                        ({EXPENSE_CATEGORIES.find(c => c.value === expenseCategory)?.unit}s)
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="e.g., 45"
+                    value={expenseQuantity}
+                    onChange={(e) => {
+                      setExpenseQuantity(e.target.value);
+                      setExpenseError(null);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Unit Price *</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="0.67"
+                      value={expenseUnitPrice}
+                      onChange={(e) => {
+                        setExpenseUnitPrice(e.target.value);
+                        setExpenseError(null);
+                      }}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Calculation */}
+              {getExpenseTotal() !== null && (
+                <div className="rounded-lg border bg-muted/50 p-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {parseFloat(expenseQuantity)} × ${parseFloat(expenseUnitPrice).toFixed(2)}
+                    </span>
+                    <span className="font-semibold text-primary text-lg">
+                      ${getExpenseTotal()?.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {expenseError && (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  {expenseError}
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Expenses require approval before being added to an invoice.
+              </p>
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={handleBack} className="w-full sm:w-auto">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <Button onClick={handleCreateExpense} className="w-full sm:w-auto">
+                <Wallet className="h-4 w-4 mr-2" />
+                Create Expense
               </Button>
             </DialogFooter>
           </>
