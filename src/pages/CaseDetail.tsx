@@ -44,7 +44,6 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { getStatusStyleFromPicklist, isClosedStatus } from "@/lib/statusUtils";
 import { useCaseTypeQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
-import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
 
 interface Case {
   id: string;
@@ -144,9 +143,6 @@ const CaseDetail = () => {
 
   // Fetch case type data using React Query
   const { data: caseType } = useCaseTypeQuery(caseData?.case_type_id);
-  
-  // Fetch case service instances
-  const { data: serviceInstances = [] } = useCaseServiceInstances(id);
   
   // Fetch case service instances
   const { data: serviceInstances = [] } = useCaseServiceInstances(id);
@@ -796,22 +792,6 @@ const CaseDetail = () => {
                           />
                         )}
                         <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
-                        {/* Pricing Profile */}
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Pricing Profile</p>
-                          {pricingLoading ? (
-                            <p className="text-sm font-medium text-muted-foreground/60">Loading...</p>
-                          ) : pricingSource === "not_configured" ? (
-                            <p className="text-sm font-medium text-muted-foreground/60">—</p>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium">{pricingProfileName}</p>
-                              <Badge variant="outline" className="text-xs">
-                                {pricingSource === "case" ? "Case" : pricingSource === "account" ? "Account" : "Org Default"}
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
                         <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
                         {isClosed && (
                           <InfoItem label="Closed" value={caseData.closed_at ? new Date(caseData.closed_at).toLocaleDateString() : null} className="text-muted-foreground" />

@@ -175,8 +175,6 @@ export function CreateBillingItemButton({
       pricingModel: eligibilityResult.pricingModel!,
       quantity,
       rate: eligibilityResult.serviceRate!,
-      pricingProfileId: eligibilityResult.pricingProfileId,
-      pricingRuleSnapshot: eligibilityResult.pricingRuleSnapshot,
       updateId,
       startTime: startTimeISO,
       endTime: endTimeISO,

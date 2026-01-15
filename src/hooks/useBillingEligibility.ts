@@ -4,29 +4,22 @@
  * Evaluates whether an activity is eligible for billing based on multiple gates.
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
- * SYSTEM PROMPT 7 COMPLIANCE: AUTOMATIC PRICING RESOLUTION
+ * BILLING RATE RESOLUTION (POST PRICING PROFILE REMOVAL)
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * Pricing is resolved automatically using the following priority order:
+ * Pricing is resolved using the following priority order:
  * 
- * 1. Case-level pricing profile (case.pricing_profile_id)
- * 2. Account-level default pricing profile (accounts.default_pricing_profile_id)
- * 3. Organization default pricing profile (pricing_profiles.is_default = true)
+ * 1. Account-specific rate via client_price_list
+ * 2. Default rate from case_services table
  * 
  * CRITICAL RULE:
  * Do NOT prompt the user to select pricing. The system automatically resolves
- * the applicable pricing profile based on the hierarchy above.
- * 
- * IMPLEMENTATION:
- * → Lines 166-210: Pricing profile resolution logic
- * → First checks case.pricing_profile_id
- * → If null, uses account.default_pricing_profile_id via case.accounts relation
- * → If still null, fetches organization default pricing profile
+ * the applicable rate based on the hierarchy above.
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
- * SYSTEM PROMPT 7B COMPLIANCE: FLAT-FEE SAFEGUARD
+ * FLAT-FEE SAFEGUARD
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * If the service pricing model is flat_fee:
@@ -34,14 +27,6 @@
  * - If a billing item already exists:
  *   → Block creation
  *   → Display: "This service has already been billed under a flat fee."
- * 
- * IMPLEMENTATION (lines 315-352):
- * 1. Check if instance has invoice_line_item_id (already invoiced)
- * 2. Check for existing billing items in case_finances
- * 3. Return isEligible: false with warning message
- * 
- * DOUBLE-CHECK in useBillingItemCreation.ts (lines 123-152):
- * - Prevents race conditions by re-validating at creation time
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
  */
@@ -61,18 +46,15 @@ export interface BillingEligibilityResult {
   estimatedAmount?: number;
   activityId?: string;
   activityTitle?: string;
-  // Time confirmation fields per SYSTEM PROMPT 6
+  // Time confirmation fields
   startDate?: string;
   startTime?: string;
   endDate?: string;
   endTime?: string;
-  // Audit and creation fields per SYSTEM PROMPT 8
+  // Audit and creation fields
   caseId?: string;
   organizationId?: string;
-  accountId?: string;  // Required per SYSTEM PROMPT 8
-  pricingProfileId?: string;
-  pricingRuleId?: string;
-  pricingRuleSnapshot?: Record<string, unknown>;
+  accountId?: string;
 }
 
 interface EvaluateParams {
@@ -88,19 +70,6 @@ export function useBillingEligibility() {
     setIsEvaluating(true);
     
     try {
-      // ═══════════════════════════════════════════════════════════════════════════════
-      // DEPRECATED: This hook is no longer the primary billing eligibility evaluator.
-      // ═══════════════════════════════════════════════════════════════════════════════
-      // Billing eligibility MUST now be evaluated via useUpdateBillingEligibility,
-      // which requires:
-      //   1. A linked EVENT (activity_type = 'event')
-      //   2. A completed update narrative
-      // 
-      // This hook is retained as a helper for service/pricing validation only.
-      // It should NOT be called directly for billing decisions.
-      // TODO: Billing moved to Updates workflow.
-      // ═══════════════════════════════════════════════════════════════════════════════
-      
       // GATE 1: Activity must be linked to a Case Service Instance
       if (!caseServiceInstanceId) {
         const notEligible: BillingEligibilityResult = {
@@ -149,7 +118,6 @@ export function useBillingEligibility() {
       const service = instanceData.case_services;
 
       // GATE 2: Service Instance must be marked billable
-      // Check instance-level billable first, then fall back to service-level is_billable
       const isBillable = instanceData.billable !== null 
         ? instanceData.billable 
         : service?.is_billable;
@@ -163,7 +131,7 @@ export function useBillingEligibility() {
         return notEligible;
       }
 
-      // GATE 5: Check if already billed or locked (check early to avoid unnecessary queries)
+      // GATE 3: Check if already billed or locked
       if (instanceData.billed_at) {
         const notEligible: BillingEligibilityResult = {
           isEligible: false,
@@ -182,18 +150,10 @@ export function useBillingEligibility() {
         return notEligible;
       }
 
-      // GATE 3: Pricing rule must exist for the service
-      // Get case details for pricing profile resolution and account_id (per SYSTEM PROMPT 8)
+      // Get case details for account_id
       const { data: caseData, error: caseError } = await supabase
         .from("cases")
-        .select(`
-          pricing_profile_id,
-          organization_id,
-          account_id,
-          accounts (
-            default_pricing_profile_id
-          )
-        `)
+        .select("organization_id, account_id")
         .eq("id", instanceData.case_id)
         .single();
 
@@ -206,78 +166,47 @@ export function useBillingEligibility() {
         return notEligible;
       }
 
-      // Determine applicable pricing profile(s) with priority:
-      // 1. Case's pricing_profile_id
-      // 2. Account's default_pricing_profile_id
-      // 3. Organization's default pricing profile
-      const profileIds: string[] = [];
-      
-      if (caseData.pricing_profile_id) {
-        profileIds.push(caseData.pricing_profile_id);
-      }
-      
-      if (caseData.accounts?.default_pricing_profile_id) {
-        profileIds.push(caseData.accounts.default_pricing_profile_id);
-      }
+      // GATE 4: Resolve billing rate
+      // Priority: 1. client_price_list (account-specific), 2. case_services.default_rate
+      let billingRate: number | null = null;
+      let pricingModel = "hourly"; // Default model
 
-      // If no explicit profiles, get org default
-      if (profileIds.length === 0 && caseData.organization_id) {
-        const { data: defaultProfile } = await supabase
-          .from("pricing_profiles")
-          .select("id")
-          .eq("organization_id", caseData.organization_id)
-          .eq("is_default", true)
+      // Check for account-specific rate in client_price_list
+      if (caseData.account_id && instanceData.case_service_id) {
+        const today = new Date().toISOString().split("T")[0];
+        const { data: clientRate } = await supabase
+          .from("client_price_list")
+          .select("custom_invoice_rate")
+          .eq("account_id", caseData.account_id)
+          .eq("finance_item_id", instanceData.case_service_id)
+          .or(`effective_date.is.null,effective_date.lte.${today}`)
+          .or(`end_date.is.null,end_date.gte.${today}`)
           .limit(1)
           .maybeSingle();
-          
-        if (defaultProfile?.id) {
-          profileIds.push(defaultProfile.id);
+
+        if (clientRate?.custom_invoice_rate) {
+          billingRate = clientRate.custom_invoice_rate;
         }
       }
 
-      // Check if pricing rule exists for this service under any applicable profile
-      let pricingRule: { id: string; rate: number; pricing_model: string; pricing_profile_id: string } | null = null;
-      
-      if (profileIds.length > 0) {
-        const { data: ruleData } = await supabase
-          .from("service_pricing_rules")
-          .select("id, default_rate, pricing_model, pricing_profile_id")
-          .eq("case_service_id", instanceData.case_service_id)
-          .in("pricing_profile_id", profileIds)
-          .limit(1)
-          .maybeSingle();
-          
-        if (ruleData) {
-          pricingRule = { ...ruleData, rate: ruleData.default_rate };
-        }
+      // Fallback to service default rate
+      if (!billingRate && service?.default_rate) {
+        billingRate = service.default_rate;
       }
 
-      if (!pricingRule) {
+      if (!billingRate) {
         const notEligible: BillingEligibilityResult = {
           isEligible: false,
-          reason: "No pricing rule found for this service"
+          reason: "No billing rate configured for this service"
         };
         setResult(notEligible);
         return notEligible;
       }
 
-      // GATE 4: Quantifiable data must exist based on pricing model
-      const pricingModel = pricingRule.pricing_model;
+      // GATE 5: Quantifiable data must exist based on pricing model
       let quantity: number | undefined;
 
-      // ═══════════════════════════════════════════════════════════════════════════════
-      // TODO: Billing duration now derived from Time Entries.
-      // ═══════════════════════════════════════════════════════════════════════════════
-      // DEPRECATED: The following case_activities fields are NO LONGER used for billing:
-      //   - start_time
-      //   - end_time
-      //   - due_date
-      //   - end_date
-      // These fields remain for scheduling/display purposes only.
-      // Duration for billing should come from linked Time Entry records.
-      // ═══════════════════════════════════════════════════════════════════════════════
-      
-      // Fetch activity data for title/type only - NOT for billing duration
+      // Fetch activity data for title only
       const { data: activityData } = await supabase
         .from("case_activities")
         .select("title, activity_type")
@@ -285,33 +214,20 @@ export function useBillingEligibility() {
         .limit(1)
         .maybeSingle();
 
-      // DEPRECATED: Event duration calculation from activity fields
-      // This logic block is disabled - duration should come from Time Entries
-      const activityDurationHours: number | undefined = undefined;
-      const activityDurationDays: number | undefined = undefined;
-      // Previously calculated from: due_date, end_date, start_time, end_time
-      // Now: Billing duration now derived from Time Entries.
-
       switch (pricingModel) {
         case "hourly":
         case "daily": {
-          // Check for duration data
-          if (pricingModel === "hourly" && activityDurationHours) {
-            quantity = activityDurationHours;
-          } else if (pricingModel === "daily" && activityDurationDays) {
-            quantity = activityDurationDays;
-          } else if (instanceData.quantity_actual && instanceData.quantity_actual > 0) {
+          if (instanceData.quantity_actual && instanceData.quantity_actual > 0) {
             quantity = instanceData.quantity_actual;
           } else if (instanceData.scheduled_start && instanceData.scheduled_end) {
-            // Calculate duration from scheduled times
             const start = new Date(instanceData.scheduled_start);
             const end = new Date(instanceData.scheduled_end);
             const diffMs = end.getTime() - start.getTime();
             
             if (pricingModel === "hourly") {
-              quantity = Math.max(0.25, diffMs / (1000 * 60 * 60)); // Hours, minimum 15 min
+              quantity = Math.max(0.25, diffMs / (1000 * 60 * 60));
             } else {
-              quantity = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24))); // Days
+              quantity = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
             }
           }
           
@@ -327,13 +243,11 @@ export function useBillingEligibility() {
         }
           
         case "per_activity":
-          // Activity completion itself is the quantity
           quantity = 1;
           break;
           
         case "flat": {
-          // FLAT-FEE ENFORCEMENT: Check if billing item already exists for this service instance
-          // Check if service instance already has an invoice line item
+          // FLAT-FEE ENFORCEMENT
           if (instanceData.invoice_line_item_id) {
             const notEligible: BillingEligibilityResult = {
               isEligible: false,
@@ -343,7 +257,6 @@ export function useBillingEligibility() {
             return notEligible;
           }
           
-          // Also check for existing pending billing items linked to this service instance
           const { data: existingBillingItem } = await supabase
             .from("case_finances")
             .select(`
@@ -372,7 +285,6 @@ export function useBillingEligibility() {
         }
           
         default:
-          // Unknown pricing model - require quantity_actual
           if (!instanceData.quantity_actual || instanceData.quantity_actual <= 0) {
             const notEligible: BillingEligibilityResult = {
               isEligible: false,
@@ -384,19 +296,15 @@ export function useBillingEligibility() {
           quantity = instanceData.quantity_actual;
       }
 
-
-      // Activity title already loaded above (activityData)
-
-
       // Calculate estimated amount
-      const estimatedAmount = pricingRule.rate * (quantity || 1);
+      const estimatedAmount = billingRate * (quantity || 1);
 
-      // All gates passed - eligible for billing prompt
+      // All gates passed - eligible for billing
       const eligible: BillingEligibilityResult = {
         isEligible: true,
         serviceInstanceId: instanceData.id,
         serviceName: service?.name,
-        serviceRate: pricingRule.rate,
+        serviceRate: billingRate,
         priceUnit: pricingModel === "hourly" ? "hour" : 
                    pricingModel === "daily" ? "day" : 
                    pricingModel === "flat" ? "flat" : 
@@ -407,26 +315,13 @@ export function useBillingEligibility() {
         estimatedAmount,
         activityId,
         activityTitle: activityData?.title,
-        // DEPRECATED: Time confirmation fields from case_activities
-        // TODO: Billing duration now derived from Time Entries.
-        // These fields are no longer populated from activity scheduling fields.
-        // startDate, startTime, endDate, endTime should come from Time Entry records.
         startDate: undefined,
         startTime: undefined,
         endDate: undefined,
         endTime: undefined,
-        // Audit fields for billing item creation per SYSTEM PROMPT 8
         caseId: instanceData.case_id,
         organizationId: instanceData.organization_id,
-        accountId: caseData?.account_id || undefined,  // Required per SYSTEM PROMPT 8
-        pricingProfileId: pricingRule.pricing_profile_id,
-        pricingRuleId: pricingRule.id,
-        pricingRuleSnapshot: {
-          id: pricingRule.id,
-          rate: pricingRule.rate,
-          pricing_model: pricingRule.pricing_model,
-          captured_at: new Date().toISOString(),
-        },
+        accountId: caseData?.account_id || undefined,
       };
       
       setResult(eligible);

@@ -104,7 +104,6 @@ interface CaseInfo {
   case_number: string;
   title: string;
   organization_id: string;
-  pricing_profile_id: string | null;
 }
 
 interface LinkedUpdate {
@@ -340,7 +339,7 @@ const EditExpenseEntry = () => {
       // Fetch case info
       const { data: caseData, error: caseError } = await supabase
         .from("cases")
-        .select("id, case_number, title, organization_id, pricing_profile_id")
+        .select("id, case_number, title, organization_id")
         .eq("id", caseId)
         .single();
 
@@ -377,7 +376,7 @@ const EditExpenseEntry = () => {
       }
 
       // Fetch rate schedule
-      await fetchRateSchedule(caseData?.pricing_profile_id);
+      await fetchRateSchedule();
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -390,7 +389,7 @@ const EditExpenseEntry = () => {
     }
   };
 
-  const fetchRateSchedule = async (pricingProfileId: string | null) => {
+  const fetchRateSchedule = async () => {
     try {
       // Fetch finance items that are expense items for this organization
       const { data: financeItems, error } = await supabase

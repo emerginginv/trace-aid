@@ -676,7 +676,7 @@ const Settings = () => {
               <TabsContent value="case-services" className="space-y-6">
                 <CaseServicesTab />
               </TabsContent>
-            {/* Picklists Tab */}
+            )}
 
             {/* Picklists Tab */}
             <TabsContent value="picklists">
