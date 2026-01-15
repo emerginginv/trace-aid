@@ -138,7 +138,7 @@ export function useExpenseBillingItemCreation() {
           quantity: quantity,
           unit_price: unitPrice,
           amount: amount,
-          status: 'pending_review',               // Always pending review
+          status: 'pending',               // Always pending
           date: new Date().toISOString().split('T')[0],
           // Not time-based - no start/end times
           start_time: null,

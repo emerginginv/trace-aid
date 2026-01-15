@@ -335,7 +335,7 @@ export const TimeExpensesPanel = ({
             notes: entry.notes || null,
             hours: entry.hours,
             rate: entry.rate,
-            status: "draft",
+            status: "pending",
           });
 
         if (error) {
@@ -380,7 +380,7 @@ export const TimeExpensesPanel = ({
             quantity: entry.quantity,
             rate: entry.rate,
             receipt_url: receiptUrl,
-            status: "draft",
+            status: "pending",
           });
 
         if (error) {

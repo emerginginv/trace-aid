@@ -39,34 +39,12 @@ interface UpdateTimeExpensesSectionProps {
   onDataChange?: () => void;
 }
 
-const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
-  switch (status) {
-    case "approved":
-      return "default";
-    case "declined":
-      return "destructive";
-    case "billed":
-      return "secondary";
-    default:
-      return "outline";
-  }
-};
-
-const getStatusColor = (status: string): string => {
-  switch (status) {
-    case "pending_review":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "approved":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "declined":
-      return "bg-red-100 text-red-800 border-red-200";
-    case "billed":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "draft":
-    default:
-      return "bg-muted text-muted-foreground border-border";
-  }
-};
+import { 
+  getStatusColor,
+  getStatusLabel,
+  getBadgeVariant,
+  getStatusConfig
+} from "@/utils/entryStatusConfig";
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-US", {

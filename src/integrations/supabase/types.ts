@@ -8817,6 +8817,10 @@ export type Database = {
         | "approved"
         | "declined"
         | "billed"
+        | "pending"
+        | "committed"
+        | "voided"
+        | "paid"
       health_risk_level: "healthy" | "watch" | "at_risk"
       incident_severity: "minor" | "major" | "critical"
       incident_status:
@@ -9029,6 +9033,10 @@ export const Constants = {
         "approved",
         "declined",
         "billed",
+        "pending",
+        "committed",
+        "voided",
+        "paid",
       ],
       health_risk_level: ["healthy", "watch", "at_risk"],
       incident_severity: ["minor", "major", "critical"],
