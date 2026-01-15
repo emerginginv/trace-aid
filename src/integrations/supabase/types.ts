@@ -8028,6 +8028,7 @@ export type Database = {
         Args: { p_organization_id: string; p_subject_identifier: string }
         Returns: Json
       }
+      can_view_billing_rates: { Args: { p_user_id?: string }; Returns: boolean }
       cancel_org_deletion: {
         Args: { p_organization_id: string }
         Returns: Json

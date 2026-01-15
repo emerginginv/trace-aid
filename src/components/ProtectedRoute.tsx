@@ -10,10 +10,11 @@ interface ProtectedRouteProps {
   requiredRole?: 'admin' | 'manager' | 'investigator' | 'vendor';
   requiresAnyRole?: ('admin' | 'manager' | 'investigator' | 'vendor')[];
   blockVendors?: boolean;
+  blockInvestigators?: boolean;
   skipBillingGate?: boolean; // Allow bypassing billing gate for specific routes
 }
 
-const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors = false, skipBillingGate = false }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors = false, blockInvestigators = false, skipBillingGate = false }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   const { organization, loading: orgLoading } = useOrganization();
   const [user, setUser] = useState<User | null>(null);
@@ -34,8 +35,8 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
 
       setUser(session.user);
 
-      // If no role requirement and not blocking vendors, just check authentication
-      if (!requiredRole && !requiresAnyRole && !blockVendors) {
+      // If no role requirement and not blocking vendors/investigators, just check authentication
+      if (!requiredRole && !requiresAnyRole && !blockVendors && !blockInvestigators) {
         setAuthorized(true);
         setLoading(false);
         return;
@@ -61,11 +62,19 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
         console.log("[ProtectedRoute] User role:", userRole, 
                     "Org:", organization?.name,
                     "Required:", requiredRole, 
-                    "Block vendors:", blockVendors);
+                    "Block vendors:", blockVendors,
+                    "Block investigators:", blockInvestigators);
 
         // Block vendors if explicitly requested
         if (blockVendors && userRole === 'vendor') {
           console.log("[ProtectedRoute] Blocking vendor access");
+          navigate("/");
+          return;
+        }
+
+        // Block investigators if explicitly requested
+        if (blockInvestigators && userRole === 'investigator') {
+          console.log("[ProtectedRoute] Blocking investigator access");
           navigate("/");
           return;
         }
@@ -113,7 +122,7 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, requiredRole, requiresAnyRole, blockVendors, organization?.id, orgLoading]);
+  }, [navigate, requiredRole, requiresAnyRole, blockVendors, blockInvestigators, organization?.id, orgLoading]);
 
   if (loading || orgLoading) {
     return (

@@ -12,6 +12,7 @@ import { FileText, AlertTriangle, Info } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { useBatchResolveInvoiceRates } from "@/hooks/useUnifiedPricing";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Invoice {
   id: string;
@@ -67,6 +68,9 @@ interface CaseBillingTabProps {
 
 export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) {
   const navigate = useNavigate();
+  const { isAdmin, isManager, isInvestigator } = useUserRole();
+  const canViewBillingRates = isAdmin || isManager;
+  
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [expenseEntries, setExpenseEntries] = useState<ExpenseEntry[]>([]);
@@ -224,8 +228,15 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
   }, [timeEntries, expenseEntries]);
 
   // Resolve billing rates from Client Price List when entries or account change
+  // Only resolve if user has permission to view billing rates
   useEffect(() => {
     const resolveRates = async () => {
+      // Skip billing rate resolution for investigators
+      if (!canViewBillingRates) {
+        setBillingRates(new Map());
+        return;
+      }
+      
       if (!accountId || unbilledItems.length === 0) {
         setBillingRates(new Map());
         return;
@@ -254,7 +265,7 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
     };
 
     resolveRates();
-  }, [accountId, unbilledItems.length, timeEntries, expenseEntries]);
+  }, [accountId, unbilledItems.length, timeEntries, expenseEntries, canViewBillingRates]);
 
   // Get billing amount for an entry using resolved invoice rate
   const getBillingRate = useCallback((item: CombinedEntry): number => {
@@ -549,8 +560,12 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
                     <TableHead>Employee</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead className="text-center">Hrs/Qty</TableHead>
-                    <TableHead className="text-right">Bill Rate</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    {canViewBillingRates && (
+                      <>
+                        <TableHead className="text-right">Bill Rate</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -585,12 +600,16 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
                           {item.notes || "—"}
                         </TableCell>
                         <TableCell className="text-center">{qtyOrHours}</TableCell>
-                        <TableCell className="text-right">
-                          {ratesLoading ? "..." : `$${getBillingRate(item).toFixed(2)}`}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {ratesLoading ? "..." : `$${getBillingAmount(item).toFixed(2)}`}
-                        </TableCell>
+                        {canViewBillingRates && (
+                          <>
+                            <TableCell className="text-right">
+                              {ratesLoading ? "..." : `$${getBillingRate(item).toFixed(2)}`}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {ratesLoading ? "..." : `$${getBillingAmount(item).toFixed(2)}`}
+                            </TableCell>
+                          </>
+                        )}
                       </TableRow>
                     );
                   })}
@@ -601,7 +620,9 @@ export function CaseBillingTab({ caseId, organizationId }: CaseBillingTabProps) 
                 <div className="border-t p-4 bg-muted/30 flex items-center justify-between">
                   <div>
                     <span className="font-medium">{selectedItems.size} item{selectedItems.size !== 1 ? "s" : ""} selected</span>
-                    <span className="text-lg font-bold ml-4">${selectedBillingTotal.toFixed(2)}</span>
+                    {canViewBillingRates && (
+                      <span className="text-lg font-bold ml-4">${selectedBillingTotal.toFixed(2)}</span>
+                    )}
                   </div>
                   <Button onClick={handleConvertToInvoice} disabled={converting}>
                     <FileText className="h-4 w-4 mr-2" />
