@@ -10,7 +10,6 @@ interface Update {
 interface UpdateEditability {
   canEdit: boolean;
   canDelete: boolean;
-  canManageBilling: boolean;
   canLinkAttachments: boolean;
   readOnlyReason: string | null;
   isOwner: boolean;
@@ -62,16 +61,12 @@ export function useUpdateEditability(
   // Delete permissions: legacy/closed always blocked, then check permissions + ownership
   const canDelete = !isLegacy && !isClosed && (canDeleteAll || (canDeleteOwn && isOwner));
   
-  // Billing management: can edit and not legacy
-  const canManageBilling = canEdit && !isLegacy;
-  
   // Attachment linking: follows edit permissions
   const canLinkAttachments = canEdit;
 
   return {
     canEdit,
     canDelete,
-    canManageBilling,
     canLinkAttachments,
     readOnlyReason,
     isOwner,

@@ -20,9 +20,7 @@ import {
   Pencil, 
   Trash2, 
   Link2, 
-  DollarSign,
   X,
-  CheckCircle,
   ListTodo,
   CalendarDays,
   FolderOpen,
@@ -36,10 +34,8 @@ import { ActivityTimelineDisplay } from "@/components/case-detail/ActivityTimeli
 import { AIBadge } from "@/components/ui/ai-badge";
 import { UpdateForm } from "@/components/case-detail/UpdateForm";
 import { AttachmentPickerDialog } from "@/components/case-detail/AttachmentPicker";
-import { CreateBillingItemButton } from "@/components/billing/CreateBillingItemButton";
 import { UpdateContextSection } from "@/components/update-detail/UpdateContextSection";
 import { UpdateAuditSection } from "@/components/update-detail/UpdateAuditSection";
-import { UpdateBillingSummary } from "@/components/update-detail/UpdateBillingSummary";
 import { UpdateTimeExpensesSection } from "@/components/update-detail/UpdateTimeExpensesSection";
 import { TimeExpensesPanel } from "@/components/case-detail/TimeExpensesPanel";
 import {
@@ -97,17 +93,6 @@ interface LinkedActivity {
   is_scheduled: boolean;
 }
 
-interface BillingEntry {
-  id: string;
-  description: string;
-  amount: number;
-  hours: number | null;
-  hourly_rate: number | null;
-  finance_type: string;
-  date: string;
-  status: string | null;
-  category: string | null;
-}
 
 interface UserProfile {
   id: string;
@@ -135,7 +120,6 @@ const CaseUpdateDetail = () => {
   const [aiApprover, setAiApprover] = useState<UserProfile | null>(null);
   const [linkedActivity, setLinkedActivity] = useState<LinkedActivity | null>(null);
   const [linkedAttachments, setLinkedAttachments] = useState<LinkedAttachment[]>([]);
-  const [billingEntries, setBillingEntries] = useState<BillingEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Dialog states
@@ -148,7 +132,6 @@ const CaseUpdateDetail = () => {
   const {
     canEdit,
     canDelete,
-    canManageBilling,
     canLinkAttachments,
     readOnlyReason,
     isOwner,
@@ -298,16 +281,6 @@ const CaseUpdateDetail = () => {
         );
       }
 
-      // Fetch billing entries linked to this update
-      const { data: billingData } = await supabase
-        .from("case_finances")
-        .select("id, description, amount, hours, hourly_rate, finance_type, date, status, category")
-        .eq("update_id", updateData.id)
-        .order("date", { ascending: false });
-
-      if (billingData) {
-        setBillingEntries(billingData);
-      }
     } catch (error) {
       console.error("Error fetching update details:", error);
       toast({
@@ -400,13 +373,6 @@ const CaseUpdateDetail = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
-  };
-
   // Get display title - use first line of description if title is generic
   const getDisplayTitle = (): string => {
     if (update?.title && update.title.toLowerCase() !== "update" && update.title.toLowerCase() !== "case update") {
@@ -420,9 +386,6 @@ const CaseUpdateDetail = () => {
     }
     return update?.title || "Update";
   };
-
-  // Check if update has billable entries
-  const hasBillableEntries = billingEntries.length > 0;
 
   if (loading) {
     return (
@@ -506,22 +469,6 @@ const CaseUpdateDetail = () => {
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">{update.update_type}</Badge>
             {update.is_ai_summary && <AIBadge />}
-            {hasBillableEntries ? (
-              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Billable
-              </Badge>
-            ) : (
-              <Badge variant="secondary">
-                <DollarSign className="h-3 w-3 mr-1" />
-                No Billing
-              </Badge>
-            )}
-            {update.is_legacy_billing && (
-              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                Legacy
-              </Badge>
-            )}
             {isOwner && (
               <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800">
                 <User className="h-3 w-3 mr-1" />
@@ -695,84 +642,6 @@ const CaseUpdateDetail = () => {
         canEdit={canEdit}
         onDataChange={fetchData}
       />
-
-      {/* ========== BILLING SECTION (Legacy) ========== */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              <CardTitle>Billing / Time Entries</CardTitle>
-              {billingEntries.length > 0 && (
-                <Badge variant="secondary">{billingEntries.length}</Badge>
-              )}
-            </div>
-            {update.linked_activity_id && canManageBilling && (
-              <CreateBillingItemButton
-                activityId={update.linked_activity_id}
-                updateId={update.id}
-                updateDescription={update.description}
-                organizationId={organization?.id || ""}
-                variant="outline"
-                size="sm"
-                onSuccess={fetchData}
-              />
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Billing Summary */}
-          <UpdateBillingSummary entries={billingEntries} />
-
-          {/* Individual Entries */}
-          {billingEntries.length > 0 ? (
-            <div className="space-y-2">
-              {billingEntries.map((entry) => (
-                <Card key={entry.id} className="bg-muted/30">
-                  <CardContent className="py-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="capitalize">
-                            {entry.finance_type}
-                          </Badge>
-                          {entry.hours && entry.hourly_rate ? (
-                            <span className="text-sm font-medium">
-                              {entry.hours} hours @ {formatCurrency(entry.hourly_rate)}/hr = {formatCurrency(entry.amount)}
-                            </span>
-                          ) : (
-                            <span className="text-sm font-medium">
-                              {formatCurrency(entry.amount)}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {entry.description}
-                        </p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          {entry.status && (
-                            <Badge variant="secondary" className="capitalize text-xs">
-                              {entry.status}
-                            </Badge>
-                          )}
-                          <span>{format(new Date(entry.date), "MMM d, yyyy")}</span>
-                          {entry.category && (
-                            <span className="capitalize">{entry.category}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No billing entries linked to this update.
-            </p>
-          )}
-        </CardContent>
-      </Card>
 
       {/* ========== ACTIVITY / AUDIT SECTION ========== */}
       <UpdateAuditSection
