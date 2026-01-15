@@ -30,6 +30,8 @@ export function getStatusDisplay(status: string): StatusConfig {
       return { label: 'Cancelled', dotColor: 'bg-red-500', textColor: 'text-red-500' };
     case 'on_hold':
       return { label: 'On Hold', dotColor: 'bg-orange-500', textColor: 'text-orange-500' };
+    case 'overdue':
+      return { label: 'Overdue', dotColor: 'bg-red-500', textColor: 'text-red-500' };
     case 'to_do':
     default:
       return { label: 'To Do', dotColor: 'bg-amber-500', textColor: 'text-amber-500' };
