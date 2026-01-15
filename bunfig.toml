@@ -1,5 +1,0 @@
-# Bun configuration (used by Lovable preview builds)
-
-[install]
-# Reduce simultaneous network requests to avoid bun install timeouts in preview builds
-networkConcurrency = 4
