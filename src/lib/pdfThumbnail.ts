@@ -1,9 +1,4 @@
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Configure the worker source using local bundled worker via Vite
-// This avoids CDN issues and blocked requests
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+import { loadPdfJs, isPreviewEnvironment } from './dynamicImports';
 
 export interface ThumbnailOptions {
   width?: number;
@@ -25,7 +20,15 @@ export async function generatePdfThumbnail(
   source: File | ArrayBuffer | Blob,
   options: ThumbnailOptions = {}
 ): Promise<Blob> {
+  // Skip thumbnail generation in preview environments
+  if (isPreviewEnvironment()) {
+    throw new Error('PDF thumbnails are available in production builds only.');
+  }
+
   const opts = { ...DEFAULT_OPTIONS, ...options };
+  
+  // Load PDF.js dynamically
+  const pdfjsLib = await loadPdfJs();
   
   // Convert source to ArrayBuffer if needed
   let arrayBuffer: ArrayBuffer;

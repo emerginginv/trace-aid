@@ -1,6 +1,6 @@
 import { format } from "date-fns";
-import html2pdf from "html2pdf.js";
 import { toast } from "sonner";
+import { loadHtml2Pdf, isPreviewEnvironment } from "./dynamicImports";
 
 export interface ExportColumn {
   key: string;
@@ -35,71 +35,85 @@ export function exportToCSV<T extends Record<string, any>>(
   toast.success(`${filename} exported to CSV`);
 }
 
-export function exportToPDF<T extends Record<string, any>>(
+export async function exportToPDF<T extends Record<string, any>>(
   data: T[],
   columns: ExportColumn[],
   title: string,
   filename: string,
   totals?: { label: string; value: string }[]
 ) {
-  const printContent = document.createElement("div");
-  
-  const headerRow = columns
-    .map(
-      (col) =>
-        `<th style="border: 1px solid #ddd; padding: 8px; text-align: ${col.align || "left"};">${col.label}</th>`
-    )
-    .join("");
+  // Check for preview environment
+  if (isPreviewEnvironment()) {
+    toast.error("PDF export is available in production builds only.");
+    return;
+  }
 
-  const bodyRows = data
-    .map((row) => {
-      const cells = columns
-        .map((col) => {
-          const value = row[col.key];
-          const formatted = col.format ? col.format(value, row) : (value ?? "-");
-          return `<td style="border: 1px solid #ddd; padding: 8px; text-align: ${col.align || "left"};">${formatted}</td>`;
-        })
-        .join("");
-      return `<tr>${cells}</tr>`;
-    })
-    .join("");
+  try {
+    // Load html2pdf dynamically
+    const html2pdf = await loadHtml2Pdf();
 
-  const totalsRow = totals
-    ? `<tfoot>
-        <tr style="background: #f3f4f6; font-weight: bold;">
-          <td colspan="${columns.length - totals.length}" style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totals[0]?.label || "Total"}:</td>
-          ${totals.map((t) => `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t.value}</td>`).join("")}
-        </tr>
-      </tfoot>`
-    : "";
+    const printContent = document.createElement("div");
+    
+    const headerRow = columns
+      .map(
+        (col) =>
+          `<th style="border: 1px solid #ddd; padding: 8px; text-align: ${col.align || "left"};">${col.label}</th>`
+      )
+      .join("");
 
-  printContent.innerHTML = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h1 style="margin-bottom: 8px; font-size: 24px;">${title}</h1>
-      <p style="margin-bottom: 20px; color: #666; font-size: 14px;">Generated: ${format(new Date(), "MMMM d, yyyy")}</p>
-      <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-        <thead>
-          <tr style="background: #f3f4f6;">
-            ${headerRow}
+    const bodyRows = data
+      .map((row) => {
+        const cells = columns
+          .map((col) => {
+            const value = row[col.key];
+            const formatted = col.format ? col.format(value, row) : (value ?? "-");
+            return `<td style="border: 1px solid #ddd; padding: 8px; text-align: ${col.align || "left"};">${formatted}</td>`;
+          })
+          .join("");
+        return `<tr>${cells}</tr>`;
+      })
+      .join("");
+
+    const totalsRow = totals
+      ? `<tfoot>
+          <tr style="background: #f3f4f6; font-weight: bold;">
+            <td colspan="${columns.length - totals.length}" style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totals[0]?.label || "Total"}:</td>
+            ${totals.map((t) => `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t.value}</td>`).join("")}
           </tr>
-        </thead>
-        <tbody>
-          ${bodyRows}
-        </tbody>
-        ${totalsRow}
-      </table>
-    </div>
-  `;
+        </tfoot>`
+      : "";
 
-  html2pdf()
-    .set({
-      margin: 10,
-      filename: `${filename}-${format(new Date(), "yyyy-MM-dd")}.pdf`,
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-    })
-    .from(printContent)
-    .save();
+    printContent.innerHTML = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h1 style="margin-bottom: 8px; font-size: 24px;">${title}</h1>
+        <p style="margin-bottom: 20px; color: #666; font-size: 14px;">Generated: ${format(new Date(), "MMMM d, yyyy")}</p>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              ${headerRow}
+            </tr>
+          </thead>
+          <tbody>
+            ${bodyRows}
+          </tbody>
+          ${totalsRow}
+        </table>
+      </div>
+    `;
 
-  toast.success(`${title} exported to PDF`);
+    html2pdf()
+      .set({
+        margin: 10,
+        filename: `${filename}-${format(new Date(), "yyyy-MM-dd")}.pdf`,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+      })
+      .from(printContent)
+      .save();
+
+    toast.success(`${title} exported to PDF`);
+  } catch (error) {
+    console.error("Failed to export PDF:", error);
+    toast.error(error instanceof Error ? error.message : "Failed to export PDF");
+  }
 }

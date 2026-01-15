@@ -2,4 +2,4 @@
 
 [install]
 # Reduce simultaneous network requests to avoid bun install timeouts in preview builds
-networkConcurrency = 16
+networkConcurrency = 4
