@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { CaseTabSkeleton } from "./CaseTabSkeleton";
@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { toast } from "@/hooks/use-toast";
 import { UpdateForm } from "./UpdateForm";
+import { TimeExpensesPanel } from "./TimeExpensesPanel";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -70,6 +71,10 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   // AI Summary selection state
   const [selectedUpdateIds, setSelectedUpdateIds] = useState<Set<string>>(new Set());
   const [showAISummaryDialog, setShowAISummaryDialog] = useState(false);
+
+  // Time & Expenses panel state
+  const [showTimeExpensesPanel, setShowTimeExpensesPanel] = useState(false);
+  const [timeExpenseUpdateId, setTimeExpenseUpdateId] = useState<string | null>(null);
 
   // Sorting states
   const { sortColumn, sortDirection, handleSort } = useSortPreference("case-updates", "created_at", "desc");
@@ -521,10 +526,32 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
         caseId={caseId}
         open={formOpen}
         onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingUpdate(null); }}
-        onSuccess={fetchUpdates}
+        onSuccess={(options) => {
+          fetchUpdates();
+          // Handle "Add time & expenses after saving" checkbox
+          if (options?.addTimeExpenses && options?.updateId) {
+            setTimeExpenseUpdateId(options.updateId);
+            setShowTimeExpensesPanel(true);
+          }
+        }}
         editingUpdate={editingUpdate}
         organizationId={organization?.id || ""}
       />
+
+      {/* Time & Expenses Panel */}
+      {timeExpenseUpdateId && (
+        <TimeExpensesPanel
+          open={showTimeExpensesPanel}
+          onOpenChange={setShowTimeExpensesPanel}
+          updateId={timeExpenseUpdateId}
+          caseId={caseId}
+          organizationId={organization?.id || ""}
+          onSaveComplete={() => {
+            setTimeExpenseUpdateId(null);
+            fetchUpdates();
+          }}
+        />
+      )}
 
       <AISummaryDialog
         open={showAISummaryDialog}
