@@ -7,6 +7,7 @@ export function useSidebarData() {
   const { organization, loading: orgLoading } = useOrganization();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [orgSettings, setOrgSettings] = useState<OrgSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
 
   // Fetch user profile and role
   useEffect(() => {
@@ -49,7 +50,12 @@ export function useSidebarData() {
 
   // Fetch organization settings
   useEffect(() => {
-    if (orgLoading || !organization?.id) return;
+    if (orgLoading) return;
+    
+    if (!organization?.id) {
+      setSettingsLoading(false);
+      return;
+    }
 
     const fetchOrgSettings = async () => {
       const { data } = await supabase
@@ -59,10 +65,11 @@ export function useSidebarData() {
         .maybeSingle();
 
       setOrgSettings(data);
+      setSettingsLoading(false);
     };
 
     fetchOrgSettings();
   }, [organization?.id, orgLoading]);
 
-  return { userProfile, orgSettings };
+  return { userProfile, orgSettings, settingsLoading };
 }

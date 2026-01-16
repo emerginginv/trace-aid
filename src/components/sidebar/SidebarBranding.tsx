@@ -3,11 +3,25 @@ import { OrgSettings } from "./types";
 
 interface SidebarBrandingProps {
   orgSettings: OrgSettings | null;
+  isLoading?: boolean;
 }
 
-export function SidebarBranding({ orgSettings }: SidebarBrandingProps) {
+export function SidebarBranding({ orgSettings, isLoading }: SidebarBrandingProps) {
   const logoUrl = orgSettings?.square_logo_url || orgSettings?.logo_url;
   const companyName = orgSettings?.company_name || "Organization";
+
+  // Show skeleton during loading to prevent CaseWyze flash
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-sidebar-accent animate-pulse" />
+        <div className="space-y-1">
+          <div className="h-4 w-24 bg-sidebar-accent rounded animate-pulse" />
+          <div className="h-3 w-20 bg-sidebar-accent/60 rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   if (logoUrl) {
     return (
