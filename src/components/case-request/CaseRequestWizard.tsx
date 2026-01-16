@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useCaseRequestForm, createEmptySubject, SubjectData } from "@/hooks/useCaseRequestForm";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useCaseRequestForm, createEmptySubject, SubjectData, Step1Data } from "@/hooks/useCaseRequestForm";
 import { CaseRequestForm } from "@/hooks/queries/useCaseRequestFormBySlug";
 import { CaseRequestProgress } from "./CaseRequestProgress";
 import { ClientInformationStep } from "./steps/ClientInformationStep";
@@ -15,9 +16,24 @@ import { toast } from "sonner";
 
 interface CaseRequestWizardProps {
   form: CaseRequestForm;
+  mode?: 'public' | 'internal';
+  prefilledClientData?: Step1Data;
+  matchedAccountId?: string;
+  matchedContactId?: string;
+  createdBy?: string;
+  onComplete?: () => void;
 }
 
-export function CaseRequestWizard({ form }: CaseRequestWizardProps) {
+export function CaseRequestWizard({ 
+  form, 
+  mode = 'public',
+  prefilledClientData,
+  matchedAccountId,
+  matchedContactId,
+  createdBy,
+  onComplete,
+}: CaseRequestWizardProps) {
+  const navigate = useNavigate();
   const {
     state,
     goToStep,
@@ -36,6 +52,13 @@ export function CaseRequestWizard({ form }: CaseRequestWizardProps) {
     INITIAL_STEP1_DATA,
     INITIAL_STEP2_DATA,
   } = useCaseRequestForm(form.form_slug || form.id);
+
+  // Apply prefilled data on mount for internal mode
+  useEffect(() => {
+    if (mode === 'internal' && prefilledClientData && !state.formData.step1?.submitted_client_name) {
+      updateStep1(prefilledClientData);
+    }
+  }, [mode, prefilledClientData]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [submittedRequestNumber, setSubmittedRequestNumber] = useState<string | null>(null);
@@ -126,6 +149,11 @@ const handleAddSubject = () => {
           error: f.error,
         })),
         userAgent: navigator.userAgent,
+        // Internal mode fields
+        createdBy: mode === 'internal' ? createdBy : undefined,
+        sourceType: mode,
+        matchedAccountId: mode === 'internal' ? matchedAccountId : undefined,
+        matchedContactId: mode === 'internal' ? matchedContactId : undefined,
       });
 
       if (!result.success) {

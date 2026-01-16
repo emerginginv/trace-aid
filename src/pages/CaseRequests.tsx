@@ -239,7 +239,7 @@ export default function CaseRequests() {
         
         <div className="flex items-center gap-2">
           <Button asChild>
-            <Link to="/request/new">
+            <Link to="/cases/requests/new">
               <Plus className="h-4 w-4 mr-2" />
               New Case Request
             </Link>

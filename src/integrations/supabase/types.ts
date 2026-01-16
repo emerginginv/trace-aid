@@ -1563,6 +1563,7 @@ export type Database = {
           client_match_action: string | null
           contact_match_action: string | null
           created_at: string
+          created_by: string | null
           custom_fields: Json | null
           decline_reason: string | null
           id: string
@@ -1576,6 +1577,7 @@ export type Database = {
           reviewed_by: string | null
           source_form_id: string | null
           source_ip: unknown
+          source_type: string | null
           source_user_agent: string | null
           status: string
           submitted_at: string
@@ -1607,6 +1609,7 @@ export type Database = {
           client_match_action?: string | null
           contact_match_action?: string | null
           created_at?: string
+          created_by?: string | null
           custom_fields?: Json | null
           decline_reason?: string | null
           id?: string
@@ -1620,6 +1623,7 @@ export type Database = {
           reviewed_by?: string | null
           source_form_id?: string | null
           source_ip?: unknown
+          source_type?: string | null
           source_user_agent?: string | null
           status?: string
           submitted_at?: string
@@ -1651,6 +1655,7 @@ export type Database = {
           client_match_action?: string | null
           contact_match_action?: string | null
           created_at?: string
+          created_by?: string | null
           custom_fields?: Json | null
           decline_reason?: string | null
           id?: string
@@ -1664,6 +1669,7 @@ export type Database = {
           reviewed_by?: string | null
           source_form_id?: string | null
           source_ip?: unknown
+          source_type?: string | null
           source_user_agent?: string | null
           status?: string
           submitted_at?: string
