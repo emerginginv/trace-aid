@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "@/hooks/use-toast";
+import { useConfirmation } from "@/components/ui/confirmation-dialog";
 
 interface AccountData {
   id: string;
@@ -60,6 +61,7 @@ export function ClientInfoSection({
   const { organization } = useOrganization();
   const { hasPermission } = usePermissions();
   const canEdit = hasPermission('edit_cases');
+  const { confirm, ConfirmDialog } = useConfirmation();
   
   // Edit mode states
   const [editingAccount, setEditingAccount] = useState(false);
@@ -196,12 +198,30 @@ export function ClientInfoSection({
     }
   };
 
-  const handleRemoveAccount = () => {
-    handleUpdateAccount("none");
+  const handleRemoveAccount = async () => {
+    const confirmed = await confirm({
+      title: "Remove Client Account",
+      description: contact 
+        ? "This will remove the account and its associated contact from this case. The account and contact records will not be deleted."
+        : "This will remove the account from this case. The account record will not be deleted.",
+      variant: "destructive",
+    });
+    
+    if (confirmed) {
+      handleUpdateAccount("none");
+    }
   };
 
-  const handleRemoveContact = () => {
-    handleUpdateContact("none");
+  const handleRemoveContact = async () => {
+    const confirmed = await confirm({
+      title: "Remove Client Contact",
+      description: "This will remove the contact from this case. The contact record will not be deleted.",
+      variant: "destructive",
+    });
+    
+    if (confirmed) {
+      handleUpdateContact("none");
+    }
   };
 
   return (
@@ -315,15 +335,26 @@ export function ClientInfoSection({
                   canEdit={canEdit}
                 />
               ) : canEdit ? (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start text-muted-foreground"
-                  onClick={() => setEditingContact(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Contact
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full justify-start text-muted-foreground"
+                    onClick={() => setEditingContact(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Contact
+                  </Button>
+                  {account && (
+                    <p className="text-xs text-muted-foreground px-1">
+                      Add a contact from {account.name}
+                    </p>
+                  )}
+                </div>
+              ) : account && !contact ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  No contact assigned
+                </p>
               ) : null}
               
               {/* Helper text when account exists but no contacts available */}
@@ -336,6 +367,7 @@ export function ClientInfoSection({
           </>
         )}
       </CardContent>
+      <ConfirmDialog />
     </Card>
   );
 }
