@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Settings, 
   Palette, 
@@ -225,7 +224,7 @@ export function CaseRequestFormEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>
             {form ? "Edit Request Form" : "Create Request Form"}
@@ -252,7 +251,7 @@ export function CaseRequestFormEditor({
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 min-h-0 h-[60vh] pr-4">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-4 pb-6">
             {/* General Tab */}
             <TabsContent value="general" className="space-y-4 mt-4">
               <div className="space-y-4">
@@ -607,7 +606,7 @@ export function CaseRequestFormEditor({
                 </div>
               </div>
             </TabsContent>
-          </ScrollArea>
+          </div>
         </Tabs>
 
         <DialogFooter className="mt-4">
