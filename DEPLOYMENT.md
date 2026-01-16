@@ -94,3 +94,35 @@ Verify Node version is 20.x (corepack is built-in for Node 18+).
 - **Fast:** Content-addressable storage with excellent caching
 - **Reliable:** No timeout issues like bun in CI environments
 - **Native support:** Corepack ships with Node 18+
+
+---
+
+## CI Guardrails
+
+> **⚠️ IMPORTANT: CI builds must use pnpm only. Do not use bun in Vercel installs.**
+
+### Bun is Prohibited
+
+This project has experienced repeated CI failures due to `bun install timeout` errors. To prevent regression:
+
+1. **Never commit bun lockfiles** - Remove immediately if found:
+   - `bun.lock`
+   - `bun.lockb`
+   - `bunfig.toml`
+
+2. **Verify Vercel install command** - Must be:
+   ```
+   corepack enable && pnpm install --frozen-lockfile
+   ```
+
+3. **If "bun install timeout" appears:**
+   - Check Vercel project settings → Install Command
+   - Confirm no bun lockfile exists in repo
+   - Clear build cache and redeploy
+
+### PR Checklist
+
+Before merging any PR, verify:
+- [ ] No `bun.lock` or `bun.lockb` in the repo
+- [ ] `pnpm-lock.yaml` is committed and up-to-date
+- [ ] `vercel.json` uses pnpm install command
