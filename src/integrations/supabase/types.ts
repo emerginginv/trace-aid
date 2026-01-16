@@ -2345,6 +2345,7 @@ export type Database = {
           retention_days: number | null
           series_instance: number | null
           series_number: number | null
+          source_request_id: string | null
           status: string
           title: string | null
           updated_at: string | null
@@ -2394,6 +2395,7 @@ export type Database = {
           retention_days?: number | null
           series_instance?: number | null
           series_number?: number | null
+          source_request_id?: string | null
           status?: string
           title?: string | null
           updated_at?: string | null
@@ -2443,6 +2445,7 @@ export type Database = {
           retention_days?: number | null
           series_instance?: number | null
           series_number?: number | null
+          source_request_id?: string | null
           status?: string
           title?: string | null
           updated_at?: string | null
@@ -2511,6 +2514,13 @@ export type Database = {
             columns: ["parent_case_id"]
             isOneToOne: false
             referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_source_request_id_fkey"
+            columns: ["source_request_id"]
+            isOneToOne: false
+            referencedRelation: "case_requests"
             referencedColumns: ["id"]
           },
           {

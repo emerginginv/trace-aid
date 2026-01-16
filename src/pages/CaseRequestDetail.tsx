@@ -56,6 +56,11 @@ interface CaseRequestFile {
   uploaded_at: string;
 }
 
+interface ApprovedCase {
+  id: string;
+  case_number: string;
+}
+
 interface CaseRequest {
   id: string;
   request_number: string | null;
@@ -64,6 +69,7 @@ interface CaseRequest {
   reviewed_at: string | null;
   reviewed_by: string | null;
   decline_reason: string | null;
+  approved_case_id: string | null;
   case_type_id: string | null;
   case_services: string[] | null;
   claim_number: string | null;
@@ -84,6 +90,7 @@ interface CaseRequest {
   submitted_contact_mobile_phone: string | null;
   case_request_subjects: CaseRequestSubject[];
   case_request_files: CaseRequestFile[];
+  approved_case: ApprovedCase | null;
 }
 
 interface SubjectType {
@@ -134,7 +141,8 @@ export default function CaseRequestDetail() {
         .select(`
           *,
           case_request_subjects (*),
-          case_request_files (*)
+          case_request_files (*),
+          approved_case:approved_case_id (id, case_number)
         `)
         .eq('id', id)
         .eq('organization_id', organization.id)
@@ -249,6 +257,7 @@ export default function CaseRequestDetail() {
           contact_id: request.matched_contact_id,
           case_type_id: request.case_type_id,
           case_manager_id: user.id,
+          source_request_id: request.id,
           title: primarySubject 
             ? [primarySubject.last_name, primarySubject.first_name].filter(Boolean).join(', ')
             : 'Case from Request',
@@ -258,7 +267,7 @@ export default function CaseRequestDetail() {
           budget_hours: request.budget_hours,
           status: 'active',
         }])
-        .select('id')
+        .select('id, case_number')
         .single();
 
       if (createError) throw createError;
@@ -539,6 +548,8 @@ export default function CaseRequestDetail() {
                   state: request.submitted_client_state,
                   zip: request.submitted_client_zip,
                 }}
+                approvedCaseId={request.approved_case?.id}
+                approvedCaseNumber={request.approved_case?.case_number}
               />
             </div>
           </div>
