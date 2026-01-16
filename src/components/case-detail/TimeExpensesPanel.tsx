@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Sheet,
@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronUp, Plus, Trash2, Upload, Clock, Receipt } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, Upload, Clock, Receipt, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -78,6 +79,7 @@ export const TimeExpensesPanel = ({
   const [caseName, setCaseName] = useState("");
   const [linkedActivityId, setLinkedActivityId] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [appliedBudgetStrategy, setAppliedBudgetStrategy] = useState<string | null>(null);
 
   // Current user ID for staff pricing lookup
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -147,16 +149,17 @@ export const TimeExpensesPanel = ({
         }
       }
 
-      // Fetch case details
+      // Fetch case details including applied budget strategy
       const { data: caseData } = await supabase
         .from("cases")
-        .select("title, case_number, account_id")
+        .select("title, case_number, account_id, applied_budget_strategy")
         .eq("id", caseId)
         .maybeSingle();
 
       if (caseData) {
         setCaseName(`${caseData.case_number} - ${caseData.title}`);
         setAccountId(caseData.account_id);
+        setAppliedBudgetStrategy(caseData.applied_budget_strategy);
       }
     } catch (error) {
       console.error("Error fetching context data:", error);
@@ -252,6 +255,14 @@ export const TimeExpensesPanel = ({
   const totalHours = timeEntries.reduce((sum, e) => sum + e.hours, 0);
   const expenseSubtotal = expenseEntries.reduce((sum, e) => sum + e.quantity * e.rate, 0);
   const grandTotal = timeSubtotal + expenseSubtotal;
+
+  // Determine if time entries are allowed based on budget strategy
+  // Time tracking is disabled only for 'money_only' strategy
+  const timeEntriesEnabled = useMemo(() => {
+    if (appliedBudgetStrategy === 'money_only') return false;
+    // hours_only, both, disabled, or null all allow time entries
+    return true;
+  }, [appliedBudgetStrategy]);
 
   // Check if there's any data entered
   const hasData = timeEntries.length > 0 || expenseEntries.length > 0;
@@ -426,10 +437,17 @@ export const TimeExpensesPanel = ({
                 >
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    <span className="font-semibold">Time Entries</span>
-                    <span className="text-sm text-muted-foreground">
-                      ({totalHours.toFixed(2)} hrs • {formatCurrency(timeSubtotal)})
+                    <span className="font-semibold">
+                      Time Entries
+                      {!timeEntriesEnabled && (
+                        <span className="text-muted-foreground font-normal ml-1">(Disabled)</span>
+                      )}
                     </span>
+                    {timeEntriesEnabled && (
+                      <span className="text-sm text-muted-foreground">
+                        ({totalHours.toFixed(2)} hrs • {formatCurrency(timeSubtotal)})
+                      </span>
+                    )}
                   </div>
                   {timeExpanded ? (
                     <ChevronUp className="h-4 w-4" />
@@ -439,95 +457,106 @@ export const TimeExpensesPanel = ({
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-4 space-y-4">
-                {timeEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="grid grid-cols-12 gap-2 items-start p-3 bg-muted/30 rounded-lg"
-                  >
-                    {/* Item dropdown */}
-                    <div className="col-span-4">
-                      <Label className="text-xs text-muted-foreground mb-1 block">Item</Label>
-                      <Select
-                        value={entry.itemId}
-                        onValueChange={(val) => handleTimeItemChange(entry.id, val)}
+                {timeEntriesEnabled ? (
+                  <>
+                    {timeEntries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="grid grid-cols-12 gap-2 items-start p-3 bg-muted/30 rounded-lg"
                       >
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Select item" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {rateScheduleItems.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.name} ({formatCurrency(item.rate)}/hr)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                        {/* Item dropdown */}
+                        <div className="col-span-4">
+                          <Label className="text-xs text-muted-foreground mb-1 block">Item</Label>
+                          <Select
+                            value={entry.itemId}
+                            onValueChange={(val) => handleTimeItemChange(entry.id, val)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Select item" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {rateScheduleItems.map((item) => (
+                                <SelectItem key={item.id} value={item.id}>
+                                  {item.name} ({formatCurrency(item.rate)}/hr)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                    {/* Notes */}
-                    <div className="col-span-3">
-                      <Label className="text-xs text-muted-foreground mb-1 block">Notes</Label>
-                      <Input
-                        value={entry.notes}
-                        onChange={(e) => updateTimeEntry(entry.id, { notes: e.target.value })}
-                        placeholder="Notes..."
-                        className="h-9"
-                      />
-                    </div>
+                        {/* Notes */}
+                        <div className="col-span-3">
+                          <Label className="text-xs text-muted-foreground mb-1 block">Notes</Label>
+                          <Input
+                            value={entry.notes}
+                            onChange={(e) => updateTimeEntry(entry.id, { notes: e.target.value })}
+                            placeholder="Notes..."
+                            className="h-9"
+                          />
+                        </div>
 
-                    {/* Hours */}
-                    <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground mb-1 block">Hours</Label>
-                      <Input
-                        type="number"
-                        step="0.25"
-                        min="0"
-                        value={entry.hours || ""}
-                        onChange={(e) =>
-                          updateTimeEntry(entry.id, { hours: parseFloat(e.target.value) || 0 })
-                        }
-                        className="h-9"
-                      />
-                    </div>
+                        {/* Hours */}
+                        <div className="col-span-2">
+                          <Label className="text-xs text-muted-foreground mb-1 block">Hours</Label>
+                          <Input
+                            type="number"
+                            step="0.25"
+                            min="0"
+                            value={entry.hours || ""}
+                            onChange={(e) =>
+                              updateTimeEntry(entry.id, { hours: parseFloat(e.target.value) || 0 })
+                            }
+                            className="h-9"
+                          />
+                        </div>
 
-                    {/* Pay Rate (read-only) */}
-                    <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground mb-1 block">Pay Rate</Label>
-                      <Input
-                        value={formatCurrency(entry.rate)}
-                        readOnly
-                        className="h-9 bg-muted"
-                      />
-                    </div>
+                        {/* Pay Rate (read-only) */}
+                        <div className="col-span-2">
+                          <Label className="text-xs text-muted-foreground mb-1 block">Pay Rate</Label>
+                          <Input
+                            value={formatCurrency(entry.rate)}
+                            readOnly
+                            className="h-9 bg-muted"
+                          />
+                        </div>
 
-                    {/* Delete button */}
-                    <div className="col-span-1 flex items-end">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9"
-                        onClick={() => removeTimeEntry(entry.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                        {/* Delete button */}
+                        <div className="col-span-1 flex items-end">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            onClick={() => removeTimeEntry(entry.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
 
-                    {/* Pay display */}
-                    <div className="col-span-12 text-right text-sm font-medium">
-                      Pay: {formatCurrency(entry.hours * entry.rate)}
-                    </div>
-                  </div>
-                ))}
+                        {/* Pay display */}
+                        <div className="col-span-12 text-right text-sm font-medium">
+                          Pay: {formatCurrency(entry.hours * entry.rate)}
+                        </div>
+                      </div>
+                    ))}
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addTimeEntry}
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Time Entry
-                </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addTimeEntry}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Time Entry
+                    </Button>
+                  </>
+                ) : (
+                  <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
+                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <AlertDescription className="text-blue-700 dark:text-blue-400">
+                      Time tracking is not available for this case. This case uses a money-only budget strategy.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </CollapsibleContent>
             </Collapsible>
 
