@@ -24,7 +24,7 @@ export function WizardNavigation({
   continueLabel,
 }: WizardNavigationProps) {
   const isFirstStep = currentStep === 1;
-  const isLastStep = currentStep === 6;
+  const isLastStep = currentStep === 7;
 
   if (isLastStep) {
     return (
