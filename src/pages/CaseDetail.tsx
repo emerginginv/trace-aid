@@ -844,7 +844,6 @@ const CaseDetail = () => {
                         caseId={id!} 
                         caseManagerId={caseData.case_manager_id}
                         caseManager2Id={caseData.case_manager_2_id}
-                        investigatorIds={caseData.investigator_ids || []} 
                         onUpdate={fetchCaseData} 
                       />
                       <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
