@@ -16,7 +16,8 @@ import {
   Phone, 
   Briefcase, 
   FileText,
-  Upload
+  Upload,
+  Info
 } from "lucide-react";
 import { FieldConfigSection } from "./case-request-forms";
 import { 
@@ -28,6 +29,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { getOrganizationProfile, OrganizationProfile } from "@/lib/organizationProfile";
 
 interface CaseRequestForm {
   id?: string;
@@ -75,6 +77,7 @@ export function CaseRequestFormEditor({
 }: CaseRequestFormEditorProps) {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
+  const [orgProfile, setOrgProfile] = useState<OrganizationProfile | null>(null);
   
   // Form state
   const [formName, setFormName] = useState("");
@@ -100,6 +103,15 @@ export function CaseRequestFormEditor({
   const [confirmationBody, setConfirmationBody] = useState("Thank you for submitting your case request. We have received your information and will be in touch shortly.");
   const [notifyStaff, setNotifyStaff] = useState(true);
   const [staffEmails, setStaffEmails] = useState("");
+
+  // Fetch organization profile on dialog open
+  useEffect(() => {
+    if (open && organizationId) {
+      getOrganizationProfile(organizationId).then(profile => {
+        setOrgProfile(profile);
+      });
+    }
+  }, [open, organizationId]);
 
   // Reset form when opening
   useEffect(() => {
@@ -318,27 +330,74 @@ export function CaseRequestFormEditor({
             {/* Branding Tab */}
             <TabsContent value="branding" className="space-y-4 mt-4">
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="logoUrl">Logo URL</Label>
-                  <Input
-                    id="logoUrl"
-                    placeholder="https://example.com/logo.png"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                  />
+                {/* Organization defaults info */}
+                <div className="p-3 bg-muted/50 rounded-lg border flex items-start gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <p className="text-xs text-muted-foreground">
-                    URL to your company logo (recommended size: 200x60px)
+                    Branding fields will use your organization settings from Settings → Organizational Information as defaults. 
+                    Override any field here to customize this specific form.
                   </p>
+                </div>
+
+                {/* Logo Section */}
+                <div className="space-y-3">
+                  <Label>Logo</Label>
+                  
+                  {/* Logo Preview */}
+                  <div className="p-4 border rounded-lg bg-muted/30">
+                    {(logoUrl || orgProfile?.logoUrl) ? (
+                      <div className="space-y-2">
+                        <img 
+                          src={logoUrl || orgProfile?.logoUrl || ''} 
+                          alt="Form logo"
+                          className="h-12 object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {logoUrl 
+                            ? "Using: Custom URL override" 
+                            : "Using: Organization logo (from Settings → Organizational Information)"}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No organization logo configured. Go to Settings → Organizational Information to add one.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* URL Override Input */}
+                  <div className="space-y-1">
+                    <Label htmlFor="logoUrl" className="text-sm font-normal text-muted-foreground">
+                      Logo URL Override (optional)
+                    </Label>
+                    <Input
+                      id="logoUrl"
+                      placeholder="https://example.com/logo.png"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      If provided, this URL will be used instead of the organization logo
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Organization Display Name</Label>
                   <Input
                     id="displayName"
-                    placeholder="e.g., Acme Investigations"
+                    placeholder={orgProfile?.companyName || "e.g., Acme Investigations"}
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                   />
+                  {orgProfile?.companyName && !displayName && (
+                    <p className="text-xs text-muted-foreground">
+                      Will use: {orgProfile.companyName}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -346,19 +405,29 @@ export function CaseRequestFormEditor({
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input
                       id="phone"
-                      placeholder="(555) 123-4567"
+                      placeholder={orgProfile?.phone || "(555) 123-4567"}
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                     />
+                    {orgProfile?.phone && !phone && (
+                      <p className="text-xs text-muted-foreground">
+                        Will use: {orgProfile.phone}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="website">Website</Label>
                     <Input
                       id="website"
-                      placeholder="https://example.com"
+                      placeholder={orgProfile?.websiteUrl || "https://example.com"}
                       value={website}
                       onChange={(e) => setWebsite(e.target.value)}
                     />
+                    {orgProfile?.websiteUrl && !website && (
+                      <p className="text-xs text-muted-foreground">
+                        Will use: {orgProfile.websiteUrl}
+                      </p>
+                    )}
                   </div>
                 </div>
 

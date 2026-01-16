@@ -7,22 +7,28 @@ interface CaseRequestHeaderProps {
 }
 
 export function CaseRequestHeader({ form }: CaseRequestHeaderProps) {
+  // Use form-specific values with fallbacks to organization settings
+  const effectiveLogoUrl = form.logo_url || form.org_settings?.logo_url;
+  const effectiveDisplayName = form.organization_display_name || form.org_settings?.company_name;
+  const effectivePhone = form.organization_phone || form.org_settings?.phone;
+  const effectiveWebsite = form.organization_website || form.org_settings?.website_url;
+
   return (
     <header className="bg-card border-b">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Left: Logo */}
           <div className="flex items-center gap-4">
-            {form.logo_url ? (
+            {effectiveLogoUrl ? (
               <img
-                src={form.logo_url}
-                alt={form.organization_display_name || 'Organization Logo'}
+                src={effectiveLogoUrl}
+                alt={effectiveDisplayName || 'Organization Logo'}
                 className="h-12 max-w-[200px] object-contain"
               />
             ) : (
               <div className="h-12 w-12 rounded bg-muted flex items-center justify-center">
                 <span className="text-lg font-bold text-muted-foreground">
-                  {form.organization_display_name?.charAt(0) || 'O'}
+                  {effectiveDisplayName?.charAt(0) || 'O'}
                 </span>
               </div>
             )}
@@ -39,20 +45,20 @@ export function CaseRequestHeader({ form }: CaseRequestHeaderProps) {
             </Link>
             
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              {form.organization_display_name && (
+              {effectiveDisplayName && (
                 <span className="font-medium text-foreground">
-                  {form.organization_display_name}
+                  {effectiveDisplayName}
                 </span>
               )}
-              {form.organization_phone && (
+              {effectivePhone && (
                 <span className="flex items-center gap-1">
                   <Phone className="h-3 w-3" />
-                  {form.organization_phone}
+                  {effectivePhone}
                 </span>
               )}
-              {form.organization_website && (
+              {effectiveWebsite && (
                 <a
-                  href={form.organization_website}
+                  href={effectiveWebsite}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 hover:text-primary"
