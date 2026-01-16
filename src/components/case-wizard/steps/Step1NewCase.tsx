@@ -27,6 +27,7 @@ import { CaseFormData } from "../hooks/useCaseWizard";
 import { useCaseTypesQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { User, Calendar, Info } from "lucide-react";
 import { addDays, format } from "date-fns";
+import { logCaseTypeAudit } from "@/lib/caseTypeAuditLogger";
 
 const formSchema = z.object({
   case_type_id: z.string().min(1, "Case type is required"),
@@ -235,6 +236,20 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         // Don't fail the whole operation, the case was created
         toast.warning("Case created but there was an issue with the primary subject");
       }
+
+      // Log audit event for Case Type assignment
+      await logCaseTypeAudit({
+        action: 'case_type_assigned',
+        organizationId: organizationId,
+        metadata: {
+          caseId: newCase.id,
+          caseNumber: generatedCaseNumber,
+          newCaseTypeId: data.case_type_id,
+          newCaseTypeName: selectedCaseType?.name || null,
+          newBudgetStrategy: selectedCaseType?.budget_strategy || 'both',
+          severity: 'LOW',
+        },
+      });
 
       // Prepare form data for wizard state
       const formData: CaseFormData = {

@@ -8627,6 +8627,7 @@ export type Database = {
         Args: { p_case_id: string; p_user_id: string }
         Returns: boolean
       }
+      is_case_billed: { Args: { p_case_id: string }; Returns: boolean }
       is_enterprise_org: { Args: { p_org_id: string }; Returns: boolean }
       is_org_active: { Args: { p_organization_id: string }; Returns: boolean }
       is_org_member: {
