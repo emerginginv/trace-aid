@@ -30,8 +30,8 @@ export interface WizardState {
   caseData: CaseFormData | null;
   selectedServices: SelectedService[];
   subjectsCount: number;
-  updatesCount: number;
-  eventsCount: number;
+  notesCount: number; // Renamed from updatesCount
+  activitiesCount: number; // Renamed from eventsCount
   attachmentsCount: number;
   isSubmitting: boolean;
 }
@@ -44,8 +44,8 @@ const initialState: WizardState = {
   caseData: null,
   selectedServices: [],
   subjectsCount: 0,
-  updatesCount: 0,
-  eventsCount: 0,
+  notesCount: 0,
+  activitiesCount: 0,
   attachmentsCount: 0,
   isSubmitting: false,
 };
@@ -92,20 +92,20 @@ export function useCaseWizard(organizationId: string | null) {
 
   const updateCounts = useCallback((counts: {
     subjects?: number;
-    updates?: number;
-    events?: number;
+    notes?: number;
+    activities?: number;
     attachments?: number;
   }) => {
     setState(prev => ({
       ...prev,
       subjectsCount: counts.subjects ?? prev.subjectsCount,
-      updatesCount: counts.updates ?? prev.updatesCount,
-      eventsCount: counts.events ?? prev.eventsCount,
+      notesCount: counts.notes ?? prev.notesCount,
+      activitiesCount: counts.activities ?? prev.activitiesCount,
       attachmentsCount: counts.attachments ?? prev.attachmentsCount,
     }));
   }, []);
 
-  const incrementCount = useCallback((type: 'subjects' | 'updates' | 'events' | 'attachments', amount = 1) => {
+  const incrementCount = useCallback((type: 'subjects' | 'notes' | 'activities' | 'attachments', amount = 1) => {
     setState(prev => ({
       ...prev,
       [`${type}Count`]: (prev as any)[`${type}Count`] + amount,
