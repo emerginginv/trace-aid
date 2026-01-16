@@ -87,6 +87,7 @@ export function Step2Subjects({ caseId, organizationId, onBack, onContinue }: St
           <h3 className="text-lg font-medium mb-2">Would you like to add subjects to this case?</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
             Subjects can include people, vehicles, locations, or items relevant to your investigation.
+            The first subject you add will automatically become the primary subject and set the case name.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -117,6 +118,7 @@ export function Step2Subjects({ caseId, organizationId, onBack, onContinue }: St
         <h3 className="text-lg font-medium">Add Subjects</h3>
         <p className="text-sm text-muted-foreground">
           Add people, vehicles, locations, or items to your case.
+          {totalCount === 0 && " The first subject will automatically become the primary and set the case name."}
         </p>
       </div>
 

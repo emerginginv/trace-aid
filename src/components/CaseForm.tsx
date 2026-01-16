@@ -465,8 +465,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           // Use primary subject name if editing and it exists
           titleToUse = primarySubjectName;
         } else {
-          // For new cases, use case number as placeholder until primary subject is set
-          titleToUse = data.case_number;
+          // For new cases, leave empty - title will be set when first subject is added (auto becomes primary)
+          titleToUse = "";
         }
       }
 
