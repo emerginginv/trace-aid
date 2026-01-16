@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Mail, Phone, Smartphone, Star, X } from "lucide-react";
+import { getRoleLabel, isPrimaryRole } from "@/lib/investigator-roles";
 
 interface InvestigatorProfile {
   id: string;
@@ -14,7 +15,7 @@ interface InvestigatorProfile {
 
 interface InvestigatorCardProps {
   investigator: InvestigatorProfile;
-  isPrimary: boolean;
+  role: string;  // Extensible - accepts any role key
   onSetPrimary: () => void;
   onRemove: () => void;
   canEdit: boolean;
@@ -23,12 +24,14 @@ interface InvestigatorCardProps {
 
 export function InvestigatorCard({
   investigator,
-  isPrimary,
+  role,
   onSetPrimary,
   onRemove,
   canEdit,
   showSetPrimary,
 }: InvestigatorCardProps) {
+  const isPrimary = isPrimaryRole(role);
+  const roleLabel = getRoleLabel(role);
   const getInitials = (name: string | null, email: string) => {
     if (name) {
       return name
@@ -75,7 +78,7 @@ export function InvestigatorCard({
                 {investigator.full_name || investigator.email}
               </p>
               <p className="text-xs text-muted-foreground">
-                {isPrimary ? "Primary Investigator" : "Support Investigator"}
+                {roleLabel}
               </p>
             </div>
 
