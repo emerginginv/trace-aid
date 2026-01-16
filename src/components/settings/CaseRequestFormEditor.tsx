@@ -252,7 +252,7 @@ export function CaseRequestFormEditor({
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="flex-1 min-h-0 h-[60vh] pr-4">
             {/* General Tab */}
             <TabsContent value="general" className="space-y-4 mt-4">
               <div className="space-y-4">
