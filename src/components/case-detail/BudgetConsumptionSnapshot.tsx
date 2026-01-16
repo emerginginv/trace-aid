@@ -65,16 +65,26 @@ export function BudgetConsumptionSnapshot({
         setInvoiceTotals(totals);
       }
 
-      // Fetch uninvoiced expenses
-      const {
-        data: uninvoiced,
-        error: uninvoicedError
-      } = await supabase.from("case_finances").select("amount").eq("case_id", caseId).in("finance_type", ["expense", "time"]).or("status.is.null,status.neq.rejected").eq("invoiced", false);
-      if (uninvoicedError) throw uninvoicedError;
-      if (uninvoiced) {
-        const total = uninvoiced.reduce((sum, item) => sum + (item.amount || 0), 0);
-        setUninvoicedAmount(total);
-      }
+      // Fetch uninvoiced amounts from canonical tables
+      const [{ data: timeData, error: timeError }, { data: expenseData, error: expenseError }] = await Promise.all([
+        supabase
+          .from("time_entries")
+          .select("total")
+          .eq("case_id", caseId)
+          .or("status.is.null,status.neq.rejected"),
+        supabase
+          .from("expense_entries")
+          .select("total")
+          .eq("case_id", caseId)
+          .or("status.is.null,status.neq.rejected"),
+      ]);
+      
+      if (timeError) throw timeError;
+      if (expenseError) throw expenseError;
+      
+      const timeTotal = (timeData || []).reduce((sum, item) => sum + (item.total || 0), 0);
+      const expenseTotal = (expenseData || []).reduce((sum, item) => sum + (item.total || 0), 0);
+      setUninvoicedAmount(timeTotal + expenseTotal);
     } catch (error) {
       console.error("Error fetching consumption snapshot:", error);
     } finally {

@@ -355,24 +355,31 @@ export async function resolveVariables(
       variables["Customer.email_signature"] = orgSettings.email_signature || "";
     }
 
-    // Fetch expense totals
-    const { data: expenses } = await supabase
-      .from("case_finances")
-      .select("amount, hours, finance_type")
-      .eq("case_id", caseId);
+    // Fetch expense totals from canonical tables
+    const [{ data: timeData }, { data: expenseData }] = await Promise.all([
+      supabase
+        .from("time_entries")
+        .select("total, hours")
+        .eq("case_id", caseId),
+      supabase
+        .from("expense_entries")
+        .select("total")
+        .eq("case_id", caseId),
+    ]);
 
-    if (expenses) {
-      let expenseTotal = 0;
-      let hourTotal = 0;
-      expenses.forEach(e => {
-        if (e.finance_type === "expense") {
-          expenseTotal += e.amount || 0;
-        }
-        hourTotal += e.hours || 0;
-      });
-      variables["Case.expense_total"] = `$${expenseTotal.toFixed(2)}`;
-      variables["Case.expense_hour_total"] = hourTotal.toString();
-    }
+    let expenseTotal = 0;
+    let hourTotal = 0;
+    
+    (timeData || []).forEach(t => {
+      hourTotal += t.hours || 0;
+    });
+    
+    (expenseData || []).forEach(e => {
+      expenseTotal += e.total || 0;
+    });
+    
+    variables["Case.expense_total"] = `$${expenseTotal.toFixed(2)}`;
+    variables["Case.expense_hour_total"] = hourTotal.toString();
 
     // Fetch invoice totals
     const { data: invoices } = await supabase

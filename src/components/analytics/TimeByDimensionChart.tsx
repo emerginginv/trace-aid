@@ -26,16 +26,15 @@ export function TimeByDimensionChart({
     queryKey: ["time-by-dimension", organizationId, dimension, timeRange],
     queryFn: async () => {
       let query = supabase
-        .from("case_finances")
-        .select("hours, user_id, case_id, date")
+        .from("time_entries")
+        .select("hours, user_id, case_id, created_at")
         .eq("organization_id", organizationId)
-        .eq("finance_type", "time")
         .gt("hours", 0);
 
       if (timeRange) {
         query = query
-          .gte("date", timeRange.start.toISOString().split("T")[0])
-          .lte("date", timeRange.end.toISOString().split("T")[0]);
+          .gte("created_at", timeRange.start.toISOString())
+          .lte("created_at", timeRange.end.toISOString());
       }
 
       const { data: timeEntries, error } = await query;

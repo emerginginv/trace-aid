@@ -23,14 +23,19 @@ export function ExpenseTrendChart({
       const start = timeRange?.start || new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const end = timeRange?.end || now;
 
-      const { data: expenses, error } = await supabase
-        .from("case_finances")
-        .select("amount, date")
+      const { data: expenseData, error } = await supabase
+        .from("expense_entries")
+        .select("total, created_at")
         .eq("organization_id", organizationId)
-        .eq("finance_type", "expense")
-        .gte("date", start.toISOString().split("T")[0])
-        .lte("date", end.toISOString().split("T")[0])
-        .order("date", { ascending: true });
+        .gte("created_at", start.toISOString())
+        .lte("created_at", end.toISOString())
+        .order("created_at", { ascending: true });
+
+      // Transform to expected format
+      const expenses = (expenseData || []).map(e => ({
+        amount: e.total,
+        date: e.created_at?.split('T')[0] || '',
+      }));
 
       if (error) throw error;
 

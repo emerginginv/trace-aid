@@ -123,48 +123,69 @@ export function useApprovedBillingItems(caseId: string | undefined) {
         .single();
       
       if (!orgMember) return [];
+
+      const results: ApprovedBillingItem[] = [];
       
-      // Fetch approved, uninvoiced billing items
-      const { data, error } = await supabase
-        .from('case_finances')
-        .select(`
-          id,
-          case_id,
-          description,
-          quantity,
-          unit_price,
-          amount,
-          pricing_model,
-          finance_type,
-          status,
-          date,
-          case_service_instance_id,
-          update_id,
-          case_service_instances (
-            case_services (
-              name,
-              code
-            )
-          )
-        `)
+      // Fetch approved time entries
+      const { data: timeEntries, error: timeError } = await supabase
+        .from('time_entries')
+        .select('*')
         .eq('case_id', caseId)
         .eq('organization_id', orgMember.organization_id)
         .eq('status', 'approved')
-        .is('invoice_id', null)
-        .in('finance_type', ['time', 'expense', 'billing_item'])
-        .order('date', { ascending: false });
+        .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('Error fetching approved billing items:', error);
-        throw error;
+      if (timeError) {
+        console.error('Error fetching approved time entries:', timeError);
+      } else {
+        results.push(...(timeEntries || []).map(item => ({
+          id: item.id,
+          case_id: item.case_id,
+          description: item.notes || item.item_type || 'Time Entry',
+          quantity: item.hours,
+          unit_price: item.rate,
+          amount: item.total,
+          pricing_model: 'hourly',
+          finance_type: 'time',
+          status: item.status,
+          date: item.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          case_service_instance_id: null,
+          update_id: item.update_id,
+        })));
       }
+
+      // Fetch approved expense entries
+      const { data: expenseEntries, error: expenseError } = await supabase
+        .from('expense_entries')
+        .select('*')
+        .eq('case_id', caseId)
+        .eq('organization_id', orgMember.organization_id)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
       
-      // Transform to include service name
-      return (data || []).map(item => ({
-        ...item,
-        service_name: (item.case_service_instances as any)?.case_services?.name,
-        service_code: (item.case_service_instances as any)?.case_services?.code,
-      })) as ApprovedBillingItem[];
+      if (expenseError) {
+        console.error('Error fetching approved expense entries:', expenseError);
+      } else {
+        results.push(...(expenseEntries || []).map(item => ({
+          id: item.id,
+          case_id: item.case_id,
+          description: item.notes || item.item_type || 'Expense',
+          quantity: item.quantity,
+          unit_price: item.rate,
+          amount: item.total,
+          pricing_model: 'fixed',
+          finance_type: 'expense',
+          status: item.status,
+          date: item.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          case_service_instance_id: null,
+          update_id: item.update_id,
+        })));
+      }
+
+      // Sort by date descending
+      return results.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      ) as ApprovedBillingItem[];
     },
     enabled: !!caseId,
   });

@@ -30,26 +30,25 @@ export function ExpensesByCategoryChart({
     queryKey: ["expenses-by-category", organizationId, timeRange],
     queryFn: async () => {
       let query = supabase
-        .from("case_finances")
-        .select("amount, category")
-        .eq("organization_id", organizationId)
-        .eq("finance_type", "expense");
+        .from("expense_entries")
+        .select("total, item_type, created_at")
+        .eq("organization_id", organizationId);
 
       if (timeRange) {
         query = query
-          .gte("date", timeRange.start.toISOString().split("T")[0])
-          .lte("date", timeRange.end.toISOString().split("T")[0]);
+          .gte("created_at", timeRange.start.toISOString())
+          .lte("created_at", timeRange.end.toISOString());
       }
 
       const { data: expenses, error } = await query;
       if (error) throw error;
 
-      // Group by category
+      // Group by category (item_type)
       const categoryTotals: Record<string, number> = {};
       
       expenses?.forEach((expense) => {
-        const category = expense.category || "Uncategorized";
-        categoryTotals[category] = (categoryTotals[category] || 0) + (expense.amount || 0);
+        const category = expense.item_type || "Uncategorized";
+        categoryTotals[category] = (categoryTotals[category] || 0) + (expense.total || 0);
       });
 
       return Object.entries(categoryTotals)

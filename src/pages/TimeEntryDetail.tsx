@@ -87,16 +87,15 @@ const TimeEntryDetail = () => {
     try {
       setLoading(true);
       
-      const { data: entryData, error: entryError } = await supabase
-        .from("case_finances")
+      const { data: rawData, error: entryError } = await supabase
+        .from("time_entries")
         .select("*")
         .eq("id", id)
-        .eq("finance_type", "time")
         .maybeSingle();
 
       if (entryError) throw entryError;
 
-      if (!entryData) {
+      if (!rawData) {
         toast({
           title: "Time entry not found",
           description: "The requested time entry could not be found.",
@@ -105,6 +104,28 @@ const TimeEntryDetail = () => {
         navigate("/time-entries");
         return;
       }
+
+      // Transform to expected interface
+      const entryData: TimeEntry = {
+        id: rawData.id,
+        case_id: rawData.case_id,
+        user_id: rawData.user_id,
+        finance_type: 'time',
+        amount: rawData.total || 0,
+        description: rawData.notes || rawData.item_type || 'Time Entry',
+        date: rawData.created_at?.split('T')[0] || '',
+        hours: rawData.hours,
+        hourly_rate: rawData.rate,
+        status: rawData.status || 'pending',
+        notes: rawData.notes,
+        invoiced: false,
+        invoice_id: null,
+        invoice_number: null,
+        created_at: rawData.created_at,
+        case_service_instance_id: null,
+        activity_id: rawData.event_id,
+        organization_id: rawData.organization_id,
+      };
 
       setTimeEntry(entryData);
 
@@ -128,23 +149,6 @@ const TimeEntryDetail = () => {
 
       if (caseData) {
         setCaseInfo(caseData);
-      }
-
-      // Fetch service info if there's a service instance
-      if (entryData.case_service_instance_id) {
-        const { data: instanceData } = await supabase
-          .from("case_service_instances")
-          .select("billable, case_services(name)")
-          .eq("id", entryData.case_service_instance_id)
-          .maybeSingle();
-
-        if (instanceData) {
-          const serviceName = (instanceData.case_services as any)?.name || "Unknown Service";
-          setServiceInfo({
-            name: serviceName,
-            billable: instanceData.billable ?? true,
-          });
-        }
       }
     } catch (error) {
       console.error("Error fetching time entry:", error);

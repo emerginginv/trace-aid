@@ -33,18 +33,17 @@ export function TimeVsBudgetChart({
       const caseIds = cases?.map(c => c.id) || [];
       if (caseIds.length === 0) return [];
 
-      // Get time entries for these cases
+      // Get time entries for these cases from canonical table
       let timeQuery = supabase
-        .from("case_finances")
+        .from("time_entries")
         .select("case_id, hours")
         .eq("organization_id", organizationId)
-        .eq("finance_type", "time")
         .in("case_id", caseIds);
 
       if (timeRange) {
         timeQuery = timeQuery
-          .gte("date", timeRange.start.toISOString().split("T")[0])
-          .lte("date", timeRange.end.toISOString().split("T")[0]);
+          .gte("created_at", timeRange.start.toISOString())
+          .lte("created_at", timeRange.end.toISOString());
       }
 
       const { data: timeEntries, error: timeError } = await timeQuery;

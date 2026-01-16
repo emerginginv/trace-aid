@@ -4,7 +4,7 @@
  * PART 8: Data fetching hook for the Billing Review Queue.
  * 
  * Fetches pending billing items with related case, account, and service data.
- * Supports filtering and sorting for efficient review workflows.
+ * NOW queries from canonical time_entries and expense_entries tables.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -43,96 +43,154 @@ export function useBillingReviewQueue(
     setError(null);
 
     try {
-      // Build query for billing items
-      let query = supabase
-        .from("case_finances")
+      const statusFilter = filter?.status || 'pending';
+      const allItems: BillingReviewItem[] = [];
+
+      // Fetch time entries
+      let timeQuery = supabase
+        .from("time_entries")
         .select(`
           id,
           case_id,
-          account_id,
-          case_service_instance_id,
-          activity_id,
-          update_id,
-          billing_type,
-          description,
-          quantity,
-          hourly_rate,
-          amount,
+          hours,
+          rate,
+          total,
           status,
           created_at,
           notes,
+          item_type,
+          event_id,
+          update_id,
           cases!inner (
             case_number,
-            title
-          ),
-          accounts (
-            name
+            title,
+            account_id
           )
         `)
-        .eq("organization_id", organization.id)
-        .in("finance_type", ["time", "expense", "billing_item"]);
+        .eq("organization_id", organization.id);
 
-      // Apply status filter (default to pending_review)
-      const statusFilter = filter?.status || 'pending';
       if (statusFilter !== 'all') {
-        query = query.eq("status", statusFilter);
+        timeQuery = timeQuery.eq("status", statusFilter as any);
       }
-
-      // Apply case filter
       if (filter?.caseId) {
-        query = query.eq("case_id", filter.caseId);
+        timeQuery = timeQuery.eq("case_id", filter.caseId);
       }
 
-      // Apply account filter
-      if (filter?.accountId) {
-        query = query.eq("account_id", filter.accountId);
-      }
+      const sortField = sort.field === 'amount' ? 'total' : sort.field;
+      timeQuery = timeQuery.order(sortField, { ascending: sort.direction === 'asc' });
 
-      // Apply sorting
-      if (sort.field === 'case_number') {
-        query = query.order("created_at", { ascending: sort.direction === 'asc' });
-      } else {
-        query = query.order(sort.field, { ascending: sort.direction === 'asc' });
-      }
+      const { data: timeData, error: timeError } = await timeQuery.limit(50);
+      if (timeError) throw timeError;
 
-      const { data, error: queryError } = await query.limit(100);
-
-      if (queryError) {
-        throw queryError;
-      }
-
-      // Transform data to match BillingReviewItem interface
-      const transformedItems: BillingReviewItem[] = (data || []).map((item: any) => ({
+      // Transform time entries
+      allItems.push(...(timeData || []).map((item: any) => ({
         id: item.id,
         case_id: item.case_id,
-        account_id: item.account_id,
-        case_service_instance_id: item.case_service_instance_id,
-        activity_id: item.activity_id,
+        account_id: item.cases?.account_id || null,
+        case_service_instance_id: null,
+        activity_id: item.event_id,
         update_id: item.update_id,
-        billing_type: item.billing_type,
-        description: item.description,
-        quantity: item.quantity,
-        hourly_rate: item.hourly_rate,
-        amount: item.amount,
+        billing_type: 'time',
+        description: item.notes || item.item_type || 'Time Entry',
+        quantity: item.hours || 1,
+        hourly_rate: item.rate,
+        amount: item.total,
         status: item.status,
         created_at: item.created_at,
         notes: item.notes,
         case_number: item.cases?.case_number,
         case_title: item.cases?.title,
-        account_name: item.accounts?.name,
-      }));
+        account_name: undefined,
+        finance_type: 'time' as const,
+      })));
 
-      setItems(transformedItems);
+      // Fetch expense entries
+      let expenseQuery = supabase
+        .from("expense_entries")
+        .select(`
+          id,
+          case_id,
+          quantity,
+          rate,
+          total,
+          status,
+          created_at,
+          notes,
+          item_type,
+          event_id,
+          update_id,
+          cases!inner (
+            case_number,
+            title,
+            account_id
+          )
+        `)
+        .eq("organization_id", organization.id);
 
-      // Fetch pending count separately
-      const { count } = await supabase
-        .from("case_finances")
-        .select("id", { count: 'exact', head: true })
-        .eq("organization_id", organization.id)
-        .eq("status", "pending_review")
-        .in("finance_type", ["time", "expense", "billing_item"]);
+      if (statusFilter !== 'all') {
+        expenseQuery = expenseQuery.eq("status", statusFilter as any);
+      }
+      if (filter?.caseId) {
+        expenseQuery = expenseQuery.eq("case_id", filter.caseId);
+      }
 
-      setPendingCount(count || 0);
+      const expenseSortField = sort.field === 'amount' ? 'total' : sort.field;
+      expenseQuery = expenseQuery.order(expenseSortField, { ascending: sort.direction === 'asc' });
+
+      const { data: expenseData, error: expenseError } = await expenseQuery.limit(50);
+      if (expenseError) throw expenseError;
+
+      // Transform expense entries
+      allItems.push(...(expenseData || []).map((item: any) => ({
+        id: item.id,
+        case_id: item.case_id,
+        account_id: item.cases?.account_id || null,
+        case_service_instance_id: null,
+        activity_id: item.event_id,
+        update_id: item.update_id,
+        billing_type: 'expense',
+        description: item.notes || item.item_type || 'Expense',
+        quantity: item.quantity || 1,
+        hourly_rate: item.rate,
+        amount: item.total,
+        status: item.status,
+        created_at: item.created_at,
+        notes: item.notes,
+        case_number: item.cases?.case_number,
+        case_title: item.cases?.title,
+        account_name: undefined,
+        finance_type: 'expense' as const,
+      })));
+
+      // Sort combined results
+      allItems.sort((a, b) => {
+        if (sort.field === 'amount') {
+          return sort.direction === 'asc' 
+            ? (a.amount || 0) - (b.amount || 0)
+            : (b.amount || 0) - (a.amount || 0);
+        }
+        const aDate = new Date(a.created_at).getTime();
+        const bDate = new Date(b.created_at).getTime();
+        return sort.direction === 'asc' ? aDate - bDate : bDate - aDate;
+      });
+
+      setItems(allItems.slice(0, 100));
+
+      // Fetch pending count from both tables
+      const [{ count: timeCount }, { count: expenseCount }] = await Promise.all([
+        supabase
+          .from("time_entries")
+          .select("id", { count: 'exact', head: true })
+          .eq("organization_id", organization.id)
+          .eq("status", "pending"),
+        supabase
+          .from("expense_entries")
+          .select("id", { count: 'exact', head: true })
+          .eq("organization_id", organization.id)
+          .eq("status", "pending"),
+      ]);
+
+      setPendingCount((timeCount || 0) + (expenseCount || 0));
     } catch (err) {
       console.error("Error fetching billing review queue:", err);
       setError("Failed to load billing items");
