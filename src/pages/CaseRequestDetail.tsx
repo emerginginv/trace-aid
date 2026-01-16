@@ -63,6 +63,7 @@ interface ApprovedCase {
 
 interface CaseRequest {
   id: string;
+  organization_id: string;
   request_number: string | null;
   status: string;
   submitted_at: string;
@@ -568,6 +569,8 @@ export default function CaseRequestDetail() {
 
         {activeTab === 'history' && (
           <RequestHistoryTab
+            requestId={request.id}
+            organizationId={request.organization_id}
             submittedAt={request.submitted_at}
             reviewedAt={request.reviewed_at}
             status={request.status}

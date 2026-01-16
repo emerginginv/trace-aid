@@ -1399,6 +1399,54 @@ export type Database = {
           },
         ]
       }
+      case_request_history: {
+        Row: {
+          action: string
+          case_request_id: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string
+          performed_at: string
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          case_request_id: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          performed_at?: string
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          case_request_id?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          performed_at?: string
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_request_history_case_request_id_fkey"
+            columns: ["case_request_id"]
+            isOneToOne: false
+            referencedRelation: "case_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_request_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_request_subjects: {
         Row: {
           address1: string | null
