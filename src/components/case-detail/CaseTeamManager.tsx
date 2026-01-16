@@ -65,13 +65,14 @@ export const CaseTeamManager = ({
     if (!caseId) return;
     
     try {
+      // Use explicit FK relationship to avoid ambiguity with assigned_by FK
       const { data, error } = await supabase
         .from('case_investigators')
         .select(`
           id,
           role,
           assigned_at,
-          investigator:profiles(id, full_name, email, mobile_phone, office_phone, avatar_url)
+          investigator:profiles!case_investigators_investigator_id_fkey(id, full_name, email, mobile_phone, office_phone, avatar_url)
         `)
         .eq('case_id', caseId)
         .order('assigned_at', { ascending: true });
@@ -242,6 +243,19 @@ export const CaseTeamManager = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
+      // Check if investigator is already assigned to prevent duplicate key error
+      const existingAssignment = investigators.find(
+        inv => inv.investigator.id === selectedInvestigator
+      );
+      if (existingAssignment) {
+        toast({
+          title: "Already Assigned",
+          description: "This investigator is already assigned to this case",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Insert into case_investigators - trigger handles primary assignment
       const { error } = await supabase
         .from('case_investigators')
@@ -252,7 +266,19 @@ export const CaseTeamManager = ({
           assigned_by: user.id
         });
       
-      if (error) throw error;
+      if (error) {
+        // Handle duplicate key error gracefully
+        if (error.code === '23505') {
+          toast({
+            title: "Already Assigned",
+            description: "This investigator is already assigned to this case",
+            variant: "destructive"
+          });
+          fetchInvestigators(); // Refresh to sync UI state
+          return;
+        }
+        throw error;
+      }
       toast({
         title: "Success",
         description: "Investigator added successfully"
