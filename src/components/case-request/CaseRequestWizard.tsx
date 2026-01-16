@@ -37,9 +37,9 @@ export function CaseRequestWizard({ form }: CaseRequestWizardProps) {
     INITIAL_STEP1_DATA,
     INITIAL_STEP2_DATA,
   } = useCaseRequestForm(form.form_slug || form.id);
-
-const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [submittedRequestNumber, setSubmittedRequestNumber] = useState<string | null>(null);
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
   const [newSubjectTypeId, setNewSubjectTypeId] = useState<string | null>(null);
 
@@ -194,6 +194,7 @@ const handleAddSubject = () => {
       }
 
       setRequestId(caseRequest.id);
+      setSubmittedRequestNumber(caseRequest.request_number);
       setIsComplete(true);
       clearForm();
       
@@ -206,6 +207,10 @@ const handleAddSubject = () => {
     }
   };
 
+  const handleEditStep = (step: number) => {
+    goToStep(step);
+  };
+
   // Show success screen
   if (isComplete) {
     return (
@@ -214,6 +219,11 @@ const handleAddSubject = () => {
           <CardContent className="py-12 text-center">
             <CheckCircle2 className="mx-auto h-16 w-16 text-green-500 mb-6" />
             <h2 className="text-2xl font-bold mb-2">Request Submitted!</h2>
+            {submittedRequestNumber && (
+              <p className="text-lg font-mono font-bold text-primary mb-4">
+                Request #{submittedRequestNumber}
+              </p>
+            )}
             <p className="text-muted-foreground mb-6">
               {form.success_message || 'Thank you for your submission. We will review your request and get back to you shortly.'}
             </p>
@@ -299,6 +309,7 @@ const caseTypeId = state.formData.step1?.case_type_id || '';
             fieldConfig={form.field_config}
             files={state.formData.files}
             requestId={state.requestId}
+            organizationId={form.organization_id}
             onAddFiles={addFiles}
             onUpdateFile={updateFile}
             onRemoveFile={removeFile}
@@ -310,6 +321,7 @@ const caseTypeId = state.formData.step1?.case_type_id || '';
 
         {state.currentStep === 6 && state.formData.step1 && state.formData.step2 && (
           <CaseSummaryStep
+            fieldConfig={form.field_config}
             organizationId={form.organization_id}
             step1Data={state.formData.step1}
             step2Data={state.formData.step2}
@@ -318,6 +330,7 @@ const caseTypeId = state.formData.step1?.case_type_id || '';
             isSubmitting={isSubmitting}
             onSubmit={handleFinalSubmit}
             onBack={goBack}
+            onEditStep={handleEditStep}
           />
         )}
       </div>
