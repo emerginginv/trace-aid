@@ -159,15 +159,15 @@ export function Step3Updates({ caseId, organizationId, onBack, onContinue }: Ste
       <div className="space-y-6">
         <div className="text-center py-8">
           <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Would you like to add an initial case update?</h3>
+          <h3 className="text-lg font-medium mb-2">Would you like to add case notes?</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-            Updates can include intake notes, initial findings, or client-provided background information.
+            Add intake notes, initial findings, or narrative updates to document the case background.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button onClick={() => setHasStarted(true)} className="gap-2">
               <Plus className="h-4 w-4" />
-              Add Update
+              Add Note
             </Button>
             <Button variant="outline" onClick={handleContinue} className="gap-2">
               <SkipForward className="h-4 w-4" />
@@ -177,7 +177,7 @@ export function Step3Updates({ caseId, organizationId, onBack, onContinue }: Ste
         </div>
 
         <WizardNavigation
-          currentStep={3}
+          currentStep={4}
           onBack={onBack}
           onContinue={handleContinue}
           canContinue={true}
@@ -189,9 +189,9 @@ export function Step3Updates({ caseId, organizationId, onBack, onContinue }: Ste
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Add Case Update</h3>
+        <h3 className="text-lg font-medium">Add Case Notes</h3>
         <p className="text-sm text-muted-foreground">
-          Add initial notes or findings to your case.
+          Document intake information, findings, or narrative updates.
         </p>
       </div>
 
@@ -302,7 +302,7 @@ export function Step3Updates({ caseId, organizationId, onBack, onContinue }: Ste
       </Card>
 
       <WizardNavigation
-        currentStep={3}
+        currentStep={4}
         onBack={onBack}
         onContinue={handleContinue}
         canContinue={true}
