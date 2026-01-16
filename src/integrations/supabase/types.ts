@@ -8254,6 +8254,41 @@ export type Database = {
           },
         ]
       }
+      case_finances_view: {
+        Row: {
+          account_id: string | null
+          activity_id: string | null
+          amount: number | null
+          billing_type: string | null
+          case_id: string | null
+          case_service_instance_id: string | null
+          category: string | null
+          created_at: string | null
+          date: string | null
+          description: string | null
+          expense_user_id: string | null
+          finance_item_id: string | null
+          finance_type: string | null
+          hourly_rate: number | null
+          hours: number | null
+          id: string | null
+          invoice_id: string | null
+          invoice_rate: number | null
+          invoiced: boolean | null
+          notes: string | null
+          organization_id: string | null
+          pricing_model: string | null
+          pricing_snapshot: Json | null
+          quantity: number | null
+          status: string | null
+          subject_id: string | null
+          unit_price: number | null
+          update_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       cases_with_budget_summary: {
         Row: {
           account_id: string | null
