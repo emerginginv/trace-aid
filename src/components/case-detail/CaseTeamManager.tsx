@@ -11,6 +11,7 @@ import { InvestigatorCard } from "./InvestigatorCard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ContextualHelp } from "@/components/help-center";
 import { EmptyState } from "@/components/ui/empty-state";
+import { isPrimaryRole } from "@/lib/investigator-roles";
 
 interface Profile {
   id: string;
@@ -23,7 +24,7 @@ interface Profile {
 
 interface CaseInvestigator {
   id: string;
-  role: 'primary' | 'support';
+  role: string;  // Extensible - not limited to primary/support
   assigned_at: string;
   investigator: Profile;
 }
@@ -85,13 +86,13 @@ export const CaseTeamManager = ({
         .filter(item => item.investigator)
         .map(item => ({
           id: item.id,
-          role: item.role as 'primary' | 'support',
+          role: item.role as string,
           assigned_at: item.assigned_at,
           investigator: item.investigator as unknown as Profile
         }))
         .sort((a, b) => {
-          if (a.role === 'primary' && b.role !== 'primary') return -1;
-          if (a.role !== 'primary' && b.role === 'primary') return 1;
+          if (isPrimaryRole(a.role) && !isPrimaryRole(b.role)) return -1;
+          if (!isPrimaryRole(a.role) && isPrimaryRole(b.role)) return 1;
           return new Date(a.assigned_at).getTime() - new Date(b.assigned_at).getTime();
         });
       
@@ -334,11 +335,11 @@ export const CaseTeamManager = ({
     // OPTIMISTIC UPDATE: Update local state immediately
     setInvestigators(prev => prev.map(inv => ({
       ...inv,
-      role: inv.investigator.id === investigatorId ? 'primary' as const : 'support' as const
+      role: inv.investigator.id === investigatorId ? 'primary' : 'support'
     })).sort((a, b) => {
       // Keep primary at top
-      if (a.role === 'primary' && b.role !== 'primary') return -1;
-      if (a.role !== 'primary' && b.role === 'primary') return 1;
+      if (isPrimaryRole(a.role) && !isPrimaryRole(b.role)) return -1;
+      if (!isPrimaryRole(a.role) && isPrimaryRole(b.role)) return 1;
       return new Date(a.assigned_at).getTime() - new Date(b.assigned_at).getTime();
     }));
 
@@ -603,7 +604,7 @@ export const CaseTeamManager = ({
               />
             ) : (
               investigators.map((item) => {
-                const isPrimary = item.role === 'primary';
+                const isPrimary = isPrimaryRole(item.role);
                 // Only show "Make Primary" if not already primary AND there are multiple investigators
                 const showSetPrimary = !isPrimary && investigators.length > 1;
                 
@@ -611,7 +612,7 @@ export const CaseTeamManager = ({
                   <InvestigatorCard
                     key={item.id}
                     investigator={item.investigator}
-                    isPrimary={isPrimary}
+                    role={item.role}
                     onSetPrimary={() => handleSetPrimaryInvestigator(item.investigator.id)}
                     onRemove={() => handleRemoveInvestigator(item.id, isPrimary)}
                     canEdit={canEdit}
