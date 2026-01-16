@@ -33,7 +33,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { CalendarIcon, X } from "lucide-react";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -44,7 +44,7 @@ import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { useCaseTypesQuery, CaseType } from "@/hooks/queries/useCaseTypesQuery";
-import { addDays } from "date-fns";
+import { DueDateRecalculateDialog } from "@/components/case-detail/DueDateRecalculateDialog";
 
 const caseSchema = z.object({
   title: z.string().max(200).optional(),
@@ -114,6 +114,16 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [primarySubjectName, setPrimarySubjectName] = useState<string | null>(null);
   const [selectedCaseTypeId, setSelectedCaseTypeId] = useState<string | null>(null);
+  
+  // Due date recalculation dialog state
+  const [dueDateDialogOpen, setDueDateDialogOpen] = useState(false);
+  const [pendingDueDateChange, setPendingDueDateChange] = useState<{
+    newCaseTypeId: string;
+    newDueDate: Date;
+    currentDueDate: Date | null;
+    defaultDays: number;
+    caseTypeName: string;
+  } | null>(null);
 
   // Fetch case types using React Query
   const { data: caseTypes = [] } = useCaseTypesQuery();
@@ -239,13 +249,27 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
   // Handle case type change - set defaults based on case type
   const handleCaseTypeChange = (caseTypeId: string | null) => {
-    setSelectedCaseTypeId(caseTypeId);
-    form.setValue("case_type_id", caseTypeId);
-    
     if (caseTypeId) {
       const caseType = caseTypes.find(ct => ct.id === caseTypeId);
       if (caseType) {
-        // Auto-set due date based on default_due_days (only for new cases)
+        // For editing existing cases with default_due_days, prompt before changing
+        if (editingCase && caseType.default_due_days && caseType.default_due_days > 0) {
+          const currentDueDate = form.getValues("due_date") || null;
+          const newDueDate = addDays(new Date(), caseType.default_due_days);
+          
+          // Show confirmation dialog
+          setPendingDueDateChange({
+            newCaseTypeId: caseTypeId,
+            newDueDate,
+            currentDueDate,
+            defaultDays: caseType.default_due_days,
+            caseTypeName: caseType.name,
+          });
+          setDueDateDialogOpen(true);
+          return; // Don't apply changes yet - wait for dialog response
+        }
+        
+        // For new cases, auto-set due date
         if (!editingCase && caseType.default_due_days && caseType.default_due_days > 0) {
           const newDueDate = addDays(new Date(), caseType.default_due_days);
           form.setValue("due_date", newDueDate);
@@ -258,6 +282,51 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         }
       }
     }
+    
+    // Apply the case type change
+    setSelectedCaseTypeId(caseTypeId);
+    form.setValue("case_type_id", caseTypeId);
+  };
+
+  // Handle keeping current due date (from dialog)
+  const handleKeepCurrentDueDate = () => {
+    if (pendingDueDateChange) {
+      const { newCaseTypeId } = pendingDueDateChange;
+      const caseType = caseTypes.find(ct => ct.id === newCaseTypeId);
+      
+      // Apply case type change without modifying due date
+      setSelectedCaseTypeId(newCaseTypeId);
+      form.setValue("case_type_id", newCaseTypeId);
+      
+      // Clear budget fields if strategy is disabled
+      if (caseType?.budget_strategy === 'disabled') {
+        form.setValue("budget_hours", null);
+        form.setValue("budget_dollars", null);
+      }
+    }
+    setDueDateDialogOpen(false);
+    setPendingDueDateChange(null);
+  };
+
+  // Handle updating to new due date (from dialog)
+  const handleUpdateToNewDueDate = () => {
+    if (pendingDueDateChange) {
+      const { newCaseTypeId, newDueDate } = pendingDueDateChange;
+      const caseType = caseTypes.find(ct => ct.id === newCaseTypeId);
+      
+      // Apply case type change with new due date
+      setSelectedCaseTypeId(newCaseTypeId);
+      form.setValue("case_type_id", newCaseTypeId);
+      form.setValue("due_date", newDueDate);
+      
+      // Clear budget fields if strategy is disabled
+      if (caseType?.budget_strategy === 'disabled') {
+        form.setValue("budget_hours", null);
+        form.setValue("budget_dollars", null);
+      }
+    }
+    setDueDateDialogOpen(false);
+    setPendingDueDateChange(null);
   };
 
   // Set default status when statuses are loaded
@@ -572,6 +641,18 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       <LoadingOverlay 
         show={form.formState.isSubmitting} 
         message={editingCase ? "Updating case..." : "Creating case..."} 
+      />
+      
+      {/* Due Date Recalculation Dialog */}
+      <DueDateRecalculateDialog
+        open={dueDateDialogOpen}
+        onOpenChange={setDueDateDialogOpen}
+        onKeepCurrent={handleKeepCurrentDueDate}
+        onUpdateToNew={handleUpdateToNewDueDate}
+        currentDueDate={pendingDueDateChange?.currentDueDate || null}
+        newDueDate={pendingDueDateChange?.newDueDate || new Date()}
+        defaultDays={pendingDueDateChange?.defaultDays || 0}
+        caseTypeName={pendingDueDateChange?.caseTypeName}
       />
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

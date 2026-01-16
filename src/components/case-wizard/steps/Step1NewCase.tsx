@@ -25,7 +25,8 @@ import { toast } from "sonner";
 import { WizardNavigation } from "../WizardNavigation";
 import { CaseFormData } from "../hooks/useCaseWizard";
 import { useCaseTypesQuery } from "@/hooks/queries/useCaseTypesQuery";
-import { User } from "lucide-react";
+import { User, Calendar, Info } from "lucide-react";
+import { addDays, format } from "date-fns";
 
 const formSchema = z.object({
   case_type_id: z.string().min(1, "Case type is required"),
@@ -50,6 +51,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   const [seriesNumber, setSeriesNumber] = useState<number | null>(null);
   const [seriesInstance, setSeriesInstance] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [calculatedDueDate, setCalculatedDueDate] = useState<Date | null>(null);
 
   // Fetch case types from database
   const { data: caseTypes = [], isLoading: caseTypesLoading } = useCaseTypesQuery({ 
@@ -71,10 +73,20 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
 
   const selectedCaseTypeId = form.watch("case_type_id");
   
-  // Get selected case type details for dynamic reference labels
+  // Get selected case type details for dynamic reference labels and due date
   const selectedCaseType = useMemo(() => {
     return caseTypes.find(ct => ct.id === selectedCaseTypeId);
   }, [caseTypes, selectedCaseTypeId]);
+
+  // Calculate due date when case type changes
+  useEffect(() => {
+    if (selectedCaseType?.default_due_days && selectedCaseType.default_due_days > 0) {
+      const dueDate = addDays(new Date(), selectedCaseType.default_due_days);
+      setCalculatedDueDate(dueDate);
+    } else {
+      setCalculatedDueDate(null);
+    }
+  }, [selectedCaseType]);
 
   useEffect(() => {
     fetchInitialData();
@@ -167,6 +179,11 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
 
     setIsSubmitting(true);
     try {
+      // Calculate due date from case type default
+      const dueDateValue = calculatedDueDate 
+        ? calculatedDueDate.toISOString().split('T')[0] 
+        : null;
+
       // Prepare case data
       const caseData: any = {
         title: data.subject_name, // Set title from primary subject name
@@ -183,6 +200,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         reference_number_3: data.reference_number_3 || null,
         series_number: seriesNumber || undefined,
         series_instance: seriesInstance || 1,
+        due_date: dueDateValue,
       };
 
       const { data: newCase, error: caseError } = await supabase
@@ -227,7 +245,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         contact_id: "",
         status: "Draft",
         description: "",
-        due_date: null,
+        due_date: calculatedDueDate,
         case_manager_id: null,
         case_manager_2_id: null,
         investigator_ids: [],
@@ -353,6 +371,25 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
                   No reference fields configured for this case type
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Due Date Preview (Auto-calculated from Case Type) */}
+          {calculatedDueDate && selectedCaseType?.default_due_days && (
+            <div className="space-y-2 rounded-lg border p-4 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Due Date (Auto-calculated)</span>
+              </div>
+              <p className="text-base font-medium">
+                {format(calculatedDueDate, "PPP")}
+              </p>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Info className="h-3 w-3" />
+                <span>
+                  Based on Case Type default: {selectedCaseType.default_due_days} days from creation
+                </span>
+              </div>
             </div>
           )}
 

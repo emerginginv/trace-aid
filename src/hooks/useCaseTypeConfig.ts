@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useCaseTypeQuery } from '@/hooks/queries/useCaseTypesQuery';
+import { addDays } from 'date-fns';
 
 export interface CaseTypeConfig {
   // Budget settings
@@ -30,6 +31,9 @@ export interface CaseTypeConfig {
   isSubjectTypeAllowed: (subjectType: string) => boolean;
   hasServiceRestrictions: boolean;
   hasSubjectTypeRestrictions: boolean;
+  
+  // Due date helper
+  calculateDueDate: (fromDate?: Date) => Date | null;
 }
 
 /**
@@ -49,6 +53,7 @@ export function useCaseTypeConfig(caseTypeId: string | undefined | null): {
     const budgetStrategy = caseType.budget_strategy as CaseTypeConfig['budgetStrategy'] || null;
     const allowedServiceIds = caseType.allowed_service_ids || [];
     const allowedSubjectTypes = caseType.allowed_subject_types || [];
+    const defaultDueDays = caseType.default_due_days || null;
     
     return {
       // Budget settings
@@ -60,7 +65,7 @@ export function useCaseTypeConfig(caseTypeId: string | undefined | null): {
       
       // Due date settings
       dueDateRequired: caseType.due_date_required || false,
-      defaultDueDays: caseType.default_due_days || null,
+      defaultDueDays,
       
       // Allowed entities
       allowedServiceIds,
@@ -85,6 +90,14 @@ export function useCaseTypeConfig(caseTypeId: string | undefined | null): {
       },
       hasServiceRestrictions: allowedServiceIds.length > 0,
       hasSubjectTypeRestrictions: allowedSubjectTypes.length > 0,
+      
+      // Due date helper
+      calculateDueDate: (fromDate = new Date()) => {
+        if (!defaultDueDays || defaultDueDays <= 0) {
+          return null;
+        }
+        return addDays(fromDate, defaultDueDays);
+      },
     };
   }, [caseType]);
   
