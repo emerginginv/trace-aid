@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FolderOpen, Calendar, Clock, MapPin, ExternalLink, Link2Off } from "lucide-react";
+import { Calendar, Clock, MapPin, Link2Off } from "lucide-react";
 import { format } from "date-fns";
 
 interface LinkedActivity {
