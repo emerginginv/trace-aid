@@ -34,19 +34,23 @@ serve(async (req) => {
     // Create client with service role for atomic operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Create client with user token to verify permissions
-    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    // Verify user is authenticated
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    // Use service role client to verify the user's token
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !user) {
+      console.error("Auth error:", userError);
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    const userId = user.id;
+    
+    // Create client with user context for RLS queries
+    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
     const body: GenerateCaseNumberRequest = await req.json();
     const { organization_id, parent_case_id, case_type_tag } = body;
@@ -63,7 +67,7 @@ serve(async (req) => {
       .from("organization_members")
       .select("id")
       .eq("organization_id", organization_id)
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (memberError || !membership) {
