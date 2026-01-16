@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,7 +34,9 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
-import { DollarSign, Clock, AlertTriangle, Shield, ShieldAlert, Plus, Pencil } from "lucide-react";
+import { useCaseTypeConfig } from "@/hooks/useCaseTypeConfig";
+import { BudgetStrategyBadge, BudgetDisabledMessage } from "./BudgetStrategyBadge";
+import { DollarSign, Clock, AlertTriangle, Shield, ShieldAlert, Plus, Pencil, Info } from "lucide-react";
 
 const budgetSetupSchema = z.object({
   budget_type: z.enum(["hours", "money", "both"]),
@@ -76,6 +78,7 @@ interface CaseBudget {
 interface BudgetSetupFormProps {
   caseId: string;
   organizationId: string;
+  caseTypeId?: string | null;
   onSuccess: () => void;
   triggerButton?: React.ReactNode;
   existingBudget?: CaseBudget | null;
@@ -84,20 +87,37 @@ interface BudgetSetupFormProps {
 export function BudgetSetupForm({ 
   caseId, 
   organizationId, 
+  caseTypeId,
   onSuccess, 
   triggerButton,
   existingBudget 
 }: BudgetSetupFormProps) {
   const { hasPermission, loading: permLoading } = usePermissions();
+  const { config: caseTypeConfig } = useCaseTypeConfig(caseTypeId);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const isEditing = !!existingBudget;
 
+  // Determine locked budget type based on strategy
+  const lockedBudgetType = useMemo(() => {
+    if (!caseTypeConfig) return null;
+    if (caseTypeConfig.budgetStrategy === 'hours_only') return 'hours';
+    if (caseTypeConfig.budgetStrategy === 'money_only') return 'money';
+    return null;
+  }, [caseTypeConfig]);
+
+  // Get default budget type based on strategy
+  const getDefaultBudgetType = () => {
+    if (existingBudget) return existingBudget.budget_type;
+    if (lockedBudgetType) return lockedBudgetType;
+    return "both";
+  };
+
   const form = useForm<BudgetSetupFormData>({
     resolver: zodResolver(budgetSetupSchema),
     defaultValues: {
-      budget_type: existingBudget?.budget_type || "both",
+      budget_type: getDefaultBudgetType(),
       total_budget_hours: existingBudget?.total_budget_hours ?? null,
       total_budget_amount: existingBudget?.total_budget_amount ?? null,
       hard_cap: existingBudget?.hard_cap || false,
@@ -108,7 +128,7 @@ export function BudgetSetupForm({
   const budgetType = form.watch("budget_type");
   const hardCap = form.watch("hard_cap");
 
-  // Reset form when existing budget changes
+  // Reset form when existing budget changes or dialog opens
   useEffect(() => {
     if (open && existingBudget) {
       form.reset({
@@ -120,14 +140,14 @@ export function BudgetSetupForm({
       });
     } else if (open && !existingBudget) {
       form.reset({
-        budget_type: "both",
+        budget_type: getDefaultBudgetType(),
         total_budget_hours: null,
         total_budget_amount: null,
         hard_cap: false,
         notes: "",
       });
     }
-  }, [open, existingBudget, form]);
+  }, [open, existingBudget, form, lockedBudgetType]);
 
   const onSubmit = async (data: BudgetSetupFormData) => {
     setLoading(true);
@@ -184,6 +204,9 @@ export function BudgetSetupForm({
 
   if (permLoading) return null;
   if (!hasPermission("modify_case_budget")) return null;
+  
+  // If budgets are disabled by Case Type, don't show the form trigger at all
+  if (caseTypeConfig?.budgetDisabled) return null;
 
   const defaultTrigger = isEditing ? (
     <Button variant="outline" size="sm">
@@ -212,42 +235,64 @@ export function BudgetSetupForm({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Show strategy indicator if locked */}
+            {lockedBudgetType && (
+              <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-700 dark:text-blue-400">
+                  Budget type is set to <strong>{lockedBudgetType === 'hours' ? 'Hours Only' : 'Dollars Only'}</strong> by the Case Type configuration.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <FormField
               control={form.control}
               name="budget_type"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Budget Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                    disabled={!!lockedBudgetType}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select budget type" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="hours">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Hours Only
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="money">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" />
-                          Dollars Only
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="both">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          <DollarSign className="h-4 w-4 -ml-1" />
-                          Both Hours & Dollars
-                        </div>
-                      </SelectItem>
+                      {(!lockedBudgetType || lockedBudgetType === 'hours') && (
+                        <SelectItem value="hours">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Hours Only
+                          </div>
+                        </SelectItem>
+                      )}
+                      {(!lockedBudgetType || lockedBudgetType === 'money') && (
+                        <SelectItem value="money">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Dollars Only
+                          </div>
+                        </SelectItem>
+                      )}
+                      {!lockedBudgetType && (
+                        <SelectItem value="both">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            <DollarSign className="h-4 w-4 -ml-1" />
+                            Both Hours & Dollars
+                          </div>
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Choose what type of budget to track for this case.
+                    {lockedBudgetType 
+                      ? "Controlled by Case Type settings."
+                      : "Choose what type of budget to track for this case."}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
