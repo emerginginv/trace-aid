@@ -1281,6 +1281,414 @@ export type Database = {
           },
         ]
       }
+      case_request_files: {
+        Row: {
+          case_request_id: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          storage_path: string
+          uploaded_at: string
+        }
+        Insert: {
+          case_request_id: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          storage_path: string
+          uploaded_at?: string
+        }
+        Update: {
+          case_request_id?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          storage_path?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_request_files_case_request_id_fkey"
+            columns: ["case_request_id"]
+            isOneToOne: false
+            referencedRelation: "case_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_request_forms: {
+        Row: {
+          confirmation_email_body: string | null
+          confirmation_email_subject: string | null
+          created_at: string
+          field_config: Json | null
+          form_name: string
+          form_slug: string | null
+          header_instructions: string | null
+          id: string
+          is_active: boolean
+          is_public: boolean
+          logo_url: string | null
+          notify_staff_on_submission: boolean | null
+          organization_display_name: string | null
+          organization_id: string
+          organization_phone: string | null
+          organization_website: string | null
+          primary_color: string | null
+          send_confirmation_email: boolean | null
+          staff_notification_emails: string[] | null
+          success_message: string | null
+          updated_at: string
+        }
+        Insert: {
+          confirmation_email_body?: string | null
+          confirmation_email_subject?: string | null
+          created_at?: string
+          field_config?: Json | null
+          form_name: string
+          form_slug?: string | null
+          header_instructions?: string | null
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          logo_url?: string | null
+          notify_staff_on_submission?: boolean | null
+          organization_display_name?: string | null
+          organization_id: string
+          organization_phone?: string | null
+          organization_website?: string | null
+          primary_color?: string | null
+          send_confirmation_email?: boolean | null
+          staff_notification_emails?: string[] | null
+          success_message?: string | null
+          updated_at?: string
+        }
+        Update: {
+          confirmation_email_body?: string | null
+          confirmation_email_subject?: string | null
+          created_at?: string
+          field_config?: Json | null
+          form_name?: string
+          form_slug?: string | null
+          header_instructions?: string | null
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          logo_url?: string | null
+          notify_staff_on_submission?: boolean | null
+          organization_display_name?: string | null
+          organization_id?: string
+          organization_phone?: string | null
+          organization_website?: string | null
+          primary_color?: string | null
+          send_confirmation_email?: boolean | null
+          staff_notification_emails?: string[] | null
+          success_message?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_request_forms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_request_subjects: {
+        Row: {
+          address1: string | null
+          address2: string | null
+          address3: string | null
+          age: number | null
+          alias: string | null
+          case_request_id: string
+          cell_phone: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          custom_fields: Json | null
+          date_of_birth: string | null
+          email: string | null
+          first_name: string | null
+          height: string | null
+          id: string
+          is_primary: boolean | null
+          last_name: string | null
+          middle_name: string | null
+          photo_url: string | null
+          race: string | null
+          sex: string | null
+          ssn: string | null
+          state: string | null
+          subject_type_id: string | null
+          weight: string | null
+          zip: string | null
+        }
+        Insert: {
+          address1?: string | null
+          address2?: string | null
+          address3?: string | null
+          age?: number | null
+          alias?: string | null
+          case_request_id: string
+          cell_phone?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          date_of_birth?: string | null
+          email?: string | null
+          first_name?: string | null
+          height?: string | null
+          id?: string
+          is_primary?: boolean | null
+          last_name?: string | null
+          middle_name?: string | null
+          photo_url?: string | null
+          race?: string | null
+          sex?: string | null
+          ssn?: string | null
+          state?: string | null
+          subject_type_id?: string | null
+          weight?: string | null
+          zip?: string | null
+        }
+        Update: {
+          address1?: string | null
+          address2?: string | null
+          address3?: string | null
+          age?: number | null
+          alias?: string | null
+          case_request_id?: string
+          cell_phone?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          date_of_birth?: string | null
+          email?: string | null
+          first_name?: string | null
+          height?: string | null
+          id?: string
+          is_primary?: boolean | null
+          last_name?: string | null
+          middle_name?: string | null
+          photo_url?: string | null
+          race?: string | null
+          sex?: string | null
+          ssn?: string | null
+          state?: string | null
+          subject_type_id?: string | null
+          weight?: string | null
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_request_subjects_case_request_id_fkey"
+            columns: ["case_request_id"]
+            isOneToOne: false
+            referencedRelation: "case_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_request_subjects_subject_type_id_fkey"
+            columns: ["subject_type_id"]
+            isOneToOne: false
+            referencedRelation: "subject_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_requests: {
+        Row: {
+          approved_case_id: string | null
+          budget_dollars: number | null
+          budget_hours: number | null
+          case_services: string[] | null
+          case_type_id: string | null
+          claim_number: string | null
+          client_match_action: string | null
+          contact_match_action: string | null
+          created_at: string
+          custom_fields: Json | null
+          decline_reason: string | null
+          id: string
+          matched_account_id: string | null
+          matched_contact_id: string | null
+          matched_location_id: string | null
+          notes_instructions: string | null
+          organization_id: string
+          request_number: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_form_id: string | null
+          source_ip: unknown
+          source_user_agent: string | null
+          status: string
+          submitted_at: string
+          submitted_client_address1: string | null
+          submitted_client_address2: string | null
+          submitted_client_address3: string | null
+          submitted_client_city: string | null
+          submitted_client_country: string | null
+          submitted_client_name: string | null
+          submitted_client_state: string | null
+          submitted_client_zip: string | null
+          submitted_contact_email: string | null
+          submitted_contact_first_name: string | null
+          submitted_contact_home_phone: string | null
+          submitted_contact_last_name: string | null
+          submitted_contact_middle_name: string | null
+          submitted_contact_mobile_carrier: string | null
+          submitted_contact_mobile_phone: string | null
+          submitted_contact_office_phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_case_id?: string | null
+          budget_dollars?: number | null
+          budget_hours?: number | null
+          case_services?: string[] | null
+          case_type_id?: string | null
+          claim_number?: string | null
+          client_match_action?: string | null
+          contact_match_action?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          decline_reason?: string | null
+          id?: string
+          matched_account_id?: string | null
+          matched_contact_id?: string | null
+          matched_location_id?: string | null
+          notes_instructions?: string | null
+          organization_id: string
+          request_number?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_form_id?: string | null
+          source_ip?: unknown
+          source_user_agent?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_client_address1?: string | null
+          submitted_client_address2?: string | null
+          submitted_client_address3?: string | null
+          submitted_client_city?: string | null
+          submitted_client_country?: string | null
+          submitted_client_name?: string | null
+          submitted_client_state?: string | null
+          submitted_client_zip?: string | null
+          submitted_contact_email?: string | null
+          submitted_contact_first_name?: string | null
+          submitted_contact_home_phone?: string | null
+          submitted_contact_last_name?: string | null
+          submitted_contact_middle_name?: string | null
+          submitted_contact_mobile_carrier?: string | null
+          submitted_contact_mobile_phone?: string | null
+          submitted_contact_office_phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_case_id?: string | null
+          budget_dollars?: number | null
+          budget_hours?: number | null
+          case_services?: string[] | null
+          case_type_id?: string | null
+          claim_number?: string | null
+          client_match_action?: string | null
+          contact_match_action?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          decline_reason?: string | null
+          id?: string
+          matched_account_id?: string | null
+          matched_contact_id?: string | null
+          matched_location_id?: string | null
+          notes_instructions?: string | null
+          organization_id?: string
+          request_number?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_form_id?: string | null
+          source_ip?: unknown
+          source_user_agent?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_client_address1?: string | null
+          submitted_client_address2?: string | null
+          submitted_client_address3?: string | null
+          submitted_client_city?: string | null
+          submitted_client_country?: string | null
+          submitted_client_name?: string | null
+          submitted_client_state?: string | null
+          submitted_client_zip?: string | null
+          submitted_contact_email?: string | null
+          submitted_contact_first_name?: string | null
+          submitted_contact_home_phone?: string | null
+          submitted_contact_last_name?: string | null
+          submitted_contact_middle_name?: string | null
+          submitted_contact_mobile_carrier?: string | null
+          submitted_contact_mobile_phone?: string | null
+          submitted_contact_office_phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_requests_approved_case_id_fkey"
+            columns: ["approved_case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_requests_approved_case_id_fkey"
+            columns: ["approved_case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_requests_case_type_id_fkey"
+            columns: ["case_type_id"]
+            isOneToOne: false
+            referencedRelation: "case_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_requests_matched_account_id_fkey"
+            columns: ["matched_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_requests_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_requests_source_form_id_fkey"
+            columns: ["source_form_id"]
+            isOneToOne: false
+            referencedRelation: "case_request_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_service_budget_limits: {
         Row: {
           case_id: string
@@ -8170,6 +8578,7 @@ export type Database = {
       }
       generate_org_subdomain: { Args: { p_org_name: string }; Returns: string }
       generate_report_content: { Args: { p_report_id: string }; Returns: Json }
+      generate_request_number: { Args: { org_id: string }; Returns: string }
       generate_scim_token: { Args: { p_org_id: string }; Returns: Json }
       get_active_impersonation: { Args: never; Returns: Json }
       get_available_services_for_case: {
