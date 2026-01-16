@@ -31,12 +31,14 @@ import { useCaseTypesQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { useAccountsQuery } from "@/hooks/queries/useAccountsQuery";
 import { useContactsQuery } from "@/hooks/queries/useContactsQuery";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Calendar, Info, Building2, Plus, X } from "lucide-react";
+import { Calendar, Info, Building2, Plus, X, User } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { logCaseTypeAudit } from "@/lib/caseTypeAuditLogger";
 import { cn } from "@/lib/utils";
 import { ClientAccountCard } from "@/components/case-detail/ClientAccountCard";
+import { ClientContactCard } from "@/components/case-detail/ClientContactCard";
 import { AccountForm } from "@/components/AccountForm";
+import { ContactForm } from "@/components/ContactForm";
 
 const formSchema = z.object({
   case_type_id: z.string().min(1, "Case type is required"),
@@ -65,10 +67,13 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingAccount, setEditingAccount] = useState(false);
   const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const [showCreateContact, setShowCreateContact] = useState(false);
 
   // Permission check for creating accounts
   const { hasPermission } = usePermissions();
   const canCreateAccount = hasPermission('add_accounts');
+  const canCreateContact = hasPermission('add_contacts');
 
   // Fetch case types from database
   const { data: caseTypes = [], isLoading: caseTypesLoading } = useCaseTypesQuery({ 
@@ -103,6 +108,21 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
     accountId: selectedAccountId || undefined,
     enabled: !!organizationId
   });
+
+  // Fetch ALL contacts (for standalone selection when no account is selected)
+  const { data: allContacts = [], isLoading: allContactsLoading } = useContactsQuery({
+    enabled: !!organizationId
+  });
+
+  // Determine which contacts to show in picker
+  const availableContacts = useMemo(() => {
+    if (selectedAccountId) {
+      // If account selected, show only that account's contacts
+      return contacts;
+    }
+    // Otherwise show all contacts
+    return allContacts;
+  }, [selectedAccountId, contacts, allContacts]);
   
   // Get selected case type details for dynamic reference labels and due date
   const selectedCaseType = useMemo(() => {
@@ -114,6 +134,13 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
     if (!selectedAccountId) return null;
     return accounts.find(acc => acc.id === selectedAccountId) || null;
   }, [accounts, selectedAccountId]);
+
+  // Get the selected contact object for card display
+  const selectedContactId = form.watch("contact_id");
+  const selectedContact = useMemo(() => {
+    if (!selectedContactId) return null;
+    return allContacts.find(c => c.id === selectedContactId) || null;
+  }, [allContacts, selectedContactId]);
 
   // Handlers for account selection
   const handleAccountChange = (accountId: string) => {
@@ -135,6 +162,24 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
     }
   };
 
+  // Handlers for contact selection
+  const handleContactChange = (contactId: string) => {
+    form.setValue("contact_id", contactId === "none" ? "" : contactId);
+    setEditingContact(false);
+  };
+
+  const handleRemoveContact = () => {
+    form.setValue("contact_id", "");
+  };
+
+  const handleContactCreated = (newContactId?: string) => {
+    setShowCreateContact(false);
+    if (newContactId) {
+      form.setValue("contact_id", newContactId);
+      setEditingContact(false);
+    }
+  };
+
   // Calculate due date when case type changes (auto-populate, but user can override)
   useEffect(() => {
     if (selectedCaseType?.default_due_days && selectedCaseType.default_due_days > 0) {
@@ -147,7 +192,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
     }
   }, [selectedCaseType, form]);
 
-  // Clear contact selection when account changes
+  // Clear contact selection when account changes (only if contact doesn't belong to new account)
   useEffect(() => {
     const currentContact = form.getValues("contact_id");
     
@@ -156,13 +201,13 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
       const contactBelongsToAccount = contacts.some(
         c => c.id === currentContact && c.account_id === selectedAccountId
       );
+      // Only clear if the contact doesn't belong to the selected account
       if (!contactBelongsToAccount && contacts.length > 0) {
         form.setValue("contact_id", "");
+        setEditingContact(false);
       }
-    } else if (!selectedAccountId && currentContact) {
-      // If account was cleared, clear contact too
-      form.setValue("contact_id", "");
     }
+    // Note: If account is cleared, we keep the contact (allows standalone contacts)
   }, [selectedAccountId, contacts, form]);
 
   useEffect(() => {
@@ -553,44 +598,108 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
                 </Button>
               )}
             </div>
+          </div>
 
-            {/* Primary Contact - Only show if account is selected */}
-            {selectedAccount && (
-              <FormField
-                control={form.control}
-                name="contact_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Primary Contact</FormLabel>
+          {/* 5. Primary Contact (Optional - Separate Section) */}
+          <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+            <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Primary Contact
+            </h4>
+            
+            <div>
+              {editingContact ? (
+                // Selection Mode
+                <div className="space-y-3">
+                  <div className="flex gap-2">
                     <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
+                      value={selectedContactId || "none"}
+                      onValueChange={handleContactChange}
+                      disabled={contactsLoading || allContactsLoading}
                     >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue 
-                            placeholder={contactsLoading ? "Loading..." : "Select contact (optional)"} 
-                          />
-                        </SelectTrigger>
-                      </FormControl>
+                      <SelectTrigger className="h-9 flex-1">
+                        <SelectValue placeholder="Select contact..." />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">
                           <span className="text-muted-foreground">None</span>
                         </SelectItem>
-                        {contacts.map(contact => (
+                        {selectedAccountId && availableContacts.length > 0 && (
+                          <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b">
+                            From selected account
+                          </div>
+                        )}
+                        {availableContacts.map(contact => (
                           <SelectItem key={contact.id} value={contact.id}>
-                            {contact.first_name} {contact.last_name}
+                            <span>{contact.first_name} {contact.last_name}</span>
+                            {contact.email && (
+                              <span className="text-muted-foreground ml-2">
+                                ({contact.email})
+                              </span>
+                            )}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>
-                      Optional. Select the primary contact from this account.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      type="button"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => setEditingContact(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Create New Contact Button (if permitted) */}
+                  {canCreateContact && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      className="w-full justify-start text-muted-foreground"
+                      onClick={() => setShowCreateContact(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create New Contact
+                    </Button>
+                  )}
+                </div>
+              ) : selectedContact ? (
+                // Display Mode - Show Card
+                <ClientContactCard
+                  contact={{
+                    id: selectedContact.id,
+                    first_name: selectedContact.first_name,
+                    last_name: selectedContact.last_name,
+                    phone: selectedContact.phone,
+                    email: selectedContact.email,
+                  }}
+                  onChangeClick={() => setEditingContact(true)}
+                  onRemove={handleRemoveContact}
+                  canEdit={true}
+                  label="Primary Contact"
+                />
+              ) : (
+                // Empty State
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  type="button"
+                  className="w-full justify-start text-muted-foreground"
+                  onClick={() => setEditingContact(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Contact
+                </Button>
+              )}
+            </div>
+            
+            {selectedAccountId && !selectedContact && !editingContact && (
+              <p className="text-xs text-muted-foreground">
+                Contacts will be filtered to the selected client account
+              </p>
             )}
           </div>
 
@@ -601,6 +710,15 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
             onSuccess={handleAccountCreated}
             organizationId={organizationId}
             navigateAfterCreate={false}
+          />
+
+          {/* Contact Creation Dialog */}
+          <ContactForm
+            open={showCreateContact}
+            onOpenChange={setShowCreateContact}
+            onSuccess={handleContactCreated}
+            organizationId={organizationId}
+            defaultAccountId={selectedAccountId || undefined}
           />
 
           {/* 5. Description (Optional) */}

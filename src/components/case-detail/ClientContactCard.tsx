@@ -14,6 +14,7 @@ interface ClientContactCardProps {
   onChangeClick: () => void;
   onRemove: () => void;
   canEdit: boolean;
+  label?: string;
 }
 
 export function ClientContactCard({
@@ -21,6 +22,7 @@ export function ClientContactCard({
   onChangeClick,
   onRemove,
   canEdit,
+  label = "Client Contact",
 }: ClientContactCardProps) {
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase();
@@ -52,7 +54,7 @@ export function ClientContactCard({
             {/* Name and Role */}
             <div>
               <p className="font-medium text-sm truncate">{fullName}</p>
-              <p className="text-xs text-muted-foreground">Client Contact</p>
+              <p className="text-xs text-muted-foreground">{label}</p>
             </div>
 
             {/* Contact Info */}

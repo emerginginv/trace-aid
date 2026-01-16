@@ -49,8 +49,9 @@ type ContactFormData = z.infer<typeof contactSchema>;
 interface ContactFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (contactId?: string) => void;
   organizationId: string;
+  defaultAccountId?: string;
 }
 
 interface Account {
@@ -58,7 +59,7 @@ interface Account {
   name: string;
 }
 
-export function ContactForm({ open, onOpenChange, onSuccess, organizationId }: ContactFormProps) {
+export function ContactForm({ open, onOpenChange, onSuccess, organizationId, defaultAccountId }: ContactFormProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
 
   const form = useForm<ContactFormData>({
@@ -72,10 +73,17 @@ export function ContactForm({ open, onOpenChange, onSuccess, organizationId }: C
       city: "",
       state: "",
       zip_code: "",
-      account_id: "",
+      account_id: defaultAccountId || "",
       notes: "",
     },
   });
+
+  // Reset account_id when defaultAccountId changes
+  useEffect(() => {
+    if (open && defaultAccountId) {
+      form.setValue("account_id", defaultAccountId);
+    }
+  }, [open, defaultAccountId, form]);
 
   useEffect(() => {
     if (open) {
@@ -109,7 +117,7 @@ export function ContactForm({ open, onOpenChange, onSuccess, organizationId }: C
         throw new Error("Organization not found");
       }
 
-      const { error } = await supabase.from("contacts").insert([{
+      const { data: newContact, error } = await supabase.from("contacts").insert([{
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
@@ -122,14 +130,16 @@ export function ContactForm({ open, onOpenChange, onSuccess, organizationId }: C
         notes: data.notes,
         user_id: user.id,
         organization_id: organizationId,
-      }]);
+      }])
+      .select('id')
+      .single();
 
       if (error) throw error;
 
       toast.success("Contact created successfully");
       form.reset();
       onOpenChange(false);
-      onSuccess();
+      onSuccess(newContact?.id);
     } catch (error) {
       toast.error("Failed to create contact");
       console.error(error);
