@@ -431,6 +431,12 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     const { newCaseTypeId, newStrategy } = pendingBudgetConflict;
 
     try {
+      // Update applied_budget_strategy on the case
+      await supabase
+        .from("cases")
+        .update({ applied_budget_strategy: newStrategy })
+        .eq("id", editingCase.id);
+
       if (newStrategy === 'disabled') {
         // Remove the case_budgets record entirely
         await supabase
@@ -767,6 +773,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         reference_number_2: data.reference_number_2 || null,
         reference_number_3: data.reference_number_3 || null,
         case_type_id: data.case_type_id || null,
+        // Store applied budget strategy from case type
+        applied_budget_strategy: selectedCaseType?.budget_strategy || 'both',
       };
 
       if (editingCase) {

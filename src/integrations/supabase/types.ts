@@ -1896,6 +1896,8 @@ export type Database = {
       cases: {
         Row: {
           account_id: string | null
+          active_service_ids: string[] | null
+          applied_budget_strategy: string | null
           budget_dollars: number | null
           budget_hours: number | null
           budget_notes: string | null
@@ -1943,6 +1945,8 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          active_service_ids?: string[] | null
+          applied_budget_strategy?: string | null
           budget_dollars?: number | null
           budget_hours?: number | null
           budget_notes?: string | null
@@ -1990,6 +1994,8 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          active_service_ids?: string[] | null
+          applied_budget_strategy?: string | null
           budget_dollars?: number | null
           budget_hours?: number | null
           budget_notes?: string | null
