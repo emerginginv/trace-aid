@@ -77,6 +77,11 @@ export interface SubmitCaseRequestParams {
   files: FileData[];
   sourceIp?: string;
   userAgent?: string;
+  // Internal mode fields
+  createdBy?: string;
+  sourceType?: 'public' | 'internal';
+  matchedAccountId?: string;
+  matchedContactId?: string;
 }
 
 export interface SubmitCaseRequestResult {
@@ -97,6 +102,10 @@ export async function submitCaseRequest(
     subjects,
     files,
     userAgent,
+    createdBy,
+    sourceType = 'public',
+    matchedAccountId,
+    matchedContactId,
   } = params;
 
   try {
@@ -105,7 +114,7 @@ export async function submitCaseRequest(
       .from('case_requests')
       .insert({
         organization_id: organizationId,
-        source_form_id: formId,
+        source_form_id: formId === 'internal' ? null : formId,
         status: 'pending',
         // Client info
         submitted_client_name: clientInfo.submitted_client_name,
@@ -135,6 +144,13 @@ export async function submitCaseRequest(
         custom_fields: caseDetails.custom_fields || null,
         // Metadata
         source_user_agent: userAgent || null,
+        // Internal mode fields
+        created_by: createdBy || null,
+        source_type: sourceType,
+        matched_account_id: matchedAccountId || null,
+        matched_contact_id: matchedContactId || null,
+        client_match_action: matchedAccountId ? 'existing' : null,
+        contact_match_action: matchedContactId ? 'existing' : null,
       })
       .select('id, request_number')
       .single();
