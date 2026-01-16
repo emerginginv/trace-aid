@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { User, Car, MapPin, Package, Building2, ShieldAlert } from "lucide-react";
+import { User, Car, MapPin, Package, Building2, ShieldAlert, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SubjectCategory, SUBJECT_CATEGORY_LABELS } from "./types";
 import { SubjectSubTab } from "./SubjectSubTab";
@@ -9,9 +9,12 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CaseTabSkeleton } from "../CaseTabSkeleton";
+import { useCaseTypeConfig, filterSubjectTypesByAllowed } from "@/hooks/useCaseTypeConfig";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SubjectsTabProps {
   caseId: string;
+  caseTypeId?: string | null; // Added to filter subject types
   isClosedCase?: boolean;
 }
 
@@ -31,9 +34,9 @@ const CATEGORY_ICONS: Record<SubjectCategory, React.ComponentType<{ className?: 
   business: Building2,
 };
 
-const CATEGORIES: SubjectCategory[] = ['person', 'vehicle', 'location', 'item', 'business'];
+const ALL_CATEGORIES: SubjectCategory[] = ['person', 'vehicle', 'location', 'item', 'business'];
 
-export const SubjectsTab = ({ caseId, isClosedCase = false }: SubjectsTabProps) => {
+export const SubjectsTab = ({ caseId, caseTypeId, isClosedCase = false }: SubjectsTabProps) => {
   const { organization } = useOrganization();
   const [activeCategory, setActiveCategory] = useState<SubjectCategory>('person');
   const [counts, setCounts] = useState<SubjectCounts>({ person: 0, vehicle: 0, location: 0, item: 0, business: 0 });
@@ -41,6 +44,25 @@ export const SubjectsTab = ({ caseId, isClosedCase = false }: SubjectsTabProps) 
   
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewSubjects = hasPermission("view_subjects");
+  
+  // Get Case Type configuration for filtering subject types
+  const { config: caseTypeConfig, isLoading: caseTypeLoading } = useCaseTypeConfig(caseTypeId);
+  
+  // Filter categories based on Case Type allowed_subject_types
+  const categories = useMemo(() => {
+    const allowed = filterSubjectTypesByAllowed(
+      ALL_CATEGORIES as string[],
+      caseTypeConfig?.allowedSubjectTypes
+    ) as SubjectCategory[];
+    return allowed.length > 0 ? allowed : ALL_CATEGORIES;
+  }, [caseTypeConfig?.allowedSubjectTypes]);
+  
+  // Update active category if current one is no longer allowed
+  useEffect(() => {
+    if (!categories.includes(activeCategory) && categories.length > 0) {
+      setActiveCategory(categories[0]);
+    }
+  }, [categories, activeCategory]);
 
   useEffect(() => {
     fetchCounts();
@@ -99,9 +121,19 @@ export const SubjectsTab = ({ caseId, isClosedCase = false }: SubjectsTabProps) 
         <p className="text-muted-foreground">Manage people, vehicles, locations, and items related to this case</p>
       </div>
 
+      {/* Show info if subject types are filtered by Case Type */}
+      {caseTypeConfig?.hasSubjectTypeRestrictions && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Only {categories.length} subject type{categories.length !== 1 ? 's' : ''} allowed for this case type: {categories.map(c => SUBJECT_CATEGORY_LABELS[c]).join(', ')}.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as SubjectCategory)}>
-        <TabsList className="grid w-full grid-cols-4">
-          {CATEGORIES.map((category) => {
+        <TabsList className={`grid w-full grid-cols-${Math.min(categories.length, 5)}`}>
+          {categories.map((category) => {
             const Icon = CATEGORY_ICONS[category];
             const count = counts[category];
             return (
@@ -118,7 +150,7 @@ export const SubjectsTab = ({ caseId, isClosedCase = false }: SubjectsTabProps) 
           })}
         </TabsList>
 
-        {CATEGORIES.map((category) => (
+        {categories.map((category) => (
           <TabsContent key={category} value={category} className="mt-6">
             {organization?.id && (
               <SubjectSubTab

@@ -894,7 +894,7 @@ const CaseDetail = () => {
             {/* Subjects Tab */}
             {!isVendor && (
               <TabsContent value="subjects" className="mt-0">
-                <SubjectsTab caseId={id!} isClosedCase={isClosed} />
+                <SubjectsTab caseId={id!} caseTypeId={caseData?.case_type_id} isClosedCase={isClosed} />
               </TabsContent>
             )}
 
