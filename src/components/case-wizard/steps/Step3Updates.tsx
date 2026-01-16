@@ -159,15 +159,15 @@ export function Step3Updates({ caseId, organizationId, onBack, onContinue }: Ste
       <div className="space-y-6">
         <div className="text-center py-8">
           <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Would you like to add case notes?</h3>
+          <h3 className="text-lg font-medium mb-2">Would you like to add case updates?</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-            Add intake notes, initial findings, or narrative updates to document the case background.
+            Capture initial narrative information, record findings, notes, and observations to provide investigative context.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button onClick={() => setHasStarted(true)} className="gap-2">
               <Plus className="h-4 w-4" />
-              Add Note
+              Add Update
             </Button>
             <Button variant="outline" onClick={handleContinue} className="gap-2">
               <SkipForward className="h-4 w-4" />
@@ -189,9 +189,9 @@ export function Step3Updates({ caseId, organizationId, onBack, onContinue }: Ste
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Add Case Notes</h3>
+        <h3 className="text-lg font-medium">Add Case Updates</h3>
         <p className="text-sm text-muted-foreground">
-          Document intake information, findings, or narrative updates.
+          Record findings, narrative notes, and observations to provide investigative context.
         </p>
       </div>
 

@@ -30,7 +30,7 @@ interface Step6Props {
   caseData: CaseFormData;
   selectedServices: SelectedService[];
   subjectsCount: number;
-  notesCount: number;
+  updatesCount: number;
   activitiesCount: number;
   attachmentsCount: number;
   onBack: () => void;
@@ -63,7 +63,7 @@ export function Step6Summary({
   caseData,
   selectedServices,
   subjectsCount,
-  notesCount,
+  updatesCount,
   activitiesCount,
   attachmentsCount,
   onBack,
@@ -317,14 +317,14 @@ export function Step6Summary({
           </Card>
         </Collapsible>
 
-        {/* Notes */}
+        {/* Updates */}
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <FileText className="h-5 w-5 text-muted-foreground" />
             <div>
-              <p className="font-medium">Notes</p>
+              <p className="font-medium">Updates</p>
               <p className="text-sm text-muted-foreground">
-                {notesCount} added
+                {updatesCount} added
               </p>
             </div>
           </CardContent>
