@@ -1,5 +1,5 @@
 import { Lock } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"; // Global TooltipProvider in App.tsx
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
@@ -33,44 +33,38 @@ export function LockedRecordIndicator({
   
   if (variant === "icon") {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Lock className={`h-4 w-4 text-muted-foreground cursor-help ${className}`} />
-          </TooltipTrigger>
-          <TooltipContent>{tooltipContent}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Lock className={`h-4 w-4 text-muted-foreground cursor-help ${className}`} />
+        </TooltipTrigger>
+        <TooltipContent>{tooltipContent}</TooltipContent>
+      </Tooltip>
     );
   }
   
   if (variant === "inline") {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className={`inline-flex items-center gap-1 text-xs text-muted-foreground cursor-help ${className}`}>
-              <Lock className="h-3 w-3" />
-              Invoiced
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{tooltipContent}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`inline-flex items-center gap-1 text-xs text-muted-foreground cursor-help ${className}`}>
+            <Lock className="h-3 w-3" />
+            Invoiced
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{tooltipContent}</TooltipContent>
+      </Tooltip>
     );
   }
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge variant="secondary" className={`gap-1 cursor-help ${className}`}>
-            <Lock className="h-3 w-3" />
-            Locked
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent>{tooltipContent}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge variant="secondary" className={`gap-1 cursor-help ${className}`}>
+          <Lock className="h-3 w-3" />
+          Locked
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>{tooltipContent}</TooltipContent>
+    </Tooltip>
   );
 }

@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Archive, ArchiveRestore, Eye, Edit, User, Car, MapPin, Package, MoreHorizontal } from "lucide-react";
+import { MoreVertical, Archive, ArchiveRestore, Eye, Edit, User, Car, MapPin, Package, MoreHorizontal, Building2 } from "lucide-react";
 import { Subject, SubjectCategory, SUBJECT_CATEGORY_SINGULAR } from "./types";
 import { useSubjectProfileImages } from "@/hooks/use-subject-profile-images";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ import { SocialLinkIcon, getPlatformConfig, SocialPlatform } from "./SocialPlatf
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"; // Global TooltipProvider in App.tsx
 
 interface SubjectCardViewProps {
   subjects: Subject[];
@@ -42,6 +42,11 @@ const getCategoryIcon = (category: SubjectCategory) => {
     case 'location':
       return MapPin;
     case 'item':
+      return Package;
+    case 'business':
+      return Building2;
+    default:
+      // Fallback for any unknown category - prevents undefined icon crash
       return Package;
   }
 };
@@ -306,29 +311,27 @@ export const SubjectCardView = ({
                     className="flex items-center justify-center gap-1 mt-2"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <TooltipProvider>
-                      {displayedLinks.map((link) => (
-                        <SocialLinkIcon
-                          key={link.id}
-                          platform={link.platform as SocialPlatform}
-                          url={link.url}
-                          label={link.label || undefined}
-                          size="sm"
-                        />
-                      ))}
-                      {overflowCount > 0 && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                              +{overflowCount}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{overflowCount} more link{overflowCount > 1 ? 's' : ''}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </TooltipProvider>
+                    {displayedLinks.map((link) => (
+                      <SocialLinkIcon
+                        key={link.id}
+                        platform={link.platform as SocialPlatform}
+                        url={link.url}
+                        label={link.label || undefined}
+                        size="sm"
+                      />
+                    ))}
+                    {overflowCount > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                            +{overflowCount}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{overflowCount} more link{overflowCount > 1 ? 's' : ''}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 );
               })()}
