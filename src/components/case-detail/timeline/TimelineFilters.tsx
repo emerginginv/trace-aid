@@ -37,7 +37,7 @@ export function TimelineFilters({
             <SelectItem value="all">All Entries</SelectItem>
             <SelectItem value="subject">Subjects</SelectItem>
             <SelectItem value="update">Updates</SelectItem>
-            <SelectItem value="event">Events</SelectItem>
+            <SelectItem value="event">Activities</SelectItem>
             <SelectItem value="attachment">Attachments</SelectItem>
             <SelectItem value="system">System</SelectItem>
           </SelectContent>
