@@ -189,43 +189,43 @@ export function Step6Summary({
             </div>
           </div>
 
-          <Separator />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Client Account
-              </p>
-              {account ? (
-                <ClientAccountCard
-                  account={account}
-                  onChangeClick={() => {}}
-                  onRemove={() => {}}
-                  canEdit={false}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No client account</p>
-              )}
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Primary Contact
-              </p>
-              {contact ? (
-                <ClientContactCard
-                  contact={contact}
-                  onChangeClick={() => {}}
-                  onRemove={() => {}}
-                  canEdit={false}
-                  label="Primary Contact"
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No primary contact</p>
-              )}
-            </div>
-          </div>
+          {/* Client Information - Only show if any client data is selected */}
+          {(account || contact) && (
+            <>
+              <Separator />
+              <div className={`grid gap-4 ${account && contact ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                {account && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Client Account
+                    </p>
+                    <ClientAccountCard
+                      account={account}
+                      onChangeClick={() => {}}
+                      onRemove={() => {}}
+                      canEdit={false}
+                    />
+                  </div>
+                )}
+                {contact && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Primary Contact
+                    </p>
+                    <ClientContactCard
+                      contact={contact}
+                      onChangeClick={() => {}}
+                      onRemove={() => {}}
+                      canEdit={false}
+                      label="Primary Contact"
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {caseData.due_date && (
             <>
