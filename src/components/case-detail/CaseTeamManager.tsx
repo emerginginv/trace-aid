@@ -299,21 +299,38 @@ export const CaseTeamManager = ({
     }
   };
 
-  // Set an investigator as primary using atomic database function
+  // Set an investigator as primary using atomic database function with optimistic UI
   const handleSetPrimaryInvestigator = async (investigatorId: string) => {
+    // Store previous state for rollback
+    const previousInvestigators = [...investigators];
+    
+    // OPTIMISTIC UPDATE: Update local state immediately
+    setInvestigators(prev => prev.map(inv => ({
+      ...inv,
+      role: inv.investigator.id === investigatorId ? 'primary' as const : 'support' as const
+    })).sort((a, b) => {
+      // Keep primary at top
+      if (a.role === 'primary' && b.role !== 'primary') return -1;
+      if (a.role !== 'primary' && b.role === 'primary') return 1;
+      return new Date(a.assigned_at).getTime() - new Date(b.assigned_at).getTime();
+    }));
+
     try {
       const { error } = await supabase.rpc('set_primary_investigator', {
         p_case_id: caseId,
         p_investigator_id: investigatorId
       });
       
-      if (error) throw error;
+      if (error) {
+        // ROLLBACK: Restore previous state on error
+        setInvestigators(previousInvestigators);
+        throw error;
+      }
       
       toast({
         title: "Success",
         description: "Primary investigator updated"
       });
-      fetchInvestigators();
       onUpdate();
     } catch (error) {
       console.error("Error setting primary investigator:", error);
@@ -325,8 +342,10 @@ export const CaseTeamManager = ({
     }
   };
 
-  // Get investigator IDs currently assigned
-  const assignedInvestigatorIds = investigators.map(inv => inv.investigator.id);
+  // Get investigator IDs currently assigned (with null safety)
+  const assignedInvestigatorIds = investigators
+    .filter(inv => inv.investigator)
+    .map(inv => inv.investigator.id);
   
   const availableInvestigators = profiles.filter(
     p => p.id !== caseManagerId && p.id !== caseManager2Id && !assignedInvestigatorIds.includes(p.id)
