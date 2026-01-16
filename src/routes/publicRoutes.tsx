@@ -7,6 +7,7 @@ import AcceptInvite from "@/pages/AcceptInvite";
 import StyleGuide from "@/pages/StyleGuide";
 import PremiumShowcase from "@/pages/PremiumShowcase";
 import AttachmentAccess from "@/pages/AttachmentAccess";
+import CaseRequestIntake from "@/pages/CaseRequestIntake";
 import NotFound from "@/pages/NotFound";
 
 /**
@@ -23,6 +24,7 @@ export const publicRoutes = (
     <Route path="/style-guide" element={<StyleGuide />} />
     <Route path="/premium-showcase" element={<PremiumShowcase />} />
     <Route path="/attachment/:token" element={<AttachmentAccess />} />
+    <Route path="/request/:slug" element={<CaseRequestIntake />} />
     <Route path="*" element={<NotFound />} />
   </>
 );
