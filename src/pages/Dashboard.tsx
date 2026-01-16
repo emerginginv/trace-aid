@@ -13,7 +13,10 @@ import {
   DashboardActivitiesPanel,
   DashboardUpdatesPanel,
   DashboardExpensesPanel,
+  DashboardCaseRequestsPanel,
 } from "@/components/dashboard";
+import { usePendingCaseRequests } from "@/hooks/usePendingCaseRequests";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Briefcase, CheckCircle2, TrendingUp, Building2, Wallet, Receipt, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -22,6 +25,11 @@ const Dashboard = () => {
 
   const { isVendor, isAdmin, isManager, loading: roleLoading } = useUserRole();
   const { organization } = useOrganization();
+  const { hasPermission } = usePermissions();
+
+  // Pending case requests for dashboard widget
+  const canViewRequests = hasPermission("view_case_requests");
+  const { requests: pendingRequests, count: pendingRequestsCount, isLoading: requestsLoading } = usePendingCaseRequests(5);
 
   // Filter states for each container
   const [activitiesFilter, setActivitiesFilter] = useState<'my' | 'all'>('my');
@@ -196,6 +204,15 @@ const Dashboard = () => {
 
       {/* Main Dashboard Grid with Panel Components */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border border-border rounded-lg p-4">
+        {/* Pending Case Requests - Top priority for admin/manager */}
+        {canViewRequests && (
+          <DashboardCaseRequestsPanel
+            requests={pendingRequests}
+            count={pendingRequestsCount}
+            isLoading={requestsLoading}
+          />
+        )}
+
         {/* Unified Activities Panel */}
         <DashboardActivitiesPanel
           activities={unifiedActivities}

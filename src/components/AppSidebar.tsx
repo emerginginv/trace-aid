@@ -15,6 +15,7 @@ import {
   menuGroups,
   UserRole,
 } from "@/components/sidebar";
+import { SidebarBadgeProvider } from "@/components/sidebar/contexts/SidebarBadgeContext";
 import {
   Tooltip,
   TooltipContent,
@@ -32,11 +33,13 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {isVendor && <VendorAlert />}
-        <SidebarNavigation
-          menuGroups={menuGroups}
-          userRole={role as UserRole | null}
-        />
+        <SidebarBadgeProvider>
+          {isVendor && <VendorAlert />}
+          <SidebarNavigation
+            menuGroups={menuGroups}
+            userRole={role as UserRole | null}
+          />
+        </SidebarBadgeProvider>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">

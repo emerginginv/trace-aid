@@ -7,6 +7,7 @@ export interface MenuItem {
   icon: LucideIcon;
   url: string;
   roles: UserRole[];
+  badgeKey?: 'pendingCaseRequests'; // Key to lookup badge count from context
 }
 
 export interface MenuGroup {

@@ -7,3 +7,4 @@ export { DashboardTasksPanel } from './DashboardTasksPanel';
 export { DashboardActivitiesPanel } from './DashboardActivitiesPanel';
 export { DashboardUpdatesPanel } from './DashboardUpdatesPanel';
 export { DashboardExpensesPanel } from './DashboardExpensesPanel';
+export { DashboardCaseRequestsPanel } from './DashboardCaseRequestsPanel';

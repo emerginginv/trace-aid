@@ -44,6 +44,7 @@ export const menuGroups: MenuGroup[] = [
         icon: FileInput,
         url: "/cases/requests",
         roles: ["admin", "manager"],
+        badgeKey: "pendingCaseRequests",
       },
       {
         title: "Subjects",
