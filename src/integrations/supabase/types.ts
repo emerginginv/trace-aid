@@ -5660,6 +5660,8 @@ export type Database = {
           address: string | null
           agency_license_number: string | null
           billing_email: string | null
+          case_request_default_instructions: string | null
+          case_request_notification_emails: string[] | null
           city: string | null
           company_name: string | null
           created_at: string | null
@@ -5689,6 +5691,8 @@ export type Database = {
           address?: string | null
           agency_license_number?: string | null
           billing_email?: string | null
+          case_request_default_instructions?: string | null
+          case_request_notification_emails?: string[] | null
           city?: string | null
           company_name?: string | null
           created_at?: string | null
@@ -5718,6 +5722,8 @@ export type Database = {
           address?: string | null
           agency_license_number?: string | null
           billing_email?: string | null
+          case_request_default_instructions?: string | null
+          case_request_notification_emails?: string[] | null
           city?: string | null
           company_name?: string | null
           created_at?: string | null

@@ -24,7 +24,7 @@ export function CaseRequestDetailHeader({
   isProcessing,
 }: CaseRequestDetailHeaderProps) {
   const { hasPermission } = usePermissions();
-  const canEdit = hasPermission('edit_case_requests');
+  const canApprove = hasPermission('approve_case_requests');
   const canDelete = hasPermission('delete_case_requests');
   const isPending = status.toLowerCase() === 'pending';
 
@@ -43,7 +43,7 @@ export function CaseRequestDetailHeader({
 
       {isPending && (
         <div className="flex items-center gap-2">
-          {canEdit && (
+          {canApprove && (
             <>
               <Button
                 onClick={onAccept}
