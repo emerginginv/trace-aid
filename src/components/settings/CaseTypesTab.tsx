@@ -288,14 +288,47 @@ export function CaseTypesTab() {
     setDialogOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!organization?.id) return;
-    if (!formData.name.trim() || !formData.tag.trim()) {
-      toast.error('Name and Tag are required');
-      return;
+  const validateForm = (): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    // Required fields
+    if (!formData.name.trim()) {
+      errors.push("Name is required");
+    }
+    if (!formData.tag.trim()) {
+      errors.push("Tag is required");
     }
     if (formData.tag.length < 2 || formData.tag.length > 4) {
-      toast.error('Tag must be 2-4 characters');
+      errors.push("Tag must be 2-4 characters");
+    }
+
+    // Budget Strategy validation
+    if (!formData.budget_strategy) {
+      errors.push("Budget Strategy must be selected");
+    }
+
+    // Contradictory rule: budget_required with disabled strategy
+    if (formData.budget_strategy === 'disabled' && formData.budget_required) {
+      errors.push("Cannot require budget when budget strategy is disabled");
+    }
+
+    // Default due days validation
+    if (formData.default_due_days !== '') {
+      const days = parseInt(formData.default_due_days);
+      if (isNaN(days) || days < 0) {
+        errors.push("Default due days must be 0 or greater");
+      }
+    }
+
+    return { valid: errors.length === 0, errors };
+  };
+
+  const handleSave = async () => {
+    if (!organization?.id) return;
+
+    const validation = validateForm();
+    if (!validation.valid) {
+      validation.errors.forEach(error => toast.error(error));
       return;
     }
 
@@ -311,7 +344,7 @@ export function CaseTypesTab() {
         reference_label_2: formData.reference_label_2.trim() || null,
         reference_label_3: formData.reference_label_3.trim() || null,
         budget_strategy: formData.budget_strategy,
-        budget_required: formData.budget_required,
+        budget_required: formData.budget_strategy === 'disabled' ? false : formData.budget_required,
         default_due_days: formData.default_due_days ? parseInt(formData.default_due_days) : null,
         due_date_required: formData.due_date_required,
         allowed_service_ids: formData.allowed_service_ids,
@@ -565,11 +598,16 @@ export function CaseTypesTab() {
                 </AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-2">
                   <div className="space-y-2">
-                    <Label>Budget Strategy</Label>
+                    <Label>Budget Strategy *</Label>
                     <Select
                       value={formData.budget_strategy}
                       onValueChange={(value: 'disabled' | 'hours_only' | 'money_only' | 'both') => 
-                        setFormData(prev => ({ ...prev, budget_strategy: value }))
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          budget_strategy: value,
+                          // Auto-reset budget_required if disabling budgets
+                          budget_required: value === 'disabled' ? false : prev.budget_required,
+                        }))
                       }
                     >
                       <SelectTrigger>
@@ -586,16 +624,31 @@ export function CaseTypesTab() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.budget_strategy === 'disabled' && 
+                        "Budgets will be hidden for cases of this type. No budget tracking available."}
+                      {formData.budget_strategy === 'hours_only' && 
+                        "Cases will track budget in hours only. Dollar amounts will be hidden."}
+                      {formData.budget_strategy === 'money_only' && 
+                        "Cases will track budget in dollars only. Hour amounts will be hidden."}
+                      {formData.budget_strategy === 'both' && 
+                        "Cases can track budget in both hours and dollars."}
+                    </p>
                   </div>
 
                   {formData.budget_strategy !== 'disabled' && (
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="budget_required"
-                        checked={formData.budget_required}
-                        onCheckedChange={checked => setFormData(prev => ({ ...prev, budget_required: checked }))}
-                      />
-                      <Label htmlFor="budget_required">Budget is required when creating cases</Label>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="budget_required"
+                          checked={formData.budget_required}
+                          onCheckedChange={checked => setFormData(prev => ({ ...prev, budget_required: checked }))}
+                        />
+                        <Label htmlFor="budget_required">Budget is required when creating cases</Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-9">
+                        When enabled, users must enter a budget before submitting a case.
+                      </p>
                     </div>
                   )}
                 </AccordionContent>
@@ -614,18 +667,32 @@ export function CaseTypesTab() {
                       type="number"
                       min="0"
                       value={formData.default_due_days}
-                      onChange={e => setFormData(prev => ({ ...prev, default_due_days: e.target.value }))}
+                      onChange={e => {
+                        const val = e.target.value;
+                        // Only allow positive numbers or empty
+                        if (val === '' || (parseInt(val) >= 0 && !val.includes('-'))) {
+                          setFormData(prev => ({ ...prev, default_due_days: val }));
+                        }
+                      }}
                       placeholder="Leave blank for no default"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      When set, new cases will automatically have a due date calculated from creation date. Leave empty to require manual entry or no default.
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="due_date_required"
-                      checked={formData.due_date_required}
-                      onCheckedChange={checked => setFormData(prev => ({ ...prev, due_date_required: checked }))}
-                    />
-                    <Label htmlFor="due_date_required">Due date is required when creating cases</Label>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="due_date_required"
+                        checked={formData.due_date_required}
+                        onCheckedChange={checked => setFormData(prev => ({ ...prev, due_date_required: checked }))}
+                      />
+                      <Label htmlFor="due_date_required">Due date is required when creating cases</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground ml-9">
+                      When enabled, users must set a due date before submitting a case.
+                    </p>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -633,11 +700,14 @@ export function CaseTypesTab() {
               {/* Case Services */}
               <AccordionItem value="services" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
-                  Allowed Services ({formData.allowed_service_ids.length} selected)
+                  Allowed Services ({formData.allowed_service_ids.length === 0 ? 'All' : formData.allowed_service_ids.length} selected)
                 </AccordionTrigger>
                 <AccordionContent className="pt-2">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Select which services are available for this case type. Leave empty to allow all services.
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Select which services are available for this case type.
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    <strong>If none are selected, all services are allowed.</strong> Services not selected will be hidden from service pickers, billing, time entries, and expenses.
                   </p>
                   {services.length === 0 ? (
                     <div className="text-sm text-muted-foreground flex items-center gap-2">
