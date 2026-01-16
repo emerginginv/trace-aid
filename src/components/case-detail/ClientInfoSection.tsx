@@ -139,15 +139,53 @@ export function ClientInfoSection({
       if (!user) return;
 
       const newAccountId = accountId === "none" ? null : accountId;
-      const hadContact = !!contact;
+      let clearContact = false;
+
+      // If there's a contact and account is changing, check if we need to prompt
+      if (contact && newAccountId !== account?.id) {
+        if (newAccountId) {
+          // Changing to a different account - check if contact belongs to it
+          const { data: contactData } = await supabase
+            .from('contacts')
+            .select('account_id')
+            .eq('id', contact.id)
+            .single();
+          
+          const belongsToNewAccount = contactData?.account_id === newAccountId || 
+                                      !contactData?.account_id; // Standalone contact
+          
+          if (!belongsToNewAccount) {
+            clearContact = await confirm({
+              title: "Contact belongs to a different account",
+              description: `"${contact.first_name} ${contact.last_name}" is associated with a different account. Would you like to clear this contact, or keep them anyway?`,
+              confirmLabel: "Clear Contact",
+              cancelLabel: "Keep Contact",
+              variant: "warning",
+            });
+          }
+        } else {
+          // Removing account - ask about keeping standalone contact
+          clearContact = await confirm({
+            title: "Keep the primary contact?",
+            description: `You're removing the client account. Would you like to also clear "${contact.first_name} ${contact.last_name}", or keep them as a standalone contact?`,
+            confirmLabel: "Clear Contact",
+            cancelLabel: "Keep Contact",
+            variant: "warning",
+          });
+        }
+      }
+
+      const updateData: { account_id: string | null; contact_id?: null } = {
+        account_id: newAccountId,
+      };
+      
+      if (clearContact) {
+        updateData.contact_id = null;
+      }
 
       const { error } = await supabase
         .from('cases')
-        .update({ 
-          account_id: newAccountId,
-          // Clear contact when account changes (contact must belong to account)
-          contact_id: null 
-        })
+        .update(updateData)
         .eq('id', caseId)
         .eq('user_id', user.id);
 
@@ -155,7 +193,7 @@ export function ClientInfoSection({
 
       toast({
         title: "Account updated",
-        description: hadContact ? "Contact was cleared as it may not belong to the new account" : undefined
+        description: clearContact ? "Contact was also cleared" : undefined
       });
       
       setEditingAccount(false);
