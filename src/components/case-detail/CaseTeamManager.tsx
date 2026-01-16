@@ -20,11 +20,17 @@ interface Profile {
   avatar_url?: string | null;
 }
 
+interface CaseInvestigator {
+  id: string;
+  role: 'primary' | 'support';
+  assigned_at: string;
+  investigator: Profile;
+}
+
 interface CaseTeamManagerProps {
   caseId: string;
   caseManagerId: string | null;
   caseManager2Id?: string | null;
-  investigatorIds: string[];
   onUpdate: () => void;
 }
 
@@ -32,7 +38,6 @@ export const CaseTeamManager = ({
   caseId,
   caseManagerId,
   caseManager2Id,
-  investigatorIds,
   onUpdate
 }: CaseTeamManagerProps) => {
   const { organization } = useOrganization();
@@ -42,7 +47,7 @@ export const CaseTeamManager = ({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [caseManager, setCaseManager] = useState<Profile | null>(null);
   const [caseManager2, setCaseManager2] = useState<Profile | null>(null);
-  const [investigators, setInvestigators] = useState<Profile[]>([]);
+  const [investigators, setInvestigators] = useState<CaseInvestigator[]>([]);
   const [showAddInvestigator, setShowAddInvestigator] = useState(false);
   const [selectedInvestigator, setSelectedInvestigator] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -53,7 +58,46 @@ export const CaseTeamManager = ({
 
   useEffect(() => {
     fetchProfiles();
-  }, [caseManagerId, caseManager2Id, investigatorIds]);
+    fetchInvestigators();
+  }, [caseManagerId, caseManager2Id, caseId, organization?.id]);
+
+  const fetchInvestigators = async () => {
+    if (!caseId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('case_investigators')
+        .select(`
+          id,
+          role,
+          assigned_at,
+          investigator:profiles(id, full_name, email, mobile_phone, office_phone, avatar_url)
+        `)
+        .eq('case_id', caseId)
+        .order('assigned_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      // Transform and sort: primary first, then by assigned_at
+      const transformed = (data || [])
+        .filter(item => item.investigator)
+        .map(item => ({
+          id: item.id,
+          role: item.role as 'primary' | 'support',
+          assigned_at: item.assigned_at,
+          investigator: item.investigator as unknown as Profile
+        }))
+        .sort((a, b) => {
+          if (a.role === 'primary' && b.role !== 'primary') return -1;
+          if (a.role !== 'primary' && b.role === 'primary') return 1;
+          return new Date(a.assigned_at).getTime() - new Date(b.assigned_at).getTime();
+        });
+      
+      setInvestigators(transformed);
+    } catch (error) {
+      console.error("Error fetching investigators:", error);
+    }
+  };
 
   const fetchProfiles = async () => {
     try {
@@ -89,18 +133,6 @@ export const CaseTeamManager = ({
           setCaseManager2(manager2 || null);
         } else {
           setCaseManager2(null);
-        }
-
-        if (investigatorIds && investigatorIds.length > 0) {
-          // Maintain order from investigatorIds array (first = primary)
-          const invs: Profile[] = [];
-          for (const id of investigatorIds) {
-            const profile = allProfiles.find(p => p.id === id);
-            if (profile) invs.push(profile);
-          }
-          setInvestigators(invs);
-        } else {
-          setInvestigators([]);
         }
       }
     } catch (error) {
@@ -205,14 +237,21 @@ export const CaseTeamManager = ({
   };
 
   const handleAddInvestigator = async () => {
-    if (!selectedInvestigator) return;
+    if (!selectedInvestigator || !organization?.id) return;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const newInvestigatorIds = [...(investigatorIds || []), selectedInvestigator];
-      const { error } = await supabase.from("cases").update({
-        investigator_ids: newInvestigatorIds
-      }).eq("id", caseId).eq("user_id", user.id);
+      
+      // Insert into case_investigators - trigger handles primary assignment
+      const { error } = await supabase
+        .from('case_investigators')
+        .insert({
+          case_id: caseId,
+          investigator_id: selectedInvestigator,
+          organization_id: organization.id,
+          assigned_by: user.id
+        });
+      
       if (error) throw error;
       toast({
         title: "Success",
@@ -220,6 +259,7 @@ export const CaseTeamManager = ({
       });
       setShowAddInvestigator(false);
       setSelectedInvestigator("");
+      fetchInvestigators();
       onUpdate();
     } catch (error) {
       console.error("Error adding investigator:", error);
@@ -231,24 +271,23 @@ export const CaseTeamManager = ({
     }
   };
 
-  const handleRemoveInvestigator = async (investigatorId: string) => {
+  const handleRemoveInvestigator = async (assignmentId: string, wasPrimary: boolean) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const newInvestigatorIds = (investigatorIds || []).filter(id => id !== investigatorId);
-      const { error } = await supabase.from("cases").update({
-        investigator_ids: newInvestigatorIds
-      }).eq("id", caseId).eq("user_id", user.id);
+      const { error } = await supabase
+        .from('case_investigators')
+        .delete()
+        .eq('id', assignmentId);
+      
       if (error) throw error;
       
-      // Check if removed investigator was primary (index 0)
-      const wasPrimary = investigatorIds?.[0] === investigatorId;
+      // Auto-promote trigger handles primary promotion automatically
       toast({
         title: "Success",
-        description: wasPrimary && newInvestigatorIds.length > 0
+        description: wasPrimary && investigators.length > 1
           ? "Investigator removed. Next investigator promoted to Primary."
           : "Investigator removed successfully"
       });
+      fetchInvestigators();
       onUpdate();
     } catch (error) {
       console.error("Error removing investigator:", error);
@@ -260,22 +299,13 @@ export const CaseTeamManager = ({
     }
   };
 
-  // Set an investigator as primary (move to index 0)
+  // Set an investigator as primary using atomic database function
   const handleSetPrimaryInvestigator = async (investigatorId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      const currentIds = investigatorIds || [];
-      // Move selected investigator to first position
-      const newInvestigatorIds = [
-        investigatorId,
-        ...currentIds.filter(id => id !== investigatorId)
-      ];
-      
-      const { error } = await supabase.from("cases").update({
-        investigator_ids: newInvestigatorIds
-      }).eq("id", caseId).eq("user_id", user.id);
+      const { error } = await supabase.rpc('set_primary_investigator', {
+        p_case_id: caseId,
+        p_investigator_id: investigatorId
+      });
       
       if (error) throw error;
       
@@ -283,6 +313,7 @@ export const CaseTeamManager = ({
         title: "Success",
         description: "Primary investigator updated"
       });
+      fetchInvestigators();
       onUpdate();
     } catch (error) {
       console.error("Error setting primary investigator:", error);
@@ -294,8 +325,11 @@ export const CaseTeamManager = ({
     }
   };
 
+  // Get investigator IDs currently assigned
+  const assignedInvestigatorIds = investigators.map(inv => inv.investigator.id);
+  
   const availableInvestigators = profiles.filter(
-    p => p.id !== caseManagerId && p.id !== caseManager2Id && !(investigatorIds || []).includes(p.id)
+    p => p.id !== caseManagerId && p.id !== caseManager2Id && !assignedInvestigatorIds.includes(p.id)
   );
   
   const availableForPrimary = profiles.filter(p => p.id !== caseManager2Id);
@@ -502,18 +536,18 @@ export const CaseTeamManager = ({
             {investigators.length === 0 ? (
               <p className="text-sm text-muted-foreground">No investigators assigned</p>
             ) : (
-              investigators.map((investigator, index) => {
-                const isPrimary = index === 0;
+              investigators.map((item) => {
+                const isPrimary = item.role === 'primary';
                 // Only show "Make Primary" if not already primary AND there are multiple investigators
                 const showSetPrimary = !isPrimary && investigators.length > 1;
                 
                 return (
                   <InvestigatorCard
-                    key={investigator.id}
-                    investigator={investigator}
+                    key={item.id}
+                    investigator={item.investigator}
                     isPrimary={isPrimary}
-                    onSetPrimary={() => handleSetPrimaryInvestigator(investigator.id)}
-                    onRemove={() => handleRemoveInvestigator(investigator.id)}
+                    onSetPrimary={() => handleSetPrimaryInvestigator(item.investigator.id)}
+                    onRemove={() => handleRemoveInvestigator(item.id, isPrimary)}
                     canEdit={canEdit}
                     showSetPrimary={showSetPrimary}
                   />
