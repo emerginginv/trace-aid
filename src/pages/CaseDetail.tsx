@@ -34,6 +34,7 @@ import { GenerateReportDialog } from "@/components/templates/GenerateReportDialo
 import { CaseSummaryPdfDialog } from "@/components/case-detail/CaseSummaryPdfDialog";
 import { CaseReports } from "@/components/case-detail/CaseReports";
 import { CaseTimeline } from "@/components/case-detail/CaseTimeline";
+import { ClientInfoSection } from "@/components/case-detail/ClientInfoSection";
 
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -71,12 +72,20 @@ interface Case {
 interface Account {
   id: string;
   name: string;
+  status?: string | null;
+  industry?: string | null;
+  phone?: string | null;
+  email?: string | null;
 }
 
 interface Contact {
   id: string;
   first_name: string;
   last_name: string;
+  status?: string | null;
+  role?: string | null;
+  phone?: string | null;
+  email?: string | null;
 }
 
 interface CaseManager {
@@ -248,12 +257,12 @@ const CaseDetail = () => {
       setCaseData(data);
 
       if (data.account_id) {
-        const { data: accountData } = await supabase.from("accounts").select("id, name").eq("id", data.account_id).maybeSingle();
+        const { data: accountData } = await supabase.from("accounts").select("id, name, status, industry, phone, email").eq("id", data.account_id).maybeSingle();
         if (accountData) setAccount(accountData);
       }
 
       if (data.contact_id) {
-        const { data: contactData } = await supabase.from("contacts").select("id, first_name, last_name").eq("id", data.contact_id).maybeSingle();
+        const { data: contactData } = await supabase.from("contacts").select("id, first_name, last_name, status, role, phone, email").eq("id", data.contact_id).maybeSingle();
         if (contactData) setContact(contactData);
       }
 
@@ -751,9 +760,6 @@ const CaseDetail = () => {
                         </div>
                       )}
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
-                        <InfoItem label="Account" value={account?.name} />
-                        <InfoItem label="Contact" value={contact ? `${contact.first_name} ${contact.last_name}` : null} />
-                        <InfoItem label="Case Manager" value={caseManager?.full_name || caseManager?.email} />
                         {/* Case Type - always show */}
                         <div>
                           <p className="text-xs text-muted-foreground mb-0.5">Case Type</p>
@@ -823,8 +829,41 @@ const CaseDetail = () => {
                     </CardContent>
                   </Card>
 
-                  {/* Two-column grid for Budget/Retainer and Team */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  {/* Three-column grid for Client, Team, and Budget */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    {/* Client Column */}
+                    <ClientInfoSection 
+                      account={account ? {
+                        id: account.id,
+                        name: account.name,
+                        status: account.status,
+                        industry: account.industry,
+                        phone: account.phone,
+                        email: account.email,
+                      } : null}
+                      contact={contact ? {
+                        id: contact.id,
+                        first_name: contact.first_name,
+                        last_name: contact.last_name,
+                        status: contact.status,
+                        role: contact.role,
+                        phone: contact.phone,
+                        email: contact.email,
+                      } : null}
+                      accountName={account?.name}
+                    />
+
+                    {/* Team + Related Cases Column */}
+                    <div className="space-y-4">
+                      <CaseTeamManager 
+                        caseId={id!} 
+                        caseManagerId={caseData.case_manager_id}
+                        caseManager2Id={caseData.case_manager_2_id}
+                        onUpdate={fetchCaseData} 
+                      />
+                      <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
+                    </div>
+
                     {/* Budget + Retainer Column */}
                     <div className="space-y-4">
                       {organization?.id && (
@@ -836,17 +875,6 @@ const CaseDetail = () => {
                         />
                       )}
                       {organization?.id && <RetainerFundsWidget caseId={id!} organizationId={organization.id} />}
-                    </div>
-
-                    {/* Team + Related Cases Column */}
-                    <div className="space-y-4">
-                      <CaseTeamManager 
-                        caseId={id!} 
-                        caseManagerId={caseData.case_manager_id}
-                        caseManager2Id={caseData.case_manager_2_id}
-                        onUpdate={fetchCaseData} 
-                      />
-                      <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
                     </div>
                   </div>
                 </div>
