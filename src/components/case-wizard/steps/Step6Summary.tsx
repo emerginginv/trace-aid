@@ -63,6 +63,12 @@ interface SubjectSummary {
   item: number;
 }
 
+interface CaseTypeLabels {
+  label1: string | null;
+  label2: string | null;
+  label3: string | null;
+}
+
 export function Step6Summary({
   caseId,
   caseNumber,
@@ -80,6 +86,12 @@ export function Step6Summary({
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
   const [caseTitle, setCaseTitle] = useState<string | null>(null);
+  const [caseTypeName, setCaseTypeName] = useState<string | null>(null);
+  const [caseTypeLabels, setCaseTypeLabels] = useState<CaseTypeLabels>({
+    label1: null,
+    label2: null,
+    label3: null,
+  });
   const [subjectCounts, setSubjectCounts] = useState<SubjectSummary>({
     person: 0,
     vehicle: 0,
@@ -103,6 +115,24 @@ export function Step6Summary({
       
       if (caseRecord) {
         setCaseTitle(caseRecord.title);
+      }
+
+      // Fetch case type details (name and reference labels)
+      if (caseData.case_type_id) {
+        const { data: caseTypeData } = await supabase
+          .from("case_types")
+          .select("name, reference_label_1, reference_label_2, reference_label_3")
+          .eq("id", caseData.case_type_id)
+          .single();
+        
+        if (caseTypeData) {
+          setCaseTypeName(caseTypeData.name);
+          setCaseTypeLabels({
+            label1: caseTypeData.reference_label_1,
+            label2: caseTypeData.reference_label_2,
+            label3: caseTypeData.reference_label_3,
+          });
+        }
       }
 
       // Fetch account and contact details
@@ -185,9 +215,36 @@ export function Step6Summary({
             </div>
             <div>
               <p className="text-muted-foreground">Case Type</p>
-              <p className="font-medium">{caseData.status}</p>
+              <p className="font-medium">{caseTypeName || "—"}</p>
             </div>
           </div>
+
+          {/* Reference Numbers - Only show if any were entered */}
+          {(caseData.reference_number || caseData.reference_number_2 || caseData.reference_number_3) && (
+            <>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {caseData.reference_number && caseTypeLabels.label1 && (
+                  <div>
+                    <p className="text-muted-foreground">{caseTypeLabels.label1}</p>
+                    <p className="font-medium">{caseData.reference_number}</p>
+                  </div>
+                )}
+                {caseData.reference_number_2 && caseTypeLabels.label2 && (
+                  <div>
+                    <p className="text-muted-foreground">{caseTypeLabels.label2}</p>
+                    <p className="font-medium">{caseData.reference_number_2}</p>
+                  </div>
+                )}
+                {caseData.reference_number_3 && caseTypeLabels.label3 && (
+                  <div>
+                    <p className="text-muted-foreground">{caseTypeLabels.label3}</p>
+                    <p className="font-medium">{caseData.reference_number_3}</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Client Information - Only show if any client data is selected */}
           {(account || contact) && (
