@@ -2,14 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { X, UserPlus, Users, Plus } from "lucide-react";
+import { UserPlus, Users, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"; // Global TooltipProvider in App.tsx
 import { CaseManagerCard } from "./CaseManagerCard";
+import { InvestigatorCard } from "./InvestigatorCard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ContextualHelp } from "@/components/help-center";
 
@@ -94,7 +92,12 @@ export const CaseTeamManager = ({
         }
 
         if (investigatorIds && investigatorIds.length > 0) {
-          const invs = allProfiles.filter(p => investigatorIds.includes(p.id));
+          // Maintain order from investigatorIds array (first = primary)
+          const invs: Profile[] = [];
+          for (const id of investigatorIds) {
+            const profile = allProfiles.find(p => p.id === id);
+            if (profile) invs.push(profile);
+          }
           setInvestigators(invs);
         } else {
           setInvestigators([]);
@@ -237,9 +240,14 @@ export const CaseTeamManager = ({
         investigator_ids: newInvestigatorIds
       }).eq("id", caseId).eq("user_id", user.id);
       if (error) throw error;
+      
+      // Check if removed investigator was primary (index 0)
+      const wasPrimary = investigatorIds?.[0] === investigatorId;
       toast({
         title: "Success",
-        description: "Investigator removed successfully"
+        description: wasPrimary && newInvestigatorIds.length > 0
+          ? "Investigator removed. Next investigator promoted to Primary."
+          : "Investigator removed successfully"
       });
       onUpdate();
     } catch (error) {
@@ -252,11 +260,38 @@ export const CaseTeamManager = ({
     }
   };
 
-  const getInitials = (name: string | null, email: string) => {
-    if (name) {
-      return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  // Set an investigator as primary (move to index 0)
+  const handleSetPrimaryInvestigator = async (investigatorId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const currentIds = investigatorIds || [];
+      // Move selected investigator to first position
+      const newInvestigatorIds = [
+        investigatorId,
+        ...currentIds.filter(id => id !== investigatorId)
+      ];
+      
+      const { error } = await supabase.from("cases").update({
+        investigator_ids: newInvestigatorIds
+      }).eq("id", caseId).eq("user_id", user.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Primary investigator updated"
+      });
+      onUpdate();
+    } catch (error) {
+      console.error("Error setting primary investigator:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update primary investigator",
+        variant: "destructive"
+      });
     }
-    return email.slice(0, 2).toUpperCase();
   };
 
   const availableInvestigators = profiles.filter(
@@ -463,38 +498,27 @@ export const CaseTeamManager = ({
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-3">
             {investigators.length === 0 ? (
               <p className="text-sm text-muted-foreground">No investigators assigned</p>
             ) : (
-              investigators.map(investigator => (
-                <Tooltip key={investigator.id}>
-                  <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="flex items-center gap-2 px-2.5 py-1 cursor-pointer">
-                      <Avatar className="h-5 w-5">
-                        <AvatarFallback className="text-[10px]">
-                          {getInitials(investigator.full_name, investigator.email)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs">
-                        {investigator.full_name || investigator.email}
-                      </span>
-                      {canEdit && (
-                        <button 
-                          onClick={() => handleRemoveInvestigator(investigator.id)} 
-                          className="ml-0.5 hover:bg-destructive/20 rounded-full p-0.5"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-sm font-medium">{investigator.full_name}</p>
-                    <p className="text-xs text-muted-foreground">{investigator.email}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ))
+              investigators.map((investigator, index) => {
+                const isPrimary = index === 0;
+                // Only show "Make Primary" if not already primary AND there are multiple investigators
+                const showSetPrimary = !isPrimary && investigators.length > 1;
+                
+                return (
+                  <InvestigatorCard
+                    key={investigator.id}
+                    investigator={investigator}
+                    isPrimary={isPrimary}
+                    onSetPrimary={() => handleSetPrimaryInvestigator(investigator.id)}
+                    onRemove={() => handleRemoveInvestigator(investigator.id)}
+                    canEdit={canEdit}
+                    showSetPrimary={showSetPrimary}
+                  />
+                );
+              })
             )}
           </div>
         </div>
