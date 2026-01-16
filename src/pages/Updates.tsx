@@ -7,7 +7,6 @@ import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { useCaseUpdatesQuery } from "@/hooks/queries";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AIBadge } from "@/components/ui/ai-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -24,6 +23,7 @@ import { StatCardsGrid, StatCardConfig, StatCardsGridSkeleton } from "@/componen
 import { FilterToolbar } from "@/components/shared/FilterToolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { UpdateCard } from "@/components/shared/UpdateCard";
 
 interface UpdateWithCase {
   id: string;
@@ -299,26 +299,22 @@ export default function Updates() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredUpdates.map((update) => (
-            <Card key={update.id} className="relative overflow-hidden transition-shadow hover:shadow-md cursor-pointer group" onClick={() => navigateToUpdate(update)}>
-              <div className="h-16 bg-gradient-to-br from-primary/20 via-primary/10 to-muted" />
-              {update.is_ai_summary && <AIBadge size="sm" className="absolute top-2 right-2 z-10" />}
-              <div className="px-4 -mt-6 relative z-10">
-                <UserAvatar name={update.author?.full_name} avatarUrl={update.author?.avatar_url} size="lg" className="border-2 border-background" />
-              </div>
-              <CardContent className="p-4 pt-2 space-y-3">
-                <div>
-                  <h3 className="font-semibold text-base line-clamp-1 group-hover:text-primary transition-colors">{update.title}</h3>
-                  {update.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{update.description}</p>}
-                </div>
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline" className={cn("text-xs", getUpdateTypeBadgeColor(update.update_type))}>{update.update_type}</Badge>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                  <span className="truncate max-w-[120px]">{update.cases.case_number}</span>
-                  <span>{update.created_at ? format(new Date(update.created_at), "MMM d") : "-"}</span>
-                </div>
-              </CardContent>
-            </Card>
+            <UpdateCard
+              key={update.id}
+              update={{
+                id: update.id,
+                title: update.title,
+                description: update.description,
+                update_type: update.update_type,
+                is_ai_summary: update.is_ai_summary,
+                created_at: update.created_at,
+                case_number: update.cases.case_number,
+                case_title: update.cases.title,
+                author_name: update.author?.full_name,
+                author_avatar: update.author?.avatar_url,
+              }}
+              onClick={() => navigateToUpdate(update)}
+            />
           ))}
         </div>
       )}

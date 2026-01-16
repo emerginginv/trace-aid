@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
 import { Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck } from "lucide-react";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
+import { InvoiceCard } from "@/components/shared/InvoiceCard";
 
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import RecordPaymentModal from "@/components/case-detail/RecordPaymentModal";
@@ -526,78 +527,25 @@ const AllInvoices = () => {
           </CardContent>
         </Card>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedInvoices.map((invoice) => {
-            const balanceDue = invoice.balance_due !== undefined 
-              ? invoice.balance_due 
-              : invoice.amount - (invoice.total_paid || 0);
-            
-            return (
-              <Card 
-                key={invoice.id} 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate(`/invoices/${invoice.id}`)}
-              >
-                <CardContent className="pt-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="font-semibold">{invoice.invoice_number || "N/A"}</div>
-                      <div className="text-sm text-muted-foreground">{invoice.case_number}</div>
-                    </div>
-                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                      invoice.status === "paid"
-                        ? "bg-green-100 text-green-700"
-                        : invoice.status === "partial"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : invoice.status === "sent"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}>
-                      {invoice.status || "Draft"}
-                    </span>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Date</span>
-                      <span>{format(new Date(invoice.date), "MMM d, yyyy")}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total</span>
-                      <span className="font-medium">${invoice.amount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Balance Due</span>
-                      <span className="font-medium">${balanceDue.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-4 pt-4 border-t" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPayModal(invoice)}
-                    >
-                      <CircleDollarSign className="h-4 w-4 mr-1" />
-                      Pay
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingInvoice(invoice.id)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteInvoice(invoice.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {sortedInvoices.map((invoice) => (
+            <InvoiceCard
+              key={invoice.id}
+              invoice={{
+                id: invoice.id,
+                invoice_number: invoice.invoice_number,
+                case_number: invoice.case_number,
+                case_title: invoice.case_title,
+                date: invoice.date,
+                due_date: invoice.due_date,
+                amount: invoice.amount,
+                total_paid: invoice.total_paid,
+                balance_due: invoice.balance_due,
+                status: invoice.status,
+              }}
+              onClick={() => navigate(`/invoices/${invoice.id}`)}
+            />
+          ))}
         </div>
       ) : (
         <>
