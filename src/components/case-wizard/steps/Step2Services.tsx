@@ -118,13 +118,15 @@ export function Step2Services({
   // Note: Rates are now configured per-account in Account Billing Rates
   // Services no longer have default rates
 
-  if (loading) {
+  // Show loading state if services OR case type config is still loading
+  // This prevents briefly showing all services before restrictions are applied
+  if (loading || (caseTypeId && caseTypeLoading)) {
     return (
       <div className="space-y-6">
         <div>
           <h3 className="text-lg font-medium">Select Services</h3>
           <p className="text-sm text-muted-foreground">
-            Loading available services...
+            {caseTypeLoading ? "Loading case type restrictions..." : "Loading available services..."}
           </p>
         </div>
         <div className="space-y-3">
