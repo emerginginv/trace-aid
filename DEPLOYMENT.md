@@ -11,7 +11,7 @@ Navigate to your Vercel project → **Settings** → **General** → **Build & D
 | **Framework Preset** | Vite |
 | **Build Command** | `pnpm run build` |
 | **Output Directory** | `dist` |
-| **Install Command** | `pnpm install --frozen-lockfile` |
+| **Install Command** | `npm install -g pnpm@9 && pnpm install --frozen-lockfile` |
 
 ### Node.js Version
 
@@ -19,7 +19,7 @@ Navigate to **Settings** → **General** → **Node.js Version**:
 
 | Setting | Value |
 |---------|-------|
-| **Node.js Version** | `20.x` |
+| **Node.js Version** | `20.x` (NOT Automatic) |
 
 > **Note:** The `.nvmrc` file pins Node to `20.11.1` which Vercel will respect automatically.
 
@@ -31,16 +31,16 @@ This repo includes the following build configuration:
 
 | File | Purpose |
 |------|---------|
-| `vercel.json` | Explicit install/build commands using pnpm + corepack |
+| `vercel.json` | Explicit install/build commands using pnpm (no corepack) |
 | `.nvmrc` | Pins Node version to 20.11.1 |
 | `.npmrc` | Network retry settings for stable installs |
-| `package.json` | Should include `"packageManager": "pnpm@9.0.0"` |
+| `package.json` | Contains `"packageManager": "pnpm@9.0.0"` |
 
 ### vercel.json
 
 ```json
 {
-  "installCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "installCommand": "npm install -g pnpm@9 && pnpm install --frozen-lockfile",
   "buildCommand": "pnpm run build"
 }
 ```
@@ -82,9 +82,12 @@ Ensure these files are deleted from the repo:
 - `bun.lockb`
 - `bunfig.toml`
 
-### Corepack not found
+### pnpm install errors
 
-Verify Node version is 20.x (corepack is built-in for Node 18+).
+Verify Vercel Install Command is exactly:
+```
+npm install -g pnpm@9 && pnpm install --frozen-lockfile
+```
 
 ---
 
@@ -93,36 +96,35 @@ Verify Node version is 20.x (corepack is built-in for Node 18+).
 - **Deterministic:** `--frozen-lockfile` ensures exact versions
 - **Fast:** Content-addressable storage with excellent caching
 - **Reliable:** No timeout issues like bun in CI environments
-- **Native support:** Corepack ships with Node 18+
 
 ---
 
 ## CI Guardrails
 
-> **⚠️ IMPORTANT: CI builds must use pnpm only. Do not use bun in Vercel installs.**
+> **⚠️ IMPORTANT: CI builds must use pnpm only. Do not use bun or corepack in Vercel installs.**
 
-### Bun is Prohibited
+### Prohibited in CI
 
-This project has experienced repeated CI failures due to `bun install timeout` errors. To prevent regression:
+This project has experienced repeated CI failures. To prevent regression:
 
-1. **Never commit bun lockfiles** - Remove immediately if found:
-   - `bun.lock`
-   - `bun.lockb`
-   - `bunfig.toml`
+- **bun** - Causes timeout errors in Vercel
+- **corepack** - Unreliable initialization in CI environments
 
-2. **Verify Vercel install command** - Must be:
-   ```
-   corepack enable && pnpm install --frozen-lockfile
-   ```
+### Required Install Command
 
-3. **If "bun install timeout" appears:**
-   - Check Vercel project settings → Install Command
-   - Confirm no bun lockfile exists in repo
-   - Clear build cache and redeploy
+```
+npm install -g pnpm@9 && pnpm install --frozen-lockfile
+```
+
+### If Build Errors Appear
+
+1. Check Vercel Install Command matches above exactly
+2. Confirm no bun lockfile exists in repo
+3. Clear build cache and redeploy
 
 ### PR Checklist
 
 Before merging any PR, verify:
 - [ ] No `bun.lock` or `bun.lockb` in the repo
 - [ ] `pnpm-lock.yaml` is committed and up-to-date
-- [ ] `vercel.json` uses pnpm install command
+- [ ] `vercel.json` uses explicit pnpm install (no corepack)
