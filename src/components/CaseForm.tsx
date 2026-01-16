@@ -32,12 +32,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon, X, Lock } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
@@ -47,6 +47,8 @@ import { useCaseTypesQuery, CaseType } from "@/hooks/queries/useCaseTypesQuery";
 import { DueDateRecalculateDialog } from "@/components/case-detail/DueDateRecalculateDialog";
 import { ServiceConflictDialog } from "@/components/case-detail/ServiceConflictDialog";
 import { BudgetConflictDialog } from "@/components/case-detail/BudgetConflictDialog";
+import { useCaseBillingStatus } from "@/hooks/useCaseBillingStatus";
+import { logCaseTypeAudit, determineCaseTypeAuditAction } from "@/lib/caseTypeAuditLogger";
 
 const caseSchema = z.object({
   title: z.string().max(200).optional(),
@@ -148,8 +150,31 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     };
   } | null>(null);
 
+  // Track audit context for Case Type changes
+  const auditContextRef = useRef<{
+    hadBudgetConflict: boolean;
+    hadServiceConflict: boolean;
+    servicesRemoved: string[];
+    hadDueDateChange: boolean;
+    previousCaseTypeId: string | null;
+    previousCaseTypeName: string | null;
+    previousBudgetStrategy: string | null;
+  }>({
+    hadBudgetConflict: false,
+    hadServiceConflict: false,
+    servicesRemoved: [],
+    hadDueDateChange: false,
+    previousCaseTypeId: null,
+    previousCaseTypeName: null,
+    previousBudgetStrategy: null,
+  });
+
   // Fetch case types using React Query
   const { data: caseTypes = [] } = useCaseTypesQuery();
+  
+  // Check if billing has started for this case (locks Case Type changes)
+  const { data: billingStatus } = useCaseBillingStatus(editingCase?.id);
+  const isCaseTypeLocked = editingCase && billingStatus?.hasBilling;
 
   // Get the selected case type object
   const selectedCaseType = useMemo(() => {
@@ -352,8 +377,8 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     applyCaseTypeChange(caseTypeId);
   };
 
-  // Apply the final case type change
-  const applyCaseTypeChange = (caseTypeId: string | null, newDueDate?: Date) => {
+  // Apply the final case type change and log audit
+  const applyCaseTypeChange = async (caseTypeId: string | null, newDueDate?: Date) => {
     const caseType = caseTypeId ? caseTypes.find(ct => ct.id === caseTypeId) : null;
     
     setSelectedCaseTypeId(caseTypeId);
@@ -361,6 +386,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     
     if (newDueDate) {
       form.setValue("due_date", newDueDate);
+      auditContextRef.current.hadDueDateChange = true;
     }
     
     // Clear budget fields if strategy is disabled (for form display only - actual budget deletion is handled in dialog confirm)
@@ -368,12 +394,93 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
       form.setValue("budget_hours", null);
       form.setValue("budget_dollars", null);
     }
+
+    // Log the case type change for existing cases
+    if (editingCase && organization) {
+      const auditAction = determineCaseTypeAuditAction(
+        auditContextRef.current.previousCaseTypeId,
+        caseTypeId
+      );
+      
+      if (auditAction && auditAction !== 'case_type_removed') {
+        await logCaseTypeAudit({
+          action: auditAction,
+          organizationId: organization.id,
+          metadata: {
+            caseId: editingCase.id,
+            caseNumber: editingCase.case_number,
+            previousCaseTypeId: auditContextRef.current.previousCaseTypeId,
+            previousCaseTypeName: auditContextRef.current.previousCaseTypeName,
+            previousBudgetStrategy: auditContextRef.current.previousBudgetStrategy,
+            newCaseTypeId: caseTypeId,
+            newCaseTypeName: caseType?.name || null,
+            newBudgetStrategy: caseType?.budget_strategy || 'both',
+            budgetConflictResolved: auditContextRef.current.hadBudgetConflict,
+            serviceConflictResolved: auditContextRef.current.hadServiceConflict,
+            servicesRemoved: auditContextRef.current.servicesRemoved,
+            dueDateRecalculated: auditContextRef.current.hadDueDateChange,
+            severity: 'MEDIUM',
+          },
+        });
+      }
+    }
   };
 
   // Handle case type change - set defaults based on case type
   const handleCaseTypeChange = async (caseTypeId: string | null) => {
+    // Check if locked due to billing
+    if (editingCase && billingStatus?.hasBilling) {
+      // Log blocked attempt
+      if (organization) {
+        await logCaseTypeAudit({
+          action: 'case_type_change_blocked',
+          organizationId: organization.id,
+          metadata: {
+            caseId: editingCase.id,
+            caseNumber: editingCase.case_number,
+            previousCaseTypeId: editingCase.case_type_id,
+            previousCaseTypeName: caseTypes.find(ct => ct.id === editingCase.case_type_id)?.name || null,
+            newCaseTypeId: caseTypeId,
+            newCaseTypeName: caseTypeId ? caseTypes.find(ct => ct.id === caseTypeId)?.name || null : null,
+            reason: 'Billing has already started for this case',
+            severity: 'MEDIUM',
+          },
+        });
+      }
+      toast.error("Cannot change case type after billing has started");
+      return;
+    }
+    
+    // Track previous state for audit logging
+    if (editingCase) {
+      const previousCaseType = caseTypes.find(ct => ct.id === editingCase.case_type_id);
+      auditContextRef.current = {
+        ...auditContextRef.current,
+        previousCaseTypeId: editingCase.case_type_id || null,
+        previousCaseTypeName: previousCaseType?.name || null,
+        previousBudgetStrategy: previousCaseType?.budget_strategy || null,
+        hadBudgetConflict: false,
+        hadServiceConflict: false,
+        servicesRemoved: [],
+        hadDueDateChange: false,
+      };
+    }
+    
     if (!caseTypeId) {
-      // Clearing case type
+      // Clearing case type - log if there was one before
+      if (editingCase?.case_type_id && organization) {
+        await logCaseTypeAudit({
+          action: 'case_type_removed',
+          organizationId: organization.id,
+          metadata: {
+            caseId: editingCase.id,
+            caseNumber: editingCase.case_number,
+            previousCaseTypeId: editingCase.case_type_id,
+            previousCaseTypeName: caseTypes.find(ct => ct.id === editingCase.case_type_id)?.name || null,
+            severity: 'MEDIUM',
+          },
+        });
+      }
       applyCaseTypeChange(null);
       return;
     }
@@ -429,6 +536,9 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     if (!pendingBudgetConflict || !editingCase) return;
 
     const { newCaseTypeId, newStrategy } = pendingBudgetConflict;
+    
+    // Track for audit
+    auditContextRef.current.hadBudgetConflict = true;
 
     try {
       // Update applied_budget_strategy on the case
@@ -489,6 +599,10 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     if (!pendingServiceConflict || !editingCase) return;
 
     const { newCaseTypeId, conflictingServices } = pendingServiceConflict;
+    
+    // Track for audit
+    auditContextRef.current.hadServiceConflict = true;
+    auditContextRef.current.servicesRemoved = conflictingServices.map(s => s.name);
 
     try {
       // Remove conflicting service instances
@@ -943,13 +1057,19 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               name="case_type_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Case Type</FormLabel>
+                  <FormLabel className="flex items-center gap-2">
+                    Case Type
+                    {isCaseTypeLocked && (
+                      <Lock className="h-3.5 w-3.5 text-amber-500" />
+                    )}
+                  </FormLabel>
                   <Select 
                     onValueChange={(value) => handleCaseTypeChange(value === "__none__" ? null : value)} 
                     value={field.value || "__none__"}
+                    disabled={isCaseTypeLocked}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className={isCaseTypeLocked ? "opacity-70" : ""}>
                         <SelectValue placeholder="Select case type (optional)" />
                       </SelectTrigger>
                     </FormControl>
@@ -973,7 +1093,13 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedCaseType && (
+                  {isCaseTypeLocked && (
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs mt-1">
+                      <Lock className="h-3 w-3" />
+                      <span>Case type locked after billing started ({billingStatus?.invoiceCount || 0} invoice{billingStatus?.invoiceCount !== 1 ? 's' : ''})</span>
+                    </div>
+                  )}
+                  {selectedCaseType && !isCaseTypeLocked && (
                     <p className="text-xs text-muted-foreground">
                       {selectedCaseType.description || `Budget: ${selectedCaseType.budget_strategy || 'both'}`}
                       {selectedCaseType.due_date_required && ' • Due date required'}
