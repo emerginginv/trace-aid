@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,7 +32,9 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
-import { DollarSign, Clock, AlertTriangle, TrendingDown, TrendingUp } from "lucide-react";
+import { useCaseTypeConfig } from "@/hooks/useCaseTypeConfig";
+import { BudgetDisabledMessage } from "./BudgetStrategyBadge";
+import { DollarSign, Clock, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
 
 const adjustmentSchema = z.object({
   adjustment_type: z.enum(["hours", "dollars"]),
@@ -55,22 +57,39 @@ interface BudgetSummaryData {
 
 interface BudgetAdjustmentFormProps {
   caseId: string;
+  caseTypeId?: string | null;
   onSuccess: () => void;
   triggerButton?: React.ReactNode;
 }
 
-export function BudgetAdjustmentForm({ caseId, onSuccess, triggerButton }: BudgetAdjustmentFormProps) {
+export function BudgetAdjustmentForm({ caseId, caseTypeId, onSuccess, triggerButton }: BudgetAdjustmentFormProps) {
   const { hasPermission, loading: permLoading } = usePermissions();
+  const { config: caseTypeConfig } = useCaseTypeConfig(caseTypeId);
   const [currentBudget, setCurrentBudget] = useState({ hours: 0, dollars: 0 });
   const [consumedBudget, setConsumedBudget] = useState({ hours: 0, dollars: 0 });
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [showConfirmReduction, setShowConfirmReduction] = useState(false);
 
+  // Determine allowed adjustment types based on strategy
+  const allowedTypes = useMemo(() => {
+    if (!caseTypeConfig) return ['hours', 'dollars'];
+    if (caseTypeConfig.budgetStrategy === 'hours_only') return ['hours'];
+    if (caseTypeConfig.budgetStrategy === 'money_only') return ['dollars'];
+    if (caseTypeConfig.budgetDisabled) return [];
+    return ['hours', 'dollars'];
+  }, [caseTypeConfig]);
+
+  // Get default adjustment type
+  const getDefaultAdjustmentType = () => {
+    if (allowedTypes.length === 1) return allowedTypes[0];
+    return 'dollars';
+  };
+
   const form = useForm<AdjustmentFormData>({
     resolver: zodResolver(adjustmentSchema),
     defaultValues: {
-      adjustment_type: "dollars",
+      adjustment_type: getDefaultAdjustmentType() as "hours" | "dollars",
       new_value: 0,
       reason: "",
     },
@@ -255,6 +274,11 @@ export function BudgetAdjustmentForm({ caseId, onSuccess, triggerButton }: Budge
     return null;
   }
 
+  // If budgets are disabled by Case Type, don't show the form trigger
+  if (caseTypeConfig?.budgetDisabled) {
+    return null;
+  }
+
   const defaultTrigger = (
     <Button variant="outline" size="sm">
       <DollarSign className="h-4 w-4 mr-2" />
@@ -280,31 +304,49 @@ export function BudgetAdjustmentForm({ caseId, onSuccess, triggerButton }: Budge
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Show strategy indicator if locked */}
+              {allowedTypes.length === 1 && (
+                <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-700 dark:text-blue-400">
+                    Only <strong>{allowedTypes[0] === 'hours' ? 'Hours' : 'Dollars'}</strong> adjustments are allowed by the Case Type configuration.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <FormField
                 control={form.control}
                 name="adjustment_type"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      disabled={allowedTypes.length === 1}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="hours">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            Hours
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="dollars">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4" />
-                            Dollars
-                          </div>
-                        </SelectItem>
+                        {allowedTypes.includes('hours') && (
+                          <SelectItem value="hours">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              Hours
+                            </div>
+                          </SelectItem>
+                        )}
+                        {allowedTypes.includes('dollars') && (
+                          <SelectItem value="dollars">
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4" />
+                              Dollars
+                            </div>
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

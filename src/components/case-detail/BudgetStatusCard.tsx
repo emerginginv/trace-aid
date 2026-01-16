@@ -16,8 +16,10 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCaseBudget } from "@/hooks/useCaseBudget";
+import { useCaseTypeConfig } from "@/hooks/useCaseTypeConfig";
 import { BudgetSetupForm } from "./BudgetSetupForm";
 import { BudgetWarningBanner } from "./BudgetWarningBanner";
+import { BudgetStrategyBadge, BudgetDisabledMessage } from "./BudgetStrategyBadge";
 import { getBudgetStatusStyles, formatBudgetCurrency, formatBudgetHours } from "@/lib/budgetUtils";
 import { ContextualHelp } from "@/components/help-center";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
@@ -36,6 +38,7 @@ interface BudgetSummaryData {
 interface BudgetStatusCardProps {
   caseId: string;
   organizationId: string;
+  caseTypeId?: string | null;
   refreshKey?: number;
   onViewHistory?: () => void;
 }
@@ -43,15 +46,22 @@ interface BudgetStatusCardProps {
 export function BudgetStatusCard({ 
   caseId, 
   organizationId, 
+  caseTypeId,
   refreshKey,
   onViewHistory 
 }: BudgetStatusCardProps) {
   const { budget, loading: budgetLoading, refetch } = useCaseBudget(caseId);
+  const { config: caseTypeConfig } = useCaseTypeConfig(caseTypeId);
   const { hasPermission } = usePermissions();
   const [summary, setSummary] = useState<BudgetSummaryData | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
 
   const canModifyBudget = hasPermission("modify_case_budget");
+  
+  // Determine what to show based on Case Type strategy
+  const showHours = !caseTypeConfig || caseTypeConfig.showBudgetHours || caseTypeConfig.budgetStrategy === 'both' || !caseTypeConfig.budgetStrategy;
+  const showDollars = !caseTypeConfig || caseTypeConfig.showBudgetDollars || caseTypeConfig.budgetStrategy === 'both' || !caseTypeConfig.budgetStrategy;
+  const budgetDisabled = caseTypeConfig?.budgetDisabled;
 
   const fetchSummary = async () => {
     setSummaryLoading(true);
@@ -103,6 +113,24 @@ export function BudgetStatusCard({
     );
   }
 
+  // If budgets are disabled by Case Type
+  if (budgetDisabled) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Budget Status
+            <ContextualHelp feature="case_budgets" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BudgetDisabledMessage />
+        </CardContent>
+      </Card>
+    );
+  }
+
   // No budget configured
   if (!budget) {
     return (
@@ -123,6 +151,7 @@ export function BudgetStatusCard({
             <BudgetSetupForm
               caseId={caseId}
               organizationId={organizationId}
+              caseTypeId={caseTypeId}
               onSuccess={handleBudgetSuccess}
             />
           )}
@@ -131,9 +160,9 @@ export function BudgetStatusCard({
     );
   }
 
-  // Use summary data from RPC as source of truth
-  const hasHoursBudget = summary && summary.budget_hours_authorized > 0;
-  const hasDollarsBudget = summary && summary.budget_dollars_authorized > 0;
+  // Use summary data from RPC as source of truth - filter by strategy
+  const hasHoursBudget = showHours && summary && summary.budget_hours_authorized > 0;
+  const hasDollarsBudget = showDollars && summary && summary.budget_dollars_authorized > 0;
 
   // Get utilization info from RPC data
   const hoursUtilization = summary?.hours_utilization_pct || 0;
