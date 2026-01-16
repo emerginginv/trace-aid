@@ -35,6 +35,15 @@ const featureGroups: FeatureGroup[] = [
     ],
   },
   {
+    name: "Case Requests",
+    features: [
+      { key: "view_case_requests", label: "View Case Requests", description: "View submitted case requests" },
+      { key: "approve_case_requests", label: "Approve/Decline Requests", description: "Accept or decline case requests" },
+      { key: "delete_case_requests", label: "Delete Case Requests", description: "Permanently delete case requests" },
+      { key: "manage_case_request_forms", label: "Manage Request Forms", description: "Create and configure public intake forms" },
+    ],
+  },
+  {
     name: "Activities",
     features: [
       { key: "view_activities", label: "View Activities" },

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   Plus, 
   MoreHorizontal, 
@@ -18,11 +20,13 @@ import {
   Power, 
   PowerOff,
   FileInput,
-  Info
+  Info,
+  ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { CaseRequestFormEditor } from "./CaseRequestFormEditor";
+import { CaseRequestSettingsSection } from "./CaseRequestSettingsSection";
 import { CaseRequestFormConfig, validateFormConfig } from "@/types/case-request-form-config";
 
 interface CaseRequestForm {
@@ -51,6 +55,8 @@ interface CaseRequestForm {
 
 export function CaseRequestFormsTab() {
   const { organization } = useOrganization();
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const canManageForms = hasPermission('manage_case_request_forms');
   const [forms, setForms] = useState<CaseRequestForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -148,7 +154,7 @@ export function CaseRequestFormsTab() {
     setEditorOpen(true);
   };
 
-  if (loading) {
+  if (loading || permissionsLoading) {
     return (
       <Card>
         <CardContent className="py-8">
@@ -160,8 +166,24 @@ export function CaseRequestFormsTab() {
     );
   }
 
+  if (!canManageForms) {
+    return (
+      <Alert variant="destructive">
+        <ShieldAlert className="h-4 w-4" />
+        <AlertTitle>Access Denied</AlertTitle>
+        <AlertDescription>
+          You don't have permission to manage case request forms. Contact your administrator to request access.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Settings Section */}
+      <CaseRequestSettingsSection />
+      
+      {/* Info Banner */}
       {/* Info Banner */}
       <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30">
         <CardContent className="pt-4 pb-4">
