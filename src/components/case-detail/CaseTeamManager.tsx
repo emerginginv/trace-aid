@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, UserPlus, Users, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CaseManagerCard } from "./CaseManagerCard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ContextualHelp } from "@/components/help-center";
@@ -468,34 +468,32 @@ export const CaseTeamManager = ({
               <p className="text-sm text-muted-foreground">No investigators assigned</p>
             ) : (
               investigators.map(investigator => (
-                <TooltipProvider key={investigator.id}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="secondary" className="flex items-center gap-2 px-2.5 py-1 cursor-pointer">
-                        <Avatar className="h-5 w-5">
-                          <AvatarFallback className="text-[10px]">
-                            {getInitials(investigator.full_name, investigator.email)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs">
-                          {investigator.full_name || investigator.email}
-                        </span>
-                        {canEdit && (
-                          <button 
-                            onClick={() => handleRemoveInvestigator(investigator.id)} 
-                            className="ml-0.5 hover:bg-destructive/20 rounded-full p-0.5"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-sm font-medium">{investigator.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{investigator.email}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip key={investigator.id}>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="flex items-center gap-2 px-2.5 py-1 cursor-pointer">
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback className="text-[10px]">
+                          {getInitials(investigator.full_name, investigator.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs">
+                        {investigator.full_name || investigator.email}
+                      </span>
+                      {canEdit && (
+                        <button 
+                          onClick={() => handleRemoveInvestigator(investigator.id)} 
+                          className="ml-0.5 hover:bg-destructive/20 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-sm font-medium">{investigator.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{investigator.email}</p>
+                  </TooltipContent>
+                </Tooltip>
               ))
             )}
           </div>

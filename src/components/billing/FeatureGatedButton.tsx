@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { 
   Tooltip, 
   TooltipContent, 
-  TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
 import { Lock, Crown } from "lucide-react";
@@ -37,30 +36,28 @@ export function FeatureGatedButton({
 
   if (!allowed) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={variant}
-              size={size}
-              className={cn("cursor-not-allowed", className)}
-              disabled
-            >
-              {showUpgradeIcon && <Lock className="h-4 w-4 mr-2" />}
-              {children}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <div className="flex items-start gap-2">
-              <Crown className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-              <div>
-                <p className="font-medium">Upgrade Required</p>
-                <p className="text-xs text-muted-foreground">{message}</p>
-              </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={variant}
+            size={size}
+            className={cn("cursor-not-allowed", className)}
+            disabled
+          >
+            {showUpgradeIcon && <Lock className="h-4 w-4 mr-2" />}
+            {children}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <div className="flex items-start gap-2">
+            <Crown className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+            <div>
+              <p className="font-medium">Upgrade Required</p>
+              <p className="text-xs text-muted-foreground">{message}</p>
             </div>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+          </div>
+        </TooltipContent>
+      </Tooltip>
     );
   }
 

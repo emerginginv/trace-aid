@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { AI_TOOLTIP_MESSAGE } from "./ai-button";
@@ -22,22 +21,20 @@ const sizeClasses = {
 
 export function AIIndicator({ className, size = "default" }: AIIndicatorProps) {
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span
-            className={cn(
-              "inline-flex items-center justify-center text-[hsl(270,85%,55%)] dark:text-[hsl(270,85%,65%)]",
-              className
-            )}
-          >
-            <Sparkles className={sizeClasses[size]} />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          <p>{AI_TOOLTIP_MESSAGE}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={cn(
+            "inline-flex items-center justify-center text-[hsl(270,85%,55%)] dark:text-[hsl(270,85%,65%)]",
+            className
+          )}
+        >
+          <Sparkles className={sizeClasses[size]} />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <p>{AI_TOOLTIP_MESSAGE}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }

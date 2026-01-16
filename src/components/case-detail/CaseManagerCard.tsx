@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Mail, Phone, Smartphone, Pencil, X } from "lucide-react";
 
 interface CaseManagerProfile {
@@ -51,12 +51,11 @@ export function CaseManagerCard({
   };
 
   return (
-    <TooltipProvider>
-      <div
-        className={`rounded-lg border p-4 transition-colors ${
-          isPrimary ? "border-primary/40 bg-primary/5" : "border-border"
-        }`}
-      >
+    <div
+      className={`rounded-lg border p-4 transition-colors ${
+        isPrimary ? "border-primary/40 bg-primary/5" : "border-border"
+      }`}
+    >
       <div className="flex flex-col sm:flex-row sm:items-start gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
           {/* Avatar */}
@@ -183,7 +182,6 @@ export function CaseManagerCard({
           )}
         </div>
       )}
-      </div>
-    </TooltipProvider>
+    </div>
   );
 }
