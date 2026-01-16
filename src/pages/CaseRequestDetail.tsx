@@ -36,15 +36,27 @@ interface CaseRequestSubject {
   first_name: string | null;
   last_name: string | null;
   middle_name: string | null;
+  alias: string | null;
   date_of_birth: string | null;
+  age: number | null;
+  sex: string | null;
+  race: string | null;
+  height: string | null;
+  weight: string | null;
+  ssn: string | null;
   email: string | null;
   cell_phone: string | null;
   address1: string | null;
+  address2: string | null;
+  address3: string | null;
   city: string | null;
   state: string | null;
   zip: string | null;
+  country: string | null;
+  photo_url: string | null;
   is_primary: boolean | null;
   subject_type_id: string | null;
+  custom_fields: Record<string, any> | null;
 }
 
 interface CaseRequestFile {
