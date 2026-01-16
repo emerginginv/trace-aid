@@ -143,7 +143,7 @@ export function CaseWizard() {
             organizationId={organizationId}
             onBack={goBack}
             onContinue={(count) => {
-              updateCounts({ notes: count });
+              updateCounts({ updates: count });
               goNext();
             }}
           />
@@ -180,7 +180,7 @@ export function CaseWizard() {
             caseData={state.caseData!}
             selectedServices={state.selectedServices}
             subjectsCount={state.subjectsCount}
-            notesCount={state.notesCount}
+            updatesCount={state.updatesCount}
             activitiesCount={state.activitiesCount}
             attachmentsCount={state.attachmentsCount}
             onBack={goBack}
