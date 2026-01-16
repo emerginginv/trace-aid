@@ -70,10 +70,12 @@ export default function CaseRequests() {
   ]);
 
   useEffect(() => {
-    if (organization?.id && hasPermission('view_case_requests')) {
+    if (organization?.id && !permissionsLoading && hasPermission('view_case_requests')) {
       fetchRequests();
+    } else if (!permissionsLoading && !hasPermission('view_case_requests')) {
+      setLoading(false);
     }
-  }, [organization?.id, hasPermission]);
+  }, [organization?.id, permissionsLoading]);
 
   const fetchRequests = async () => {
     if (!organization?.id) return;
