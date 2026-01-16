@@ -300,10 +300,10 @@ export function useCaseRequestForm(formSlug: string) {
   };
 }
 
-export function createEmptySubject(isPrimary: boolean = false): SubjectData {
+export function createEmptySubject(isPrimary: boolean = false, subjectTypeId?: string): SubjectData {
   return {
     id: crypto.randomUUID(),
-    subject_type_id: null,
+    subject_type_id: subjectTypeId || null,
     is_primary: isPrimary,
     first_name: '',
     middle_name: '',

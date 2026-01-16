@@ -17,35 +17,44 @@ import { US_STATES } from "@/components/case-detail/subjects/types";
 import { SubjectData, createEmptySubject } from "@/hooks/useCaseRequestForm";
 import { CaseRequestFormConfig, isFieldVisible } from "@/types/case-request-form-config";
 import { Loader2, ArrowLeft, User, Upload, X } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PhoneInput } from "../PhoneInput";
+import { SSNInput } from "../SSNInput";
+import { useSubjectTypesForPublicForm, useCaseTypesForPublicForm } from "@/hooks/queries/useCaseRequestFormBySlug";
 
 const COUNTRIES = [
   { value: "United States", label: "United States" },
   { value: "Canada", label: "Canada" },
   { value: "United Kingdom", label: "United Kingdom" },
   { value: "Australia", label: "Australia" },
+  { value: "Mexico", label: "Mexico" },
+  { value: "Germany", label: "Germany" },
+  { value: "France", label: "France" },
+  { value: "Spain", label: "Spain" },
   { value: "Other", label: "Other" },
 ];
 
 const RACES = [
   { value: "", label: "Select Race" },
-  { value: "Asian", label: "Asian" },
+  { value: "Unknown", label: "Unknown" },
+  { value: "White", label: "White/Caucasian" },
   { value: "Black", label: "Black/African American" },
   { value: "Hispanic", label: "Hispanic/Latino" },
+  { value: "Asian", label: "Asian" },
   { value: "Native American", label: "Native American" },
   { value: "Pacific Islander", label: "Pacific Islander" },
-  { value: "White", label: "White/Caucasian" },
   { value: "Mixed", label: "Mixed/Multi-racial" },
   { value: "Other", label: "Other" },
-  { value: "Unknown", label: "Unknown" },
 ];
 
 interface SubjectInformationStepProps {
   fieldConfig: CaseRequestFormConfig;
   organizationId: string;
+  caseTypeId: string;
   subject: SubjectData | null;
+  subjectTypeId?: string | null;
   onSubmit: (data: SubjectData) => void;
   onBack: () => void;
   isEditing?: boolean;
@@ -54,7 +63,9 @@ interface SubjectInformationStepProps {
 export function SubjectInformationStep({
   fieldConfig,
   organizationId,
+  caseTypeId,
   subject,
+  subjectTypeId,
   onSubmit,
   onBack,
   isEditing = false,
@@ -63,15 +74,29 @@ export function SubjectInformationStep({
   const [photoPreview, setPhotoPreview] = useState<string | null>(subject?.photo_url || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const initialData = subject || createEmptySubject(true);
+  // Fetch subject types and case types
+  const { data: subjectTypes } = useSubjectTypesForPublicForm(organizationId);
+  const { data: caseTypes } = useCaseTypesForPublicForm(organizationId);
+
+  // Get allowed subject types for selected case type
+  const selectedCaseType = caseTypes?.find(ct => ct.id === caseTypeId);
+  const allowedSubjectTypes = subjectTypes?.filter(st => 
+    !selectedCaseType?.allowed_subject_types?.length || 
+    selectedCaseType.allowed_subject_types.includes(st.id)
+  );
+
+  // Determine initial subject type
+  const initialSubjectTypeId = subject?.subject_type_id || subjectTypeId || selectedCaseType?.default_subject_type || null;
+  
+  const initialData = subject || createEmptySubject(true, initialSubjectTypeId || undefined);
 
   const schema = z.object({
     id: z.string(),
     subject_type_id: z.string().nullable(),
     is_primary: z.boolean(),
-    first_name: z.string(),
+    first_name: z.string().min(1, "First name is required"),
     middle_name: z.string(),
-    last_name: z.string(),
+    last_name: z.string().min(1, "Last name is required"),
     country: z.string(),
     address1: z.string(),
     address2: z.string(),
@@ -98,7 +123,7 @@ export function SubjectInformationStep({
     handleSubmit,
     setValue,
     watch,
-    formState: { isSubmitting },
+    formState: { errors, isSubmitting },
   } = useForm<SubjectData>({
     resolver: zodResolver(schema),
     defaultValues: initialData,
@@ -106,6 +131,29 @@ export function SubjectInformationStep({
 
   const selectedCountry = watch("country");
   const selectedSex = watch("sex");
+  const selectedSubjectTypeId = watch("subject_type_id");
+  const watchedDOB = watch("date_of_birth");
+  const watchedSSN = watch("ssn");
+  const watchedCellPhone = watch("cell_phone");
+
+  // Get subject type name for display
+  const subjectTypeName = subjectTypes?.find(st => st.id === selectedSubjectTypeId)?.name;
+
+  // Auto-calculate age from DOB
+  useEffect(() => {
+    if (watchedDOB) {
+      const birthDate = new Date(watchedDOB);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (age >= 0 && age < 150) {
+        setValue("age", age);
+      }
+    }
+  }, [watchedDOB, setValue]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -186,13 +234,35 @@ export function SubjectInformationStep({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            {isEditing ? 'Edit Subject' : 'Subject Information'}
+            {subjectTypeName ? `${subjectTypeName} Information` : (isEditing ? 'Edit Subject' : 'Subject Information')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Subject Type Selection */}
+          {allowedSubjectTypes && allowedSubjectTypes.length > 0 && (
+            <div className="space-y-2">
+              <Label>Subject Type <span className="text-destructive">*</span></Label>
+              <Select
+                value={selectedSubjectTypeId || ''}
+                onValueChange={(value) => setValue("subject_type_id", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select subject type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allowedSubjectTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Full Name */}
           <div className="space-y-2">
-            <Label>Full Name</Label>
+            <Label>Full Name <span className="text-destructive">*</span></Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <div className="relative">
@@ -203,9 +273,17 @@ export function SubjectInformationStep({
                     {...register("first_name")}
                   />
                 </div>
+                {errors.first_name && (
+                  <p className="text-xs text-destructive">{errors.first_name.message}</p>
+                )}
               </div>
               <Input placeholder="Middle Name" {...register("middle_name")} />
-              <Input placeholder="Last Name" {...register("last_name")} />
+              <div className="space-y-1">
+                <Input placeholder="Last Name" {...register("last_name")} />
+                {errors.last_name && (
+                  <p className="text-xs text-destructive">{errors.last_name.message}</p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -261,11 +339,11 @@ export function SubjectInformationStep({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="cell_phone">Cell Phone</Label>
-              <Input
+              <PhoneInput
                 id="cell_phone"
-                type="tel"
+                value={watchedCellPhone}
+                onChange={(value) => setValue("cell_phone", value)}
                 placeholder="(555) 555-5555"
-                {...register("cell_phone")}
               />
             </div>
             <div className="space-y-2">
@@ -288,7 +366,9 @@ export function SubjectInformationStep({
               <Input
                 id="age"
                 type="number"
-                placeholder="Age"
+                placeholder="Auto-calculated"
+                readOnly
+                className="bg-muted"
                 {...register("age", { valueAsNumber: true })}
               />
             </div>
@@ -300,6 +380,9 @@ export function SubjectInformationStep({
                 placeholder="email@example.com"
                 {...register("email")}
               />
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              )}
             </div>
           </div>
 
@@ -348,17 +431,20 @@ export function SubjectInformationStep({
                   <RadioGroupItem value="female" id="sex-female" />
                   <Label htmlFor="sex-female" className="cursor-pointer">Female</Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="unknown" id="sex-unknown" />
+                  <Label htmlFor="sex-unknown" className="cursor-pointer">Unknown</Label>
+                </div>
               </RadioGroup>
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="ssn">Social Security Number</Label>
-            <Input
+            <SSNInput
               id="ssn"
-              type="password"
-              placeholder="XXX-XX-XXXX"
-              {...register("ssn")}
+              value={watchedSSN}
+              onChange={(value) => setValue("ssn", value)}
             />
             <p className="text-xs text-muted-foreground">This field is encrypted and securely stored.</p>
           </div>

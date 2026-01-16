@@ -114,7 +114,7 @@ export function useSubjectTypesForPublicForm(organizationId: string | undefined)
 
       const { data, error } = await supabase
         .from('subject_types')
-        .select('id, name, category, fields_config, is_active')
+        .select('id, name, category, is_active')
         .eq('organization_id', organizationId)
         .eq('is_active', true)
         .order('display_order', { ascending: true });
