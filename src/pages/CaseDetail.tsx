@@ -833,6 +833,7 @@ const CaseDetail = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* Client Column */}
                     <ClientInfoSection 
+                      caseId={id!}
                       account={account ? {
                         id: account.id,
                         name: account.name,
@@ -851,6 +852,7 @@ const CaseDetail = () => {
                         email: contact.email,
                       } : null}
                       accountName={account?.name}
+                      onUpdate={fetchCaseData}
                     />
 
                     {/* Team + Related Cases Column */}
