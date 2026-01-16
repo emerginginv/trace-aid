@@ -5,10 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Save, Loader2, FileInput } from "lucide-react";
+import { X, Plus, Save, Loader2, FileInput, Users, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useOrganizationProfilesQuery } from "@/hooks/queries/useProfilesQuery";
 
 export function CaseRequestSettingsSection() {
   const { organization } = useOrganization();
@@ -17,6 +21,10 @@ export function CaseRequestSettingsSection() {
   const [newEmail, setNewEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [userPickerOpen, setUserPickerOpen] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  
+  const { data: profiles = [] } = useOrganizationProfilesQuery();
 
   useEffect(() => {
     if (organization?.id) {
@@ -129,6 +137,45 @@ export function CaseRequestSettingsSection() {
     }
   };
 
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUserIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
+
+  const addSelectedUsers = () => {
+    const selectedProfiles = profiles.filter(p => selectedUserIds.has(p.id));
+    const newEmails: string[] = [];
+    let duplicateCount = 0;
+
+    selectedProfiles.forEach(profile => {
+      const email = profile.email.toLowerCase();
+      if (!notificationEmails.includes(email)) {
+        newEmails.push(email);
+      } else {
+        duplicateCount++;
+      }
+    });
+
+    if (newEmails.length > 0) {
+      setNotificationEmails([...notificationEmails, ...newEmails]);
+      toast.success(`Added ${newEmails.length} recipient${newEmails.length > 1 ? 's' : ''}`);
+    }
+    
+    if (duplicateCount > 0) {
+      toast.info(`${duplicateCount} email${duplicateCount > 1 ? 's were' : ' was'} already in the list`);
+    }
+
+    setSelectedUserIds(new Set());
+    setUserPickerOpen(false);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -171,12 +218,71 @@ export function CaseRequestSettingsSection() {
             <Input
               id="notification-emails"
               type="email"
-              placeholder="Enter email address"
+              placeholder="Enter external email address"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <Button type="button" variant="outline" onClick={addEmail}>
+            <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline" title="Add team members">
+                  <Users className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="end">
+                <Command>
+                  <CommandInput placeholder="Search team members..." />
+                  <CommandList>
+                    <CommandEmpty>No team members found.</CommandEmpty>
+                    <CommandGroup>
+                      {profiles.map((profile) => {
+                        const isSelected = selectedUserIds.has(profile.id);
+                        const isAlreadyAdded = notificationEmails.includes(profile.email.toLowerCase());
+                        
+                        return (
+                          <CommandItem
+                            key={profile.id}
+                            value={`${profile.full_name || ''} ${profile.email}`}
+                            onSelect={() => !isAlreadyAdded && toggleUserSelection(profile.id)}
+                            className={isAlreadyAdded ? "opacity-50" : ""}
+                          >
+                            <div className="flex items-center gap-3 w-full">
+                              <Checkbox
+                                checked={isSelected || isAlreadyAdded}
+                                disabled={isAlreadyAdded}
+                                className="pointer-events-none"
+                              />
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <span className="font-medium truncate">
+                                  {profile.full_name || "Unknown"}
+                                </span>
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {profile.email}
+                                </span>
+                              </div>
+                              {isAlreadyAdded && (
+                                <Check className="h-4 w-4 text-muted-foreground shrink-0" />
+                              )}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+                <div className="p-2 border-t">
+                  <Button
+                    onClick={addSelectedUsers}
+                    disabled={selectedUserIds.size === 0}
+                    className="w-full"
+                    size="sm"
+                  >
+                    Add {selectedUserIds.size > 0 ? `${selectedUserIds.size} Selected` : "Selected"}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button type="button" variant="outline" onClick={addEmail} title="Add custom email">
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -197,7 +303,7 @@ export function CaseRequestSettingsSection() {
             </div>
           )}
           <p className="text-sm text-muted-foreground">
-            These email addresses will receive notifications for all new case request submissions.
+            Click the team icon to select organization members, or enter external email addresses manually.
           </p>
         </div>
 
