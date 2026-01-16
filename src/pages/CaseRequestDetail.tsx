@@ -208,22 +208,47 @@ export default function CaseRequestDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Generate a unique case number based on timestamp
-      const timestamp = Date.now().toString(36).toUpperCase();
-      const caseNumber = `CASE-${timestamp}`;
+      // Step 1: Generate proper case number using database function
+      let caseNumber: string;
+      let seriesNumber: number | null = null;
+      let seriesInstance: number = 1;
 
-      // Create the case
+      const { data: caseNumberData, error: caseNumberError } = await supabase
+        .rpc('generate_next_case_number', { 
+          p_organization_id: organization.id,
+          p_parent_case_id: null 
+        });
+
+      if (caseNumberError || !caseNumberData) {
+        console.error('Error generating case number:', caseNumberError);
+        // Fallback to timestamp-based number
+        const timestamp = Date.now().toString(36).toUpperCase();
+        caseNumber = `CASE-${timestamp}`;
+      } else {
+        // Cast the response to the expected shape
+        const caseNumResult = caseNumberData as { case_number: string; series_number: number | null; series_instance: number };
+        caseNumber = caseNumResult.case_number;
+        seriesNumber = caseNumResult.series_number;
+        seriesInstance = caseNumResult.series_instance || 1;
+      }
+
+      // Step 2: Determine primary subject for title
       const primarySubject = request.case_request_subjects.find(s => s.is_primary) 
         || request.case_request_subjects[0];
 
+      // Step 3: Create the case
       const { data: newCase, error: createError } = await supabase
         .from('cases')
         .insert([{
+          organization_id: organization.id,
           user_id: user.id,
           case_number: caseNumber,
+          series_number: seriesNumber,
+          series_instance: seriesInstance,
           account_id: request.matched_account_id,
           contact_id: request.matched_contact_id,
           case_type_id: request.case_type_id,
+          case_manager_id: user.id,
           title: primarySubject 
             ? [primarySubject.last_name, primarySubject.first_name].filter(Boolean).join(', ')
             : 'Case from Request',
@@ -238,7 +263,7 @@ export default function CaseRequestDetail() {
 
       if (createError) throw createError;
 
-      // Create case subjects from request subjects
+      // Step 4: Create case subjects from request subjects
       if (request.case_request_subjects.length > 0) {
         const subjectsToCreate = request.case_request_subjects.map(sub => ({
           organization_id: organization.id,
@@ -265,7 +290,53 @@ export default function CaseRequestDetail() {
         await supabase.from('case_subjects').insert(subjectsToCreate);
       }
 
-      // Update the request status
+      // Step 5: Copy files from request to case attachments
+      if (request.case_request_files.length > 0) {
+        for (const file of request.case_request_files) {
+          try {
+            const fileExt = file.file_name.split('.').pop() || 'bin';
+            const newFilePath = `${user.id}/${newCase.id}/${crypto.randomUUID()}.${fileExt}`;
+            
+            // Download from request bucket
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('case-request-files')
+              .download(file.storage_path);
+              
+            if (downloadError) {
+              console.error('Error downloading file:', downloadError);
+              continue; // Skip this file but continue with others
+            }
+
+            if (fileData) {
+              // Upload to case attachments bucket
+              const { error: uploadError } = await supabase.storage
+                .from('case-attachments')
+                .upload(newFilePath, fileData);
+                
+              if (uploadError) {
+                console.error('Error uploading file:', uploadError);
+                continue;
+              }
+
+              // Create case_attachments record
+              await supabase.from('case_attachments').insert({
+                case_id: newCase.id,
+                organization_id: organization.id,
+                user_id: user.id,
+                file_name: file.file_name,
+                file_path: newFilePath,
+                file_type: file.file_type || 'application/octet-stream',
+                file_size: file.file_size || 0,
+              });
+            }
+          } catch (fileError) {
+            console.error('Error copying file:', fileError);
+            // Continue with other files even if one fails
+          }
+        }
+      }
+
+      // Step 6: Update the request status
       await supabase
         .from('case_requests')
         .update({
