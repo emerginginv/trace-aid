@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, UserPlus, Users, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"; // Global TooltipProvider in App.tsx
 import { CaseManagerCard } from "./CaseManagerCard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ContextualHelp } from "@/components/help-center";
