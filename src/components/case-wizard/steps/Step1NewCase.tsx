@@ -35,7 +35,7 @@ const formSchema = z.object({
   account_id: z.string().min(1, "Client is required"),
   contact_id: z.string().min(1, "Primary contact is required"),
   status: z.string().min(1, "Case type is required"),
-  title: z.string().max(200).optional(),
+  
   description: z.string().max(1000).optional(),
   due_date: z.date().optional(),
   assign_myself_as: z.enum(["none", "case_manager", "investigator"]).default("none"),
@@ -85,7 +85,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
       account_id: existingData?.account_id || "",
       contact_id: existingData?.contact_id || "",
       status: existingData?.status || "",
-      title: existingData?.title || "",
+      
       description: existingData?.description || "",
       due_date: existingData?.due_date || undefined,
       assign_myself_as: "none",
@@ -242,7 +242,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
     try {
       // Prepare case data - pricing_profile_id is automatically set by database trigger
       const caseData: any = {
-        title: data.title || generatedCaseNumber,
+        title: "", // Will be set from primary subject in Step 2
         case_number: generatedCaseNumber,
         description: data.description || null,
         status: "Draft",
@@ -281,7 +281,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         account_id: data.account_id,
         contact_id: data.contact_id,
         status: data.status,
-        title: data.title || "",
+        title: "", // Will be set from primary subject
         case_number: generatedCaseNumber,
         description: data.description || "",
         due_date: data.due_date || null,
@@ -432,23 +432,18 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
             )}
           />
 
-          {/* Case Name / Title */}
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Case Name / Internal Reference</FormLabel>
-                <FormControl>
-                  <Input placeholder="Optional case name" {...field} />
-                </FormControl>
-                <FormDescription>
-                  Leave blank to use the case number as the title
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Case Name Preview (read-only) */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Case Name</label>
+            <Input
+              value="(Will be set from Primary Subject)"
+              disabled
+              className="bg-muted text-muted-foreground italic"
+            />
+            <p className="text-xs text-muted-foreground">
+              The case name is automatically derived from the Primary Subject's name, which you'll add in the next step.
+            </p>
+          </div>
 
           {/* Reference Number */}
           <FormField
