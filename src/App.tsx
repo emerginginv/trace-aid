@@ -1,19 +1,10 @@
 import * as React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { TenantProvider } from "./contexts/TenantContext";
-import { OrganizationProvider } from "./contexts/OrganizationContext";
-import { ImpersonationProvider } from "./contexts/ImpersonationContext";
-import { GlobalLoadingProvider } from "./contexts/GlobalLoadingContext";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { Providers } from "@/components/providers";
 import { GlobalLoadingIndicator } from "./components/ui/global-loading-indicator";
 import { RouteTransitionDetector } from "./hooks/use-route-transition";
-import { BreadcrumbProvider } from "./contexts/BreadcrumbContext";
-import { FaviconProvider } from "./components/FaviconProvider";
-import { NavigationProvider } from "./contexts/NavigationContext";
 import Auth from "./pages/Auth";
 import { Onboarding } from "./components/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -80,45 +71,14 @@ import NewExpenseEntry from "./pages/NewExpenseEntry";
 import EditExpenseEntry from "./pages/EditExpenseEntry";
 import ExpenseEntryDetail from "./pages/ExpenseEntryDetail";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 const App = () => {
   return (
-    <TenantProvider>
-      <QueryClientProvider client={queryClient}>
-        <GlobalLoadingProvider>
-          <ThemeProvider 
-            attribute="class" 
-            defaultTheme="system" 
-            enableSystem
-            disableTransitionOnChange
-          >
-            {/*
-              RADIX UI PROVIDER REQUIREMENTS:
-              - TooltipProvider: Required at root for all Tooltip components to function.
-                Mount once here; individual components should NOT wrap in TooltipProvider.
-              - Dialog/AlertDialog/Popover: Per-instance Root components, no global provider.
-              - Toaster/Sonner: Contain their own providers internally.
-            */}
-            <TooltipProvider>
-              <OrganizationProvider>
-                <BrowserRouter>
-                <NavigationProvider>
-                  <ImpersonationProvider>
-                    <BreadcrumbProvider>
-                      <FaviconProvider>
-                      <GlobalLoadingIndicator />
-              <RouteTransitionDetector />
-              <Toaster />
-              <Sonner />
-              <Routes>
+    <Providers>
+      <GlobalLoadingIndicator />
+      <RouteTransitionDetector />
+      <Toaster />
+      <Sonner />
+      <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
             {/* Public Trust Center - No auth required */}
@@ -675,18 +635,8 @@ const App = () => {
           }
         />
         <Route path="*" element={<NotFound />} />
-                </Routes>
-                      </FaviconProvider>
-                    </BreadcrumbProvider>
-                  </ImpersonationProvider>
-                </NavigationProvider>
-              </BrowserRouter>
-              </OrganizationProvider>
-            </TooltipProvider>
-          </ThemeProvider>
-        </GlobalLoadingProvider>
-      </QueryClientProvider>
-    </TenantProvider>
+      </Routes>
+    </Providers>
   );
 };
 
