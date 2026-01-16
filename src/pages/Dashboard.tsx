@@ -112,8 +112,8 @@ const Dashboard = () => {
       title: "Accounts",
       value: stats.totalAccounts,
       icon: Building2,
-      color: "text-accent",
-      bgColor: "bg-accent/10",
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10",
     },
   ];
 
