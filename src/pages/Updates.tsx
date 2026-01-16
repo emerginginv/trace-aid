@@ -1,16 +1,18 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { useCaseUpdatesQuery } from "@/hooks/queries";
+import { useViewMode } from "@/hooks/use-view-mode";
+import { useUpdateEnrichment } from "@/hooks/use-enriched-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FileText, Users, Bot, Clock, MoreVertical, Eye, ExternalLink } from "lucide-react";
+import { getUpdateTypeBadgeClasses } from "@/lib/statusUtils";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { HelpfulHeader } from "@/components/help-center/ContextualHelp";
 import { format, subDays, isAfter } from "date-fns";
@@ -58,16 +60,7 @@ const UPDATE_TYPES = [
   { value: "Other", label: "Other" },
 ];
 
-const getUpdateTypeBadgeColor = (type: string) => {
-  switch (type) {
-    case 'Case Update': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-    case 'Client Contact': return 'bg-green-500/10 text-green-600 border-green-500/20';
-    case '3rd-Party Contact': return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
-    case 'Surveillance': return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
-    case 'Accounting': return 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20';
-    default: return 'bg-gray-500/10 text-gray-600 border-gray-500/20';
-  }
-};
+// Badge color function moved to src/lib/statusUtils.ts - use getUpdateTypeBadgeClasses
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { key: "title", label: "Title" },
@@ -87,53 +80,16 @@ export default function Updates() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [specialFilter, setSpecialFilter] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
-    return (localStorage.getItem('updates-view-mode') as 'list' | 'cards') || 'list';
-  });
+  const [viewMode, setViewMode] = useViewMode<'list' | 'cards'>('updates-view-mode', 'list');
 
   const [showCaseSelector, setShowCaseSelector] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [showUpdateForm, setShowUpdateForm] = useState(false);
 
   const { data: rawUpdates = [], isLoading } = useCaseUpdatesQuery({ limit: 500 });
-  const [enrichedUpdates, setEnrichedUpdates] = useState<UpdateWithCase[]>([]);
-  const [enriching, setEnriching] = useState(false);
-
-  useEffect(() => { localStorage.setItem('updates-view-mode', viewMode); }, [viewMode]);
-
-  useEffect(() => {
-    const enrichUpdates = async () => {
-      if (rawUpdates.length === 0) { setEnrichedUpdates([]); return; }
-      setEnriching(true);
-      try {
-        const caseIds = [...new Set(rawUpdates.map(u => u.case_id))];
-        const userIds = [...new Set(rawUpdates.map(u => u.user_id))];
-
-        const [casesResult, usersResult] = await Promise.all([
-          caseIds.length > 0 ? supabase.from("cases").select("id, case_number, title").in("id", caseIds) : { data: [] },
-          userIds.length > 0 ? supabase.from("profiles").select("id, full_name, avatar_url").in("id", userIds) : { data: [] },
-        ]);
-
-        const casesMap = (casesResult.data || []).reduce((acc, c) => ({ ...acc, [c.id]: c }), {} as Record<string, any>);
-        const usersMap = (usersResult.data || []).reduce((acc, u) => ({ ...acc, [u.id]: u }), {} as Record<string, any>);
-
-        const enriched = rawUpdates
-          .filter(u => casesMap[u.case_id])
-          .map(u => ({
-            ...u,
-            cases: casesMap[u.case_id],
-            author: usersMap[u.user_id] || null,
-          }));
-
-        setEnrichedUpdates(enriched);
-      } catch (error) {
-        console.error("Error enriching updates:", error);
-      } finally {
-        setEnriching(false);
-      }
-    };
-    enrichUpdates();
-  }, [rawUpdates]);
+  
+  // Use the shared enrichment hook
+  const { enrichedData: enrichedUpdates, isEnriching: enriching } = useUpdateEnrichment(rawUpdates);
 
   const counts = useMemo(() => {
     const oneWeekAgo = subDays(new Date(), 7);
@@ -273,7 +229,7 @@ export default function Updates() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell><Badge variant="outline" className={getUpdateTypeBadgeColor(update.update_type)}>{update.update_type}</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className={getUpdateTypeBadgeClasses(update.update_type)}>{update.update_type}</Badge></TableCell>
                   <TableCell>
                     <div className="text-sm">
                       <div className="font-medium">{update.cases.case_number}</div>
