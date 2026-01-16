@@ -39,7 +39,6 @@ const COUNTRIES = [
 ];
 
 const MOBILE_CARRIERS = [
-  { value: "", label: "Select Carrier" },
   { value: "AT&T", label: "AT&T" },
   { value: "Verizon", label: "Verizon" },
   { value: "T-Mobile", label: "T-Mobile" },
