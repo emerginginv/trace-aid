@@ -34,6 +34,7 @@ import { CaseServicesTab } from "@/components/settings/CaseServicesTab";
 import { CaseTypesTab } from "@/components/settings/CaseTypesTab";
 import { SubjectTypesTab } from "@/components/settings/SubjectTypesTab";
 import { FinanceItemsTab } from "@/components/settings/FinanceItemsTab";
+import { CaseRequestFormsTab } from "@/components/settings/CaseRequestFormsTab";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(100, "Name must be less than 100 characters"),
@@ -695,6 +696,13 @@ const Settings = () => {
             {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
               <TabsContent value="finance-items" className="space-y-6">
                 <FinanceItemsTab />
+              </TabsContent>
+            )}
+
+            {/* Case Request Forms Tab */}
+            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+              <TabsContent value="case-request-forms" className="space-y-6">
+                <CaseRequestFormsTab />
               </TabsContent>
             )}
 
