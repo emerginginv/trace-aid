@@ -70,6 +70,9 @@ import NewCaseUpdate from "./pages/NewCaseUpdate";
 import NewExpenseEntry from "./pages/NewExpenseEntry";
 import EditExpenseEntry from "./pages/EditExpenseEntry";
 import ExpenseEntryDetail from "./pages/ExpenseEntryDetail";
+import CaseRequests from "./pages/CaseRequests";
+import CaseRequestDetail from "./pages/CaseRequestDetail";
+import NewCaseRequest from "./pages/NewCaseRequest";
 
 const App = () => {
   return (
@@ -134,6 +137,37 @@ const App = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <CaseWizard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Case Request Routes - must be before /cases/:id */}
+        <Route
+          path="/cases/requests"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <CaseRequests />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/requests/new"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <NewCaseRequest />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/requests/:id"
+          element={
+            <ProtectedRoute blockVendors={true}>
+              <DashboardLayout>
+                <CaseRequestDetail />
               </DashboardLayout>
             </ProtectedRoute>
           }
