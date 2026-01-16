@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,24 @@ import { Step1Data } from "@/hooks/useCaseRequestForm";
 import { CaseRequestFormConfig, isFieldVisible, isFieldRequired, getFieldLabel } from "@/types/case-request-form-config";
 import { useCaseTypesForPublicForm } from "@/hooks/queries/useCaseRequestFormBySlug";
 import { Loader2 } from "lucide-react";
+import { PhoneInput } from "../PhoneInput";
+import { useMemo } from "react";
 
 const COUNTRIES = [
   { value: "United States", label: "United States" },
   { value: "Canada", label: "Canada" },
   { value: "United Kingdom", label: "United Kingdom" },
   { value: "Australia", label: "Australia" },
+  { value: "Mexico", label: "Mexico" },
+  { value: "Germany", label: "Germany" },
+  { value: "France", label: "France" },
+  { value: "Spain", label: "Spain" },
+  { value: "Italy", label: "Italy" },
+  { value: "Netherlands", label: "Netherlands" },
+  { value: "Brazil", label: "Brazil" },
+  { value: "Japan", label: "Japan" },
+  { value: "India", label: "India" },
+  { value: "China", label: "China" },
   { value: "Other", label: "Other" },
 ];
 
@@ -33,6 +45,9 @@ const MOBILE_CARRIERS = [
   { value: "T-Mobile", label: "T-Mobile" },
   { value: "Sprint", label: "Sprint" },
   { value: "US Cellular", label: "US Cellular" },
+  { value: "Cricket", label: "Cricket" },
+  { value: "Metro PCS", label: "Metro PCS" },
+  { value: "Boost Mobile", label: "Boost Mobile" },
   { value: "Other", label: "Other" },
 ];
 
@@ -52,35 +67,44 @@ export function ClientInformationStep({
   const { data: caseTypes, isLoading: loadingCaseTypes } = useCaseTypesForPublicForm(organizationId);
 
   // Build schema dynamically based on field config
-  const schema = z.object({
-    case_type_id: z.string().min(1, "Please select a case type"),
-    submitted_client_name: isFieldRequired(fieldConfig, 'clientInformation', 'companyName')
-      ? z.string().min(1, "Company name is required")
-      : z.string(),
-    submitted_client_country: z.string(),
-    submitted_client_address1: z.string(),
-    submitted_client_address2: z.string(),
-    submitted_client_address3: z.string(),
-    submitted_client_city: z.string(),
-    submitted_client_state: z.string(),
-    submitted_client_zip: z.string(),
-    submitted_contact_first_name: z.string(),
-    submitted_contact_middle_name: z.string(),
-    submitted_contact_last_name: z.string(),
-    submitted_contact_email: isFieldRequired(fieldConfig, 'contactInformation', 'email')
-      ? z.string().email("Valid email is required")
-      : z.string().email().or(z.literal('')),
-    submitted_contact_office_phone: z.string(),
-    submitted_contact_mobile_phone: z.string(),
-    submitted_contact_mobile_carrier: z.string(),
-    submitted_contact_home_phone: z.string(),
-  });
+  const schema = useMemo(() => {
+    const contactNameRequired = isFieldRequired(fieldConfig, 'contactInformation', 'contactName');
+    
+    return z.object({
+      case_type_id: z.string().min(1, "Please select a case type"),
+      submitted_client_name: isFieldRequired(fieldConfig, 'clientInformation', 'companyName')
+        ? z.string().min(1, "Company name is required")
+        : z.string(),
+      submitted_client_country: z.string(),
+      submitted_client_address1: z.string(),
+      submitted_client_address2: z.string(),
+      submitted_client_address3: z.string(),
+      submitted_client_city: z.string(),
+      submitted_client_state: z.string(),
+      submitted_client_zip: z.string(),
+      submitted_contact_first_name: contactNameRequired
+        ? z.string().min(1, "First name is required")
+        : z.string(),
+      submitted_contact_middle_name: z.string(),
+      submitted_contact_last_name: contactNameRequired
+        ? z.string().min(1, "Last name is required")
+        : z.string(),
+      submitted_contact_email: isFieldRequired(fieldConfig, 'contactInformation', 'email')
+        ? z.string().email("Valid email is required")
+        : z.string().email().or(z.literal('')),
+      submitted_contact_office_phone: z.string(),
+      submitted_contact_mobile_phone: z.string(),
+      submitted_contact_mobile_carrier: z.string(),
+      submitted_contact_home_phone: z.string(),
+    });
+  }, [fieldConfig]);
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<Step1Data>({
     resolver: zodResolver(schema),
@@ -88,6 +112,7 @@ export function ClientInformationStep({
   });
 
   const selectedCountry = watch("submitted_client_country");
+  const contactNameRequired = isFieldRequired(fieldConfig, 'contactInformation', 'contactName');
 
   const showClientInfo = isFieldVisible(fieldConfig, 'clientInformation', 'companyName') ||
     isFieldVisible(fieldConfig, 'clientInformation', 'country') ||
@@ -247,20 +272,42 @@ export function ClientInformationStep({
           </CardHeader>
           <CardContent className="space-y-4">
             {isFieldVisible(fieldConfig, 'contactInformation', 'contactName') && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="submitted_contact_first_name">First Name</Label>
-                  <Input id="submitted_contact_first_name" {...register("submitted_contact_first_name")} />
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="submitted_contact_first_name">
+                      First Name
+                      {contactNameRequired && <span className="text-destructive"> *</span>}
+                    </Label>
+                    <Input 
+                      id="submitted_contact_first_name" 
+                      {...register("submitted_contact_first_name")} 
+                      className={errors.submitted_contact_first_name ? "border-destructive" : ""}
+                    />
+                    {errors.submitted_contact_first_name && (
+                      <p className="text-sm text-destructive">{errors.submitted_contact_first_name.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="submitted_contact_middle_name">Middle Name</Label>
+                    <Input id="submitted_contact_middle_name" {...register("submitted_contact_middle_name")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="submitted_contact_last_name">
+                      Last Name
+                      {contactNameRequired && <span className="text-destructive"> *</span>}
+                    </Label>
+                    <Input 
+                      id="submitted_contact_last_name" 
+                      {...register("submitted_contact_last_name")} 
+                      className={errors.submitted_contact_last_name ? "border-destructive" : ""}
+                    />
+                    {errors.submitted_contact_last_name && (
+                      <p className="text-sm text-destructive">{errors.submitted_contact_last_name.message}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="submitted_contact_middle_name">Middle Name</Label>
-                  <Input id="submitted_contact_middle_name" {...register("submitted_contact_middle_name")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="submitted_contact_last_name">Last Name</Label>
-                  <Input id="submitted_contact_last_name" {...register("submitted_contact_last_name")} />
-                </div>
-              </div>
+              </>
             )}
 
             {isFieldVisible(fieldConfig, 'contactInformation', 'email') && (
@@ -286,11 +333,17 @@ export function ClientInformationStep({
             {isFieldVisible(fieldConfig, 'contactInformation', 'officePhone') && (
               <div className="space-y-2">
                 <Label htmlFor="submitted_contact_office_phone">Office Phone</Label>
-                <Input
-                  id="submitted_contact_office_phone"
-                  type="tel"
-                  {...register("submitted_contact_office_phone")}
-                  placeholder="(555) 555-5555"
+                <Controller
+                  name="submitted_contact_office_phone"
+                  control={control}
+                  render={({ field }) => (
+                    <PhoneInput
+                      id="submitted_contact_office_phone"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                  )}
                 />
               </div>
             )}
@@ -299,11 +352,17 @@ export function ClientInformationStep({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="submitted_contact_mobile_phone">Mobile Phone</Label>
-                  <Input
-                    id="submitted_contact_mobile_phone"
-                    type="tel"
-                    {...register("submitted_contact_mobile_phone")}
-                    placeholder="(555) 555-5555"
+                  <Controller
+                    name="submitted_contact_mobile_phone"
+                    control={control}
+                    render={({ field }) => (
+                      <PhoneInput
+                        id="submitted_contact_mobile_phone"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                      />
+                    )}
                   />
                 </div>
                 <div className="space-y-2">
@@ -330,11 +389,17 @@ export function ClientInformationStep({
             {isFieldVisible(fieldConfig, 'contactInformation', 'homePhone') && (
               <div className="space-y-2">
                 <Label htmlFor="submitted_contact_home_phone">Home Phone</Label>
-                <Input
-                  id="submitted_contact_home_phone"
-                  type="tel"
-                  {...register("submitted_contact_home_phone")}
-                  placeholder="(555) 555-5555"
+                <Controller
+                  name="submitted_contact_home_phone"
+                  control={control}
+                  render={({ field }) => (
+                    <PhoneInput
+                      id="submitted_contact_home_phone"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                  )}
                 />
               </div>
             )}
