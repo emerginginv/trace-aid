@@ -46,6 +46,7 @@ import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { useCaseTypesQuery, CaseType } from "@/hooks/queries/useCaseTypesQuery";
 import { DueDateRecalculateDialog } from "@/components/case-detail/DueDateRecalculateDialog";
 import { ServiceConflictDialog } from "@/components/case-detail/ServiceConflictDialog";
+import { BudgetConflictDialog } from "@/components/case-detail/BudgetConflictDialog";
 
 const caseSchema = z.object({
   title: z.string().max(200).optional(),
@@ -132,6 +133,19 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     newCaseTypeId: string;
     newCaseTypeName: string;
     conflictingServices: Array<{ id: string; name: string; code?: string | null }>;
+  } | null>(null);
+
+  // Budget conflict dialog state
+  const [budgetConflictDialogOpen, setBudgetConflictDialogOpen] = useState(false);
+  const [pendingBudgetConflict, setPendingBudgetConflict] = useState<{
+    newCaseTypeId: string;
+    newCaseTypeName: string;
+    newStrategy: string;
+    currentBudget: {
+      budget_type: string;
+      total_budget_hours: number | null;
+      total_budget_amount: number | null;
+    };
   } | null>(null);
 
   // Fetch case types using React Query
@@ -256,77 +270,207 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     }
   }, [open, editingCase, organization?.id]);
 
-  // Handle case type change - set defaults based on case type
-  const handleCaseTypeChange = async (caseTypeId: string | null) => {
-    if (caseTypeId) {
-      const caseType = caseTypes.find(ct => ct.id === caseTypeId);
-      if (caseType) {
-        // For editing existing cases, check for service conflicts
-        if (editingCase && caseType.allowed_service_ids && caseType.allowed_service_ids.length > 0) {
-          // Fetch current case services
-          const { data: currentInstances } = await supabase
-            .from("case_service_instances")
-            .select(`
-              id, 
-              case_service_id,
-              case_services!inner(name, code)
-            `)
-            .eq("case_id", editingCase.id);
+  // Helper to check if budget conflict exists
+  const checkBudgetConflict = (
+    currentBudget: { budget_type: string; total_budget_hours: number | null; total_budget_amount: number | null },
+    newStrategy: string
+  ): boolean => {
+    // Switching to disabled always conflicts if budget exists
+    if (newStrategy === 'disabled') return true;
+    
+    // Switching to hours_only conflicts if there's dollar data
+    if (newStrategy === 'hours_only' && currentBudget.total_budget_amount) return true;
+    
+    // Switching to money_only conflicts if there's hours data
+    if (newStrategy === 'money_only' && currentBudget.total_budget_hours) return true;
+    
+    return false;
+  };
 
-          // Find services that would be incompatible
-          const conflicting = currentInstances?.filter(
-            instance => !caseType.allowed_service_ids!.includes(instance.case_service_id)
-          ).map(instance => ({
-            id: instance.id,
-            name: (instance.case_services as any)?.name || 'Unknown',
-            code: (instance.case_services as any)?.code || null,
-          }));
+  // Continue checking for service conflicts after budget is resolved
+  const continueWithServiceConflictCheck = async (caseTypeId: string) => {
+    const caseType = caseTypes.find(ct => ct.id === caseTypeId);
+    if (!caseType || !editingCase) {
+      continueWithDueDateCheck(caseTypeId);
+      return;
+    }
 
-          if (conflicting && conflicting.length > 0) {
-            setPendingServiceConflict({
-              newCaseTypeId: caseTypeId,
-              newCaseTypeName: caseType.name,
-              conflictingServices: conflicting,
-            });
-            setServiceConflictDialogOpen(true);
-            return; // Wait for dialog response
-          }
-        }
-        
-        // For editing existing cases with default_due_days, prompt before changing
-        if (editingCase && caseType.default_due_days && caseType.default_due_days > 0) {
-          const currentDueDate = form.getValues("due_date") || null;
-          const newDueDate = addDays(new Date(), caseType.default_due_days);
-          
-          // Show confirmation dialog
-          setPendingDueDateChange({
-            newCaseTypeId: caseTypeId,
-            newDueDate,
-            currentDueDate,
-            defaultDays: caseType.default_due_days,
-            caseTypeName: caseType.name,
-          });
-          setDueDateDialogOpen(true);
-          return; // Don't apply changes yet - wait for dialog response
-        }
-        
-        // For new cases, auto-set due date
-        if (!editingCase && caseType.default_due_days && caseType.default_due_days > 0) {
-          const newDueDate = addDays(new Date(), caseType.default_due_days);
-          form.setValue("due_date", newDueDate);
-        }
-        
-        // Clear budget fields if strategy is disabled
-        if (caseType.budget_strategy === 'disabled') {
-          form.setValue("budget_hours", null);
-          form.setValue("budget_dollars", null);
-        }
+    // Check for service conflicts
+    if (caseType.allowed_service_ids && caseType.allowed_service_ids.length > 0) {
+      const { data: currentInstances } = await supabase
+        .from("case_service_instances")
+        .select(`
+          id, 
+          case_service_id,
+          case_services!inner(name, code)
+        `)
+        .eq("case_id", editingCase.id);
+
+      const conflicting = currentInstances?.filter(
+        instance => !caseType.allowed_service_ids!.includes(instance.case_service_id)
+      ).map(instance => ({
+        id: instance.id,
+        name: (instance.case_services as any)?.name || 'Unknown',
+        code: (instance.case_services as any)?.code || null,
+      }));
+
+      if (conflicting && conflicting.length > 0) {
+        setPendingServiceConflict({
+          newCaseTypeId: caseTypeId,
+          newCaseTypeName: caseType.name,
+          conflictingServices: conflicting,
+        });
+        setServiceConflictDialogOpen(true);
+        return;
       }
     }
+
+    // No service conflicts, continue to due date check
+    continueWithDueDateCheck(caseTypeId);
+  };
+
+  // Continue checking for due date after services are resolved
+  const continueWithDueDateCheck = (caseTypeId: string) => {
+    const caseType = caseTypes.find(ct => ct.id === caseTypeId);
     
-    // Apply the case type change
+    if (editingCase && caseType?.default_due_days && caseType.default_due_days > 0) {
+      const currentDueDate = form.getValues("due_date") || null;
+      const newDueDate = addDays(new Date(), caseType.default_due_days);
+      
+      setPendingDueDateChange({
+        newCaseTypeId: caseTypeId,
+        newDueDate,
+        currentDueDate,
+        defaultDays: caseType.default_due_days,
+        caseTypeName: caseType.name,
+      });
+      setDueDateDialogOpen(true);
+      return;
+    }
+
+    // No due date dialog needed, apply the change
+    applyCaseTypeChange(caseTypeId);
+  };
+
+  // Apply the final case type change
+  const applyCaseTypeChange = (caseTypeId: string | null, newDueDate?: Date) => {
+    const caseType = caseTypeId ? caseTypes.find(ct => ct.id === caseTypeId) : null;
+    
     setSelectedCaseTypeId(caseTypeId);
     form.setValue("case_type_id", caseTypeId);
+    
+    if (newDueDate) {
+      form.setValue("due_date", newDueDate);
+    }
+    
+    // Clear budget fields if strategy is disabled (for form display only - actual budget deletion is handled in dialog confirm)
+    if (caseType?.budget_strategy === 'disabled') {
+      form.setValue("budget_hours", null);
+      form.setValue("budget_dollars", null);
+    }
+  };
+
+  // Handle case type change - set defaults based on case type
+  const handleCaseTypeChange = async (caseTypeId: string | null) => {
+    if (!caseTypeId) {
+      // Clearing case type
+      applyCaseTypeChange(null);
+      return;
+    }
+
+    const caseType = caseTypes.find(ct => ct.id === caseTypeId);
+    if (!caseType) {
+      applyCaseTypeChange(caseTypeId);
+      return;
+    }
+
+    // For new cases, just apply with auto-set due date
+    if (!editingCase) {
+      if (caseType.default_due_days && caseType.default_due_days > 0) {
+        const newDueDate = addDays(new Date(), caseType.default_due_days);
+        form.setValue("due_date", newDueDate);
+      }
+      applyCaseTypeChange(caseTypeId);
+      return;
+    }
+
+    // For editing existing cases, check conflicts in order: Budget → Services → Due Date
+    const newStrategy = caseType.budget_strategy || 'both';
+
+    // STEP 1: Check for budget conflicts
+    const { data: currentBudget } = await supabase
+      .from("case_budgets")
+      .select("budget_type, total_budget_hours, total_budget_amount")
+      .eq("case_id", editingCase.id)
+      .maybeSingle();
+
+    if (currentBudget && checkBudgetConflict(currentBudget, newStrategy)) {
+      setPendingBudgetConflict({
+        newCaseTypeId: caseTypeId,
+        newCaseTypeName: caseType.name,
+        newStrategy,
+        currentBudget,
+      });
+      setBudgetConflictDialogOpen(true);
+      return;
+    }
+
+    // No budget conflict, continue to service conflict check
+    await continueWithServiceConflictCheck(caseTypeId);
+  };
+
+  // Handle cancelling budget conflict change
+  const handleCancelBudgetConflict = () => {
+    setPendingBudgetConflict(null);
+  };
+
+  // Handle confirming budget conflict (update/delete budget and continue chain)
+  const handleConfirmBudgetConflict = async () => {
+    if (!pendingBudgetConflict || !editingCase) return;
+
+    const { newCaseTypeId, newStrategy } = pendingBudgetConflict;
+
+    try {
+      if (newStrategy === 'disabled') {
+        // Remove the case_budgets record entirely
+        await supabase
+          .from("case_budgets")
+          .delete()
+          .eq("case_id", editingCase.id);
+        
+        toast.success("Budget configuration removed");
+      } else if (newStrategy === 'hours_only') {
+        // Clear dollar amount, update budget_type
+        await supabase
+          .from("case_budgets")
+          .update({ 
+            total_budget_amount: null,
+            budget_type: 'hours'
+          })
+          .eq("case_id", editingCase.id);
+        
+        toast.success("Dollar budget cleared");
+      } else if (newStrategy === 'money_only') {
+        // Clear hours amount, update budget_type
+        await supabase
+          .from("case_budgets")
+          .update({ 
+            total_budget_hours: null,
+            budget_type: 'money'
+          })
+          .eq("case_id", editingCase.id);
+        
+        toast.success("Hours budget cleared");
+      }
+
+      // Continue to service conflict check
+      await continueWithServiceConflictCheck(newCaseTypeId);
+    } catch (error) {
+      console.error("Error updating budget:", error);
+      toast.error("Failed to update budget configuration");
+    }
+
+    setPendingBudgetConflict(null);
   };
 
   // Handle cancelling service conflict change
@@ -334,12 +478,11 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     setPendingServiceConflict(null);
   };
 
-  // Handle confirming service conflict (remove conflicting services and apply change)
+  // Handle confirming service conflict (remove conflicting services and continue chain)
   const handleConfirmServiceConflict = async () => {
     if (!pendingServiceConflict || !editingCase) return;
 
     const { newCaseTypeId, conflictingServices } = pendingServiceConflict;
-    const caseType = caseTypes.find(ct => ct.id === newCaseTypeId);
 
     try {
       // Remove conflicting service instances
@@ -355,38 +498,12 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
           toast.error("Failed to remove conflicting services");
           return;
         }
-      }
-
-      // Now check for due date change if applicable
-      if (caseType?.default_due_days && caseType.default_due_days > 0) {
-        const currentDueDate = form.getValues("due_date") || null;
-        const newDueDate = addDays(new Date(), caseType.default_due_days);
-        
-        setPendingDueDateChange({
-          newCaseTypeId,
-          newDueDate,
-          currentDueDate,
-          defaultDays: caseType.default_due_days,
-          caseTypeName: caseType.name,
-        });
-        setDueDateDialogOpen(true);
-        setPendingServiceConflict(null);
         
         toast.success(`Removed ${conflictingServices.length} incompatible service${conflictingServices.length !== 1 ? 's' : ''}`);
-        return;
       }
 
-      // Apply case type change
-      setSelectedCaseTypeId(newCaseTypeId);
-      form.setValue("case_type_id", newCaseTypeId);
-
-      // Clear budget fields if strategy is disabled
-      if (caseType?.budget_strategy === 'disabled') {
-        form.setValue("budget_hours", null);
-        form.setValue("budget_dollars", null);
-      }
-
-      toast.success(`Case Type updated. Removed ${conflictingServices.length} incompatible service${conflictingServices.length !== 1 ? 's' : ''}.`);
+      // Continue to due date check
+      continueWithDueDateCheck(newCaseTypeId);
     } catch (error) {
       console.error("Error handling service conflict:", error);
       toast.error("Failed to update Case Type");
@@ -399,17 +516,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const handleKeepCurrentDueDate = () => {
     if (pendingDueDateChange) {
       const { newCaseTypeId } = pendingDueDateChange;
-      const caseType = caseTypes.find(ct => ct.id === newCaseTypeId);
-      
-      // Apply case type change without modifying due date
-      setSelectedCaseTypeId(newCaseTypeId);
-      form.setValue("case_type_id", newCaseTypeId);
-      
-      // Clear budget fields if strategy is disabled
-      if (caseType?.budget_strategy === 'disabled') {
-        form.setValue("budget_hours", null);
-        form.setValue("budget_dollars", null);
-      }
+      applyCaseTypeChange(newCaseTypeId);
     }
     setDueDateDialogOpen(false);
     setPendingDueDateChange(null);
@@ -419,18 +526,7 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   const handleUpdateToNewDueDate = () => {
     if (pendingDueDateChange) {
       const { newCaseTypeId, newDueDate } = pendingDueDateChange;
-      const caseType = caseTypes.find(ct => ct.id === newCaseTypeId);
-      
-      // Apply case type change with new due date
-      setSelectedCaseTypeId(newCaseTypeId);
-      form.setValue("case_type_id", newCaseTypeId);
-      form.setValue("due_date", newDueDate);
-      
-      // Clear budget fields if strategy is disabled
-      if (caseType?.budget_strategy === 'disabled') {
-        form.setValue("budget_hours", null);
-        form.setValue("budget_dollars", null);
-      }
+      applyCaseTypeChange(newCaseTypeId, newDueDate);
     }
     setDueDateDialogOpen(false);
     setPendingDueDateChange(null);
@@ -760,6 +856,17 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         newDueDate={pendingDueDateChange?.newDueDate || new Date()}
         defaultDays={pendingDueDateChange?.defaultDays || 0}
         caseTypeName={pendingDueDateChange?.caseTypeName}
+      />
+
+      {/* Budget Conflict Dialog */}
+      <BudgetConflictDialog
+        open={budgetConflictDialogOpen}
+        onOpenChange={setBudgetConflictDialogOpen}
+        onConfirm={handleConfirmBudgetConflict}
+        onCancel={handleCancelBudgetConflict}
+        currentBudget={pendingBudgetConflict?.currentBudget || null}
+        newStrategy={pendingBudgetConflict?.newStrategy || 'both'}
+        newCaseTypeName={pendingBudgetConflict?.newCaseTypeName || ''}
       />
 
       {/* Service Conflict Dialog */}
