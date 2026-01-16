@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { TenantProvider } from "./contexts/TenantContext";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
 import { ImpersonationProvider } from "./contexts/ImpersonationContext";
@@ -99,8 +100,9 @@ const App = () => {
             enableSystem
             disableTransitionOnChange
           >
-            <OrganizationProvider>
-              <BrowserRouter>
+            <TooltipProvider>
+              <OrganizationProvider>
+                <BrowserRouter>
                 <NavigationProvider>
                   <ImpersonationProvider>
                     <BreadcrumbProvider>
@@ -672,7 +674,8 @@ const App = () => {
                   </ImpersonationProvider>
                 </NavigationProvider>
               </BrowserRouter>
-            </OrganizationProvider>
+              </OrganizationProvider>
+            </TooltipProvider>
           </ThemeProvider>
         </GlobalLoadingProvider>
       </QueryClientProvider>
