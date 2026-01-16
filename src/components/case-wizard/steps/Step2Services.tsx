@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WizardNavigation } from "../WizardNavigation";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
+import { useCaseTypeConfig, filterServicesByAllowed } from "@/hooks/useCaseTypeConfig";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CaseService {
   id: string;
@@ -26,6 +28,7 @@ export interface SelectedService {
 interface Step2ServicesProps {
   caseId: string;
   organizationId: string;
+  caseTypeId?: string; // Added to filter services by Case Type
   onBack: () => void;
   onContinue: (selectedServices: SelectedService[]) => void;
 }
@@ -33,13 +36,17 @@ interface Step2ServicesProps {
 export function Step2Services({
   caseId,
   organizationId,
+  caseTypeId,
   onBack,
   onContinue,
 }: Step2ServicesProps) {
-  const [services, setServices] = useState<CaseService[]>([]);
+  const [allServices, setAllServices] = useState<CaseService[]>([]);
   const [selectedServices, setSelectedServices] = useState<Map<string, SelectedService>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get Case Type configuration for filtering
+  const { config: caseTypeConfig, isLoading: caseTypeLoading } = useCaseTypeConfig(caseTypeId);
 
   useEffect(() => {
     fetchServices();
@@ -60,7 +67,7 @@ export function Step2Services({
 
       if (servicesError) throw servicesError;
 
-      setServices(data || []);
+      setAllServices(data || []);
     } catch (err) {
       console.error("Error fetching services:", err);
       setError("Failed to load services");
@@ -68,6 +75,11 @@ export function Step2Services({
       setLoading(false);
     }
   };
+
+  // Filter services based on Case Type allowed_service_ids
+  const services = useMemo(() => {
+    return filterServicesByAllowed(allServices, caseTypeConfig?.allowedServiceIds);
+  }, [allServices, caseTypeConfig?.allowedServiceIds]);
 
   const toggleService = (service: CaseService) => {
     const newSelected = new Map(selectedServices);
@@ -132,6 +144,16 @@ export function Step2Services({
           Choose the services to be performed on this case. You can skip this step if needed.
         </p>
       </div>
+
+      {/* Show info if services are filtered by Case Type */}
+      {caseTypeConfig?.hasServiceRestrictions && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Only services allowed for this case type are shown ({services.length} available).
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 text-destructive text-sm p-3 border border-destructive/30 rounded-lg bg-destructive/10">
