@@ -42,11 +42,19 @@ type AccountFormData = z.infer<typeof accountSchema>;
 interface AccountFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (accountId?: string) => void;
   organizationId: string;
+  /** When false, stays on current page after creation (useful for wizards). Default: true */
+  navigateAfterCreate?: boolean;
 }
 
-export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: AccountFormProps) {
+export function AccountForm({ 
+  open, 
+  onOpenChange, 
+  onSuccess, 
+  organizationId,
+  navigateAfterCreate = true 
+}: AccountFormProps) {
   const navigate = useNavigate();
   const form = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
@@ -88,19 +96,23 @@ export function AccountForm({ open, onOpenChange, onSuccess, organizationId }: A
 
       if (error) throw error;
 
-      toast.success("Account created successfully", {
-        description: "Configure billing rates to enable invoicing.",
-        action: {
-          label: "Configure Rates",
-          onClick: () => navigate(`/accounts/${newAccount.id}?setup=pricing`),
-        },
-      });
       form.reset();
       onOpenChange(false);
-      onSuccess();
+      onSuccess(newAccount.id);
       
-      // Navigate to account detail with pricing setup prompt
-      navigate(`/accounts/${newAccount.id}?setup=pricing`);
+      // Only navigate if navigateAfterCreate is true (default behavior)
+      if (navigateAfterCreate) {
+        toast.success("Account created successfully", {
+          description: "Configure billing rates to enable invoicing.",
+          action: {
+            label: "Configure Rates",
+            onClick: () => navigate(`/accounts/${newAccount.id}?setup=pricing`),
+          },
+        });
+        navigate(`/accounts/${newAccount.id}?setup=pricing`);
+      } else {
+        toast.success("Account created successfully");
+      }
     } catch (error) {
       toast.error("Failed to create account");
       console.error(error);

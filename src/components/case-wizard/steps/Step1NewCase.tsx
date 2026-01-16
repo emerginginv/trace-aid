@@ -5,6 +5,7 @@ import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -21,19 +22,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { WizardNavigation } from "../WizardNavigation";
 import { CaseFormData } from "../hooks/useCaseWizard";
 import { useCaseTypesQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { useAccountsQuery } from "@/hooks/queries/useAccountsQuery";
 import { useContactsQuery } from "@/hooks/queries/useContactsQuery";
-import { Calendar, Info, Building2 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Calendar, Info, Building2, Plus, X } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { logCaseTypeAudit } from "@/lib/caseTypeAuditLogger";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { ClientAccountCard } from "@/components/case-detail/ClientAccountCard";
+import { AccountForm } from "@/components/AccountForm";
 
 const formSchema = z.object({
   case_type_id: z.string().min(1, "Case type is required"),
@@ -60,6 +63,12 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   const [seriesNumber, setSeriesNumber] = useState<number | null>(null);
   const [seriesInstance, setSeriesInstance] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(false);
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
+
+  // Permission check for creating accounts
+  const { hasPermission } = usePermissions();
+  const canCreateAccount = hasPermission('add_accounts');
 
   // Fetch case types from database
   const { data: caseTypes = [], isLoading: caseTypesLoading } = useCaseTypesQuery({ 
@@ -99,6 +108,32 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   const selectedCaseType = useMemo(() => {
     return caseTypes.find(ct => ct.id === selectedCaseTypeId);
   }, [caseTypes, selectedCaseTypeId]);
+
+  // Get the selected account object for card display
+  const selectedAccount = useMemo(() => {
+    if (!selectedAccountId) return null;
+    return accounts.find(acc => acc.id === selectedAccountId) || null;
+  }, [accounts, selectedAccountId]);
+
+  // Handlers for account selection
+  const handleAccountChange = (accountId: string) => {
+    form.setValue("account_id", accountId === "none" ? "" : accountId);
+    form.setValue("contact_id", ""); // Clear contact when account changes
+    setEditingAccount(false);
+  };
+
+  const handleRemoveAccount = () => {
+    form.setValue("account_id", "");
+    form.setValue("contact_id", "");
+  };
+
+  const handleAccountCreated = (newAccountId?: string) => {
+    setShowCreateAccount(false);
+    if (newAccountId) {
+      form.setValue("account_id", newAccountId);
+      setEditingAccount(false);
+    }
+  };
 
   // Calculate due date when case type changes (auto-populate, but user can override)
   useEffect(() => {
@@ -438,80 +473,135 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
           <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
             <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Building2 className="h-4 w-4" />
-              Client Information
+              Client Account
             </h4>
             
-            <FormField
-              control={form.control}
-              name="account_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Client (Account)</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || ""}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={accountsLoading ? "Loading..." : "Select client"} />
+            {/* Account Selection/Display */}
+            <div>
+              {editingAccount ? (
+                // Selection Mode
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Select 
+                      value={selectedAccountId || "none"}
+                      onValueChange={handleAccountChange}
+                      disabled={accountsLoading}
+                    >
+                      <SelectTrigger className="h-9 flex-1">
+                        <SelectValue placeholder={accountsLoading ? "Loading..." : "Select account..."} />
                       </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accounts.map(account => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">None</span>
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Optional. Select the client this case is for.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+                        {accounts.map(acc => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      type="button"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => setEditingAccount(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Create New Account Button (if permitted) */}
+                  {canCreateAccount && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      className="w-full justify-start text-muted-foreground"
+                      onClick={() => setShowCreateAccount(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create New Account
+                    </Button>
+                  )}
+                </div>
+              ) : selectedAccount ? (
+                // Display Mode - Show Card
+                <ClientAccountCard
+                  account={{
+                    id: selectedAccount.id,
+                    name: selectedAccount.name,
+                    phone: selectedAccount.phone,
+                    email: selectedAccount.email,
+                  }}
+                  onChangeClick={() => setEditingAccount(true)}
+                  onRemove={handleRemoveAccount}
+                  canEdit={true}
+                />
+              ) : (
+                // Empty State
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  type="button"
+                  className="w-full justify-start text-muted-foreground"
+                  onClick={() => setEditingAccount(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Account
+                </Button>
               )}
-            />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="contact_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Primary Contact</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || ""}
-                    disabled={!selectedAccountId}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue 
-                          placeholder={
-                            !selectedAccountId 
-                              ? "Select a client first" 
-                              : contactsLoading 
-                                ? "Loading..." 
-                                : "Select contact"
-                          } 
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {contacts.map(contact => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.first_name} {contact.last_name}
+            {/* Primary Contact - Only show if account is selected */}
+            {selectedAccount && (
+              <FormField
+                control={form.control}
+                name="contact_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Primary Contact</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue 
+                            placeholder={contactsLoading ? "Loading..." : "Select contact (optional)"} 
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">None</span>
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Optional. Select the primary contact for this case.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                        {contacts.map(contact => (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {contact.first_name} {contact.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Optional. Select the primary contact from this account.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
+
+          {/* Account Creation Dialog */}
+          <AccountForm
+            open={showCreateAccount}
+            onOpenChange={setShowCreateAccount}
+            onSuccess={handleAccountCreated}
+            organizationId={organizationId}
+            navigateAfterCreate={false}
+          />
 
           {/* 5. Description (Optional) */}
           <FormField
