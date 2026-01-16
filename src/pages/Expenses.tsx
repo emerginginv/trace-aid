@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { DollarSign, Loader2 } from "lucide-react";
+import { DollarSign, Loader2, LayoutGrid, List } from "lucide-react";
 import { format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useCasesQuery } from "@/hooks/queries/useCasesQuery";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ExpenseCard } from "@/components/shared/ExpenseCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -40,6 +41,7 @@ export default function Expenses() {
   const { organization } = useOrganization();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   // Form state
   const [selectedCaseId, setSelectedCaseId] = useState("");
@@ -306,54 +308,102 @@ export default function Expenses() {
           }}
         />
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Expense History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Case</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell>{format(new Date(expense.created_at), "MMM d, yyyy")}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{expense.case_number}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {expense.case_title}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{expense.notes || "-"}</TableCell>
-                    <TableCell>
-                      {expense.item_type ? (
-                        <Badge variant="outline" className="capitalize">
-                          {expense.item_type}
-                        </Badge>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${expense.total.toFixed(2)}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(expense.status || "pending")}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <>
+          {/* View Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {expenses.length} expense{expenses.length !== 1 ? 's' : ''}
+            </div>
+            <div className="flex gap-1 border rounded-md p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-7 w-7 p-0"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-7 w-7 p-0"
+              >
+                <List className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {expenses.map((expense) => (
+                <ExpenseCard
+                  key={expense.id}
+                  expense={{
+                    id: expense.id,
+                    item_type: expense.item_type,
+                    notes: expense.notes,
+                    total: expense.total,
+                    status: expense.status,
+                    created_at: expense.created_at,
+                    case_number: expense.case_number,
+                    case_title: expense.case_title,
+                    receipt_url: expense.receipt_url,
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Expense History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Case</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell>{format(new Date(expense.created_at), "MMM d, yyyy")}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{expense.case_number}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {expense.case_title}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{expense.notes || "-"}</TableCell>
+                        <TableCell>
+                          {expense.item_type ? (
+                            <Badge variant="outline" className="capitalize">
+                              {expense.item_type}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          ${expense.total.toFixed(2)}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(expense.status || "pending")}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -151,198 +151,179 @@ export const SubjectCardView = ({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {subjects.map((subject) => {
         const imageUrl = subject.profile_image_url ? signedUrls[subject.id] : null;
-        const coverUrl = subject.cover_image_url ? signedCoverUrls[subject.id] : null;
         const subtitle = getSubjectSubtitle(subject);
         const isArchived = subject.status === 'archived';
+        const subjectLinks = socialLinksBySubject[subject.id] || [];
 
         return (
           <Card
             key={subject.id}
             className={cn(
-              "relative overflow-hidden transition-shadow hover:shadow-md cursor-pointer group",
+              "p-4 hover:shadow-md transition-shadow cursor-pointer",
               isArchived && "opacity-70"
             )}
             onClick={() => onNavigate(subject)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onNavigate(subject);
+              }
+            }}
           >
-            {/* Cover Image Section */}
-            <div className="h-20 relative">
-              {coverUrl ? (
-                <img 
-                  src={coverUrl} 
-                  alt="" 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-muted" />
-              )}
-            </div>
-
-            {/* Status Badge */}
-            {isArchived && (
-              <Badge 
-                variant="secondary" 
-                className="absolute top-2 right-2 text-xs z-10"
-              >
-                Archived
-              </Badge>
-            )}
-
-            {/* Primary Badge */}
-            {subject.is_primary && !isArchived && (
-              <Badge 
-                className="absolute top-2 right-2 text-xs bg-primary text-white z-10"
-              >
-                Primary
-              </Badge>
-            )}
-
-            {/* Overlapping Avatar/Icon - positioned to overlap cover */}
-            <div className="absolute top-8 left-1/2 -translate-x-1/2 z-10">
+            {/* Header: Avatar + Name + Status */}
+            <div className="flex items-start gap-3 mb-3">
+              {/* Avatar/Icon */}
               {imageUrl ? (
                 <Avatar 
-                  className={cn(
-                    "h-24 w-24 border-4 border-card shadow-md cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
-                  )}
+                  className="h-10 w-10 flex-shrink-0 cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
                   onClick={(e) => handleImageClick(e, imageUrl, subject.display_name || subject.name)}
                 >
                   <AvatarImage src={imageUrl} alt={subject.display_name || subject.name} />
-                  <AvatarFallback className="text-xl bg-muted">
-                    {category === 'person' ? getInitials(subject.display_name || subject.name) : <Icon className="h-10 w-10 text-muted-foreground" />}
+                  <AvatarFallback className="text-sm bg-muted">
+                    {category === 'person' ? getInitials(subject.display_name || subject.name) : <Icon className="h-5 w-5 text-muted-foreground" />}
                   </AvatarFallback>
                 </Avatar>
               ) : category === 'person' ? (
-                <Avatar className="h-24 w-24 border-4 border-card shadow-md">
-                  <AvatarFallback className="text-xl bg-muted">
+                <Avatar className="h-10 w-10 flex-shrink-0">
+                  <AvatarFallback className="text-sm bg-primary text-primary-foreground">
                     {getInitials(subject.display_name || subject.name)}
                   </AvatarFallback>
                 </Avatar>
               ) : (
-                <div className="h-24 w-24 rounded-full bg-muted border-4 border-card shadow-md flex items-center justify-center">
-                  <Icon className="h-10 w-10 text-muted-foreground" />
+                <div className="h-10 w-10 rounded-full bg-muted flex-shrink-0 flex items-center justify-center">
+                  <Icon className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}
-            </div>
 
-            {/* Action Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-3 left-3 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem onClick={() => onEdit(subject)}>
-                  {canEdit && !isClosedCase && !isArchived ? (
+              {/* Name + Badge */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-semibold text-base leading-tight truncate">
+                    {subject.display_name || subject.name}
+                  </h3>
+                  {/* Status Badge */}
+                  {isArchived ? (
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      Archived
+                    </Badge>
+                  ) : subject.is_primary ? (
+                    <Badge className="text-xs bg-primary text-white shrink-0">
+                      Primary
+                    </Badge>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Action Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={() => onEdit(subject)}>
+                    {canEdit && !isClosedCase && !isArchived ? (
+                      <>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  {canArchive && !isClosedCase && (
                     <>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
+                      {isArchived ? (
+                        <DropdownMenuItem onClick={() => onUnarchive(subject)}>
+                          <ArchiveRestore className="h-4 w-4 mr-2" />
+                          Unarchive
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => onArchive(subject)}>
+                          <Archive className="h-4 w-4 mr-2" />
+                          Archive
+                        </DropdownMenuItem>
+                      )}
                     </>
                   )}
-                </DropdownMenuItem>
-                {canArchive && !isClosedCase && (
-                  <>
-                    {isArchived ? (
-                      <DropdownMenuItem onClick={() => onUnarchive(subject)}>
-                        <ArchiveRestore className="h-4 w-4 mr-2" />
-                        Unarchive
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem onClick={() => onArchive(subject)}>
-                        <Archive className="h-4 w-4 mr-2" />
-                        Archive
-                      </DropdownMenuItem>
-                    )}
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-            <CardContent className="pt-14 flex flex-col items-center text-center">
-              {/* Name */}
-              <h3 className="font-semibold text-foreground truncate w-full">
-                {subject.display_name || subject.name}
-              </h3>
+            {/* Subtitle (Role/Type) */}
+            {subtitle && (
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
+                <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">{subtitle}</span>
+              </div>
+            )}
 
-              {/* Subtitle */}
-              {subtitle && (
-                <p className="text-sm text-muted-foreground mt-0.5 truncate w-full">
-                  {subtitle}
-                </p>
-              )}
-
-              {/* Date of Birth (People only) */}
-              {category === 'person' && (() => {
-                const dob = subject.details?.date_of_birth;
-                if (!dob) return null;
-                try {
-                  const formattedDob = format(new Date(dob), "MMM d, yyyy");
-                  return (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      DOB: {formattedDob}
-                    </p>
-                  );
-                } catch {
-                  return null;
-                }
-              })()}
-
-              {/* Social Media Icons (People only) */}
-              {category === 'person' && (() => {
-                const subjectLinks = socialLinksBySubject[subject.id] || [];
-                if (subjectLinks.length === 0) return null;
-                
-                const displayedLinks = subjectLinks.slice(0, 5);
-                const overflowCount = subjectLinks.length - 5;
-                
+            {/* Date of Birth (People only) */}
+            {category === 'person' && (() => {
+              const dob = subject.details?.date_of_birth;
+              if (!dob) return null;
+              try {
+                const formattedDob = format(new Date(dob), "MMM d, yyyy");
                 return (
-                  <div 
-                    className="flex items-center justify-center gap-1 mt-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {displayedLinks.map((link) => (
-                      <SocialLinkIcon
-                        key={link.id}
-                        platform={link.platform as SocialPlatform}
-                        url={link.url}
-                        label={link.label || undefined}
-                        size="sm"
-                      />
-                    ))}
-                    {overflowCount > 0 && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                            +{overflowCount}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{overflowCount} more link{overflowCount > 1 ? 's' : ''}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
+                    <User className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>DOB: {formattedDob}</span>
                   </div>
                 );
-              })()}
+              } catch {
+                return null;
+              }
+            })()}
 
-              {/* Notes */}
-              {subject.notes && (
-                <p className="text-sm text-muted-foreground/80 mt-3 line-clamp-3 text-center w-full">
-                  {subject.notes}
-                </p>
-              )}
-            </CardContent>
+            {/* Notes */}
+            {subject.notes && (
+              <p className="text-sm text-muted-foreground/80 line-clamp-2 mb-2">
+                {subject.notes}
+              </p>
+            )}
+
+            {/* Social Media Icons (People only) - Footer */}
+            {category === 'person' && subjectLinks.length > 0 && (
+              <div 
+                className="flex items-center gap-1 pt-2 border-t mt-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {subjectLinks.slice(0, 5).map((link) => (
+                  <SocialLinkIcon
+                    key={link.id}
+                    platform={link.platform as SocialPlatform}
+                    url={link.url}
+                    label={link.label || undefined}
+                    size="sm"
+                  />
+                ))}
+                {subjectLinks.length > 5 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                        +{subjectLinks.length - 5}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{subjectLinks.length - 5} more link{subjectLinks.length - 5 > 1 ? 's' : ''}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            )}
           </Card>
         );
       })}
