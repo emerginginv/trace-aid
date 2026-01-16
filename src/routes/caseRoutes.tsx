@@ -14,6 +14,7 @@ import NewExpenseEntry from "@/pages/NewExpenseEntry";
 import ExpenseEntryDetail from "@/pages/ExpenseEntryDetail";
 import EditExpenseEntry from "@/pages/EditExpenseEntry";
 import NewCaseUpdate from "@/pages/NewCaseUpdate";
+import CaseRequests from "@/pages/CaseRequests";
 
 /**
  * Routes related to case management.
@@ -25,6 +26,14 @@ export const caseRoutes = (
       element={
         <RouteWrapper>
           <Cases />
+        </RouteWrapper>
+      }
+    />
+    <Route
+      path="/cases/requests"
+      element={
+        <RouteWrapper blockVendors>
+          <CaseRequests />
         </RouteWrapper>
       }
     />
