@@ -24,6 +24,7 @@ import { NotificationHelpers } from "@/lib/notifications";
 import { CaseTeamManager } from "@/components/case-detail/CaseTeamManager";
 import { EmailComposer } from "@/components/EmailComposer";
 import { RelatedCases } from "@/components/case-detail/RelatedCases";
+import { SourceRequestCard } from "@/components/case-detail/SourceRequestCard";
 import { BudgetSummary } from "@/components/case-detail/BudgetSummary";
 import { BudgetAdjustmentForm } from "@/components/case-detail/BudgetAdjustmentForm";
 import { BudgetAdjustmentsHistory } from "@/components/case-detail/BudgetAdjustmentsHistory";
@@ -67,6 +68,7 @@ interface Case {
   reference_number_2?: string | null;
   reference_number_3?: string | null;
   case_type_id?: string | null;
+  source_request_id?: string | null;
 }
 
 interface Account {
@@ -854,6 +856,9 @@ const CaseDetail = () => {
                         caseManager2Id={caseData.case_manager_2_id}
                         onUpdate={fetchCaseData} 
                       />
+                      {caseData.source_request_id && (
+                        <SourceRequestCard sourceRequestId={caseData.source_request_id} />
+                      )}
                       <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
                     </div>
 

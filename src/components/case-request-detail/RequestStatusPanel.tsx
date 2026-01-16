@@ -1,8 +1,9 @@
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Phone, Building2, MapPin } from "lucide-react";
+import { Mail, Phone, Building2, MapPin, CheckCircle2, ArrowRight } from "lucide-react";
 
 interface RequestStatusPanelProps {
   status: string;
@@ -19,6 +20,8 @@ interface RequestStatusPanelProps {
     state: string | null;
     zip: string | null;
   };
+  approvedCaseId?: string | null;
+  approvedCaseNumber?: string | null;
 }
 
 export function RequestStatusPanel({
@@ -31,6 +34,8 @@ export function RequestStatusPanel({
   contactPhone,
   clientName,
   clientAddress,
+  approvedCaseId,
+  approvedCaseNumber,
 }: RequestStatusPanelProps) {
   const contactName = [contactFirstName, contactLastName].filter(Boolean).join(' ');
   const fullAddress = [
@@ -38,6 +43,8 @@ export function RequestStatusPanel({
     [clientAddress.city, clientAddress.state].filter(Boolean).join(', '),
     clientAddress.zip,
   ].filter(Boolean).join(' • ');
+
+  const isApproved = status.toLowerCase() === 'approved' && approvedCaseId;
 
   return (
     <Card>
@@ -55,6 +62,32 @@ export function RequestStatusPanel({
             <p>Reviewed: {format(new Date(reviewedAt), 'MMM d, yyyy h:mm a')}</p>
           )}
         </div>
+
+        {isApproved && (
+          <>
+            <Separator />
+            <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50 p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                    Converted to Case
+                  </p>
+                  <p className="text-sm text-green-700 dark:text-green-300 font-mono">
+                    {approvedCaseNumber || 'Case created'}
+                  </p>
+                  <Link 
+                    to={`/cases/${approvedCaseId}`}
+                    className="inline-flex items-center gap-1 text-sm text-green-600 dark:text-green-400 hover:underline mt-1"
+                  >
+                    View Case
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         <Separator />
 
