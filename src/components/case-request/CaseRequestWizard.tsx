@@ -38,9 +38,10 @@ export function CaseRequestWizard({ form }: CaseRequestWizardProps) {
     INITIAL_STEP2_DATA,
   } = useCaseRequestForm(form.form_slug || form.id);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
+  const [newSubjectTypeId, setNewSubjectTypeId] = useState<string | null>(null);
 
   const handleStep1Submit = async (data: typeof INITIAL_STEP1_DATA) => {
     updateStep1(data);
@@ -80,10 +81,15 @@ export function CaseRequestWizard({ form }: CaseRequestWizardProps) {
     goToStep(3);
   };
 
-  const handleAddSubject = () => {
-    const newSubject = createEmptySubject(false);
+const handleAddSubject = () => {
+    setNewSubjectTypeId(null);
     setEditingSubjectId(null);
-    // We'll handle adding in handleSubjectSubmit
+    goToStep(3);
+  };
+
+  const handleAddSubjectOfType = (typeId: string) => {
+    setNewSubjectTypeId(typeId);
+    setEditingSubjectId(null);
     goToStep(3);
   };
 
@@ -224,9 +230,13 @@ export function CaseRequestWizard({ form }: CaseRequestWizardProps) {
     );
   }
 
+const caseTypeId = state.formData.step1?.case_type_id || '';
+
   const currentSubject = editingSubjectId
     ? state.formData.subjects.find(s => s.id === editingSubjectId)
-    : state.formData.subjects.find(s => s.is_primary) || null;
+    : newSubjectTypeId 
+      ? createEmptySubject(state.formData.subjects.length === 0, newSubjectTypeId)
+      : state.formData.subjects.find(s => s.is_primary) || null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -260,7 +270,9 @@ export function CaseRequestWizard({ form }: CaseRequestWizardProps) {
           <SubjectInformationStep
             fieldConfig={form.field_config}
             organizationId={form.organization_id}
+            caseTypeId={caseTypeId}
             subject={currentSubject}
+            subjectTypeId={newSubjectTypeId}
             onSubmit={handleSubjectSubmit}
             onBack={goBack}
             isEditing={!!editingSubjectId}
@@ -270,10 +282,13 @@ export function CaseRequestWizard({ form }: CaseRequestWizardProps) {
         {state.currentStep === 4 && (
           <SubjectSummaryStep
             fieldConfig={form.field_config}
+            organizationId={form.organization_id}
+            caseTypeId={caseTypeId}
             subjects={state.formData.subjects}
             onEditSubject={handleEditSubject}
             onRemoveSubject={removeSubject}
             onAddSubject={handleAddSubject}
+            onAddSubjectOfType={handleAddSubjectOfType}
             onContinue={goNext}
             onBack={goBack}
           />

@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SubjectData, createEmptySubject } from "@/hooks/useCaseRequestForm";
+import { SubjectData } from "@/hooks/useCaseRequestForm";
 import { CaseRequestFormConfig, isFieldVisible } from "@/types/case-request-form-config";
-import { ArrowLeft, ArrowRight, Edit2, Trash2, UserPlus, User, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Edit2, Trash2, UserPlus, User, Users, Mail, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -15,26 +15,50 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useSubjectTypesForPublicForm, useCaseTypesForPublicForm } from "@/hooks/queries/useCaseRequestFormBySlug";
 
 interface SubjectSummaryStepProps {
   fieldConfig: CaseRequestFormConfig;
+  organizationId: string;
+  caseTypeId: string;
   subjects: SubjectData[];
   onEditSubject: (id: string) => void;
   onRemoveSubject: (id: string) => void;
   onAddSubject: () => void;
+  onAddSubjectOfType: (typeId: string) => void;
   onContinue: () => void;
   onBack: () => void;
 }
 
 export function SubjectSummaryStep({
   fieldConfig,
+  organizationId,
+  caseTypeId,
   subjects,
   onEditSubject,
   onRemoveSubject,
   onAddSubject,
+  onAddSubjectOfType,
   onContinue,
   onBack,
 }: SubjectSummaryStepProps) {
+  // Fetch subject types and case types
+  const { data: subjectTypes } = useSubjectTypesForPublicForm(organizationId);
+  const { data: caseTypes } = useCaseTypesForPublicForm(organizationId);
+
+  // Get allowed subject types for selected case type
+  const selectedCaseType = caseTypes?.find(ct => ct.id === caseTypeId);
+  const allowedSubjectTypes = subjectTypes?.filter(st => 
+    !selectedCaseType?.allowed_subject_types?.length || 
+    selectedCaseType.allowed_subject_types.includes(st.id)
+  );
+
+  const getSubjectTypeName = (typeId: string | null): string => {
+    if (!typeId || !subjectTypes) return 'Subject';
+    const type = subjectTypes.find(t => t.id === typeId);
+    return type?.name || 'Subject';
+  };
+
   const getSubjectDisplayName = (subject: SubjectData): string => {
     const name = [subject.first_name, subject.middle_name, subject.last_name]
       .filter(Boolean)
@@ -53,6 +77,7 @@ export function SubjectSummaryStep({
   };
 
   const showAdditionalSubjects = isFieldVisible(fieldConfig, 'subjectInformation', 'additionalSubjects');
+  const canRemovePrimary = subjects.length > 1;
 
   return (
     <div className="space-y-6">
@@ -95,10 +120,13 @@ export function SubjectSummaryStep({
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-medium truncate">
                         {getSubjectDisplayName(subject)}
                       </h4>
+                      <Badge variant="outline" className="text-xs">
+                        {getSubjectTypeName(subject.subject_type_id)}
+                      </Badge>
                       {subject.is_primary && (
                         <Badge variant="secondary" className="text-xs">Primary</Badge>
                       )}
@@ -106,11 +134,24 @@ export function SubjectSummaryStep({
                     <p className="text-sm text-muted-foreground mt-1">
                       {getSubjectAddress(subject)}
                     </p>
-                    {subject.email && (
-                      <p className="text-sm text-muted-foreground">{subject.email}</p>
-                    )}
-                    {subject.cell_phone && (
-                      <p className="text-sm text-muted-foreground">{subject.cell_phone}</p>
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                      {subject.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {subject.email}
+                        </span>
+                      )}
+                      {subject.cell_phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {subject.cell_phone}
+                        </span>
+                      )}
+                    </div>
+                    {subject.date_of_birth && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        DOB: {subject.date_of_birth} {subject.age !== null && `(${subject.age} years old)`}
+                      </p>
                     )}
                   </div>
 
@@ -125,7 +166,8 @@ export function SubjectSummaryStep({
                       Edit
                     </Button>
                     
-                    {!subject.is_primary && (
+                    {/* Only show delete for non-primary OR if there are multiple subjects */}
+                    {(!subject.is_primary || canRemovePrimary) && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="sm" className="text-destructive">
@@ -168,13 +210,26 @@ export function SubjectSummaryStep({
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={onAddSubject}
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add Subject
-              </Button>
+              {allowedSubjectTypes && allowedSubjectTypes.length > 0 ? (
+                allowedSubjectTypes.map((type) => (
+                  <Button
+                    key={type.id}
+                    variant="outline"
+                    onClick={() => onAddSubjectOfType(type.id)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add {type.name}
+                  </Button>
+                ))
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={onAddSubject}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Subject
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
