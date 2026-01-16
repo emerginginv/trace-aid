@@ -348,85 +348,6 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
             )}
           />
 
-          {/* 2. Client Information */}
-          <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
-            <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Client Information
-            </h4>
-            
-            <FormField
-              control={form.control}
-              name="account_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Client (Account)</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || ""}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={accountsLoading ? "Loading..." : "Select client"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accounts.map(account => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Optional. Select the client this case is for.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="contact_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Primary Contact</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || ""}
-                    disabled={!selectedAccountId}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue 
-                          placeholder={
-                            !selectedAccountId 
-                              ? "Select a client first" 
-                              : contactsLoading 
-                                ? "Loading..." 
-                                : "Select contact"
-                          } 
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {contacts.map(contact => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.first_name} {contact.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Optional. Select the primary contact for this case.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
           {/* 2. Reference Numbers (Conditional - shown after Case Type selected) */}
           {selectedCaseType && (
             <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
@@ -513,7 +434,86 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
             </p>
           </div>
 
-          {/* 4. Description (Optional) */}
+          {/* 4. Client Information (Optional) */}
+          <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+            <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Client Information
+            </h4>
+            
+            <FormField
+              control={form.control}
+              name="account_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Client (Account)</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={accountsLoading ? "Loading..." : "Select client"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {accounts.map(account => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Optional. Select the client this case is for.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="contact_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Primary Contact</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""}
+                    disabled={!selectedAccountId}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue 
+                          placeholder={
+                            !selectedAccountId 
+                              ? "Select a client first" 
+                              : contactsLoading 
+                                ? "Loading..." 
+                                : "Select contact"
+                          } 
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {contacts.map(contact => (
+                        <SelectItem key={contact.id} value={contact.id}>
+                          {contact.first_name} {contact.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Optional. Select the primary contact for this case.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* 5. Description (Optional) */}
           <FormField
             control={form.control}
             name="description"
@@ -536,7 +536,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
             )}
           />
 
-          {/* 5. Due Date (Auto-calculated from Case Type, but editable) */}
+          {/* 6. Due Date (Auto-calculated from Case Type, but editable) */}
           <FormField
             control={form.control}
             name="due_date"
