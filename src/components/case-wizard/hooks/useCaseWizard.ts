@@ -17,6 +17,9 @@ export interface CaseFormData {
   case_manager_2_id: string | null;
   investigator_ids: string[];
   reference_number: string | null;
+  reference_number_2?: string | null;
+  reference_number_3?: string | null;
+  case_type_id?: string;
 }
 
 export interface WizardState {
