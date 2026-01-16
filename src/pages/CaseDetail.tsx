@@ -88,11 +88,6 @@ interface Contact {
   email?: string | null;
 }
 
-interface CaseManager {
-  id: string;
-  full_name: string | null;
-  email: string;
-}
 
 const CaseDetail = () => {
   const { id } = useParams();
@@ -105,7 +100,7 @@ const CaseDetail = () => {
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
-  const [caseManager, setCaseManager] = useState<CaseManager | null>(null);
+  
   const [loading, setLoading] = useState(true);
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -266,10 +261,6 @@ const CaseDetail = () => {
         if (contactData) setContact(contactData);
       }
 
-      if (data.case_manager_id) {
-        const { data: managerData } = await supabase.from("profiles").select("id, full_name, email").eq("id", data.case_manager_id).maybeSingle();
-        if (managerData) setCaseManager(managerData);
-      }
     } catch (error) {
       console.error("Error fetching case:", error);
       toast({
