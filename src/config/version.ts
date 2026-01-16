@@ -5,7 +5,7 @@
 declare const __BUILD_TIME__: string;
 declare const __GIT_COMMIT__: string;
 
-export const APP_VERSION = '2026.01.16.003';
+export const APP_VERSION = '2026.01.16.004';
 export const BUILD_DATE = '2026-01-16';
 
 export const BUILD_TIME = typeof __BUILD_TIME__ !== 'undefined' 

@@ -49,14 +49,12 @@ function DelayedTooltip({
   className,
 }: DelayedTooltipProps) {
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={delayDuration}>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent side={side} align={align} className={className}>
-          {content}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip delayDuration={delayDuration}>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side={side} align={align} className={className}>
+        {content}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

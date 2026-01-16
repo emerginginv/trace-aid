@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -83,14 +82,12 @@ const AIButton = React.forwardRef<HTMLButtonElement, AIButtonProps>(
     }
 
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>{button}</TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p>{AI_TOOLTIP_MESSAGE}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p>{AI_TOOLTIP_MESSAGE}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   }
 );

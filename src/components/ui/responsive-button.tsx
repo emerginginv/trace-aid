@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Button, ButtonProps } from "./button";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "./tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 interface ResponsiveButtonProps extends ButtonProps {
   icon: React.ReactNode;
@@ -62,33 +62,31 @@ export const ResponsiveButton = React.forwardRef<HTMLButtonElement, ResponsiveBu
     };
 
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              ref={ref}
-              size={size}
-              className={cn(
-                "px-2", // Mobile: icon-only padding
-                breakpointClasses[showLabelBreakpoint], // Desktop: text padding
-                className
-              )}
-              {...props}
-            >
-              <span className="shrink-0">{icon}</span>
-              <span className={cn("ml-2", labelClasses[showLabelBreakpoint])}>
-                {label}
-              </span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent
-            side={tooltipSide}
-            className={hideTooltipOnDesktop ? tooltipHideClasses[showLabelBreakpoint] : undefined}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            ref={ref}
+            size={size}
+            className={cn(
+              "px-2", // Mobile: icon-only padding
+              breakpointClasses[showLabelBreakpoint], // Desktop: text padding
+              className
+            )}
+            {...props}
           >
-            {label}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+            <span className="shrink-0">{icon}</span>
+            <span className={cn("ml-2", labelClasses[showLabelBreakpoint])}>
+              {label}
+            </span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent
+          side={tooltipSide}
+          className={hideTooltipOnDesktop ? tooltipHideClasses[showLabelBreakpoint] : undefined}
+        >
+          {label}
+        </TooltipContent>
+      </Tooltip>
     );
   }
 );

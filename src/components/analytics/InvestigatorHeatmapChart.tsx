@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, parseISO, getDay, getHours } from "date-fns";
 import type { ResolvedTimeRange } from "@/lib/analytics/time-ranges";
 import { cn } from "@/lib/utils";
@@ -159,38 +159,36 @@ export function InvestigatorHeatmapChart({ organizationId, timeRange }: Investig
               </div>
 
               {/* Grid rows */}
-              <TooltipProvider>
-                {DAYS.map((day, dayIndex) => (
-                  <div key={day} className="flex items-center mb-1">
-                    <div className="w-10 text-xs text-muted-foreground font-medium">
-                      {day}
-                    </div>
-                    <div className="flex flex-1 gap-0.5">
-                      {HOURS.map(hour => {
-                        const value = grid[dayIndex]?.[hour] || 0;
-                        const intensity = getIntensity(value);
-                        return (
-                          <Tooltip key={hour}>
-                            <TooltipTrigger asChild>
-                              <div 
-                                className={cn(
-                                  "h-6 flex-1 rounded-sm cursor-pointer transition-colors hover:ring-2 hover:ring-ring",
-                                  getColorClass(intensity)
-                                )}
-                                style={{ minWidth: "12px" }}
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="font-medium">{day} {formatHour(hour)}</p>
-                              <p className="text-muted-foreground">{value} activities</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      })}
-                    </div>
+              {DAYS.map((day, dayIndex) => (
+                <div key={day} className="flex items-center mb-1">
+                  <div className="w-10 text-xs text-muted-foreground font-medium">
+                    {day}
                   </div>
-                ))}
-              </TooltipProvider>
+                  <div className="flex flex-1 gap-0.5">
+                    {HOURS.map(hour => {
+                      const value = grid[dayIndex]?.[hour] || 0;
+                      const intensity = getIntensity(value);
+                      return (
+                        <Tooltip key={hour}>
+                          <TooltipTrigger asChild>
+                            <div 
+                              className={cn(
+                                "h-6 flex-1 rounded-sm cursor-pointer transition-colors hover:ring-2 hover:ring-ring",
+                                getColorClass(intensity)
+                              )}
+                              style={{ minWidth: "12px" }}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="font-medium">{day} {formatHour(hour)}</p>
+                            <p className="text-muted-foreground">{value} activities</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
 
               {/* Legend */}
               <div className="flex items-center justify-end mt-4 gap-2">
