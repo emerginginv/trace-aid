@@ -1938,7 +1938,7 @@ export type Database = {
           series_instance: number | null
           series_number: number | null
           status: string
-          title: string
+          title: string | null
           updated_at: string | null
           use_primary_subject_as_title: boolean | null
           user_id: string
@@ -1987,7 +1987,7 @@ export type Database = {
           series_instance?: number | null
           series_number?: number | null
           status?: string
-          title: string
+          title?: string | null
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null
           user_id: string
@@ -2036,7 +2036,7 @@ export type Database = {
           series_instance?: number | null
           series_number?: number | null
           status?: string
-          title?: string
+          title?: string | null
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null
           user_id?: string

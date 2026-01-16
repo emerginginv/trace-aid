@@ -9,7 +9,7 @@ export interface CaseFormData {
   account_id: string;
   contact_id: string;
   status: string;
-  title: string;
+  title: string | null; // Can be null until primary subject is set in Step 3
   case_number: string;
   description: string;
   due_date: Date | null;

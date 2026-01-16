@@ -3,8 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -25,17 +25,21 @@ import { toast } from "sonner";
 import { WizardNavigation } from "../WizardNavigation";
 import { CaseFormData } from "../hooks/useCaseWizard";
 import { useCaseTypesQuery } from "@/hooks/queries/useCaseTypesQuery";
-import { User, Calendar, Info } from "lucide-react";
+import { Calendar, Info } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { logCaseTypeAudit } from "@/lib/caseTypeAuditLogger";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   case_type_id: z.string().min(1, "Case type is required"),
   reference_number: z.string().max(100).optional().nullable(),
   reference_number_2: z.string().max(100).optional().nullable(),
   reference_number_3: z.string().max(100).optional().nullable(),
-  subject_name: z.string().min(1, "Primary subject name is required"),
-  subject_role: z.string().optional(),
+  description: z.string().max(2000).optional().nullable(),
+  due_date: z.date().optional().nullable(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -52,7 +56,6 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   const [seriesNumber, setSeriesNumber] = useState<number | null>(null);
   const [seriesInstance, setSeriesInstance] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [calculatedDueDate, setCalculatedDueDate] = useState<Date | null>(null);
 
   // Fetch case types from database
   const { data: caseTypes = [], isLoading: caseTypesLoading } = useCaseTypesQuery({ 
@@ -67,8 +70,8 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
       reference_number: existingData?.reference_number || "",
       reference_number_2: existingData?.reference_number_2 || "",
       reference_number_3: existingData?.reference_number_3 || "",
-      subject_name: "",
-      subject_role: "subject",
+      description: existingData?.description || "",
+      due_date: existingData?.due_date || null,
     },
   });
 
@@ -79,15 +82,17 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
     return caseTypes.find(ct => ct.id === selectedCaseTypeId);
   }, [caseTypes, selectedCaseTypeId]);
 
-  // Calculate due date when case type changes
+  // Calculate due date when case type changes (auto-populate, but user can override)
   useEffect(() => {
     if (selectedCaseType?.default_due_days && selectedCaseType.default_due_days > 0) {
       const dueDate = addDays(new Date(), selectedCaseType.default_due_days);
-      setCalculatedDueDate(dueDate);
-    } else {
-      setCalculatedDueDate(null);
+      // Only set if user hasn't manually set a due date
+      const currentDueDate = form.getValues("due_date");
+      if (!currentDueDate) {
+        form.setValue("due_date", dueDate);
+      }
     }
-  }, [selectedCaseType]);
+  }, [selectedCaseType, form]);
 
   useEffect(() => {
     fetchInitialData();
@@ -180,14 +185,14 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
 
     setIsSubmitting(true);
     try {
-      // Calculate due date from case type default
-      const dueDateValue = calculatedDueDate 
-        ? calculatedDueDate.toISOString().split('T')[0] 
+      // Use the due date from form (user may have overridden it)
+      const dueDateValue = data.due_date 
+        ? data.due_date.toISOString().split('T')[0] 
         : null;
 
-      // Prepare case data - include applied_budget_strategy from case type
+      // Prepare case data - title will be NULL until primary subject is set in Step 3
       const caseData: any = {
-        title: data.subject_name, // Set title from primary subject name
+        title: null, // Will be set via trigger when primary subject is added in Step 3
         case_number: generatedCaseNumber,
         status: "Draft",
         case_type_id: data.case_type_id,
@@ -196,6 +201,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         instance_number: 1,
         is_draft: true,
         draft_created_by: currentUserId,
+        description: data.description || null,
         reference_number: data.reference_number || null,
         reference_number_2: data.reference_number_2 || null,
         reference_number_3: data.reference_number_3 || null,
@@ -204,6 +210,8 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         due_date: dueDateValue,
         // Store applied budget strategy from case type at creation time
         applied_budget_strategy: selectedCaseType?.budget_strategy || 'both',
+        // Enable the trigger to sync title from primary subject
+        use_primary_subject_as_title: true,
         // active_service_ids will be synced by trigger when service instances are created
         active_service_ids: [],
       };
@@ -216,26 +224,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
 
       if (caseError) throw caseError;
 
-      // Create primary subject
-      const { error: subjectError } = await supabase
-        .from("case_subjects")
-        .insert({
-          case_id: newCase.id,
-          organization_id: organizationId,
-          user_id: currentUserId,
-          subject_type: "person",
-          name: data.subject_name,
-          display_name: data.subject_name,
-          role: data.subject_role || "subject",
-          is_primary: true,
-          status: "active",
-        });
-
-      if (subjectError) {
-        console.error("Error creating primary subject:", subjectError);
-        // Don't fail the whole operation, the case was created
-        toast.warning("Case created but there was an issue with the primary subject");
-      }
+      // DO NOT create primary subject here - it will be created in Step 3 (Subjects)
 
       // Log audit event for Case Type assignment
       await logCaseTypeAudit({
@@ -254,8 +243,9 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
       // Prepare form data for wizard state
       const formData: CaseFormData = {
         case_type_id: data.case_type_id,
-        title: data.subject_name,
+        title: null, // Title will be set in Step 3
         case_number: generatedCaseNumber,
+        description: data.description || "",
         reference_number: data.reference_number || null,
         reference_number_2: data.reference_number_2 || null,
         reference_number_3: data.reference_number_3 || null,
@@ -263,8 +253,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         account_id: "",
         contact_id: "",
         status: "Draft",
-        description: "",
-        due_date: calculatedDueDate,
+        due_date: data.due_date || null,
         case_manager_id: null,
         case_manager_2_id: null,
         investigator_ids: [],
@@ -280,12 +269,14 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
     }
   };
 
+  const dueDateValue = form.watch("due_date");
+
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">Case Information</h3>
         <p className="text-sm text-muted-foreground">
-          Select the case type and enter the primary subject. A draft will be created when you continue.
+          Select the case type and enter basic case details. A draft will be created when you continue.
         </p>
       </div>
 
@@ -393,79 +384,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
             </div>
           )}
 
-          {/* Due Date Preview (Auto-calculated from Case Type) */}
-          {calculatedDueDate && selectedCaseType?.default_due_days && (
-            <div className="space-y-2 rounded-lg border p-4 bg-muted/30">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Due Date (Auto-calculated)</span>
-              </div>
-              <p className="text-base font-medium">
-                {format(calculatedDueDate, "PPP")}
-              </p>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Info className="h-3 w-3" />
-                <span>
-                  Based on Case Type default: {selectedCaseType.default_due_days} days from creation
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* 3. Primary Subject (Required) */}
-          <div className="space-y-4 rounded-lg border p-4">
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              <h4 className="font-medium">Primary Subject *</h4>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              The case name will be set to this person's name.
-            </p>
-            
-            <FormField
-              control={form.control}
-              name="subject_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name *</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="e.g., John Doe" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="subject_role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || "subject"}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="subject">Subject</SelectItem>
-                      <SelectItem value="claimant">Claimant</SelectItem>
-                      <SelectItem value="witness">Witness</SelectItem>
-                      <SelectItem value="complainant">Complainant</SelectItem>
-                      <SelectItem value="respondent">Respondent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {/* 4. Case Number (Auto-generated, shown last) */}
+          {/* 3. Case Number (Auto-generated) */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Case Number</label>
             <Input
@@ -478,13 +397,84 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
             </p>
           </div>
 
+          {/* 4. Description (Optional) */}
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Enter a brief description of the case..."
+                    className="min-h-[100px] resize-y"
+                    {...field}
+                    value={field.value || ""}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Optional. Provide context or notes about this case.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* 5. Due Date (Auto-calculated from Case Type, but editable) */}
+          <FormField
+            control={form.control}
+            name="due_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Due Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={field.value || undefined}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                {selectedCaseType?.default_due_days && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Info className="h-3 w-3" />
+                    <span>
+                      Auto-calculated from Case Type default: {selectedCaseType.default_due_days} days
+                    </span>
+                  </div>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <WizardNavigation
             currentStep={1}
             onBack={() => {}}
             onContinue={form.handleSubmit(onSubmit)}
-            canContinue={form.formState.isValid && !!generatedCaseNumber}
             isSubmitting={isSubmitting}
-            continueLabel="Create Draft & Continue"
+            canContinue={!!generatedCaseNumber}
           />
         </form>
       </Form>
