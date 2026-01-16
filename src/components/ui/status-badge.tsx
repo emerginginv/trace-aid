@@ -95,6 +95,15 @@ const statusConfig: Record<
     label: "Low",
     className: "bg-muted text-muted-foreground border border-border",
   },
+  // Case Request statuses
+  approved: {
+    label: "Approved",
+    className: "bg-success-100 text-success-700 border border-success-200 dark:bg-success-900/30 dark:text-success-400 dark:border-success-800",
+  },
+  declined: {
+    label: "Declined",
+    className: "bg-destructive-100 text-destructive-700 border border-destructive-200 dark:bg-destructive-900/30 dark:text-destructive-400 dark:border-destructive-800",
+  },
 };
 
 interface StatusBadgeProps {

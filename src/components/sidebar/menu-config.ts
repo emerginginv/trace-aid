@@ -13,6 +13,7 @@ import {
   ClipboardList,
   FileEdit,
   Clock,
+  FileInput,
 } from "lucide-react";
 import { MenuGroup } from "./types";
 
@@ -37,6 +38,12 @@ export const menuGroups: MenuGroup[] = [
         icon: Briefcase,
         url: "/cases",
         roles: ["admin", "manager", "investigator"],
+      },
+      {
+        title: "Case Requests",
+        icon: FileInput,
+        url: "/cases/requests",
+        roles: ["admin", "manager"],
       },
       {
         title: "Subjects",
