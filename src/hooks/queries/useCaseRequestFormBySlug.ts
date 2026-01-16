@@ -2,6 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { validateFormConfig, CaseRequestFormConfig } from "@/types/case-request-form-config";
 
+export interface OrganizationSettings {
+  company_name: string | null;
+  logo_url: string | null;
+  phone: string | null;
+  website_url: string | null;
+}
+
 export interface CaseRequestForm {
   id: string;
   organization_id: string;
@@ -24,6 +31,8 @@ export interface CaseRequestForm {
   field_config: CaseRequestFormConfig;
   created_at: string;
   updated_at: string;
+  // Organization fallback settings
+  org_settings?: OrganizationSettings | null;
 }
 
 export function useCaseRequestFormBySlug(slug: string | undefined) {
@@ -43,12 +52,20 @@ export function useCaseRequestFormBySlug(slug: string | undefined) {
       if (error) throw error;
       if (!data) throw new Error('Form not found or is not active');
 
+      // Fetch organization settings for fallbacks
+      const { data: orgSettings } = await supabase
+        .from('organization_settings')
+        .select('company_name, logo_url, phone, website_url')
+        .eq('organization_id', data.organization_id)
+        .maybeSingle();
+
       // Validate and merge field config with defaults
       const validatedFieldConfig = validateFormConfig(data.field_config as any);
 
       return {
         ...data,
         field_config: validatedFieldConfig,
+        org_settings: orgSettings,
       } as CaseRequestForm;
     },
     enabled: !!slug,
