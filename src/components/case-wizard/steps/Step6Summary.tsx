@@ -23,6 +23,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ClientAccountCard } from "@/components/case-detail/ClientAccountCard";
+import { ClientContactCard } from "@/components/case-detail/ClientContactCard";
 
 interface Step6Props {
   caseId: string;
@@ -42,12 +44,16 @@ interface Step6Props {
 interface Account {
   id: string;
   name: string;
+  email?: string | null;
+  phone?: string | null;
 }
 
 interface Contact {
   id: string;
   first_name: string;
   last_name: string;
+  email?: string | null;
+  phone?: string | null;
 }
 
 interface SubjectSummary {
@@ -99,23 +105,27 @@ export function Step6Summary({
         setCaseTitle(caseRecord.title);
       }
 
-      // Fetch account and contact names
+      // Fetch account and contact details
       if (caseData.account_id) {
         const { data } = await supabase
           .from("accounts")
-          .select("id, name")
+          .select("id, name, email, phone")
           .eq("id", caseData.account_id)
           .single();
         if (data) setAccount(data);
+      } else {
+        setAccount(null);
       }
 
       if (caseData.contact_id) {
         const { data } = await supabase
           .from("contacts")
-          .select("id, first_name, last_name")
+          .select("id, first_name, last_name, email, phone")
           .eq("id", caseData.contact_id)
           .single();
         if (data) setContact(data);
+      } else {
+        setContact(null);
       }
 
       // Fetch subject counts by type
@@ -181,22 +191,39 @@ export function Step6Summary({
 
           <Separator />
 
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex items-start gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-muted-foreground">Client</p>
-                <p className="font-medium">{account?.name || "—"}</p>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Client Account
+              </p>
+              {account ? (
+                <ClientAccountCard
+                  account={account}
+                  onChangeClick={() => {}}
+                  onRemove={() => {}}
+                  canEdit={false}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No client account</p>
+              )}
             </div>
-            <div className="flex items-start gap-2">
-              <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-muted-foreground">Primary Contact</p>
-                <p className="font-medium">
-                  {contact ? `${contact.first_name} ${contact.last_name}` : "—"}
-                </p>
-              </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Primary Contact
+              </p>
+              {contact ? (
+                <ClientContactCard
+                  contact={contact}
+                  onChangeClick={() => {}}
+                  onRemove={() => {}}
+                  canEdit={false}
+                  label="Primary Contact"
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No primary contact</p>
+              )}
             </div>
           </div>
 
