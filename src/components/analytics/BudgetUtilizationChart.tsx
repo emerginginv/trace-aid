@@ -60,15 +60,29 @@ export function BudgetUtilizationChart({ organizationId, timeRange }: BudgetUtil
 
         const caseIds = cases.map((c) => c.id);
 
-        // Get all finances for these cases
-        const { data: finances } = await supabase
-          .from("case_finances")
-          .select("case_id, amount, date, finance_type")
-          .in("case_id", caseIds)
-          .in("finance_type", ["time", "expense"])
-          .gte("date", start.toISOString())
-          .lte("date", end.toISOString())
-          .order("date", { ascending: true });
+        // Get all finances from canonical tables
+        const [{ data: timeData }, { data: expenseData }] = await Promise.all([
+          supabase
+            .from("time_entries")
+            .select("case_id, total, created_at")
+            .in("case_id", caseIds)
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString())
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("expense_entries")
+            .select("case_id, total, created_at")
+            .in("case_id", caseIds)
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString())
+            .order("created_at", { ascending: true }),
+        ]);
+
+        // Combine into unified format
+        const finances = [
+          ...(timeData || []).map(t => ({ case_id: t.case_id, amount: t.total, date: t.created_at?.split('T')[0] })),
+          ...(expenseData || []).map(e => ({ case_id: e.case_id, amount: e.total, date: e.created_at?.split('T')[0] })),
+        ];
 
         // Calculate cumulative utilization per day/week
         const totalBudget = cases.reduce((sum, c) => sum + (c.budget_dollars || 0), 0);

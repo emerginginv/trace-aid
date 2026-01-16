@@ -333,10 +333,8 @@ const AllInvoices = () => {
     if (!confirm("Are you sure you want to delete this invoice?")) return;
     
     try {
-      await supabase
-        .from("case_finances")
-        .delete()
-        .eq("invoice_id", invoiceId);
+      // Note: invoice_id linking is now handled in canonical tables or can be cleaned up separately
+      // The old case_finances table is deprecated
       
       const { error } = await supabase
         .from("invoices")

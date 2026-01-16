@@ -54,16 +54,15 @@ const ExpenseDetail = () => {
     try {
       setLoading(true);
       
-      const { data: expenseData, error: expenseError } = await supabase
-        .from("case_finances")
+      const { data: rawData, error: expenseError } = await supabase
+        .from("expense_entries")
         .select("*")
         .eq("id", id)
-        .eq("finance_type", "expense")
         .maybeSingle();
 
       if (expenseError) throw expenseError;
 
-      if (!expenseData) {
+      if (!rawData) {
         toast({
           title: "Expense not found",
           description: "The requested expense could not be found.",
@@ -72,6 +71,24 @@ const ExpenseDetail = () => {
         navigate("/expenses");
         return;
       }
+
+      // Transform to expected interface
+      const expenseData: Expense = {
+        id: rawData.id,
+        case_id: rawData.case_id,
+        user_id: rawData.user_id,
+        finance_type: 'expense',
+        amount: rawData.total || 0,
+        description: rawData.notes || rawData.item_type || 'Expense',
+        date: rawData.created_at?.split('T')[0] || '',
+        category: rawData.item_type || '',
+        status: rawData.status || 'pending',
+        notes: rawData.notes || '',
+        invoiced: false,
+        invoice_id: null,
+        created_at: rawData.created_at,
+        quantity: rawData.quantity,
+      };
 
       setExpense(expenseData);
 

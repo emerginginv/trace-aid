@@ -65,14 +65,27 @@ export function ProfitTrendChart({ organizationId, timeRange }: ProfitTrendChart
           .gte("date", start.toISOString())
           .lte("date", end.toISOString());
 
-        // Fetch costs
-        const { data: finances } = await supabase
-          .from("case_finances")
-          .select("amount, date, finance_type")
-          .eq("organization_id", organizationId)
-          .in("finance_type", ["time", "expense"])
-          .gte("date", start.toISOString())
-          .lte("date", end.toISOString());
+        // Fetch costs from canonical tables
+        const [{ data: timeData }, { data: expenseData }] = await Promise.all([
+          supabase
+            .from("time_entries")
+            .select("total, created_at")
+            .eq("organization_id", organizationId)
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString()),
+          supabase
+            .from("expense_entries")
+            .select("total, created_at")
+            .eq("organization_id", organizationId)
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString()),
+        ]);
+
+        // Combine into unified format
+        const finances = [
+          ...(timeData || []).map(t => ({ amount: t.total, date: t.created_at?.split('T')[0] })),
+          ...(expenseData || []).map(e => ({ amount: e.total, date: e.created_at?.split('T')[0] })),
+        ];
 
         // Generate intervals
         const intervals = useMonthly

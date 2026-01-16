@@ -198,41 +198,49 @@ const Cases = () => {
           return { caseId: c.id, summary: data?.[0] || null };
         });
       
-      // Fetch financial totals from case_finances
-      const { data: financialData, error: financialError } = await supabase
-        .from("case_finances")
-        .select("case_id, finance_type, amount, hours")
-        .in("case_id", caseIds);
+      // Fetch financial totals from canonical tables
+      const [{ data: timeData, error: timeError }, { data: expenseData, error: expenseError }] = await Promise.all([
+        supabase
+          .from("time_entries")
+          .select("case_id, hours, total")
+          .in("case_id", caseIds),
+        supabase
+          .from("expense_entries")
+          .select("case_id, total")
+          .in("case_id", caseIds),
+      ]);
       
-      if (financialError) {
-        console.error("Error fetching financial data:", financialError);
+      if (timeError) {
+        console.error("Error fetching time data:", timeError);
+      }
+      if (expenseError) {
+        console.error("Error fetching expense data:", expenseError);
       }
       
       // Aggregate financial totals by case
       const totalsMap = new Map<string, FinancialTotals>();
-      financialData?.forEach(entry => {
+      
+      // Process time entries
+      timeData?.forEach(entry => {
         const existing = totalsMap.get(entry.case_id) || {
           total_expenses: 0,
           total_hours: 0,
           total_retainer: 0,
           total_invoiced: 0,
         };
-        
-        switch (entry.finance_type) {
-          case 'expense':
-            existing.total_expenses += entry.amount || 0;
-            break;
-          case 'time':
-            existing.total_hours += entry.hours || 0;
-            break;
-          case 'retainer':
-            existing.total_retainer += entry.amount || 0;
-            break;
-          case 'invoice':
-            existing.total_invoiced += entry.amount || 0;
-            break;
-        }
-        
+        existing.total_hours += entry.hours || 0;
+        totalsMap.set(entry.case_id, existing);
+      });
+      
+      // Process expense entries
+      expenseData?.forEach(entry => {
+        const existing = totalsMap.get(entry.case_id) || {
+          total_expenses: 0,
+          total_hours: 0,
+          total_retainer: 0,
+          total_invoiced: 0,
+        };
+        existing.total_expenses += entry.total || 0;
         totalsMap.set(entry.case_id, existing);
       });
       

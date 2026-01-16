@@ -62,17 +62,25 @@ export function ProfitabilityOverviewChart({ organizationId, timeRange }: Profit
           .gte("date", start.toISOString())
           .lte("date", end.toISOString());
 
-        // Fetch case finances for costs
-        const { data: finances } = await supabase
-          .from("case_finances")
-          .select("amount, finance_type")
-          .eq("organization_id", organizationId)
-          .in("finance_type", ["time", "expense"])
-          .gte("date", start.toISOString())
-          .lte("date", end.toISOString());
+        // Fetch costs from canonical tables
+        const [{ data: timeData }, { data: expenseData }] = await Promise.all([
+          supabase
+            .from("time_entries")
+            .select("total")
+            .eq("organization_id", organizationId)
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString()),
+          supabase
+            .from("expense_entries")
+            .select("total")
+            .eq("organization_id", organizationId)
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString()),
+        ]);
 
         const totalRevenue = (invoices || []).reduce((sum, inv) => sum + (inv.total || 0), 0);
-        const totalCosts = (finances || []).reduce((sum, f) => sum + (f.amount || 0), 0);
+        const totalCosts = (timeData || []).reduce((sum, t) => sum + (t.total || 0), 0) +
+                          (expenseData || []).reduce((sum, e) => sum + (e.total || 0), 0);
         const profit = totalRevenue - totalCosts;
 
         setData([
