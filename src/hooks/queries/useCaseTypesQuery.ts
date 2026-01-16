@@ -82,6 +82,7 @@ export function useCaseTypeQuery(caseTypeId: string | undefined | null) {
       return data as CaseType;
     },
     enabled: !!caseTypeId && !!organization?.id,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0, // Always refetch to ensure fresh case type config (especially allowed_service_ids)
+    refetchOnMount: true,
   });
 }

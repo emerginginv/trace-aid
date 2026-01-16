@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,6 +126,7 @@ function SortableCaseTypeRow({ caseType, onEdit, onDelete }: {
 
 export function CaseTypesTab() {
   const { organization } = useOrganization();
+  const queryClient = useQueryClient();
   const [caseTypes, setCaseTypes] = useState<CaseType[]>([]);
   const [services, setServices] = useState<CaseService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,6 +241,9 @@ export function CaseTypesTab() {
           .update({ display_order: update.display_order })
           .eq('id', update.id);
       }
+      
+      // Invalidate React Query caches after reorder
+      queryClient.invalidateQueries({ queryKey: ['case-types'] });
     } catch (error) {
       console.error('Error updating order:', error);
       toast.error('Failed to update order');
@@ -366,6 +371,10 @@ export function CaseTypesTab() {
         toast.success('Case type created');
       }
 
+      // Invalidate React Query caches so wizard and other screens get fresh data
+      queryClient.invalidateQueries({ queryKey: ['case-types'] });
+      queryClient.invalidateQueries({ queryKey: ['case-type'] });
+
       setDialogOpen(false);
       fetchCaseTypes();
     } catch (error: any) {
@@ -389,6 +398,11 @@ export function CaseTypesTab() {
 
       if (error) throw error;
       toast.success('Case type deleted');
+      
+      // Invalidate React Query caches
+      queryClient.invalidateQueries({ queryKey: ['case-types'] });
+      queryClient.invalidateQueries({ queryKey: ['case-type'] });
+      
       setDeleteDialogOpen(false);
       setDeletingId(null);
       fetchCaseTypes();
