@@ -52,17 +52,42 @@ export function CaseRequestSettingsSection() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
+      // First try to update existing row
+      const { data: existingData, error: selectError } = await supabase
         .from("organization_settings")
-        .upsert({
-          organization_id: organization.id,
-          case_request_default_instructions: defaultInstructions || null,
-          case_request_notification_emails: notificationEmails.length > 0 ? notificationEmails : null,
-        } as any, {
-          onConflict: "organization_id",
-        });
+        .select("id")
+        .eq("organization_id", organization.id)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (selectError) throw selectError;
+
+      if (existingData) {
+        // Update existing row
+        const { error } = await supabase
+          .from("organization_settings")
+          .update({
+            case_request_default_instructions: defaultInstructions || null,
+            case_request_notification_emails: notificationEmails.length > 0 ? notificationEmails : null,
+          } as any)
+          .eq("organization_id", organization.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new row - need to get current user for user_id field
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
+
+        const { error } = await supabase
+          .from("organization_settings")
+          .insert({
+            organization_id: organization.id,
+            user_id: user.id,
+            case_request_default_instructions: defaultInstructions || null,
+            case_request_notification_emails: notificationEmails.length > 0 ? notificationEmails : null,
+          } as any);
+
+        if (error) throw error;
+      }
 
       toast.success("Case request settings saved");
     } catch (error) {
