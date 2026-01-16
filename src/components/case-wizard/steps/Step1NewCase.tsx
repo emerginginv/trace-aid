@@ -31,7 +31,8 @@ import { useCaseTypesQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { useAccountsQuery } from "@/hooks/queries/useAccountsQuery";
 import { useContactsQuery } from "@/hooks/queries/useContactsQuery";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Calendar, Info, Building2, Plus, X, User } from "lucide-react";
+import { Calendar, Info, Building2, Plus, X, User, AlertTriangle } from "lucide-react";
+import { useConfirmation } from "@/components/ui/confirmation-dialog";
 import { addDays, format } from "date-fns";
 import { logCaseTypeAudit } from "@/lib/caseTypeAuditLogger";
 import { cn } from "@/lib/utils";
@@ -74,6 +75,9 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   const { hasPermission } = usePermissions();
   const canCreateAccount = hasPermission('add_accounts');
   const canCreateContact = hasPermission('add_contacts');
+
+  // Confirmation dialog for client data changes
+  const { confirm, ConfirmDialog } = useConfirmation();
 
   // Fetch case types from database
   const { data: caseTypes = [], isLoading: caseTypesLoading } = useCaseTypesQuery({ 
@@ -143,15 +147,62 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   }, [allContacts, selectedContactId]);
 
   // Handlers for account selection
-  const handleAccountChange = (accountId: string) => {
-    form.setValue("account_id", accountId === "none" ? "" : accountId);
-    form.setValue("contact_id", ""); // Clear contact when account changes
+  const handleAccountChange = async (accountId: string) => {
+    const newAccountId = accountId === "none" ? "" : accountId;
+    const currentContactId = form.getValues("contact_id");
+    
+    // Check if there's a contact selected that might not belong to new account
+    if (currentContactId && newAccountId) {
+      const currentContact = allContacts.find(c => c.id === currentContactId);
+      
+      // Check if contact belongs to the new account (or is standalone)
+      const contactBelongsToNewAccount = 
+        (currentContact?.account_id === newAccountId) ||
+        (!currentContact?.account_id); // Standalone contact is fine
+      
+      if (!contactBelongsToNewAccount) {
+        // Show warning dialog - user chooses to clear or keep
+        const shouldClear = await confirm({
+          title: "Contact belongs to a different account",
+          description: `"${currentContact?.first_name} ${currentContact?.last_name}" is associated with a different account. Would you like to clear this contact, or keep them anyway?`,
+          confirmLabel: "Clear Contact",
+          cancelLabel: "Keep Contact",
+          variant: "warning",
+        });
+        
+        if (shouldClear) {
+          form.setValue("contact_id", "");
+        }
+        // If user cancels (Keep Contact), we keep the contact regardless
+      }
+    }
+    
+    form.setValue("account_id", newAccountId);
     setEditingAccount(false);
   };
 
-  const handleRemoveAccount = () => {
+  const handleRemoveAccount = async () => {
+    const currentContactId = form.getValues("contact_id");
+    
+    if (currentContactId) {
+      const currentContact = allContacts.find(c => c.id === currentContactId);
+      
+      // Ask if user wants to keep the contact as standalone
+      const shouldClear = await confirm({
+        title: "Keep the primary contact?",
+        description: `You're removing the client account. Would you like to also clear "${currentContact?.first_name} ${currentContact?.last_name}", or keep them as a standalone contact?`,
+        confirmLabel: "Clear Contact",
+        cancelLabel: "Keep Contact",
+        variant: "warning",
+      });
+      
+      if (shouldClear) {
+        form.setValue("contact_id", "");
+      }
+      // If user cancels (Keep Contact), keep the contact as standalone
+    }
+    
     form.setValue("account_id", "");
-    form.setValue("contact_id", "");
   };
 
   const handleAccountCreated = (newAccountId?: string) => {
@@ -192,23 +243,13 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
     }
   }, [selectedCaseType, form]);
 
-  // Clear contact selection when account changes (only if contact doesn't belong to new account)
-  useEffect(() => {
-    const currentContact = form.getValues("contact_id");
-    
-    // If account changed and there was a contact selected, validate it still belongs
-    if (currentContact && selectedAccountId) {
-      const contactBelongsToAccount = contacts.some(
-        c => c.id === currentContact && c.account_id === selectedAccountId
-      );
-      // Only clear if the contact doesn't belong to the selected account
-      if (!contactBelongsToAccount && contacts.length > 0) {
-        form.setValue("contact_id", "");
-        setEditingContact(false);
-      }
-    }
-    // Note: If account is cleared, we keep the contact (allows standalone contacts)
-  }, [selectedAccountId, contacts, form]);
+  // Check if current contact has a mismatch with selected account
+  const contactHasMismatch = useMemo(() => {
+    if (!selectedContact || !selectedAccountId) return false;
+    // Contact has a mismatch if it belongs to a DIFFERENT account
+    return selectedContact.account_id && 
+           selectedContact.account_id !== selectedAccountId;
+  }, [selectedContact, selectedAccountId]);
 
   useEffect(() => {
     fetchInitialData();
@@ -668,19 +709,28 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
                 </div>
               ) : selectedContact ? (
                 // Display Mode - Show Card
-                <ClientContactCard
-                  contact={{
-                    id: selectedContact.id,
-                    first_name: selectedContact.first_name,
-                    last_name: selectedContact.last_name,
-                    phone: selectedContact.phone,
-                    email: selectedContact.email,
-                  }}
-                  onChangeClick={() => setEditingContact(true)}
-                  onRemove={handleRemoveContact}
-                  canEdit={true}
-                  label="Primary Contact"
-                />
+                <>
+                  <ClientContactCard
+                    contact={{
+                      id: selectedContact.id,
+                      first_name: selectedContact.first_name,
+                      last_name: selectedContact.last_name,
+                      phone: selectedContact.phone,
+                      email: selectedContact.email,
+                    }}
+                    onChangeClick={() => setEditingContact(true)}
+                    onRemove={handleRemoveContact}
+                    canEdit={true}
+                    label="Primary Contact"
+                  />
+                  {/* Warning if contact belongs to a different account */}
+                  {contactHasMismatch && (
+                    <p className="text-xs text-warning flex items-center gap-1 mt-2">
+                      <AlertTriangle className="h-3 w-3" />
+                      This contact belongs to a different account
+                    </p>
+                  )}
+                </>
               ) : (
                 // Empty State
                 <Button 
@@ -720,6 +770,9 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
             organizationId={organizationId}
             defaultAccountId={selectedAccountId || undefined}
           />
+
+          {/* Confirmation Dialog for Client Data Changes */}
+          <ConfirmDialog />
 
           {/* 5. Description (Optional) */}
           <FormField

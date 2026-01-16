@@ -137,6 +137,8 @@ export function useConfirmation() {
     title: string;
     description: string;
     variant: "default" | "destructive" | "warning" | "success";
+    confirmLabel: string;
+    cancelLabel: string;
     onConfirm: () => void;
     onCancel: () => void;
   }>({
@@ -144,6 +146,8 @@ export function useConfirmation() {
     title: "",
     description: "",
     variant: "default",
+    confirmLabel: "Confirm",
+    cancelLabel: "Cancel",
     onConfirm: () => {},
     onCancel: () => {},
   });
@@ -153,6 +157,8 @@ export function useConfirmation() {
       title: string;
       description: string;
       variant?: "default" | "destructive" | "warning" | "success";
+      confirmLabel?: string;
+      cancelLabel?: string;
     }) => {
       return new Promise<boolean>((resolve) => {
         setState({
@@ -160,6 +166,8 @@ export function useConfirmation() {
           title: options.title,
           description: options.description,
           variant: options.variant || "default",
+          confirmLabel: options.confirmLabel || "Confirm",
+          cancelLabel: options.cancelLabel || "Cancel",
           onConfirm: () => {
             resolve(true);
             setState((prev) => ({ ...prev, open: false }));
@@ -187,6 +195,8 @@ export function useConfirmation() {
         title={state.title}
         description={state.description}
         variant={state.variant}
+        confirmLabel={state.confirmLabel}
+        cancelLabel={state.cancelLabel}
         onConfirm={state.onConfirm}
       />
     ),
