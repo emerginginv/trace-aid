@@ -2658,6 +2658,7 @@ export type Database = {
       }
       contacts: {
         Row: {
+          access_level: string | null
           account_id: string | null
           address: string | null
           city: string | null
@@ -2665,22 +2666,29 @@ export type Database = {
           email: string | null
           external_record_id: string | null
           external_system_name: string | null
+          fax: string | null
           first_name: string
+          home_phone: string | null
           id: string
           import_batch_id: string | null
           import_timestamp: string | null
           last_name: string
+          middle_name: string | null
+          mobile_phone: string | null
           notes: string | null
+          office_phone: string | null
           organization_id: string
           phone: string | null
           role: string | null
           state: string | null
           status: string | null
+          title: string | null
           updated_at: string | null
           user_id: string
           zip_code: string | null
         }
         Insert: {
+          access_level?: string | null
           account_id?: string | null
           address?: string | null
           city?: string | null
@@ -2688,22 +2696,29 @@ export type Database = {
           email?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
+          fax?: string | null
           first_name: string
+          home_phone?: string | null
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
           last_name: string
+          middle_name?: string | null
+          mobile_phone?: string | null
           notes?: string | null
+          office_phone?: string | null
           organization_id: string
           phone?: string | null
           role?: string | null
           state?: string | null
           status?: string | null
+          title?: string | null
           updated_at?: string | null
           user_id: string
           zip_code?: string | null
         }
         Update: {
+          access_level?: string | null
           account_id?: string | null
           address?: string | null
           city?: string | null
@@ -2711,17 +2726,23 @@ export type Database = {
           email?: string | null
           external_record_id?: string | null
           external_system_name?: string | null
+          fax?: string | null
           first_name?: string
+          home_phone?: string | null
           id?: string
           import_batch_id?: string | null
           import_timestamp?: string | null
           last_name?: string
+          middle_name?: string | null
+          mobile_phone?: string | null
           notes?: string | null
+          office_phone?: string | null
           organization_id?: string
           phone?: string | null
           role?: string | null
           state?: string | null
           status?: string | null
+          title?: string | null
           updated_at?: string | null
           user_id?: string
           zip_code?: string | null
