@@ -317,7 +317,7 @@ export default function CaseRequests() {
               </p>
               {!searchTerm && statusFilter === "all" && (
                 <Button asChild>
-                  <Link to="/request/new">
+                  <Link to="/cases/requests/new">
                     <Plus className="h-4 w-4 mr-2" />
                     Create First Request
                   </Link>
