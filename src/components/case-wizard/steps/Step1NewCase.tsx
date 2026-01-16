@@ -447,7 +447,34 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Case Type *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select 
+                  onValueChange={async (newValue) => {
+                    // Check if changing case type would clear reference numbers
+                    const hasReferenceData = form.getValues("reference_number") || 
+                                             form.getValues("reference_number_2") || 
+                                             form.getValues("reference_number_3");
+                    
+                    if (hasReferenceData && field.value && newValue !== field.value) {
+                      const shouldChange = await confirm({
+                        title: "Change Case Type?",
+                        description: "Changing the case type will clear the reference numbers you entered, as each case type has different reference fields.",
+                        confirmLabel: "Change Type",
+                        cancelLabel: "Keep Current",
+                        variant: "warning",
+                      });
+                      
+                      if (!shouldChange) return;
+                      
+                      // Clear reference numbers
+                      form.setValue("reference_number", "");
+                      form.setValue("reference_number_2", "");
+                      form.setValue("reference_number_3", "");
+                    }
+                    
+                    field.onChange(newValue);
+                  }} 
+                  value={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={caseTypesLoading ? "Loading..." : "Select case type"} />
