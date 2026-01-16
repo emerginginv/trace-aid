@@ -174,12 +174,17 @@ export default function CaseRequestDetail() {
     if (data) setSubjectTypes(data);
   };
 
-  const handleMatchComplete = (accountId: string, contactId: string | null) => {
+  const handleMatchComplete = (data: {
+    accountId: string;
+    contactId: string | null;
+    clientAction: 'existing' | 'new';
+    contactAction: 'existing' | 'new' | null;
+  }) => {
     if (request) {
       setRequest({
         ...request,
-        matched_account_id: accountId,
-        matched_contact_id: contactId,
+        matched_account_id: data.accountId,
+        matched_contact_id: data.contactId,
       });
     }
   };
@@ -423,6 +428,13 @@ export default function CaseRequestDetail() {
                   organizationId={organization.id}
                   matchedAccountId={request.matched_account_id}
                   matchedContactId={request.matched_contact_id}
+                  submittedContactData={{
+                    firstName: request.submitted_contact_first_name,
+                    middleName: null,
+                    lastName: request.submitted_contact_last_name,
+                    email: request.submitted_contact_email,
+                    mobilePhone: request.submitted_contact_mobile_phone,
+                  }}
                   onMatchComplete={handleMatchComplete}
                 />
               )}
