@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useBillingItemApproval } from "@/hooks/useBillingItemApproval";
+import { 
+  fetchCombinedFinances, 
+  deleteFinanceRecord, 
+  updateFinanceStatus,
+  type UnifiedFinanceRecord 
+} from "@/lib/financeUtils";
 
 export interface Finance {
   id: string;
@@ -47,11 +53,17 @@ interface UseCaseFinancesResult {
   retainerTotal: number;
   loading: boolean;
   fetchFinances: () => Promise<void>;
-  handleDelete: (id: string) => Promise<void>;
+  handleDelete: (id: string, financeType?: string) => Promise<void>;
   handleApprove: (id: string, financeType?: string) => Promise<void>;
   handleReject: (id: string, financeType?: string) => Promise<void>;
 }
 
+/**
+ * Hook for managing case financial data.
+ * 
+ * MIGRATED: Now fetches from canonical time_entries and expense_entries tables
+ * instead of the deprecated case_finances table.
+ */
 export function useCaseFinances(caseId: string): UseCaseFinancesResult {
   const [finances, setFinances] = useState<Finance[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -76,15 +88,30 @@ export function useCaseFinances(caseId: string): UseCaseFinancesResult {
 
       if (!memberData) return;
 
-      const { data, error } = await supabase
-        .from("case_finances")
-        .select("*")
-        .eq("case_id", caseId)
-        .eq("organization_id", memberData.organization_id)
-        .order("date", { ascending: false });
+      // MIGRATED: Fetch from canonical tables instead of case_finances
+      const { combined } = await fetchCombinedFinances(memberData.organization_id, {
+        caseId,
+      });
 
-      if (error) throw error;
-      setFinances(data || []);
+      // Transform to Finance interface
+      const financeData: Finance[] = combined.map((record: UnifiedFinanceRecord) => ({
+        id: record.id,
+        finance_type: record.finance_type,
+        amount: record.amount,
+        description: record.description || record.notes || record.category || '',
+        date: record.date,
+        status: record.status,
+        created_at: record.created_at,
+        activity_id: record.activity_id,
+        category: record.category,
+        notes: record.notes,
+        hours: record.hours,
+        hourly_rate: record.hourly_rate,
+        quantity: record.quantity,
+        unit_price: record.unit_price,
+      }));
+
+      setFinances(financeData);
 
       const { data: invoicesData, error: invoicesError } = await supabase
         .from("invoices")
@@ -135,14 +162,29 @@ export function useCaseFinances(caseId: string): UseCaseFinancesResult {
   useEffect(() => {
     fetchFinances();
 
-    const financesChannel = supabase
-      .channel('case-finances-changes')
+    // Subscribe to both canonical tables for real-time updates
+    const timeEntriesChannel = supabase
+      .channel('time-entries-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'case_finances',
+          table: 'time_entries',
+          filter: `case_id=eq.${caseId}`
+        },
+        () => fetchFinances()
+      )
+      .subscribe();
+
+    const expenseEntriesChannel = supabase
+      .channel('expense-entries-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'expense_entries',
           filter: `case_id=eq.${caseId}`
         },
         () => fetchFinances()
@@ -164,21 +206,31 @@ export function useCaseFinances(caseId: string): UseCaseFinancesResult {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(financesChannel);
+      supabase.removeChannel(timeEntriesChannel);
+      supabase.removeChannel(expenseEntriesChannel);
       supabase.removeChannel(invoicesChannel);
     };
   }, [caseId, fetchFinances]);
 
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDelete = useCallback(async (id: string, financeType?: string) => {
     if (!confirm("Are you sure you want to delete this transaction?")) return;
 
     try {
-      const { error } = await supabase
-        .from("case_finances")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      // Determine finance type from existing data if not provided
+      const type = financeType || finances.find(f => f.id === id)?.finance_type;
+      
+      if (type === 'time' || type === 'expense') {
+        // MIGRATED: Delete from canonical table
+        const result = await deleteFinanceRecord(id, type);
+        if (!result.success) throw new Error(result.error);
+      } else {
+        // Fallback for legacy billing_item types still in case_finances
+        const { error } = await supabase
+          .from("case_finances")
+          .delete()
+          .eq("id", id);
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",
@@ -193,7 +245,7 @@ export function useCaseFinances(caseId: string): UseCaseFinancesResult {
         variant: "destructive",
       });
     }
-  }, [fetchFinances]);
+  }, [fetchFinances, finances]);
 
   const handleApprove = useCallback(async (id: string, financeType?: string) => {
     try {
@@ -214,16 +266,25 @@ export function useCaseFinances(caseId: string): UseCaseFinancesResult {
           description: "Billing item approved. Budget consumption updated.",
         });
       } else {
-        const { error } = await supabase
-          .from("case_finances")
-          .update({ status: "approved" })
-          .eq("id", id);
-
-        if (error) throw error;
+        // Determine type from existing data
+        const type = financeType || finances.find(f => f.id === id)?.finance_type;
+        
+        if (type === 'time' || type === 'expense') {
+          // MIGRATED: Update in canonical table
+          const result = await updateFinanceStatus(id, type, 'approved');
+          if (!result.success) throw new Error(result.error);
+        } else {
+          // Fallback for legacy types
+          const { error } = await supabase
+            .from("case_finances")
+            .update({ status: "approved" })
+            .eq("id", id);
+          if (error) throw error;
+        }
 
         toast({
           title: "Success",
-          description: "Expense approved successfully",
+          description: "Entry approved successfully",
         });
       }
       fetchFinances();
@@ -235,7 +296,7 @@ export function useCaseFinances(caseId: string): UseCaseFinancesResult {
         variant: "destructive",
       });
     }
-  }, [approveBillingItem, fetchFinances]);
+  }, [approveBillingItem, fetchFinances, finances]);
 
   const handleReject = useCallback(async (id: string, financeType?: string) => {
     try {
@@ -256,16 +317,25 @@ export function useCaseFinances(caseId: string): UseCaseFinancesResult {
           description: "Billing item rejected. Item remains linked but non-billable.",
         });
       } else {
-        const { error } = await supabase
-          .from("case_finances")
-          .update({ status: "rejected" })
-          .eq("id", id);
-
-        if (error) throw error;
+        // Determine type from existing data
+        const type = financeType || finances.find(f => f.id === id)?.finance_type;
+        
+        if (type === 'time' || type === 'expense') {
+          // MIGRATED: Update in canonical table
+          const result = await updateFinanceStatus(id, type, 'declined');
+          if (!result.success) throw new Error(result.error);
+        } else {
+          // Fallback for legacy types
+          const { error } = await supabase
+            .from("case_finances")
+            .update({ status: "rejected" })
+            .eq("id", id);
+          if (error) throw error;
+        }
 
         toast({
           title: "Success",
-          description: "Expense rejected",
+          description: "Entry rejected",
         });
       }
       fetchFinances();
@@ -277,7 +347,7 @@ export function useCaseFinances(caseId: string): UseCaseFinancesResult {
         variant: "destructive",
       });
     }
-  }, [rejectBillingItem, fetchFinances]);
+  }, [rejectBillingItem, fetchFinances, finances]);
 
   return {
     finances,

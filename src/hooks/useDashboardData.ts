@@ -320,13 +320,12 @@ export function useDashboardData({
         setUpdates(recentUpdates);
       }
 
-      // Fetch recent expenses from case_finances
+      // MIGRATED: Fetch recent expenses from expense_entries (canonical table)
       let expensesQuery = supabase
-        .from('case_finances')
+        .from('expense_entries')
         .select('*')
         .eq('organization_id', orgId)
-        .eq('finance_type', 'expense')
-        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(5);
 
       if (expensesFilter === 'my') {
@@ -339,10 +338,10 @@ export function useDashboardData({
           const submitter = orgUsers?.find((u) => u.id === expense.user_id);
           return {
             id: expense.id,
-            description: expense.description,
-            amount: typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount || '0'),
-            date: expense.date,
-            category: expense.category || 'General',
+            description: expense.notes || expense.item_type || 'Expense',
+            amount: typeof expense.total === 'number' ? expense.total : parseFloat(String(expense.total) || '0'),
+            date: expense.created_at.split('T')[0],
+            category: expense.item_type || 'General',
             userId: expense.user_id,
             submittedByName: submitter?.full_name || submitter?.email || null,
             caseId: expense.case_id,
@@ -352,14 +351,18 @@ export function useDashboardData({
         setExpenses(recentExpenses);
       }
 
-      // Fetch financial summary data
-      const [retainerResult, pendingExpensesResult, unpaidInvoicesResult] = await Promise.all([
+      // MIGRATED: Fetch financial summary from canonical tables
+      const [retainerResult, pendingTimeResult, pendingExpenseResult, unpaidInvoicesResult] = await Promise.all([
         supabase.from('retainer_funds').select('amount').eq('organization_id', orgId),
         supabase
-          .from('case_finances')
-          .select('amount')
+          .from('time_entries')
+          .select('total')
           .eq('organization_id', orgId)
-          .eq('finance_type', 'expense')
+          .eq('status', 'pending'),
+        supabase
+          .from('expense_entries')
+          .select('total')
+          .eq('organization_id', orgId)
           .eq('status', 'pending'),
         supabase
           .from('invoices')
@@ -370,8 +373,11 @@ export function useDashboardData({
 
       const totalRetainer =
         retainerResult.data?.reduce((sum, r) => sum + parseFloat(String(r.amount) || '0'), 0) || 0;
-      const outstandingExpenses =
-        pendingExpensesResult.data?.reduce((sum, e) => sum + parseFloat(String(e.amount) || '0'), 0) || 0;
+      const pendingTimeTotal =
+        pendingTimeResult.data?.reduce((sum, e) => sum + parseFloat(String(e.total) || '0'), 0) || 0;
+      const pendingExpenseTotal =
+        pendingExpenseResult.data?.reduce((sum, e) => sum + parseFloat(String(e.total) || '0'), 0) || 0;
+      const outstandingExpenses = pendingTimeTotal + pendingExpenseTotal;
       const unpaidInvoicesTotal =
         unpaidInvoicesResult.data?.reduce((sum, i) => sum + parseFloat(String(i.balance_due) || '0'), 0) || 0;
 

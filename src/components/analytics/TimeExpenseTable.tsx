@@ -34,28 +34,80 @@ export function TimeExpenseTable({
   const { data, isLoading } = useQuery({
     queryKey: ["time-expense-table", organizationId, timeRange, typeFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("case_finances")
-        .select("id, date, finance_type, description, category, hours, hourly_rate, amount, status, invoiced, case_id, user_id")
-        .eq("organization_id", organizationId)
-        .in("finance_type", ["time", "expense"])
-        .order("date", { ascending: false });
+      // MIGRATED: Fetch from canonical tables instead of case_finances
+      const results: any[] = [];
 
-      if (typeFilter !== "all") {
-        query = query.eq("finance_type", typeFilter);
+      // Fetch time entries if not filtering to expenses only
+      if (typeFilter !== "expense") {
+        let timeQuery = supabase
+          .from("time_entries")
+          .select("id, created_at, hours, rate, total, status, item_type, notes, case_id, user_id")
+          .eq("organization_id", organizationId)
+          .order("created_at", { ascending: false });
+
+        if (timeRange) {
+          timeQuery = timeQuery
+            .gte("created_at", timeRange.start.toISOString())
+            .lte("created_at", timeRange.end.toISOString());
+        }
+
+        const { data: timeData } = await timeQuery;
+        (timeData || []).forEach(entry => {
+          results.push({
+            id: entry.id,
+            date: entry.created_at.split('T')[0],
+            finance_type: 'time',
+            description: entry.notes || entry.item_type || 'Time Entry',
+            category: entry.item_type,
+            hours: entry.hours,
+            hourly_rate: entry.rate,
+            amount: entry.total,
+            status: entry.status,
+            invoiced: false, // TODO: Add invoice tracking to canonical tables
+            case_id: entry.case_id,
+            user_id: entry.user_id,
+          });
+        });
       }
 
-      if (timeRange) {
-        query = query
-          .gte("date", timeRange.start.toISOString().split("T")[0])
-          .lte("date", timeRange.end.toISOString().split("T")[0]);
+      // Fetch expense entries if not filtering to time only
+      if (typeFilter !== "time") {
+        let expenseQuery = supabase
+          .from("expense_entries")
+          .select("id, created_at, quantity, rate, total, status, item_type, notes, case_id, user_id")
+          .eq("organization_id", organizationId)
+          .order("created_at", { ascending: false });
+
+        if (timeRange) {
+          expenseQuery = expenseQuery
+            .gte("created_at", timeRange.start.toISOString())
+            .lte("created_at", timeRange.end.toISOString());
+        }
+
+        const { data: expenseData } = await expenseQuery;
+        (expenseData || []).forEach(entry => {
+          results.push({
+            id: entry.id,
+            date: entry.created_at.split('T')[0],
+            finance_type: 'expense',
+            description: entry.notes || entry.item_type || 'Expense',
+            category: entry.item_type,
+            hours: null,
+            hourly_rate: entry.rate,
+            amount: entry.total,
+            status: entry.status,
+            invoiced: false,
+            case_id: entry.case_id,
+            user_id: entry.user_id,
+          });
+        });
       }
 
-      const { data: entries, error } = await query;
-      if (error) throw error;
+      // Sort by date descending
+      results.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       // Fetch case info
-      const caseIds = [...new Set(entries?.map(e => e.case_id).filter(Boolean))];
+      const caseIds = [...new Set(results.map(e => e.case_id).filter(Boolean))];
       const { data: cases } = await supabase
         .from("cases")
         .select("id, case_number, title")
@@ -64,7 +116,7 @@ export function TimeExpenseTable({
       const caseMap = new Map(cases?.map(c => [c.id, { case_number: c.case_number, title: c.title }]) || []);
 
       // Fetch user names
-      const userIds = [...new Set(entries?.map(e => e.user_id).filter(Boolean))];
+      const userIds = [...new Set(results.map(e => e.user_id).filter(Boolean))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name, email")
@@ -72,7 +124,7 @@ export function TimeExpenseTable({
 
       const profileMap = new Map(profiles?.map(p => [p.id, p.full_name || p.email]) || []);
 
-      return entries?.map(entry => {
+      return results.map(entry => {
         const caseInfo = caseMap.get(entry.case_id);
         return {
           ...entry,
@@ -80,7 +132,7 @@ export function TimeExpenseTable({
           caseTitle: caseInfo?.title || "",
           userName: profileMap.get(entry.user_id) || "Unknown",
         };
-      }) || [];
+      });
     },
     enabled: !!organizationId,
   });
