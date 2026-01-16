@@ -783,6 +783,11 @@ export function ActivityForm({
                     </Select>
                     <p className="text-xs text-muted-foreground">
                       Link this task to a service for budget tracking and invoicing.
+                      {availableServices.length > 0 && availableServices.length < 10 && (
+                        <span className="ml-1 text-muted-foreground/70">
+                          ({availableServices.length} service{availableServices.length !== 1 ? 's' : ''} available for this Case Type)
+                        </span>
+                      )}
                     </p>
                     <FormMessage />
                   </FormItem>

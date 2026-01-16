@@ -45,6 +45,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { useCaseTypesQuery, CaseType } from "@/hooks/queries/useCaseTypesQuery";
 import { DueDateRecalculateDialog } from "@/components/case-detail/DueDateRecalculateDialog";
+import { ServiceConflictDialog } from "@/components/case-detail/ServiceConflictDialog";
 
 const caseSchema = z.object({
   title: z.string().max(200).optional(),
@@ -123,6 +124,14 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     currentDueDate: Date | null;
     defaultDays: number;
     caseTypeName: string;
+  } | null>(null);
+
+  // Service conflict dialog state
+  const [serviceConflictDialogOpen, setServiceConflictDialogOpen] = useState(false);
+  const [pendingServiceConflict, setPendingServiceConflict] = useState<{
+    newCaseTypeId: string;
+    newCaseTypeName: string;
+    conflictingServices: Array<{ id: string; name: string; code?: string | null }>;
   } | null>(null);
 
   // Fetch case types using React Query
@@ -248,10 +257,42 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
   }, [open, editingCase, organization?.id]);
 
   // Handle case type change - set defaults based on case type
-  const handleCaseTypeChange = (caseTypeId: string | null) => {
+  const handleCaseTypeChange = async (caseTypeId: string | null) => {
     if (caseTypeId) {
       const caseType = caseTypes.find(ct => ct.id === caseTypeId);
       if (caseType) {
+        // For editing existing cases, check for service conflicts
+        if (editingCase && caseType.allowed_service_ids && caseType.allowed_service_ids.length > 0) {
+          // Fetch current case services
+          const { data: currentInstances } = await supabase
+            .from("case_service_instances")
+            .select(`
+              id, 
+              case_service_id,
+              case_services!inner(name, code)
+            `)
+            .eq("case_id", editingCase.id);
+
+          // Find services that would be incompatible
+          const conflicting = currentInstances?.filter(
+            instance => !caseType.allowed_service_ids!.includes(instance.case_service_id)
+          ).map(instance => ({
+            id: instance.id,
+            name: (instance.case_services as any)?.name || 'Unknown',
+            code: (instance.case_services as any)?.code || null,
+          }));
+
+          if (conflicting && conflicting.length > 0) {
+            setPendingServiceConflict({
+              newCaseTypeId: caseTypeId,
+              newCaseTypeName: caseType.name,
+              conflictingServices: conflicting,
+            });
+            setServiceConflictDialogOpen(true);
+            return; // Wait for dialog response
+          }
+        }
+        
         // For editing existing cases with default_due_days, prompt before changing
         if (editingCase && caseType.default_due_days && caseType.default_due_days > 0) {
           const currentDueDate = form.getValues("due_date") || null;
@@ -286,6 +327,72 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
     // Apply the case type change
     setSelectedCaseTypeId(caseTypeId);
     form.setValue("case_type_id", caseTypeId);
+  };
+
+  // Handle cancelling service conflict change
+  const handleCancelServiceConflict = () => {
+    setPendingServiceConflict(null);
+  };
+
+  // Handle confirming service conflict (remove conflicting services and apply change)
+  const handleConfirmServiceConflict = async () => {
+    if (!pendingServiceConflict || !editingCase) return;
+
+    const { newCaseTypeId, conflictingServices } = pendingServiceConflict;
+    const caseType = caseTypes.find(ct => ct.id === newCaseTypeId);
+
+    try {
+      // Remove conflicting service instances
+      const conflictingIds = conflictingServices.map(s => s.id);
+      if (conflictingIds.length > 0) {
+        const { error } = await supabase
+          .from("case_service_instances")
+          .delete()
+          .in("id", conflictingIds);
+
+        if (error) {
+          console.error("Error removing conflicting services:", error);
+          toast.error("Failed to remove conflicting services");
+          return;
+        }
+      }
+
+      // Now check for due date change if applicable
+      if (caseType?.default_due_days && caseType.default_due_days > 0) {
+        const currentDueDate = form.getValues("due_date") || null;
+        const newDueDate = addDays(new Date(), caseType.default_due_days);
+        
+        setPendingDueDateChange({
+          newCaseTypeId,
+          newDueDate,
+          currentDueDate,
+          defaultDays: caseType.default_due_days,
+          caseTypeName: caseType.name,
+        });
+        setDueDateDialogOpen(true);
+        setPendingServiceConflict(null);
+        
+        toast.success(`Removed ${conflictingServices.length} incompatible service${conflictingServices.length !== 1 ? 's' : ''}`);
+        return;
+      }
+
+      // Apply case type change
+      setSelectedCaseTypeId(newCaseTypeId);
+      form.setValue("case_type_id", newCaseTypeId);
+
+      // Clear budget fields if strategy is disabled
+      if (caseType?.budget_strategy === 'disabled') {
+        form.setValue("budget_hours", null);
+        form.setValue("budget_dollars", null);
+      }
+
+      toast.success(`Case Type updated. Removed ${conflictingServices.length} incompatible service${conflictingServices.length !== 1 ? 's' : ''}.`);
+    } catch (error) {
+      console.error("Error handling service conflict:", error);
+      toast.error("Failed to update Case Type");
+    }
+
+    setPendingServiceConflict(null);
   };
 
   // Handle keeping current due date (from dialog)
@@ -653,6 +760,16 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         newDueDate={pendingDueDateChange?.newDueDate || new Date()}
         defaultDays={pendingDueDateChange?.defaultDays || 0}
         caseTypeName={pendingDueDateChange?.caseTypeName}
+      />
+
+      {/* Service Conflict Dialog */}
+      <ServiceConflictDialog
+        open={serviceConflictDialogOpen}
+        onOpenChange={setServiceConflictDialogOpen}
+        onConfirm={handleConfirmServiceConflict}
+        onCancel={handleCancelServiceConflict}
+        conflictingServices={pendingServiceConflict?.conflictingServices || []}
+        newCaseTypeName={pendingServiceConflict?.newCaseTypeName || ""}
       />
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
