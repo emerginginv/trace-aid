@@ -11,7 +11,8 @@ export interface AvailableService {
 
 /**
  * Fetches available services for a case.
- * Filters services based on the Case Type's allowed_service_ids if set.
+ * Filters services based on the case's active_service_ids (if set), 
+ * or falls back to the Case Type's allowed_service_ids.
  */
 export function useCaseAvailableServices(caseId: string | undefined) {
   return useQuery({
@@ -19,12 +20,13 @@ export function useCaseAvailableServices(caseId: string | undefined) {
     queryFn: async () => {
       if (!caseId) return [];
 
-      // Fetch the case with organization and case_type's allowed_service_ids
+      // Fetch the case with organization, active_service_ids, and case_type's allowed_service_ids
       const { data: caseData, error: caseError } = await supabase
         .from("cases")
         .select(`
           organization_id,
           case_type_id,
+          active_service_ids,
           case_types!cases_case_type_id_fkey (
             allowed_service_ids
           )
@@ -50,11 +52,15 @@ export function useCaseAvailableServices(caseId: string | undefined) {
         throw error;
       }
 
-      // Get allowed_service_ids from the case type
+      // Determine which service IDs to filter by:
+      // 1. Use case's active_service_ids if populated (these are synced from case_service_instances)
+      // 2. Fall back to case_type's allowed_service_ids for filtering available services
+      const caseActiveIds = caseData.active_service_ids as string[] | null;
       const caseTypeData = caseData.case_types as { allowed_service_ids: string[] | null } | null;
       const allowedIds = caseTypeData?.allowed_service_ids;
 
-      // Filter by allowed_service_ids if set and not empty
+      // For available services, use the case type's allowed_service_ids
+      // (active_service_ids tracks what's already added, not what's allowed)
       let filteredServices = allServices || [];
       if (allowedIds && allowedIds.length > 0) {
         filteredServices = filteredServices.filter(service => 

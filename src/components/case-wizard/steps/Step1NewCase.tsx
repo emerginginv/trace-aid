@@ -184,7 +184,7 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         ? calculatedDueDate.toISOString().split('T')[0] 
         : null;
 
-      // Prepare case data
+      // Prepare case data - include applied_budget_strategy from case type
       const caseData: any = {
         title: data.subject_name, // Set title from primary subject name
         case_number: generatedCaseNumber,
@@ -201,6 +201,10 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         series_number: seriesNumber || undefined,
         series_instance: seriesInstance || 1,
         due_date: dueDateValue,
+        // Store applied budget strategy from case type at creation time
+        applied_budget_strategy: selectedCaseType?.budget_strategy || 'both',
+        // active_service_ids will be synced by trigger when service instances are created
+        active_service_ids: [],
       };
 
       const { data: newCase, error: caseError } = await supabase
