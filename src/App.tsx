@@ -73,6 +73,7 @@ import ExpenseEntryDetail from "./pages/ExpenseEntryDetail";
 import CaseRequests from "./pages/CaseRequests";
 import CaseRequestDetail from "./pages/CaseRequestDetail";
 import NewCaseRequest from "./pages/NewCaseRequest";
+import CaseRequestIntake from "./pages/CaseRequestIntake";
 
 const App = () => {
   return (
@@ -90,6 +91,8 @@ const App = () => {
             <Route path="/status" element={<StatusPage />} />
             {/* Public Security Report Form - No auth required */}
             <Route path="/security/report" element={<SecurityReport />} />
+            {/* Public Case Request Form - No auth required */}
+            <Route path="/request/:slug" element={<CaseRequestIntake />} />
             <Route
               path="/onboarding"
               element={
