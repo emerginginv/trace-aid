@@ -17,6 +17,7 @@ import { useCasesQuery } from "@/hooks/queries/useCasesQuery";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ExpenseCard } from "@/components/shared/ExpenseCard";
+import { useViewMode } from "@/hooks/use-view-mode";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -41,7 +42,7 @@ export default function Expenses() {
   const { organization } = useOrganization();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useViewMode<'grid' | 'list'>('expenses-view-mode', 'list');
 
   // Form state
   const [selectedCaseId, setSelectedCaseId] = useState("");

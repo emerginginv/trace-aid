@@ -5,6 +5,8 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { useActivitiesQuery, isScheduledActivity } from "@/hooks/queries";
+import { useViewMode } from "@/hooks/use-view-mode";
+import { useActivityEnrichment } from "@/hooks/use-enriched-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -100,9 +102,7 @@ export default function Activities() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState(initialTypeFilter);
-  const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
-    return (localStorage.getItem('activities-view-mode') as 'list' | 'cards') || 'cards';
-  });
+  const [viewMode, setViewMode] = useViewMode<'list' | 'cards'>('activities-view-mode', 'cards');
 
   const [showCaseSelector, setShowCaseSelector] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -113,62 +113,13 @@ export default function Activities() {
   // Use unified activities query
   const { data: rawActivities = [], isLoading } = useActivitiesQuery({ limit: 500 });
 
-  // Enrich activities with case and user data
-  const [enrichedActivities, setEnrichedActivities] = useState<ActivityWithCase[]>([]);
-  const [enriching, setEnriching] = useState(false);
-
-  useEffect(() => {
-    localStorage.setItem('activities-view-mode', viewMode);
-  }, [viewMode]);
+  // Use the shared enrichment hook
+  const { enrichedData: enrichedActivities, isEnriching: enriching } = useActivityEnrichment(rawActivities);
 
   useEffect(() => {
     if (!organization?.id) return;
     fetchUsers();
   }, [organization?.id]);
-
-  // Enrich raw activities with case and user data
-  useEffect(() => {
-    const enrichActivities = async () => {
-      if (rawActivities.length === 0) {
-        setEnrichedActivities([]);
-        return;
-      }
-      
-      setEnriching(true);
-      try {
-        const caseIds = [...new Set(rawActivities.map(a => a.case_id))];
-        const userIds = [...new Set(rawActivities.filter(a => a.assigned_user_id).map(a => a.assigned_user_id!))];
-
-        const [casesResult, usersResult] = await Promise.all([
-          caseIds.length > 0 
-            ? supabase.from("cases").select("id, case_number, title").in("id", caseIds)
-            : { data: [] },
-          userIds.length > 0
-            ? supabase.from("profiles").select("id, full_name, avatar_url").in("id", userIds)
-            : { data: [] },
-        ]);
-
-        const casesMap = (casesResult.data || []).reduce((acc, c) => ({ ...acc, [c.id]: c }), {} as Record<string, any>);
-        const usersMap = (usersResult.data || []).reduce((acc, u) => ({ ...acc, [u.id]: u }), {} as Record<string, any>);
-
-        const enriched = rawActivities
-          .filter(a => casesMap[a.case_id])
-          .map(a => ({
-            ...a,
-            cases: casesMap[a.case_id],
-            assigned_user: a.assigned_user_id ? usersMap[a.assigned_user_id] || null : null,
-          }));
-
-        setEnrichedActivities(enriched);
-      } catch (error) {
-        console.error("Error enriching activities:", error);
-      } finally {
-        setEnriching(false);
-      }
-    };
-
-    enrichActivities();
-  }, [rawActivities]);
 
   const fetchUsers = async () => {
     if (!organization?.id) return;
