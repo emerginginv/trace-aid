@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Plus, SkipForward, X } from "lucide-react";
+import { FileText, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -169,8 +169,7 @@ export function Step3Updates({ caseId, organizationId, onBack, onContinue }: Ste
               <Plus className="h-4 w-4" />
               Add Update
             </Button>
-            <Button variant="outline" onClick={handleContinue} className="gap-2">
-              <SkipForward className="h-4 w-4" />
+            <Button variant="outline" onClick={handleContinue}>
               Skip for Now
             </Button>
           </div>

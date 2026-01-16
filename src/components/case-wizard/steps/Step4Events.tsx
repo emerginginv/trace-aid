@@ -181,15 +181,12 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              variant="outline"
-              onClick={handleContinue}
-            >
-              Skip for Now
-            </Button>
-            <Button onClick={() => setShowForm(true)}>
-              <CalendarPlus className="h-4 w-4 mr-2" />
+            <Button onClick={() => setShowForm(true)} className="gap-2">
+              <CalendarPlus className="h-4 w-4" />
               Add Activity
+            </Button>
+            <Button variant="outline" onClick={handleContinue}>
+              Skip for Now
             </Button>
           </div>
         </div>
