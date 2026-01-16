@@ -1177,6 +1177,72 @@ export type Database = {
           },
         ]
       }
+      case_investigators: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          case_id: string
+          id: string
+          investigator_id: string
+          organization_id: string
+          role: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          case_id: string
+          id?: string
+          investigator_id: string
+          organization_id: string
+          role?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          case_id?: string
+          id?: string
+          investigator_id?: string
+          organization_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_investigators_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_investigators_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_investigators_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_investigators_investigator_id_fkey"
+            columns: ["investigator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_investigators_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_number_format_audit_log: {
         Row: {
           action: string
@@ -8755,6 +8821,10 @@ export type Database = {
           p_region: Database["public"]["Enums"]["data_region"]
         }
         Returns: boolean
+      }
+      set_primary_investigator: {
+        Args: { p_case_id: string; p_investigator_id: string }
+        Returns: undefined
       }
       sign_contract: {
         Args: {
