@@ -10,6 +10,7 @@ import { CaseManagerCard } from "./CaseManagerCard";
 import { InvestigatorCard } from "./InvestigatorCard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ContextualHelp } from "@/components/help-center";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Profile {
   id: string;
@@ -358,11 +359,20 @@ export const CaseTeamManager = ({
         description: "Primary investigator updated"
       });
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error setting primary investigator:", error);
+      
+      // Surface specific constraint violations
+      let errorMessage = "Failed to update primary investigator";
+      if (error?.message?.includes('multiple primary')) {
+        errorMessage = "Only one Primary Investigator is allowed per case";
+      } else if (error?.message?.includes('not found')) {
+        errorMessage = "Investigator not found. Please refresh and try again.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to update primary investigator",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -579,7 +589,18 @@ export const CaseTeamManager = ({
 
           <div className="space-y-3">
             {investigators.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No investigators assigned</p>
+              <EmptyState
+                icon={UserPlus}
+                title="No Investigators Assigned"
+                description="Add an investigator to begin working on this case"
+                action={canEdit ? {
+                  label: "Add Investigator",
+                  onClick: () => setShowAddInvestigator(true),
+                  variant: "default"
+                } : undefined}
+                size="sm"
+                className="py-6"
+              />
             ) : (
               investigators.map((item) => {
                 const isPrimary = item.role === 'primary';
