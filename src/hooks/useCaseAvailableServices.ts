@@ -11,7 +11,7 @@ export interface AvailableService {
 
 /**
  * Fetches available services for a case.
- * Now that pricing profiles are removed, this returns all active services for the organization.
+ * Filters services based on the Case Type's allowed_service_ids if set.
  */
 export function useCaseAvailableServices(caseId: string | undefined) {
   return useQuery({
@@ -19,10 +19,16 @@ export function useCaseAvailableServices(caseId: string | undefined) {
     queryFn: async () => {
       if (!caseId) return [];
 
-      // First get the case's organization
+      // Fetch the case with organization and case_type's allowed_service_ids
       const { data: caseData, error: caseError } = await supabase
         .from("cases")
-        .select("organization_id")
+        .select(`
+          organization_id,
+          case_type_id,
+          case_types!cases_case_type_id_fkey (
+            allowed_service_ids
+          )
+        `)
         .eq("id", caseId)
         .single();
 
@@ -32,8 +38,7 @@ export function useCaseAvailableServices(caseId: string | undefined) {
       }
 
       // Fetch all active services for this organization
-      // Note: Rates are now account-specific (client_price_list), not service-level
-      const { data, error } = await supabase
+      const { data: allServices, error } = await supabase
         .from("case_services")
         .select("id, name, code, is_billable")
         .eq("organization_id", caseData.organization_id)
@@ -45,7 +50,19 @@ export function useCaseAvailableServices(caseId: string | undefined) {
         throw error;
       }
 
-      return (data || []).map((service) => ({
+      // Get allowed_service_ids from the case type
+      const caseTypeData = caseData.case_types as { allowed_service_ids: string[] | null } | null;
+      const allowedIds = caseTypeData?.allowed_service_ids;
+
+      // Filter by allowed_service_ids if set and not empty
+      let filteredServices = allServices || [];
+      if (allowedIds && allowedIds.length > 0) {
+        filteredServices = filteredServices.filter(service => 
+          allowedIds.includes(service.id)
+        );
+      }
+
+      return filteredServices.map((service) => ({
         id: service.id,
         name: service.name,
         code: service.code || null,
