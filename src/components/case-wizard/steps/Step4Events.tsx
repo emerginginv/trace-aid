@@ -177,7 +177,7 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
           <CalendarPlus className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Activities</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-            Schedule investigative work such as surveillance, interviews, and canvasses.
+            Schedule investigative activities such as surveillance, interviews, or canvasses.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -208,9 +208,9 @@ export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">Activities</h3>
-        <p className="text-sm text-muted-foreground">
-          Schedule investigative work such as surveillance, interviews, and canvasses.
-        </p>
+          <p className="text-sm text-muted-foreground">
+            Schedule investigative activities such as surveillance, interviews, or canvasses.
+          </p>
       </div>
 
       {/* List of added activities */}
