@@ -24,12 +24,12 @@ import {
 
 export function AppSidebar() {
   const { role, isVendor } = useUserRole();
-  const { userProfile, orgSettings } = useSidebarData();
+  const { userProfile, orgSettings, settingsLoading } = useSidebarData();
 
   return (
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <SidebarBranding orgSettings={orgSettings} />
+        <SidebarBranding orgSettings={orgSettings} isLoading={settingsLoading} />
       </SidebarHeader>
 
       <SidebarContent>
