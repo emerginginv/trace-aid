@@ -100,6 +100,13 @@ const App = () => {
             enableSystem
             disableTransitionOnChange
           >
+            {/*
+              RADIX UI PROVIDER REQUIREMENTS:
+              - TooltipProvider: Required at root for all Tooltip components to function.
+                Mount once here; individual components should NOT wrap in TooltipProvider.
+              - Dialog/AlertDialog/Popover: Per-instance Root components, no global provider.
+              - Toaster/Sonner: Contain their own providers internally.
+            */}
             <TooltipProvider>
               <OrganizationProvider>
                 <BrowserRouter>

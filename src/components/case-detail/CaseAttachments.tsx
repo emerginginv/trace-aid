@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { AIBadge } from "@/components/ui/ai-badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"; // Global TooltipProvider in App.tsx
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { getPlanLimits } from "@/lib/planLimits";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -1022,8 +1022,7 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   };
 
   return (
-    <TooltipProvider>
-      <div className="flex flex-col md:flex-row gap-0 w-full min-w-0">
+    <div className="flex flex-col md:flex-row gap-0 w-full min-w-0">
         {/* Folder Panel - Hidden on mobile, visible on md+ */}
         {organization?.id && !isMobile && (
           <FolderPanel
@@ -2089,6 +2088,5 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
         />
         </div>
       </div>
-    </TooltipProvider>
   );
 };
