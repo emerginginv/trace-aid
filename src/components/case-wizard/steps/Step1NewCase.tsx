@@ -25,7 +25,9 @@ import { toast } from "sonner";
 import { WizardNavigation } from "../WizardNavigation";
 import { CaseFormData } from "../hooks/useCaseWizard";
 import { useCaseTypesQuery } from "@/hooks/queries/useCaseTypesQuery";
-import { Calendar, Info } from "lucide-react";
+import { useAccountsQuery } from "@/hooks/queries/useAccountsQuery";
+import { useContactsQuery } from "@/hooks/queries/useContactsQuery";
+import { Calendar, Info, Building2 } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { logCaseTypeAudit } from "@/lib/caseTypeAuditLogger";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,8 @@ import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   case_type_id: z.string().min(1, "Case type is required"),
+  account_id: z.string().optional().nullable(),
+  contact_id: z.string().optional().nullable(),
   reference_number: z.string().max(100).optional().nullable(),
   reference_number_2: z.string().max(100).optional().nullable(),
   reference_number_3: z.string().max(100).optional().nullable(),
@@ -67,6 +71,8 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
     resolver: zodResolver(formSchema),
     defaultValues: {
       case_type_id: existingData?.case_type_id || "",
+      account_id: existingData?.account_id || "",
+      contact_id: existingData?.contact_id || "",
       reference_number: existingData?.reference_number || "",
       reference_number_2: existingData?.reference_number_2 || "",
       reference_number_3: existingData?.reference_number_3 || "",
@@ -76,6 +82,18 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
   });
 
   const selectedCaseTypeId = form.watch("case_type_id");
+  const selectedAccountId = form.watch("account_id");
+
+  // Fetch accounts for Client dropdown
+  const { data: accounts = [], isLoading: accountsLoading } = useAccountsQuery({
+    enabled: !!organizationId
+  });
+
+  // Fetch contacts filtered by selected account
+  const { data: contacts = [], isLoading: contactsLoading } = useContactsQuery({
+    accountId: selectedAccountId || undefined,
+    enabled: !!organizationId
+  });
   
   // Get selected case type details for dynamic reference labels and due date
   const selectedCaseType = useMemo(() => {
@@ -93,6 +111,24 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
       }
     }
   }, [selectedCaseType, form]);
+
+  // Clear contact selection when account changes
+  useEffect(() => {
+    const currentContact = form.getValues("contact_id");
+    
+    // If account changed and there was a contact selected, validate it still belongs
+    if (currentContact && selectedAccountId) {
+      const contactBelongsToAccount = contacts.some(
+        c => c.id === currentContact && c.account_id === selectedAccountId
+      );
+      if (!contactBelongsToAccount && contacts.length > 0) {
+        form.setValue("contact_id", "");
+      }
+    } else if (!selectedAccountId && currentContact) {
+      // If account was cleared, clear contact too
+      form.setValue("contact_id", "");
+    }
+  }, [selectedAccountId, contacts, form]);
 
   useEffect(() => {
     fetchInitialData();
@@ -196,6 +232,8 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         case_number: generatedCaseNumber,
         status: "Draft",
         case_type_id: data.case_type_id,
+        account_id: data.account_id || null,
+        contact_id: data.contact_id || null,
         user_id: currentUserId,
         organization_id: organizationId,
         instance_number: 1,
@@ -249,9 +287,8 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
         reference_number: data.reference_number || null,
         reference_number_2: data.reference_number_2 || null,
         reference_number_3: data.reference_number_3 || null,
-        // These will be set in later steps
-        account_id: "",
-        contact_id: "",
+        account_id: data.account_id || "",
+        contact_id: data.contact_id || "",
         status: "Draft",
         due_date: data.due_date || null,
         case_manager_id: null,
@@ -310,6 +347,85 @@ export function Step1NewCase({ organizationId, onComplete, existingData }: Step1
               </FormItem>
             )}
           />
+
+          {/* 2. Client Information */}
+          <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+            <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Client Information
+            </h4>
+            
+            <FormField
+              control={form.control}
+              name="account_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Client (Account)</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={accountsLoading ? "Loading..." : "Select client"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {accounts.map(account => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Optional. Select the client this case is for.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="contact_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Primary Contact</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""}
+                    disabled={!selectedAccountId}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue 
+                          placeholder={
+                            !selectedAccountId 
+                              ? "Select a client first" 
+                              : contactsLoading 
+                                ? "Loading..." 
+                                : "Select contact"
+                          } 
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {contacts.map(contact => (
+                        <SelectItem key={contact.id} value={contact.id}>
+                          {contact.first_name} {contact.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Optional. Select the primary contact for this case.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           {/* 2. Reference Numbers (Conditional - shown after Case Type selected) */}
           {selectedCaseType && (
