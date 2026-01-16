@@ -9,9 +9,9 @@ interface StepInfo {
 }
 
 const STEPS: StepInfo[] = [
-  { step: 1, label: "New Case", optional: false },
+  { step: 1, label: "Case Info", optional: false },
   { step: 2, label: "Services", optional: true },
-  { step: 3, label: "Subjects", optional: true },
+  { step: 3, label: "Subjects", optional: false }, // Required - must designate primary subject
   { step: 4, label: "Updates", optional: true },
   { step: 5, label: "Events", optional: true },
   { step: 6, label: "Attachments", optional: true },

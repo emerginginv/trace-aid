@@ -73,6 +73,7 @@ export function Step6Summary({
 }: Step6Props) {
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
+  const [caseTitle, setCaseTitle] = useState<string | null>(null);
   const [subjectCounts, setSubjectCounts] = useState<SubjectSummary>({
     person: 0,
     vehicle: 0,
@@ -83,10 +84,21 @@ export function Step6Summary({
 
   useEffect(() => {
     fetchDetails();
-  }, [caseData]);
+  }, [caseData, caseId]);
 
   const fetchDetails = async () => {
     try {
+      // Fetch the case title from database (set by trigger from primary subject)
+      const { data: caseRecord } = await supabase
+        .from("cases")
+        .select("title")
+        .eq("id", caseId)
+        .single();
+      
+      if (caseRecord) {
+        setCaseTitle(caseRecord.title);
+      }
+
       // Fetch account and contact names
       if (caseData.account_id) {
         const { data } = await supabase
@@ -159,7 +171,7 @@ export function Step6Summary({
             </div>
             <div>
               <p className="text-muted-foreground">Case Name</p>
-              <p className="font-medium">{caseData.title || "(Will be set from primary subject)"}</p>
+              <p className="font-medium">{caseTitle || "(Set from primary subject)"}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Case Type</p>
