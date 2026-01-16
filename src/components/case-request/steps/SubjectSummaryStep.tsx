@@ -1,0 +1,196 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubjectData, createEmptySubject } from "@/hooks/useCaseRequestForm";
+import { CaseRequestFormConfig, isFieldVisible } from "@/types/case-request-form-config";
+import { ArrowLeft, ArrowRight, Edit2, Trash2, UserPlus, User, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+interface SubjectSummaryStepProps {
+  fieldConfig: CaseRequestFormConfig;
+  subjects: SubjectData[];
+  onEditSubject: (id: string) => void;
+  onRemoveSubject: (id: string) => void;
+  onAddSubject: () => void;
+  onContinue: () => void;
+  onBack: () => void;
+}
+
+export function SubjectSummaryStep({
+  fieldConfig,
+  subjects,
+  onEditSubject,
+  onRemoveSubject,
+  onAddSubject,
+  onContinue,
+  onBack,
+}: SubjectSummaryStepProps) {
+  const getSubjectDisplayName = (subject: SubjectData): string => {
+    const name = [subject.first_name, subject.middle_name, subject.last_name]
+      .filter(Boolean)
+      .join(' ');
+    return name || 'Unnamed Subject';
+  };
+
+  const getSubjectAddress = (subject: SubjectData): string => {
+    const parts = [
+      subject.address1,
+      subject.city,
+      subject.state,
+      subject.zip,
+    ].filter(Boolean);
+    return parts.join(', ') || 'No address provided';
+  };
+
+  const showAdditionalSubjects = isFieldVisible(fieldConfig, 'subjectInformation', 'additionalSubjects');
+
+  return (
+    <div className="space-y-6">
+      {/* Subjects Already Added */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Subjects Already Added
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {subjects.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <User className="mx-auto h-12 w-12 mb-4 opacity-50" />
+              <p>No subjects have been added yet.</p>
+              <p className="text-sm">Click "Add Subject" below to add one.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {subjects.map((subject) => (
+                <div
+                  key={subject.id}
+                  className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  {/* Photo */}
+                  <div className="flex-shrink-0">
+                    {subject.photo_url ? (
+                      <img
+                        src={subject.photo_url}
+                        alt={getSubjectDisplayName(subject)}
+                        className="h-16 w-16 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 bg-muted rounded flex items-center justify-center">
+                        <User className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium truncate">
+                        {getSubjectDisplayName(subject)}
+                      </h4>
+                      {subject.is_primary && (
+                        <Badge variant="secondary" className="text-xs">Primary</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {getSubjectAddress(subject)}
+                    </p>
+                    {subject.email && (
+                      <p className="text-sm text-muted-foreground">{subject.email}</p>
+                    )}
+                    {subject.cell_phone && (
+                      <p className="text-sm text-muted-foreground">{subject.cell_phone}</p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditSubject(subject.id)}
+                    >
+                      <Edit2 className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    
+                    {!subject.is_primary && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Subject</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to remove "{getSubjectDisplayName(subject)}"? 
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => onRemoveSubject(subject.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Remove
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Additional Subjects */}
+      {showAdditionalSubjects && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Additional Subjects</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={onAddSubject}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Subject
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Navigation */}
+      <div className="flex justify-between">
+        <Button type="button" variant="outline" onClick={onBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+        <Button onClick={onContinue} size="lg">
+          I'm done adding subjects. Continue
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
