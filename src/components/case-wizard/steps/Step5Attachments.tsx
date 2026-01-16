@@ -222,7 +222,7 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
           <Paperclip className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Would you like to add any attachments?</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-            Upload documents, images, videos, or other files relevant to this case.
+            Upload any relevant files or evidence for this case.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -252,7 +252,7 @@ export function Step5Attachments({ caseId, organizationId, onBack, onContinue }:
       <div>
         <h3 className="text-lg font-medium">Upload Attachments</h3>
         <p className="text-sm text-muted-foreground">
-          Add documents, images, or other files to your case.
+          Upload any relevant files or evidence for this case.
         </p>
       </div>
 

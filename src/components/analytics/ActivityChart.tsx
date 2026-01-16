@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import type { ResolvedTimeRange } from "@/lib/analytics/time-ranges";
 
-interface EventActivityChartProps {
+interface ActivityChartProps {
   organizationId: string;
   timeRange: ResolvedTimeRange;
 }
@@ -17,9 +17,9 @@ const STATUS_COLORS: Record<string, string> = {
   in_progress: "hsl(var(--chart-3))",
 };
 
-export function EventActivityChart({ organizationId, timeRange }: EventActivityChartProps) {
+export function ActivityChart({ organizationId, timeRange }: ActivityChartProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ["event-activity-by-service", organizationId, timeRange],
+    queryKey: ["activity-by-service", organizationId, timeRange],
     queryFn: async () => {
       const { data: events, error } = await supabase
         .from("case_activities")
@@ -95,8 +95,8 @@ export function EventActivityChart({ organizationId, timeRange }: EventActivityC
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Event Activity by Service</CardTitle>
-          <CardDescription>Events grouped by linked service and status</CardDescription>
+          <CardTitle>Activity by Service</CardTitle>
+          <CardDescription>Activities grouped by linked service and status</CardDescription>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[300px] w-full" />
@@ -110,15 +110,15 @@ export function EventActivityChart({ organizationId, timeRange }: EventActivityC
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Event Activity by Service</CardTitle>
+        <CardTitle>Activity by Service</CardTitle>
         <CardDescription>
-          {data?.total || 0} events total &bull; Grouped by linked service
+          {data?.total || 0} activities total &bull; Grouped by linked service
         </CardDescription>
       </CardHeader>
       <CardContent>
         {chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            No events in this period
+            No activities in this period
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>

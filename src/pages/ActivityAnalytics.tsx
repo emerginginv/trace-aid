@@ -3,7 +3,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { TimeRangeSelector } from "@/components/analytics/TimeRangeSelector";
 import { UpdateFrequencyChart } from "@/components/analytics/UpdateFrequencyChart";
-import { EventActivityChart } from "@/components/analytics/EventActivityChart";
+import { ActivityChart } from "@/components/analytics/ActivityChart";
 import { ActivityTimelineChart } from "@/components/analytics/ActivityTimelineChart";
 import { InvestigatorHeatmapChart } from "@/components/analytics/InvestigatorHeatmapChart";
 import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
@@ -255,7 +255,7 @@ export default function ActivityAnalytics() {
           organizationId={organization.id}
           timeRange={timeRange}
         />
-        <EventActivityChart
+        <ActivityChart
           organizationId={organization.id}
           timeRange={timeRange}
         />

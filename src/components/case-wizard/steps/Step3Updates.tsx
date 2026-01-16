@@ -161,7 +161,7 @@ export function Step3Updates({ caseId, organizationId, onBack, onContinue }: Ste
           <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Case Updates</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-            Add initial notes, findings, or narrative updates for this case.
+            Add notes, findings, or narrative context for this case.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -190,7 +190,7 @@ export function Step3Updates({ caseId, organizationId, onBack, onContinue }: Ste
       <div>
         <h3 className="text-lg font-medium">Case Updates</h3>
         <p className="text-sm text-muted-foreground">
-          Add initial notes, findings, or narrative updates for this case.
+          Add notes, findings, or narrative context for this case.
         </p>
       </div>
 
