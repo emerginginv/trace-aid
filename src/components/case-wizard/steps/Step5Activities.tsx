@@ -51,7 +51,7 @@ interface Step4Props {
   onContinue: (count: number) => void;
 }
 
-export function Step4Events({ caseId, organizationId, onBack, onContinue }: Step4Props) {
+export function Step5Activities({ caseId, organizationId, onBack, onContinue }: Step4Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dateOpen, setDateOpen] = useState(false);

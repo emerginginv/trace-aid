@@ -173,10 +173,10 @@ export const TEMPLATE_COLUMNS: Record<string, EntityDefinition> = {
   },
   case_activities: {
     entityType: 'case_activities',
-    displayName: 'Events',
-    description: 'Scheduled events, tasks, and activities',
+    displayName: 'Activities',
+    description: 'Scheduled activities and tasks',
     importOrder: 8,
-    fileName: '08_Events.csv',
+    fileName: '08_Activities.csv',
     dependsOn: ['cases'],
     columns: [
       { name: 'external_record_id', label: 'External ID', key: 'external_record_id', required: true, type: 'text', description: 'Unique ID', example: 'EVT-001' },

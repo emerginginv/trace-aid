@@ -10,7 +10,7 @@ import { Step1NewCase } from "./steps/Step1NewCase";
 import { Step2Services } from "./steps/Step2Services";
 import { Step2Subjects } from "./steps/Step2Subjects";
 import { Step3Updates } from "./steps/Step3Updates";
-import { Step4Events } from "./steps/Step4Events";
+import { Step5Activities } from "./steps/Step5Activities";
 import { Step5Attachments } from "./steps/Step5Attachments";
 import { Step6Summary } from "./steps/Step6Summary";
 import {
@@ -150,7 +150,7 @@ export function CaseWizard() {
         );
       case 5:
         return (
-          <Step4Events
+          <Step5Activities
             caseId={state.draftCaseId!}
             organizationId={organizationId}
             onBack={goBack}
@@ -251,7 +251,7 @@ export function CaseWizard() {
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
         title="Delete Draft Case?"
-        description="This will permanently delete this draft case and all associated data including subjects, updates, events, and attachments."
+        description="This will permanently delete this draft case and all associated data including subjects, updates, activities, and attachments."
         confirmLabel="Delete Draft"
         onConfirm={handleCancelDraft}
         variant="destructive"

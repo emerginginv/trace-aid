@@ -22,7 +22,7 @@ Import files in this exact order to maintain referential integrity:
 | 05 | Subjects.csv | None (standalone entities) |
 | 06 | CaseSubjects.csv | Cases, Subjects |
 | 07 | Updates.csv | Cases |
-| 08 | Events.csv | Cases |
+| 08 | Activities.csv | Cases |
 | 09 | TimeEntries.csv | Cases, Subjects (optional) |
 | 10 | Expenses.csv | Cases, Subjects (optional) |
 | 11 | Budgets.csv | Cases |
@@ -174,7 +174,7 @@ These fields accept specific values. Unknown values may be rejected or create ne
 | 05_Subjects.csv | Subject entities | external_record_id, name, subject_type |
 | 06_CaseSubjects.csv | Link subjects to cases | external_record_id, external_case_id, external_subject_id |
 | 07_Updates.csv | Case updates/notes | external_record_id, external_case_id, title, update_type |
-| 08_Events.csv | Activities/tasks | external_record_id, external_case_id, activity_type, title |
+| 08_Activities.csv | Activities/tasks | external_record_id, external_case_id, activity_type, title |
 | 09_TimeEntries.csv | Time records | external_record_id, external_case_id, date, hours, description |
 | 10_Expenses.csv | Expense records | external_record_id, external_case_id, date, amount, description |
 | 11_Budgets.csv | Initial budgets | external_record_id, external_case_id |
