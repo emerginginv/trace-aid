@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AccountCard } from "@/components/shared/AccountCard";
-import { ContactCard } from "@/components/shared/ContactCard";
-import { Users, Pencil, Plus, X } from "lucide-react";
+import { ClientAccountCard } from "./ClientAccountCard";
+import { ClientContactCard } from "./ClientContactCard";
+import { Users, Plus, X } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -56,10 +55,8 @@ export function ClientInfoSection({
   caseId, 
   account, 
   contact, 
-  accountName, 
   onUpdate 
 }: ClientInfoSectionProps) {
-  const navigate = useNavigate();
   const { organization } = useOrganization();
   const { hasPermission } = usePermissions();
   const canEdit = hasPermission('edit_cases');
@@ -199,6 +196,14 @@ export function ClientInfoSection({
     }
   };
 
+  const handleRemoveAccount = () => {
+    handleUpdateAccount("none");
+  };
+
+  const handleRemoveContact = () => {
+    handleUpdateContact("none");
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -220,7 +225,6 @@ export function ClientInfoSection({
           <>
             {/* Account Section */}
             <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Account</p>
               {editingAccount ? (
                 <div className="flex gap-2">
                   <Select 
@@ -252,27 +256,12 @@ export function ClientInfoSection({
                   </Button>
                 </div>
               ) : account ? (
-                <div className="relative group">
-                  <AccountCard
-                    account={account}
-                    onClick={() => navigate(`/accounts/${account.id}`)}
-                    variant="list-item"
-                    showCaseCount={false}
-                  />
-                  {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingAccount(true);
-                      }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
+                <ClientAccountCard
+                  account={account}
+                  onChangeClick={() => setEditingAccount(true)}
+                  onRemove={handleRemoveAccount}
+                  canEdit={canEdit}
+                />
               ) : canEdit ? (
                 <Button 
                   variant="outline" 
@@ -283,14 +272,11 @@ export function ClientInfoSection({
                   <Plus className="h-4 w-4 mr-2" />
                   Add Account
                 </Button>
-              ) : (
-                <p className="text-sm text-muted-foreground/60">No account assigned</p>
-              )}
+              ) : null}
             </div>
             
             {/* Contact Section */}
             <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Contact</p>
               {editingContact ? (
                 <div className="flex gap-2">
                   <Select 
@@ -322,30 +308,12 @@ export function ClientInfoSection({
                   </Button>
                 </div>
               ) : contact ? (
-                <div className="relative group">
-                  <ContactCard
-                    contact={{
-                      ...contact,
-                      organization_name: accountName || account?.name || null,
-                    }}
-                    onClick={() => navigate(`/contacts/${contact.id}`)}
-                    variant="list-item"
-                    showFooter={false}
-                  />
-                  {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingContact(true);
-                      }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
+                <ClientContactCard
+                  contact={contact}
+                  onChangeClick={() => setEditingContact(true)}
+                  onRemove={handleRemoveContact}
+                  canEdit={canEdit}
+                />
               ) : canEdit ? (
                 <Button 
                   variant="outline" 
@@ -356,9 +324,7 @@ export function ClientInfoSection({
                   <Plus className="h-4 w-4 mr-2" />
                   Add Contact
                 </Button>
-              ) : (
-                <p className="text-sm text-muted-foreground/60">No contact assigned</p>
-              )}
+              ) : null}
               
               {/* Helper text when account exists but no contacts available */}
               {editingContact && account && contacts.length === 0 && !loadingContacts && (
