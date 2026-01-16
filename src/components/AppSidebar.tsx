@@ -4,7 +4,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { APP_VERSION } from "@/config/version";
+import { APP_VERSION, GIT_COMMIT, BUILD_TIME } from "@/config/version";
 import { useUserRole } from "@/hooks/useUserRole";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import {
@@ -15,6 +15,11 @@ import {
   menuGroups,
   UserRole,
 } from "@/components/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function AppSidebar() {
   const { role, isVendor } = useUserRole();
@@ -36,9 +41,19 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <UserProfileDropdown userProfile={userProfile} />
-        <div className="text-xs text-muted-foreground text-center mt-2">
-          v{APP_VERSION}
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="text-xs text-muted-foreground text-center mt-2 cursor-help">
+              v{APP_VERSION}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            <div className="space-y-1">
+              <div>Build: {BUILD_TIME}</div>
+              <div>Commit: {GIT_COMMIT === 'local' || GIT_COMMIT === 'local-dev' ? GIT_COMMIT : GIT_COMMIT.slice(0, 7)}</div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
       </SidebarFooter>
     </Sidebar>
   );
