@@ -77,7 +77,7 @@ export function DashboardActivitiesPanel({
       filterOptions={filterOptions}
       filterValue={filter}
       onFilterChange={(v) => onFilterChange(v as 'my' | 'all')}
-      filterWidth="w-[120px]"
+      filterWidth="w-[140px]"
       isLoading={isLoading}
     >
       {activities.slice(0, 8).map((activity) => {
