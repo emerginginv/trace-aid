@@ -94,8 +94,8 @@ export function TimeByDimensionChart({
             const caseInfo = caseMap.get(caseId);
             return {
               id: caseId,
-              name: caseInfo?.case_number || "Unknown",
-              fullName: caseInfo?.title || "",
+              name: caseInfo?.title || caseInfo?.case_number || "Unknown",
+              fullName: caseInfo?.case_number || "",
               hours: Number(hours.toFixed(2)),
             };
           })

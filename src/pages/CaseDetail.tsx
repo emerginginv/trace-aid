@@ -156,7 +156,7 @@ const CaseDetail = () => {
     caseData
       ? [
           { label: "Cases", href: "/cases" },
-          { label: caseData.case_number || caseData.title },
+          { label: caseData.title || caseData.case_number || "Case" },
         ]
       : [{ label: "Cases", href: "/cases" }]
   );

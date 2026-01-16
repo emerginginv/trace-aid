@@ -159,7 +159,7 @@ export function Step6Summary({
             </div>
             <div>
               <p className="text-muted-foreground">Case Name</p>
-              <p className="font-medium">{caseData.title || caseNumber}</p>
+              <p className="font-medium">{caseData.title || "(Will be set from primary subject)"}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Case Type</p>
