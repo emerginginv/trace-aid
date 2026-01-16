@@ -4,6 +4,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { APP_VERSION } from "@/config/version";
 import { useUserRole } from "@/hooks/useUserRole";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import {
@@ -35,6 +36,9 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <UserProfileDropdown userProfile={userProfile} />
+        <div className="text-xs text-muted-foreground text-center mt-2">
+          v{APP_VERSION}
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
