@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Pencil, Trash2, Check, X, Plus, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, LayoutGrid, List, Receipt } from "lucide-react";
+import { Search, Pencil, Trash2, Check, X, Plus, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, Receipt } from "lucide-react";
 import { ImportTemplateDropdown } from "@/components/ui/import-template-button";
 
 import { ResponsiveButton } from "@/components/ui/responsive-button";
@@ -83,7 +83,7 @@ const AllExpenses = () => {
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  // viewMode state removed - always use list view
   
   // Filter states
   const [expenseSearch, setExpenseSearch] = useState("");
@@ -626,24 +626,6 @@ const AllExpenses = () => {
             { fileName: "10_Expenses.csv", label: "Expenses Template" },
           ]} 
         />
-        <div className="flex gap-1 border rounded-md p-1 h-10">
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className="h-7 w-7 p-0"
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-            className="h-7 w-7 p-0"
-          >
-            <List className="h-3.5 w-3.5" />
-          </Button>
-        </div>
       </div>
 
       {/* Entry count */}
@@ -673,134 +655,9 @@ const AllExpenses = () => {
             <p className="text-muted-foreground">No expenses match your search criteria</p>
           </CardContent>
         </Card>
-      ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedExpenses.map((expense) => {
-            const isPending = expense.status === "pending";
-            return (
-              <Card key={expense.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="font-semibold">{expense.case_title}</div>
-                      <div className="text-sm text-muted-foreground">{expense.case_number}</div>
-                    </div>
-                    <span className={getStatusBadge(expense.status)}>
-                      {getStatusDisplay(expense.status)}
-                    </span>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Date</span>
-                      <span>{format(new Date(expense.created_at), "MMM d, yyyy")}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <span>{expense.item_type || "N/A"}</span>
-                    </div>
-                    {canViewRates && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Pay Total</span>
-                        <span className="font-medium">${expense.total.toFixed(2)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-4 pt-4 border-t">
-                    {isPending && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            const { error } = await supabase
-                              .from("expense_entries")
-                              .update({ status: "approved" })
-                              .eq("id", expense.id);
-                            
-                            if (error) {
-                              toast.error("Failed to approve expense");
-                            } else {
-                              toast.success("Expense approved");
-                              fetchExpenseData();
-                            }
-                          }}
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                          const { error } = await supabase
-                              .from("expense_entries")
-                              .update({ status: "declined" as any })
-                              .eq("id", expense.id);
-                            
-                            if (error) {
-                              toast.error("Failed to reject expense");
-                            } else {
-                              toast.success("Expense rejected");
-                              fetchExpenseData();
-                            }
-                          }}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Reject
-                        </Button>
-                      </>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        const { data, error } = await supabase
-                          .from("expense_entries")
-                          .select("*")
-                          .eq("id", expense.id)
-                          .single();
-                        
-                        if (error) {
-                          toast.error("Failed to load expense details");
-                        } else {
-                          setEditingExpense(data);
-                          setShowExpenseForm(true);
-                        }
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        if (confirm("Are you sure you want to delete this expense?")) {
-                          const { error } = await supabase
-                            .from("expense_entries")
-                            .delete()
-                            .eq("id", expense.id);
-                          
-                          if (error) {
-                            toast.error("Failed to delete expense");
-                          } else {
-                            toast.success("Expense deleted");
-                            fetchExpenseData();
-                          }
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
       ) : (
         <Card>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

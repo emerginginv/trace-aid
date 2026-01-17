@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
-import { User, Car, MapPin, Package, Building2, Search, LayoutGrid, List, MoreVertical, Eye, ExternalLink, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { User, Car, MapPin, Package, Building2, Search, MoreVertical, Eye, ExternalLink, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -89,9 +89,7 @@ export default function Subjects() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("active");
-  const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
-    return (localStorage.getItem('subjects-view-mode') as 'list' | 'cards') || 'cards';
-  });
+  // viewMode state removed - always use list view
 
   const [counts, setCounts] = useState<SubjectCounts>({
     person: 0,
@@ -109,10 +107,6 @@ export default function Subjects() {
     console.log("Subjects: Fetching for org", organization.id);
     fetchSubjects();
   }, [organization?.id]);
-
-  useEffect(() => {
-    localStorage.setItem('subjects-view-mode', viewMode);
-  }, [viewMode]);
 
   const fetchSubjects = async () => {
     if (!organization?.id) return;
@@ -340,31 +334,13 @@ export default function Subjects() {
           </DropdownMenuContent>
         </DropdownMenu>
         <ImportTemplateButton templateFileName="05_Subjects.csv" entityDisplayName="Subjects" />
-        <div className="flex items-center gap-1 border rounded-md p-1">
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setViewMode('list')}
-          >
-            <List className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setViewMode('cards')}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
 
       {/* Content */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-48" />
+            <Skeleton key={i} className="h-16" />
           ))}
         </div>
       ) : filteredSubjects.length === 0 ? (
@@ -373,8 +349,8 @@ export default function Subjects() {
           <h3 className="text-lg font-medium text-muted-foreground">No subjects found</h3>
           <p className="text-sm text-muted-foreground/60 mt-1">Try adjusting your filters</p>
         </div>
-      ) : viewMode === 'list' ? (
-        <div className="border rounded-lg overflow-hidden">
+      ) : (
+        <div className="border rounded-lg overflow-hidden overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -465,73 +441,6 @@ export default function Subjects() {
               })}
             </TableBody>
           </Table>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredSubjects.map((subject) => {
-            const Icon = CATEGORY_ICONS[subject.subject_type];
-            const signedUrl = signedUrls[subject.id];
-            const isArchived = subject.status === 'archived';
-
-            return (
-              <Card
-                key={subject.id}
-                className={cn(
-                  "relative overflow-hidden transition-shadow hover:shadow-md cursor-pointer group",
-                  isArchived && "opacity-70"
-                )}
-                onClick={() => navigateToSubject(subject)}
-              >
-                {/* Cover Section */}
-                <div className="h-16 bg-gradient-to-br from-primary/20 via-primary/10 to-muted" />
-
-                {/* Status Badge */}
-                {isArchived && (
-                  <Badge variant="secondary" className="absolute top-2 right-2 text-xs z-10">
-                    Archived
-                  </Badge>
-                )}
-                {subject.is_primary && !isArchived && (
-                  <Badge className="absolute top-2 right-2 text-xs bg-primary text-white z-10">
-                    Primary
-                  </Badge>
-                )}
-
-                {/* Avatar */}
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10">
-                  {subject.subject_type === 'person' ? (
-                    <Avatar className="h-20 w-20 border-4 border-card shadow-md">
-                      <AvatarImage src={signedUrl || undefined} alt={subject.name} />
-                      <AvatarFallback className="text-lg bg-muted">
-                        {getInitials(subject.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                  ) : (
-                    <div className="h-20 w-20 rounded-full bg-muted border-4 border-card shadow-md flex items-center justify-center">
-                      <Icon className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-
-                <CardContent className="pt-12 pb-4 flex flex-col items-center text-center">
-                  <h3 className="font-semibold text-foreground truncate w-full">
-                    {subject.display_name || subject.name}
-                  </h3>
-                  {subject.role && (
-                    <p className="text-sm text-muted-foreground">{getRoleLabel(subject.role)}</p>
-                  )}
-                  <Badge variant="outline" className="mt-2 capitalize text-xs">
-                    {SUBJECT_CATEGORY_LABELS[subject.subject_type]}
-                  </Badge>
-                  <div className="mt-3 pt-3 border-t w-full">
-                    <p className="text-xs text-muted-foreground">Case</p>
-                    <p className="text-sm font-medium truncate">{subject.cases.case_number}</p>
-                    <p className="text-xs text-muted-foreground truncate">{subject.cases.title}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
         </div>
       )}
 

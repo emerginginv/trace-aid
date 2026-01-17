@@ -5,7 +5,7 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil, RefreshCw, X } from "lucide-react";
+import { Plus, Briefcase, Search, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil, RefreshCw, X } from "lucide-react";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -95,7 +95,7 @@ const Cases = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  // viewMode state removed - always use list view
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
   const [statusPicklists, setStatusPicklists] = useState<Array<{
@@ -614,14 +614,6 @@ const Cases = () => {
           </DropdownMenuContent>
         </DropdownMenu>
         <ImportTemplateButton templateFileName="04_Cases.csv" entityDisplayName="Cases" />
-        <div className="flex gap-1 border rounded-md p-1 h-10">
-          <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-7 w-7 p-0">
-            <LayoutGrid className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-7 w-7 p-0">
-            <List className="h-3.5 w-3.5" />
-          </Button>
-        </div>
       </div>
 
       {/* Entry count */}
@@ -680,7 +672,8 @@ const Cases = () => {
         </div>
       )}
 
-      {cases.length === 0 ? <Card>
+      {cases.length === 0 ? (
+        <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <Briefcase className="w-8 h-8 text-muted-foreground" />
@@ -694,179 +687,16 @@ const Cases = () => {
               Create First Case
             </Button>
           </CardContent>
-        </Card> : filteredCases.length === 0 ? <Card>
+        </Card>
+      ) : filteredCases.length === 0 ? (
+        <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground">No cases match your search criteria</p>
           </CardContent>
-        </Card> : viewMode === 'grid' ? <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {sortedCases.map(caseItem => <Card 
-              key={caseItem.id} 
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/cases/${caseItem.id}`)}
-            >
-            <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1 flex-1 min-w-0">
-                    <CardTitle className="text-xl truncate">{caseItem.title}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Case #{caseItem.case_number}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge className="border" style={getStatusStyle(caseItem.status)}>
-                      {caseItem.status}
-                    </Badge>
-                    {(hasPermission('edit_cases') || hasPermission('delete_cases')) && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          {hasPermission('edit_cases') && (
-                            <DropdownMenuItem onClick={() => {
-                              setEditingCase(caseItem);
-                              setFormOpen(true);
-                            }}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                          )}
-                          {hasPermission('delete_cases') && (
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteClick(caseItem.id)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <CaseCardManagerDisplay manager={caseItem.case_manager || null} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                  {caseItem.description || "No description provided"}
-                </p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Created: {new Date(caseItem.created_at).toLocaleDateString()}</span>
-                  {caseItem.due_date && <span>Due: {new Date(caseItem.due_date).toLocaleDateString()}</span>}
-                </div>
-                
-                {hasPermission('view_finances') && (
-                  <>
-                    {caseItem.budget_summary && (
-                      <CaseCardFinancialWidget
-                        budgetDollars={caseItem.budget_dollars}
-                        dollarsConsumed={caseItem.budget_summary.dollars_consumed}
-                        dollarsRemaining={caseItem.budget_summary.dollars_remaining}
-                        utilizationPct={caseItem.budget_summary.dollars_utilization_pct}
-                      />
-                    )}
-                    {caseItem.financial_totals && (
-                      <CaseCardFinancialSummary
-                        totalExpenses={caseItem.financial_totals.total_expenses}
-                        totalHours={caseItem.financial_totals.total_hours}
-                        totalRetainer={caseItem.financial_totals.total_retainer}
-                        totalInvoiced={caseItem.financial_totals.total_invoiced}
-                      />
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>)}
-        </div> : <>
-          {/* Mobile Card View */}
-          <div className="block sm:hidden space-y-4">
-          {sortedCases.map(caseItem => {
-          const isClosed = isClosedCase(caseItem.status);
-          return <Card key={caseItem.id} className={`p-4 ${isClosed ? 'opacity-60' : ''} cursor-pointer hover:shadow-md transition-all`}
-                  onClick={() => navigate(`/cases/${caseItem.id}`)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      navigate(`/cases/${caseItem.id}`);
-                    }
-                  }}
-                >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm">{caseItem.case_number}</div>
-                      <div className={`font-medium mt-1 flex items-center gap-2 ${isClosed ? 'text-muted-foreground' : 'text-foreground'}`}>
-                        <span className="truncate">{caseItem.title}</span>
-                        {isClosed && <Badge variant="secondary" className="text-xs shrink-0">
-                            Closed
-                          </Badge>}
-                      </div>
-                    </div>
-                    {(hasPermission('edit_cases') || hasPermission('delete_cases')) && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          {hasPermission('edit_cases') && (
-                            <DropdownMenuItem onClick={() => {
-                              setEditingCase(caseItem);
-                              setFormOpen(true);
-                            }}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                          )}
-                          {hasPermission('delete_cases') && (
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteClick(caseItem.id)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Badge className="border" style={getStatusStyle(caseItem.status)}>
-                      {caseItem.status}
-                    </Badge>
-                  </div>
-
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div>Created: {new Date(caseItem.created_at).toLocaleDateString()}</div>
-                    {caseItem.due_date && <div>Due: {new Date(caseItem.due_date).toLocaleDateString()}</div>}
-                  </div>
-                </div>
-              </Card>;
-        })}
-          </div>
-
-          {/* Desktop Table View */}
-          <Card className="hidden sm:block">
+        </Card>
+      ) : (
+        <Card>
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1017,8 +847,9 @@ const Cases = () => {
             })}
               </TableBody>
             </Table>
-          </Card>
-        </>}
+          </div>
+        </Card>
+      )}
 
       <CaseForm 
         open={formOpen} 

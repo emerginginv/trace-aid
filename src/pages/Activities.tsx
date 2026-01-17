@@ -5,7 +5,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { useActivitiesQuery, isScheduledActivity, useDeleteActivity } from "@/hooks/queries";
-import { useViewMode } from "@/hooks/use-view-mode";
+// useViewMode hook removed - always use list view
 import { useActivityEnrichment } from "@/hooks/use-enriched-data";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +25,6 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCardsGrid, StatCardConfig, StatCardsGridSkeleton } from "@/components/shared/StatCardsGrid";
 import { FilterToolbar } from "@/components/shared/FilterToolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { UserAvatar } from "@/components/shared/UserAvatar";
 import { ActivityCard } from "@/components/shared/ActivityCard";
 import { ActivityStatusPill, deriveActivityDisplayStatus } from "@/components/shared/ActivityStatusPill";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -142,7 +141,7 @@ export default function Activities() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState(initialTypeFilter);
-  const [viewMode, setViewMode] = useViewMode<'list' | 'cards'>('activities-view-mode', 'cards');
+  // viewMode state removed - always use list view
 
   const [showCaseSelector, setShowCaseSelector] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -455,9 +454,6 @@ export default function Activities() {
         filters={[
           { value: statusFilter, onChange: setStatusFilter, options: STATUS_OPTIONS, placeholder: "Status" }
         ]}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showViewToggle
         showExport
         onExportCSV={() => exportToCSV(filteredActivities, EXPORT_COLUMNS, "activities")}
         onExportPDF={() => exportToPDF(filteredActivities, EXPORT_COLUMNS, "Activities", "activities")}
@@ -515,13 +511,13 @@ export default function Activities() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-48" />)}
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-16" />)}
         </div>
       ) : filteredActivities.length === 0 ? (
         <EmptyState icon={ClipboardList} title="No activities found" description="Try adjusting your filters" />
-      ) : viewMode === 'list' ? (
-        <div className="border rounded-lg overflow-hidden">
+      ) : (
+        <div className="border rounded-lg overflow-hidden overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -584,11 +580,9 @@ export default function Activities() {
                       {activity.due_date ? (
                         <div className={cn(
                           "text-sm",
-                          // Only show red "overdue" styling for TASKS, not scheduled activities
                           !activity.is_scheduled && displayStatus === 'overdue' && "text-red-500 font-medium"
                         )}>
                           {format(new Date(activity.due_date), "MMM d, yyyy")}
-                          {/* Show time for scheduled activities */}
                           {activity.is_scheduled && activity.start_time && (
                             <div className="text-xs text-muted-foreground">
                               {activity.start_time}
@@ -608,7 +602,9 @@ export default function Activities() {
                     <TableCell>
                       {activity.assigned_user ? (
                         <div className="flex items-center gap-2">
-                          <UserAvatar name={activity.assigned_user.full_name} avatarUrl={activity.assigned_user.avatar_url} size="sm" />
+                          <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                            {activity.assigned_user.full_name?.charAt(0) || '?'}
+                          </div>
                           <span className="text-sm truncate max-w-[100px]">{activity.assigned_user.full_name || "Unassigned"}</span>
                         </div>
                       ) : <span className="text-muted-foreground text-sm">Unassigned</span>}
@@ -651,31 +647,6 @@ export default function Activities() {
               })}
             </TableBody>
           </Table>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredActivities.map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              activity={{
-                id: activity.id,
-                title: activity.title,
-                due_date: activity.due_date,
-                start_time: activity.start_time,
-                end_time: activity.end_time,
-                status: activity.status,
-                is_scheduled: activity.is_scheduled,
-                completed: activity.completed,
-                address: activity.address,
-                case_number: activity.cases.case_number,
-                case_title: activity.cases.title,
-                assigned_user_name: activity.assigned_user?.full_name,
-                assigned_user_avatar: activity.assigned_user?.avatar_url,
-              }}
-              onClick={() => navigateToCase(activity.cases.id)}
-              showCase={true}
-            />
-          ))}
         </div>
       )}
 
