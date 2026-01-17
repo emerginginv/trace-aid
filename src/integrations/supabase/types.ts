@@ -2414,6 +2414,85 @@ export type Database = {
           },
         ]
       }
+      case_status_migration_backup: {
+        Row: {
+          created_at: string | null
+          id: string
+          migration_log_id: string | null
+          original_data: Json
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          migration_log_id?: string | null
+          original_data: Json
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          migration_log_id?: string | null
+          original_data?: Json
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_status_migration_backup_migration_log_id_fkey"
+            columns: ["migration_log_id"]
+            isOneToOne: false
+            referencedRelation: "case_status_migration_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_status_migration_log: {
+        Row: {
+          completed_at: string | null
+          details: Json | null
+          executed_by: string | null
+          id: string
+          migration_step: string
+          organization_id: string | null
+          records_affected: number | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          details?: Json | null
+          executed_by?: string | null
+          id?: string
+          migration_step: string
+          organization_id?: string | null
+          records_affected?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          details?: Json | null
+          executed_by?: string | null
+          id?: string
+          migration_step?: string
+          organization_id?: string | null
+          records_affected?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_status_migration_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_status_transitions: {
         Row: {
           created_at: string | null
@@ -9334,6 +9413,14 @@ export type Database = {
         }
         Returns: Json
       }
+      fix_status_history_timestamps: {
+        Args: {
+          p_dry_run?: boolean
+          p_organization_id: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       generate_audit_bundle: {
         Args: {
           p_date_from: string
@@ -9753,6 +9840,10 @@ export type Database = {
       }
       get_soc2_dashboard: { Args: never; Returns: Json }
       get_sso_config: { Args: { p_org_id: string }; Returns: Json }
+      get_status_id_from_legacy: {
+        Args: { p_legacy_status: string; p_organization_id: string }
+        Returns: string
+      }
       get_status_page_data: { Args: never; Returns: Json }
       get_tenant_login_branding: {
         Args: { p_subdomain: string }
@@ -9920,6 +10011,14 @@ export type Database = {
         Args: { p_description: string; p_severity: string; p_title: string }
         Returns: Json
       }
+      migrate_case_status_data: {
+        Args: {
+          p_dry_run?: boolean
+          p_organization_id: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       post_incident_update: {
         Args: {
           p_incident_id: string
@@ -10004,6 +10103,7 @@ export type Database = {
         Returns: boolean
       }
       revoke_invitation: { Args: { p_invite_id: string }; Returns: Json }
+      rollback_status_migration: { Args: { p_log_id: string }; Returns: Json }
       seed_case_lifecycle_statuses: {
         Args: { org_id: string }
         Returns: undefined
@@ -10104,6 +10204,7 @@ export type Database = {
         Args: { p_enforce: boolean; p_org_id: string }
         Returns: Json
       }
+      toggle_legacy_status_lock: { Args: { p_enable?: boolean }; Returns: Json }
       toggle_scim: {
         Args: { p_enabled: boolean; p_org_id: string }
         Returns: Json
@@ -10231,6 +10332,10 @@ export type Database = {
       validate_scim_token: {
         Args: { p_org_id: string; p_token: string }
         Returns: boolean
+      }
+      validate_status_migration: {
+        Args: { p_organization_id: string }
+        Returns: Json
       }
       validate_status_transition: {
         Args: {

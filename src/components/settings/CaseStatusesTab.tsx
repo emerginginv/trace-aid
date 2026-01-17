@@ -15,8 +15,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Pencil, Trash2, GripVertical, ArrowUpDown, RefreshCw, Check, X, Clock, Lock, RotateCcw, FileText, Database } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, ArrowUpDown, RefreshCw, Check, X, Clock, Lock, RotateCcw, FileText, Database, Settings } from "lucide-react";
 import { SyncCasesModal } from "./SyncCasesModal";
+import { StatusMigrationModal } from "./StatusMigrationModal";
 import { useCaseStatuses, useCaseStatusMutations, CaseStatus, CategoryName, CATEGORY_COLORS } from "@/hooks/use-case-statuses";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { toast } from "sonner";
@@ -119,6 +120,7 @@ export function CaseStatusesTab() {
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [editingStatus, setEditingStatus] = useState<CaseStatus | null>(null);
   const [deletingStatusId, setDeletingStatusId] = useState<string | null>(null);
   const [localStatuses, setLocalStatuses] = useState<CaseStatus[]>([]);
