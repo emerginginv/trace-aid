@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreVertical, Eye, Pencil, Archive, ArchiveRestore, User, Car, MapPin, Package } from "lucide-react";
+import { MoreVertical, Eye, Pencil, Archive, ArchiveRestore, User, Car, MapPin, Package, Building2 } from "lucide-react";
 import { Subject, SubjectCategory, PERSON_ROLES, VEHICLE_TYPES, LOCATION_TYPES, ITEM_TYPES } from "./types";
 import { format } from "date-fns";
 import { useSubjectProfileImages } from "@/hooks/use-subject-profile-images";
@@ -58,11 +58,12 @@ export const SubjectListView = ({
   };
 
   const getCategoryIcon = (cat: SubjectCategory) => {
-    const icons = {
+    const icons: Record<SubjectCategory, React.ComponentType<{ className?: string }>> = {
       person: User,
       vehicle: Car,
       location: MapPin,
       item: Package,
+      business: Building2,
     };
     return icons[cat];
   };
