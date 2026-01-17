@@ -723,7 +723,7 @@ const AllExpenses = () => {
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSort={handleSort}
-                    className="text-right"
+                    className="text-right w-[100px]"
                   />
                 )}
                 {canViewRates && isVisible("total") && (
@@ -733,7 +733,7 @@ const AllExpenses = () => {
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSort={handleSort}
-                    className="text-right"
+                    className="text-right w-[100px]"
                   />
                 )}
                 {isVisible("actions") && (
@@ -765,12 +765,8 @@ const AllExpenses = () => {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{expense.case_title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {expense.case_number}
-                        </div>
-                      </div>
+                      <div className="font-medium">{expense.case_number}</div>
+                      <div className="text-xs text-muted-foreground truncate max-w-[200px]">{expense.case_title}</div>
                     </TableCell>
                     <TableCell>{expense.item_type || "N/A"}</TableCell>
                     <TableCell>
@@ -778,10 +774,10 @@ const AllExpenses = () => {
                     </TableCell>
                     {canViewRates && (
                       <>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right w-[100px]">
                           ${expense.rate.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-right font-medium">
+                        <TableCell className="text-right w-[100px] font-medium">
                           ${expense.total.toFixed(2)}
                         </TableCell>
                       </>
