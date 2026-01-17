@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CaseStatusTriggersCard } from "./CaseStatusTriggersCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -597,6 +598,9 @@ export function CaseStatusesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Automatic Status Triggers */}
+      <CaseStatusTriggersCard />
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
