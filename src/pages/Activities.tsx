@@ -565,7 +565,7 @@ export default function Activities() {
                     )}
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
-                        <div className="font-medium">{activity.title}</div>
+                        <div className="font-semibold">{activity.title}</div>
                         {activity.description && (
                           <div className="text-sm text-muted-foreground truncate max-w-[280px]">{activity.description}</div>
                         )}
