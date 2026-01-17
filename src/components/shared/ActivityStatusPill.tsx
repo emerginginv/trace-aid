@@ -1,10 +1,10 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Circle, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
+import { Circle, Calendar, CheckCircle, AlertCircle, Clock, XCircle } from 'lucide-react';
 import { isPast, parseISO, isToday } from 'date-fns';
 
-export type ActivityDisplayStatus = 'to_do' | 'scheduled' | 'completed' | 'overdue';
+export type ActivityDisplayStatus = 'to_do' | 'scheduled' | 'in_progress' | 'completed' | 'overdue' | 'cancelled';
 
 export interface ActivityStatusPillProps {
   status: ActivityDisplayStatus;
@@ -29,6 +29,11 @@ const STATUS_CONFIG: Record<ActivityDisplayStatus, {
     icon: Calendar,
     className: 'bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400',
   },
+  in_progress: {
+    label: 'In Progress',
+    icon: Clock,
+    className: 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400',
+  },
   completed: {
     label: 'Completed',
     icon: CheckCircle,
@@ -39,15 +44,20 @@ const STATUS_CONFIG: Record<ActivityDisplayStatus, {
     icon: AlertCircle,
     className: 'bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400',
   },
+  cancelled: {
+    label: 'Cancelled',
+    icon: XCircle,
+    className: 'bg-gray-500/10 text-gray-600 border-gray-500/20 dark:text-gray-400',
+  },
 };
 
 /**
  * Derive the display status from activity data.
  * This centralizes status logic so it's not duplicated across components.
  * 
- * Key distinction:
- * - SCHEDULED activities: Have appointment times, cannot be "overdue" (past = missed, not overdue)
- * - TASKS: Have deadlines (due dates), can be overdue
+ * Status rules:
+ * - TASKS: Can be to_do, in_progress, completed, cancelled (can also show overdue if past due)
+ * - SCHEDULED activities: Can be scheduled, completed, cancelled (never "overdue")
  */
 export function deriveActivityDisplayStatus(activity: {
   status?: string;
@@ -55,6 +65,9 @@ export function deriveActivityDisplayStatus(activity: {
   is_scheduled?: boolean | null;
   due_date?: string | null;
 }): ActivityDisplayStatus {
+  // Check cancelled first - applies to both types
+  if (activity.status === 'cancelled') return 'cancelled';
+
   // Check if completed
   const isComplete = 
     activity.status === 'completed' || 
@@ -62,6 +75,9 @@ export function deriveActivityDisplayStatus(activity: {
     activity.completed === true;
   
   if (isComplete) return 'completed';
+
+  // Check in_progress - applies to tasks only but we show it if set
+  if (activity.status === 'in_progress') return 'in_progress';
 
   // Check if this is a SCHEDULED activity (event/appointment)
   // Scheduled activities don't have "overdue" - they either happened or were missed
