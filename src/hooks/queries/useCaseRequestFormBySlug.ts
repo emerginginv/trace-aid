@@ -23,16 +23,14 @@ export interface CaseRequestForm {
   organization_website: string | null;
   header_instructions: string | null;
   success_message: string | null;
-  send_confirmation_email: boolean | null;
-  confirmation_email_subject: string | null;
-  confirmation_email_body: string | null;
-  notify_staff_on_submission: boolean | null;
-  staff_notification_emails: string[] | null;
   field_config: CaseRequestFormConfig;
   created_at: string;
   updated_at: string;
   // Organization fallback settings
   org_settings?: OrganizationSettings | null;
+  // Note: staff_notification_emails, send_confirmation_email, confirmation_email_subject,
+  // confirmation_email_body, notify_staff_on_submission are intentionally excluded from
+  // public view for security - they're only available to authenticated org members
 }
 
 export function useCaseRequestFormBySlug(slug: string | undefined) {
@@ -41,12 +39,11 @@ export function useCaseRequestFormBySlug(slug: string | undefined) {
     queryFn: async () => {
       if (!slug) throw new Error('Form slug is required');
 
+      // Use secure public view that excludes sensitive fields like staff_notification_emails
       const { data, error } = await supabase
-        .from('case_request_forms')
+        .from('case_request_forms_public')
         .select('*')
         .eq('form_slug', slug)
-        .eq('is_active', true)
-        .eq('is_public', true)
         .maybeSingle();
 
       if (error) throw error;

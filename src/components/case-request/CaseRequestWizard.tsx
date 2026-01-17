@@ -172,17 +172,11 @@ const handleAddSubject = () => {
         throw new Error(result.error || 'Submission failed');
       }
 
-      // Send notifications (non-blocking)
+      // Send notifications server-side (non-blocking)
+      // Note: Notification settings like staff emails are fetched server-side for security
       sendCaseRequestNotifications({
         requestId: result.requestId!,
         requestNumber: result.requestNumber || 'N/A',
-        formSettings: {
-          sendConfirmationEmail: form.send_confirmation_email ?? true,
-          confirmationEmailSubject: form.confirmation_email_subject || undefined,
-          confirmationEmailBody: form.confirmation_email_body || undefined,
-          notifyStaffOnSubmission: form.notify_staff_on_submission ?? true,
-          staffNotificationEmails: form.staff_notification_emails || undefined,
-        },
         submitterInfo: {
           email: state.formData.step1.submitted_contact_email,
           name: getContactName(),

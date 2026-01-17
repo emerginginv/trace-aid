@@ -2018,6 +2018,13 @@ export type Database = {
             referencedRelation: "case_request_forms"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "case_requests_source_form_id_fkey"
+            columns: ["source_form_id"]
+            isOneToOne: false
+            referencedRelation: "case_request_forms_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       case_service_budget_limits: {
@@ -9430,6 +9437,71 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
+      }
+      case_request_forms_public: {
+        Row: {
+          created_at: string | null
+          field_config: Json | null
+          form_name: string | null
+          form_slug: string | null
+          header_instructions: string | null
+          id: string | null
+          is_active: boolean | null
+          is_public: boolean | null
+          logo_url: string | null
+          organization_display_name: string | null
+          organization_id: string | null
+          organization_phone: string | null
+          organization_website: string | null
+          primary_color: string | null
+          success_message: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_config?: Json | null
+          form_name?: string | null
+          form_slug?: string | null
+          header_instructions?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_public?: boolean | null
+          logo_url?: string | null
+          organization_display_name?: string | null
+          organization_id?: string | null
+          organization_phone?: string | null
+          organization_website?: string | null
+          primary_color?: string | null
+          success_message?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_config?: Json | null
+          form_name?: string | null
+          form_slug?: string | null
+          header_instructions?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_public?: boolean | null
+          logo_url?: string | null
+          organization_display_name?: string | null
+          organization_id?: string | null
+          organization_phone?: string | null
+          organization_website?: string | null
+          primary_color?: string | null
+          success_message?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_request_forms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cases_with_budget_summary: {
         Row: {
