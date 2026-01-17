@@ -44,6 +44,10 @@ const STATUS_CONFIG: Record<ActivityDisplayStatus, {
 /**
  * Derive the display status from activity data.
  * This centralizes status logic so it's not duplicated across components.
+ * 
+ * Key distinction:
+ * - SCHEDULED activities: Have appointment times, cannot be "overdue" (past = missed, not overdue)
+ * - TASKS: Have deadlines (due dates), can be overdue
  */
 export function deriveActivityDisplayStatus(activity: {
   status?: string;
@@ -59,7 +63,13 @@ export function deriveActivityDisplayStatus(activity: {
   
   if (isComplete) return 'completed';
 
-  // Check if overdue (has due date in the past and not complete)
+  // Check if this is a SCHEDULED activity (event/appointment)
+  // Scheduled activities don't have "overdue" - they either happened or were missed
+  if (activity.is_scheduled || activity.status === 'scheduled') {
+    return 'scheduled';
+  }
+
+  // For TASKS only - check if overdue (has due date in the past and not complete)
   if (activity.due_date) {
     try {
       const dueDate = parseISO(activity.due_date);
@@ -69,11 +79,6 @@ export function deriveActivityDisplayStatus(activity: {
     } catch {
       // Invalid date format, continue
     }
-  }
-
-  // Check if scheduled
-  if (activity.is_scheduled || activity.status === 'scheduled') {
-    return 'scheduled';
   }
 
   return 'to_do';
