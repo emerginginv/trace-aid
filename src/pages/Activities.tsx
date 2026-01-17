@@ -56,9 +56,16 @@ interface ActivityWithCase {
 
 type ActivityCountKey = 'total' | 'dueSoon' | 'inProgress' | 'completed';
 
-const STAT_CARDS: StatCardConfig<ActivityCountKey>[] = [
+// Stat cards will be dynamically generated based on typeFilter
+const getStatCards = (typeFilter: string): StatCardConfig<ActivityCountKey>[] => [
   { key: 'total', label: 'Total Activities', icon: ClipboardList, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-  { key: 'dueSoon', label: 'Due Soon', icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
+  { 
+    key: 'dueSoon', 
+    label: typeFilter === 'scheduled' ? 'Upcoming' : 'Due Soon', 
+    icon: Clock, 
+    color: 'text-amber-500', 
+    bgColor: 'bg-amber-500/10' 
+  },
   { key: 'inProgress', label: 'In Progress', icon: Clock, color: 'text-purple-500', bgColor: 'bg-purple-500/10', filterValue: 'in_progress' },
   { key: 'completed', label: 'Completed', icon: CheckCircle, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', filterValue: 'completed' },
 ];
@@ -87,7 +94,19 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { key: "case_number", label: "Case #", format: (_, row) => row.cases?.case_number || "-" },
   { key: "case_title", label: "Case Title", format: (_, row) => row.cases?.title || "-" },
   { key: "status", label: "Status", format: (v) => STATUS_OPTIONS.find(s => s.value === v)?.label || v },
-  { key: "due_date", label: "Due Date", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
+  { 
+    key: "due_date", 
+    label: "Date", 
+    format: (v, row) => {
+      if (!v) return "-";
+      const dateStr = format(new Date(v), "MMM d, yyyy");
+      // Include time for scheduled activities
+      if (row.is_scheduled && row.start_time) {
+        return `${dateStr} ${row.start_time}`;
+      }
+      return dateStr;
+    }
+  },
   { key: "address", label: "Location", format: (v) => v || "-" },
   { key: "assigned_to", label: "Assigned To", format: (_, row) => row.assigned_user?.full_name || "-" },
   { key: "created_at", label: "Created", format: (v) => v ? format(new Date(v), "MMM d, yyyy") : "-" },
@@ -384,7 +403,7 @@ export default function Activities() {
       />
 
       <StatCardsGrid
-        stats={STAT_CARDS}
+        stats={getStatCards(typeFilter)}
         counts={counts}
         activeFilter={statusFilter !== 'all' ? statusFilter : undefined}
         onStatClick={handleStatClick}
@@ -489,7 +508,7 @@ export default function Activities() {
                 <TableHead className="w-[300px]">Title</TableHead>
                 <TableHead>Case</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Due Date</TableHead>
+                <TableHead>{typeFilter === 'scheduled' ? 'Scheduled Date' : typeFilter === 'unscheduled' ? 'Due Date' : 'Date'}</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Assigned To</TableHead>
                 <TableHead className="w-[80px]">Actions</TableHead>
@@ -534,8 +553,18 @@ export default function Activities() {
                     </TableCell>
                     <TableCell>
                       {activity.due_date ? (
-                        <div className={cn("text-sm", displayStatus === 'overdue' && "text-red-500 font-medium")}>
+                        <div className={cn(
+                          "text-sm",
+                          // Only show red "overdue" styling for TASKS, not scheduled activities
+                          !activity.is_scheduled && displayStatus === 'overdue' && "text-red-500 font-medium"
+                        )}>
                           {format(new Date(activity.due_date), "MMM d, yyyy")}
+                          {/* Show time for scheduled activities */}
+                          {activity.is_scheduled && activity.start_time && (
+                            <div className="text-xs text-muted-foreground">
+                              {activity.start_time}
+                            </div>
+                          )}
                         </div>
                       ) : <span className="text-muted-foreground">-</span>}
                     </TableCell>
