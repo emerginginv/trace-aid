@@ -2865,6 +2865,7 @@ export type Database = {
           updated_at: string | null
           use_primary_subject_as_title: boolean | null
           user_id: string
+          workflow: string | null
         }
         Insert: {
           account_id?: string | null
@@ -2920,6 +2921,7 @@ export type Database = {
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null
           user_id: string
+          workflow?: string | null
         }
         Update: {
           account_id?: string | null
@@ -2975,6 +2977,7 @@ export type Database = {
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null
           user_id?: string
+          workflow?: string | null
         }
         Relationships: [
           {
@@ -8934,6 +8937,7 @@ export type Database = {
         Args: { p_organization_id: string; p_subject_identifier: string }
         Returns: Json
       }
+      can_reopen_case: { Args: { p_case_id: string }; Returns: Json }
       can_view_billing_rates: { Args: { p_user_id?: string }; Returns: boolean }
       cancel_org_deletion: {
         Args: { p_organization_id: string }
@@ -10042,6 +10046,15 @@ export type Database = {
       validate_scim_token: {
         Args: { p_org_id: string; p_token: string }
         Returns: boolean
+      }
+      validate_status_transition: {
+        Args: {
+          p_case_id: string
+          p_from_status_id: string
+          p_to_status_id: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       verify_status_subscription: {
         Args: { p_token: string }

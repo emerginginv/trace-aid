@@ -46,6 +46,7 @@ import { useCaseTypeQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
 import { useCaseLifecycleStatuses, STATUS_KEYS } from "@/hooks/use-case-lifecycle-statuses";
 import { useCaseStatuses } from "@/hooks/use-case-statuses";
+import { useCaseStatusTransition } from "@/hooks/use-case-status-transition";
 
 interface Case {
   id: string;
@@ -58,6 +59,7 @@ interface Case {
   current_category_id: string | null; // New category reference
   status_entered_at: string | null;
   category_entered_at: string | null;
+  workflow: string | null; // Workflow for filtering available statuses
   account_id: string | null;
   contact_id: string | null;
   due_date: string | null;
@@ -140,8 +142,24 @@ const CaseDetail = () => {
     isClosedCategory,
     getNextStatus,
     getPrevStatus,
+    getCategoryByName,
+    getStatusesByCategoryId,
     isLoading: newStatusesLoading,
   } = useCaseStatuses();
+  
+  // Status transition engine with validation and workflow filtering
+  const {
+    getStatusesForWorkflow,
+    getStatusesGroupedByCategory,
+    canTransitionTo,
+    canModifyStatus,
+    isStatusLocked,
+    getDefaultNextStatus,
+    getDefaultPrevStatus,
+    checkCanReopen,
+    canPotentiallyReopen,
+    getFirstOpenStatus,
+  } = useCaseStatusTransition();
   
   const statusesLoading = legacyStatusesLoading || newStatusesLoading;
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
@@ -376,6 +394,19 @@ const CaseDetail = () => {
       return false;
     }
     
+    // Validate transition using the transition engine
+    const caseWorkflow = caseData.workflow || "standard";
+    const validation = canTransitionTo(oldStatusId, newStatusId, caseWorkflow);
+    
+    if (!validation.valid) {
+      toast({ 
+        title: "Transition Blocked", 
+        description: validation.reason || "Status change not allowed", 
+        variant: "destructive" 
+      });
+      return false;
+    }
+    
     const wasClosedCategory = oldStatusId ? isClosedCategory(oldStatusId) : false;
     const isNowClosedCategory = isClosedCategory(newStatusId);
     const isClosing = !wasClosedCategory && isNowClosedCategory;
@@ -575,32 +606,53 @@ const CaseDetail = () => {
         }
       } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-      const {
-        data: existingReopen
-      } = await supabase.from("cases").select("id").eq("parent_case_id", caseData.id).maybeSingle();
-      if (existingReopen) {
+      
+      // Check if reopen is allowed using the transition engine
+      const reopenCheck = await checkCanReopen(caseData.id);
+      if (!reopenCheck.valid) {
         toast({
           title: "Cannot Reopen",
-          description: "This case has already been reopened. You cannot reopen the same case multiple times.",
+          description: reopenCheck.reason || "This case cannot be reopened.",
           variant: "destructive"
         });
         setReopenDialogOpen(false);
         return;
       }
+      
       const {
         data: profile
       } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
-      // Find first open execution status for reopened case
-      const openStatus = executionStatuses.find(s => s.status_type === "open");
-      if (!openStatus) {
-        toast({
-          title: "Error",
-          description: "No open status available. Please configure an open status first.",
-          variant: "destructive"
-        });
-        return;
+      
+      // Get the case workflow and find the first "Open" category status
+      const caseWorkflow = caseData.workflow || "standard";
+      const firstOpenStatus = getFirstOpenStatus(caseWorkflow);
+      
+      // Fall back to legacy if new system doesn't have an open status
+      let openStatusName: string;
+      let openStatusKey: string | null = null;
+      let openStatusId: string | null = null;
+      let openCategoryId: string | null = null;
+      
+      if (firstOpenStatus) {
+        openStatusName = firstOpenStatus.name;
+        openStatusId = firstOpenStatus.id;
+        openCategoryId = firstOpenStatus.category_id;
+      } else {
+        // Legacy fallback
+        const legacyOpenStatus = executionStatuses.find(s => s.status_type === "open");
+        if (!legacyOpenStatus) {
+          toast({
+            title: "Error",
+            description: "No open status available. Please configure an open status first.",
+            variant: "destructive"
+          });
+          return;
+        }
+        openStatusName = legacyOpenStatus.display_name;
+        openStatusKey = legacyOpenStatus.status_key;
       }
+      
       const rootCaseId = caseData.parent_case_id || caseData.id;
       const {
         data: relatedCases
@@ -623,23 +675,36 @@ const CaseDetail = () => {
       const {
         data: subjects
       } = await supabase.from("case_subjects").select("*").eq("case_id", caseData.id);
-      const {
-        data: newCase,
-        error: caseError
-      } = await supabase.from("cases").insert({
+      
+      // Create new case with proper status system fields
+      const newCaseData: Record<string, unknown> = {
         case_number: newCaseNumber,
         title: caseData.title,
         description: caseData.description,
-        status: openStatus.display_name,
-        status_key: openStatus.status_key,
+        status: openStatusName,
         account_id: caseData.account_id,
         contact_id: caseData.contact_id,
         case_manager_id: caseData.case_manager_id,
         investigator_ids: caseData.investigator_ids,
-        parent_case_id: rootCaseId,
+        parent_case_id: rootCaseId, // Links as case_series_id
         instance_number: newInstanceNumber,
-        user_id: user.id
-      }).select().single();
+        user_id: user.id,
+        workflow: caseWorkflow, // Preserve workflow
+      };
+      
+      // Set new status system fields if available
+      if (openStatusId) {
+        newCaseData.current_status_id = openStatusId;
+        newCaseData.current_category_id = openCategoryId;
+      }
+      if (openStatusKey) {
+        newCaseData.status_key = openStatusKey;
+      }
+      
+      const {
+        data: newCase,
+        error: caseError
+      } = await supabase.from("cases").insert(newCaseData as any).select().single();
       if (caseError) throw caseError;
       if (subjects && subjects.length > 0) {
         const subjectsToInsert = subjects.map(subject => ({
@@ -675,7 +740,7 @@ const CaseDetail = () => {
         description: `New case instance created from ${caseData.case_number} by ${userName}`,
         status: "completed"
       });
-      await NotificationHelpers.caseStatusChanged(newCaseNumber, openStatus.display_name, newCase.id);
+      await NotificationHelpers.caseStatusChanged(newCaseNumber, openStatusName, newCase.id);
       toast({
         title: "Success",
         description: `Case reopened as ${newCaseNumber}`
