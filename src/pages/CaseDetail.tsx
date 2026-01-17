@@ -36,7 +36,6 @@ import { CaseSummaryPdfDialog } from "@/components/case-detail/CaseSummaryPdfDia
 import { CaseReports } from "@/components/case-detail/CaseReports";
 import { CaseTimeline } from "@/components/case-detail/CaseTimeline";
 import { ClientInfoSection } from "@/components/case-detail/ClientInfoSection";
-
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -46,7 +45,6 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { getStatusStyleFromPicklist, isClosedStatus } from "@/lib/statusUtils";
 import { useCaseTypeQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
-
 interface Case {
   id: string;
   case_number: string;
@@ -70,7 +68,6 @@ interface Case {
   case_type_id?: string | null;
   source_request_id?: string | null;
 }
-
 interface Account {
   id: string;
   name: string;
@@ -79,7 +76,6 @@ interface Account {
   phone?: string | null;
   email?: string | null;
 }
-
 interface Contact {
   id: string;
   first_name: string;
@@ -89,20 +85,27 @@ interface Contact {
   phone?: string | null;
   email?: string | null;
 }
-
-
 const CaseDetail = () => {
-  const { id } = useParams();
+  const {
+    id
+  } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
-  const { isVendor, isAdmin, isManager } = useUserRole();
-  const { hasPermission } = usePermissions();
-  const { organization } = useOrganization();
+  const {
+    isVendor,
+    isAdmin,
+    isManager
+  } = useUserRole();
+  const {
+    hasPermission
+  } = usePermissions();
+  const {
+    organization
+  } = useOrganization();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
-  
   const [loading, setLoading] = useState(true);
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -117,7 +120,6 @@ const CaseDetail = () => {
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
   const [reportsRefreshKey, setReportsRefreshKey] = useState(0);
-  
   const validTabs = ['info', 'budget', 'subjects', 'updates', 'activities', 'calendar', 'finances', 'time-expense', 'attachments', 'timeline', 'reports'];
   const getInitialTab = () => {
     const tabFromUrl = searchParams.get('tab');
@@ -135,74 +137,100 @@ const CaseDetail = () => {
       setActiveTab(tabFromUrl);
     }
   }, [searchParams]);
-
   const handleTabChange = (newTab: string) => {
     setActiveTab(newTab);
-    setSearchParams({ tab: newTab }, { replace: true });
+    setSearchParams({
+      tab: newTab
+    }, {
+      replace: true
+    });
   };
   const [highlightHistory, setHighlightHistory] = useState(false);
   const budgetTabRef = useRef<HTMLDivElement>(null);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [summaryPdfDialogOpen, setSummaryPdfDialogOpen] = useState(false);
-  const [updates, setUpdates] = useState<Array<{ id: string; title: string; description: string | null; created_at: string; update_type: string; user_id: string }>>([]);
-  const [userProfiles, setUserProfiles] = useState<Record<string, { id: string; full_name: string; email: string }>>({});
+  const [updates, setUpdates] = useState<Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    created_at: string;
+    update_type: string;
+    user_id: string;
+  }>>([]);
+  const [userProfiles, setUserProfiles] = useState<Record<string, {
+    id: string;
+    full_name: string;
+    email: string;
+  }>>({});
 
   // Fetch case type data using React Query
-  const { data: caseType } = useCaseTypeQuery(caseData?.case_type_id);
-  
+  const {
+    data: caseType
+  } = useCaseTypeQuery(caseData?.case_type_id);
+
   // Fetch case service instances
-  const { data: serviceInstances = [] } = useCaseServiceInstances(id);
+  const {
+    data: serviceInstances = []
+  } = useCaseServiceInstances(id);
 
   // Set breadcrumbs based on case data
-  useSetBreadcrumbs(
-    caseData
-      ? [
-          { label: "Cases", href: "/cases" },
-          { label: caseData.title || caseData.case_number || "Case" },
-        ]
-      : [{ label: "Cases", href: "/cases" }]
-  );
-
+  useSetBreadcrumbs(caseData ? [{
+    label: "Cases",
+    href: "/cases"
+  }, {
+    label: caseData.title || caseData.case_number || "Case"
+  }] : [{
+    label: "Cases",
+    href: "/cases"
+  }]);
   const handleViewBudgetHistory = () => {
     setActiveTab("budget");
     setHighlightHistory(true);
     setTimeout(() => {
-      budgetTabRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      budgetTabRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
       setTimeout(() => setHighlightHistory(false), 2000);
     }, 100);
   };
-
   const fetchUpdatesForReport = async () => {
-    const { data } = await supabase
-      .from("case_updates")
-      .select("*")
-      .eq("case_id", id)
-      .order("created_at", { ascending: false });
+    const {
+      data
+    } = await supabase.from("case_updates").select("*").eq("case_id", id).order("created_at", {
+      ascending: false
+    });
     setUpdates(data || []);
   };
-
   const fetchUserProfilesForReport = async () => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, full_name, email");
-    const profiles: Record<string, { id: string; full_name: string; email: string }> = {};
-    (data || []).forEach(p => { profiles[p.id] = p; });
+    const {
+      data
+    } = await supabase.from("profiles").select("id, full_name, email");
+    const profiles: Record<string, {
+      id: string;
+      full_name: string;
+      email: string;
+    }> = {};
+    (data || []).forEach(p => {
+      profiles[p.id] = p;
+    });
     setUserProfiles(profiles);
   };
-
   useEffect(() => {
     fetchCaseData();
     fetchCaseStatuses();
     fetchUpdatesForReport();
     fetchUserProfilesForReport();
   }, [id]);
-
   const fetchCaseStatuses = async () => {
     try {
-      const { getCurrentUserOrganizationId } = await import("@/lib/organizationHelpers");
+      const {
+        getCurrentUserOrganizationId
+      } = await import("@/lib/organizationHelpers");
       const organizationId = await getCurrentUserOrganizationId();
-      
-      const { data } = await supabase.from("picklists").select("id, value, color, status_type").eq("type", "case_status").eq("is_active", true).or(`organization_id.eq.${organizationId},organization_id.is.null`).order("display_order");
+      const {
+        data
+      } = await supabase.from("picklists").select("id, value, color, status_type").eq("type", "case_status").eq("is_active", true).or(`organization_id.eq.${organizationId},organization_id.is.null`).order("display_order");
       if (data) {
         setCaseStatuses(data);
       }
@@ -210,23 +238,23 @@ const CaseDetail = () => {
       console.error("Error fetching case statuses:", error);
     }
   };
-
   const fetchCaseData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data: userOrgs } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id);
-      
+      const {
+        data: userOrgs
+      } = await supabase.from("organization_members").select("organization_id").eq("user_id", user.id);
       const userOrgIds = userOrgs?.map(o => o.organization_id) || [];
-
-      const { data, error } = await supabase.from("cases").select("*").eq("id", id).maybeSingle();
-      
+      const {
+        data,
+        error
+      } = await supabase.from("cases").select("*").eq("id", id).maybeSingle();
       if (error) throw error;
-
       if (!data) {
         toast({
           title: "Not Found",
@@ -236,12 +264,7 @@ const CaseDetail = () => {
         navigate("/cases");
         return;
       }
-
-      const hasAccess = 
-        data.user_id === user.id || 
-        data.investigator_ids?.includes(user.id) ||
-        (data.organization_id && userOrgIds.includes(data.organization_id));
-      
+      const hasAccess = data.user_id === user.id || data.investigator_ids?.includes(user.id) || data.organization_id && userOrgIds.includes(data.organization_id);
       if (!hasAccess) {
         toast({
           title: "Access Denied",
@@ -252,17 +275,18 @@ const CaseDetail = () => {
         return;
       }
       setCaseData(data);
-
       if (data.account_id) {
-        const { data: accountData } = await supabase.from("accounts").select("id, name, status, industry, phone, email").eq("id", data.account_id).maybeSingle();
+        const {
+          data: accountData
+        } = await supabase.from("accounts").select("id, name, status, industry, phone, email").eq("id", data.account_id).maybeSingle();
         if (accountData) setAccount(accountData);
       }
-
       if (data.contact_id) {
-        const { data: contactData } = await supabase.from("contacts").select("id, first_name, last_name, status, role, phone, email").eq("id", data.contact_id).maybeSingle();
+        const {
+          data: contactData
+        } = await supabase.from("contacts").select("id, first_name, last_name, status, role, phone, email").eq("id", data.contact_id).maybeSingle();
         if (contactData) setContact(contactData);
       }
-
     } catch (error) {
       console.error("Error fetching case:", error);
       toast({
@@ -275,7 +299,6 @@ const CaseDetail = () => {
       setLoading(false);
     }
   };
-
   const getStatusColor = (status: string) => {
     const statusItem = caseStatuses.find(s => s.value === status);
     if (statusItem?.color) {
@@ -283,27 +306,22 @@ const CaseDetail = () => {
     }
     return "bg-muted";
   };
-
   const getStatusStyle = (status: string) => getStatusStyleFromPicklist(status, caseStatuses);
-
   const isClosedCase = () => {
     if (!caseData) return false;
     return isClosedStatus(caseData.status, caseStatuses);
   };
-
   const handleStatusChange = async (newStatus: string): Promise<boolean> => {
     if (!caseData) return false;
-
     const oldStatus = caseData.status;
     if (oldStatus === newStatus) return true;
-    
-    const previousCaseData = { ...caseData };
-    
+    const previousCaseData = {
+      ...caseData
+    };
     const newStatusItem = caseStatuses.find(s => s.value === newStatus);
     const isClosing = newStatusItem?.status_type === 'closed';
     const oldStatusItem = caseStatuses.find(s => s.value === oldStatus);
     const wasOpen = oldStatusItem?.status_type === 'open';
-    
     setCaseData({
       ...caseData,
       status: newStatus,
@@ -312,35 +330,40 @@ const CaseDetail = () => {
         closed_at: new Date().toISOString()
       } : {})
     });
-    
     toast({
       title: "Status updated",
       description: isClosing && wasOpen ? "Case closed" : `Status changed to ${newStatus}`
     });
-    
     setUpdatingStatus(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-
-      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      const {
+        data: profile
+      } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
-
-      const updateData: any = { status: newStatus };
-
+      const updateData: any = {
+        status: newStatus
+      };
       if (isClosing && wasOpen) {
         updateData.closed_by_user_id = user.id;
         updateData.closed_at = new Date().toISOString();
       }
-
-      const { error } = await supabase.from("cases").update(updateData).eq("id", id).eq("user_id", user.id);
+      const {
+        error
+      } = await supabase.from("cases").update(updateData).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
-
       let activityDescription = `Status changed from "${oldStatus}" to "${newStatus}" by ${userName}`;
       if (isClosing && wasOpen) {
         activityDescription = `Case closed by ${userName}`;
       }
-      const { error: activityError } = await supabase.from("case_activities").insert({
+      const {
+        error: activityError
+      } = await supabase.from("case_activities").insert({
         case_id: id,
         user_id: user.id,
         activity_type: "Status Change",
@@ -351,9 +374,7 @@ const CaseDetail = () => {
       if (activityError) {
         console.error("Error creating activity log:", activityError);
       }
-
       await NotificationHelpers.caseStatusChanged(caseData.case_number, newStatus, id!);
-
       setCaseData(prev => prev ? {
         ...prev,
         status: newStatus,
@@ -362,7 +383,6 @@ const CaseDetail = () => {
           closed_at: new Date().toISOString()
         } : {})
       } : null);
-      
       return true;
     } catch (error) {
       console.error("Error updating status:", error);
@@ -377,100 +397,81 @@ const CaseDetail = () => {
       setUpdatingStatus(false);
     }
   };
-
   const handleReopenCase = async () => {
     if (!caseData) return;
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-
-      const { data: existingReopen } = await supabase
-        .from("cases")
-        .select("id")
-        .eq("parent_case_id", caseData.id)
-        .maybeSingle();
-
+      const {
+        data: existingReopen
+      } = await supabase.from("cases").select("id").eq("parent_case_id", caseData.id).maybeSingle();
       if (existingReopen) {
         toast({
           title: "Cannot Reopen",
           description: "This case has already been reopened. You cannot reopen the same case multiple times.",
-          variant: "destructive",
+          variant: "destructive"
         });
         setReopenDialogOpen(false);
         return;
       }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
+      const {
+        data: profile
+      } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
-
-      const openStatus = caseStatuses.find((s) => s.status_type === "open");
+      const openStatus = caseStatuses.find(s => s.status_type === "open");
       if (!openStatus) {
         toast({
           title: "Error",
           description: "No open status available. Please configure an open status first.",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
-
       const rootCaseId = caseData.parent_case_id || caseData.id;
-
-      const { data: relatedCases } = await supabase.rpc("get_related_cases", {
-        case_id: caseData.id,
+      const {
+        data: relatedCases
+      } = await supabase.rpc("get_related_cases", {
+        case_id: caseData.id
       });
-
-      const maxInstance = relatedCases
-        ? Math.max(...relatedCases.map((c: any) => c.instance_number))
-        : caseData.instance_number;
+      const maxInstance = relatedCases ? Math.max(...relatedCases.map((c: any) => c.instance_number)) : caseData.instance_number;
       const newInstanceNumber = maxInstance + 1;
-
       let baseCaseNumber = caseData.case_number;
       if (caseData.parent_case_id) {
-        const { data: rootCase } = await supabase
-          .from("cases")
-          .select("case_number")
-          .eq("id", rootCaseId)
-          .single();
+        const {
+          data: rootCase
+        } = await supabase.from("cases").select("case_number").eq("id", rootCaseId).single();
         if (rootCase) {
           baseCaseNumber = rootCase.case_number;
         }
       }
-      
       const instanceSuffix = String(newInstanceNumber - 1).padStart(2, "0");
       const newCaseNumber = `${baseCaseNumber}-${instanceSuffix}`;
-
-      const { data: subjects } = await supabase
-        .from("case_subjects")
-        .select("*")
-        .eq("case_id", caseData.id);
-
-      const { data: newCase, error: caseError } = await supabase
-        .from("cases")
-        .insert({
-          case_number: newCaseNumber,
-          title: caseData.title,
-          description: caseData.description,
-          status: openStatus.value,
-          account_id: caseData.account_id,
-          contact_id: caseData.contact_id,
-          case_manager_id: caseData.case_manager_id,
-          investigator_ids: caseData.investigator_ids,
-          parent_case_id: rootCaseId,
-          instance_number: newInstanceNumber,
-          user_id: user.id,
-        })
-        .select()
-        .single();
-
+      const {
+        data: subjects
+      } = await supabase.from("case_subjects").select("*").eq("case_id", caseData.id);
+      const {
+        data: newCase,
+        error: caseError
+      } = await supabase.from("cases").insert({
+        case_number: newCaseNumber,
+        title: caseData.title,
+        description: caseData.description,
+        status: openStatus.value,
+        account_id: caseData.account_id,
+        contact_id: caseData.contact_id,
+        case_manager_id: caseData.case_manager_id,
+        investigator_ids: caseData.investigator_ids,
+        parent_case_id: rootCaseId,
+        instance_number: newInstanceNumber,
+        user_id: user.id
+      }).select().single();
       if (caseError) throw caseError;
-
       if (subjects && subjects.length > 0) {
-        const subjectsToInsert = subjects.map((subject) => ({
+        const subjectsToInsert = subjects.map(subject => ({
           case_id: newCase.id,
           subject_type: subject.subject_type,
           name: subject.name,
@@ -478,58 +479,46 @@ const CaseDetail = () => {
           notes: subject.notes,
           profile_image_url: subject.profile_image_url,
           user_id: user.id,
-          organization_id: subject.organization_id,
+          organization_id: subject.organization_id
         }));
-
-        const { error: subjectsError } = await supabase
-          .from("case_subjects")
-          .insert(subjectsToInsert);
-
+        const {
+          error: subjectsError
+        } = await supabase.from("case_subjects").insert(subjectsToInsert);
         if (subjectsError) {
           console.error("Error copying subjects:", subjectsError);
         }
       }
-
       await supabase.from("case_activities").insert({
         case_id: caseData.id,
         user_id: user.id,
         activity_type: "Status Change",
         title: "Case Reopened",
         description: `Case reopened as new instance ${newCaseNumber} by ${userName}`,
-        status: "completed",
+        status: "completed"
       });
-
       await supabase.from("case_activities").insert({
         case_id: newCase.id,
         user_id: user.id,
         activity_type: "Status Change",
         title: "Case Instance Created",
         description: `New case instance created from ${caseData.case_number} by ${userName}`,
-        status: "completed",
+        status: "completed"
       });
-
-      await NotificationHelpers.caseStatusChanged(
-        newCaseNumber,
-        openStatus.value,
-        newCase.id
-      );
-
+      await NotificationHelpers.caseStatusChanged(newCaseNumber, openStatus.value, newCase.id);
       toast({
         title: "Success",
-        description: `Case reopened as ${newCaseNumber}`,
+        description: `Case reopened as ${newCaseNumber}`
       });
-
       navigate(`/cases/${newCase.id}`);
     } catch (error) {
       console.error("Error reopening case:", error);
       toast({
         title: "Error",
         description: "Failed to reopen case",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleDelete = async () => {
     if (!caseData) return;
     if (!confirm(`Are you sure you want to delete case "${caseData.title}"? This action cannot be undone.`)) {
@@ -537,9 +526,15 @@ const CaseDetail = () => {
     }
     setDeleting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-      const { error } = await supabase.from("cases").delete().eq("id", id).eq("user_id", user.id);
+      const {
+        error
+      } = await supabase.from("cases").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       toast({
         title: "Success",
@@ -557,69 +552,60 @@ const CaseDetail = () => {
       setDeleting(false);
     }
   };
-
   if (loading) {
     return <CaseDetailSkeleton />;
   }
-
   if (!caseData) {
-    return (
-      <div className="text-center py-12">
+    return <div className="text-center py-12">
         <p className="text-muted-foreground">Case not found</p>
         <Button asChild className="mt-4">
           <Link to="/cases">Back to Cases</Link>
         </Button>
-      </div>
-    );
+      </div>;
   }
-
   const isClosed = isClosedCase();
 
   // Info item helper component - always shows the field, with placeholder when empty
-  const InfoItem = ({ label, value, className = "" }: { label: string; value: string | undefined | null; className?: string }) => {
-    return (
-      <div>
+  const InfoItem = ({
+    label,
+    value,
+    className = ""
+  }: {
+    label: string;
+    value: string | undefined | null;
+    className?: string;
+  }) => {
+    return <div>
         <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
         <p className={`text-sm font-medium ${value ? className : 'text-muted-foreground/60'}`}>
           {value || "—"}
         </p>
-      </div>
-    );
+      </div>;
   };
-
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      {isVendor && (
-        <Alert className="bg-muted/50 border-primary/20">
+  return <div className="space-y-4 sm:space-y-6">
+      {isVendor && <Alert className="bg-muted/50 border-primary/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
             Vendor Access - You can view case details and submit updates. Contact and account information is restricted.
           </AlertDescription>
-        </Alert>
-      )}
+        </Alert>}
 
-      {isClosed && (
-        <Alert className="bg-muted/50 border-muted">
+      {isClosed && <Alert className="bg-muted/50 border-muted">
           <Info className="h-4 w-4" />
           <AlertDescription>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex flex-col gap-1">
                 <span className="font-semibold">This case is closed.</span>
-                {caseData.closed_by_user_id && caseData.closed_at && (
-                  <span className="text-sm text-muted-foreground">
+                {caseData.closed_by_user_id && caseData.closed_at && <span className="text-sm text-muted-foreground">
                     Closed on {new Date(caseData.closed_at).toLocaleDateString()} at {new Date(caseData.closed_at).toLocaleTimeString()}
-                  </span>
-                )}
+                  </span>}
               </div>
-              {(isAdmin || isManager) && (
-                <Button variant="outline" size="sm" onClick={() => setReopenDialogOpen(true)} className="self-start sm:self-auto">
+              {(isAdmin || isManager) && <Button variant="outline" size="sm" onClick={() => setReopenDialogOpen(true)} className="self-start sm:self-auto">
                   Reopen Case
-                </Button>
-              )}
+                </Button>}
             </div>
           </AlertDescription>
-        </Alert>
-      )}
+        </Alert>}
       
       {/* Header */}
       <div className="flex items-start gap-3 md:gap-4 min-w-0">
@@ -632,13 +618,10 @@ const CaseDetail = () => {
           </Button>
           
           <div className="flex-1 min-w-0">
-            <h1
-              className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold leading-tight break-words ${isClosed ? 'text-muted-foreground' : ''}`}
-              title={caseData.title}
-            >
+            <h1 title={caseData.title} className="">
               {caseData.title}
             </h1>
-            <p className={`text-xs mt-0.5 font-medium ${isClosed ? 'text-muted-foreground' : 'text-primary'}`}>
+            <p className="">
               {caseData.case_number}
             </p>
           </div>
@@ -647,72 +630,53 @@ const CaseDetail = () => {
         {/* Status + Actions - break under title until lg, then sit to the right */}
         <div className="flex items-center gap-2 shrink-0 ml-auto">
           {/* Status Dropdown */}
-          {!isVendor && (
-            <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
+          {!isVendor && <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
               <SelectTrigger className={`w-[140px] h-9 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {caseStatuses.map(status => (
-                  <SelectItem key={status.id} value={status.value}>
+                {caseStatuses.map(status => <SelectItem key={status.id} value={status.value}>
                     <span className="flex items-center gap-2">
-                      <span 
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: status.color || '#9ca3af' }}
-                      />
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{
+                  backgroundColor: status.color || '#9ca3af'
+                }} />
                       {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
                     </span>
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
-            </Select>
-          )}
+            </Select>}
           
           {/* Vendor Status Badge */}
-          {isVendor && (
-            <Badge className="border" style={getStatusStyle(caseData.status)}>
+          {isVendor && <Badge className="border" style={getStatusStyle(caseData.status)}>
               {caseData.status}
-            </Badge>
-          )}
+            </Badge>}
           
           {/* Action Menu */}
-          {!isVendor && (
-            <DropdownMenu>
+          {!isVendor && <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="shrink-0 h-9 w-9">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                {isManager && (
-                  <DropdownMenuItem onClick={() => setSummaryPdfDialogOpen(true)}>
+                {isManager && <DropdownMenuItem onClick={() => setSummaryPdfDialogOpen(true)}>
                     <FileText className="h-4 w-4 mr-2" />
                     Summary PDF
-                  </DropdownMenuItem>
-                )}
+                  </DropdownMenuItem>}
                 <DropdownMenuItem onClick={() => setEmailComposerOpen(true)} disabled={isClosed}>
                   <Mail className="h-4 w-4 mr-2" />
                   Send Email
                 </DropdownMenuItem>
-                {hasPermission('edit_cases') && (
-                  <DropdownMenuItem onClick={() => setEditFormOpen(true)} disabled={isClosed}>
+                {hasPermission('edit_cases') && <DropdownMenuItem onClick={() => setEditFormOpen(true)} disabled={isClosed}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Case
-                  </DropdownMenuItem>
-                )}
-                {hasPermission('delete_cases') && (
-                  <DropdownMenuItem 
-                    onClick={handleDelete} 
-                    disabled={deleting}
-                    className="text-destructive focus:text-destructive"
-                  >
+                  </DropdownMenuItem>}
+                {hasPermission('delete_cases') && <DropdownMenuItem onClick={handleDelete} disabled={deleting} className="text-destructive focus:text-destructive">
                     <Trash2 className="h-4 w-4 mr-2" />
                     {deleting ? "Deleting..." : "Delete Case"}
-                  </DropdownMenuItem>
-                )}
+                  </DropdownMenuItem>}
               </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+            </DropdownMenu>}
         </div>
       </div>
 
@@ -722,20 +686,14 @@ const CaseDetail = () => {
           {/* Left sidebar navigation */}
           <div className="w-full md:w-56 shrink-0">
             <div className="md:sticky md:top-6">
-              <CaseDetailNav 
-                currentTab={activeTab}
-                onTabChange={handleTabChange}
-                isVendor={isVendor}
-                hasReportsPermission={hasPermission('view_reports')}
-              />
+              <CaseDetailNav currentTab={activeTab} onTabChange={handleTabChange} isVendor={isVendor} hasReportsPermission={hasPermission('view_reports')} />
             </div>
           </div>
 
           {/* Right content area */}
           <div className="flex-1 min-w-0">
             {/* Info Tab */}
-            {!isVendor && (
-              <TabsContent value="info" className="mt-0">
+            {!isVendor && <TabsContent value="info" className="mt-0">
                 <div className="space-y-4 sm:space-y-6">
                   {/* Case Details Card - Always full width */}
                   <Card>
@@ -746,78 +704,42 @@ const CaseDetail = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {caseData.description && (
-                        <div>
+                      {caseData.description && <div>
                           <p className="text-xs text-muted-foreground mb-1">Case Objective</p>
                           <p className="text-sm">{caseData.description}</p>
-                        </div>
-                      )}
+                        </div>}
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
                         {/* Case Type - always show */}
                         <div>
                           <p className="text-xs text-muted-foreground mb-0.5">Case Type</p>
-                          {caseType ? (
-                            <div className="flex items-center gap-1.5">
-                              <span 
-                                className="w-2.5 h-2.5 rounded-full shrink-0"
-                                style={{ backgroundColor: caseType.color || '#9ca3af' }}
-                              />
+                          {caseType ? <div className="flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{
+                          backgroundColor: caseType.color || '#9ca3af'
+                        }} />
                               <span className="text-sm font-medium">{caseType.name}</span>
                               <Badge variant="outline" className="text-xs px-1.5 py-0 ml-1">
                                 {caseType.tag}
                               </Badge>
-                            </div>
-                          ) : (
-                            <p className="text-sm font-medium text-muted-foreground/60">—</p>
-                          )}
+                            </div> : <p className="text-sm font-medium text-muted-foreground/60">—</p>}
                         </div>
                         {/* Reference Numbers - Dynamic based on Case Type */}
-                        {(caseType?.reference_label_1 || !caseType) && (
-                          <InfoItem 
-                            label={caseType?.reference_label_1 || "Reference No."} 
-                            value={caseData.reference_number} 
-                          />
-                        )}
-                        {caseType?.reference_label_2 && (
-                          <InfoItem 
-                            label={caseType.reference_label_2} 
-                            value={caseData.reference_number_2} 
-                          />
-                        )}
-                        {caseType?.reference_label_3 && (
-                          <InfoItem 
-                            label={caseType.reference_label_3} 
-                            value={caseData.reference_number_3} 
-                          />
-                        )}
+                        {(caseType?.reference_label_1 || !caseType) && <InfoItem label={caseType?.reference_label_1 || "Reference No."} value={caseData.reference_number} />}
+                        {caseType?.reference_label_2 && <InfoItem label={caseType.reference_label_2} value={caseData.reference_number_2} />}
+                        {caseType?.reference_label_3 && <InfoItem label={caseType.reference_label_3} value={caseData.reference_number_3} />}
                         <InfoItem label="Due Date" value={caseData.due_date ? new Date(caseData.due_date).toLocaleDateString() : null} className="text-destructive" />
                         <InfoItem label="Created" value={caseData.created_at ? new Date(caseData.created_at).toLocaleDateString() : null} />
-                        {isClosed && (
-                          <InfoItem label="Closed" value={caseData.closed_at ? new Date(caseData.closed_at).toLocaleDateString() : null} className="text-muted-foreground" />
-                        )}
+                        {isClosed && <InfoItem label="Closed" value={caseData.closed_at ? new Date(caseData.closed_at).toLocaleDateString() : null} className="text-muted-foreground" />}
                       </div>
                       
                       {/* Services Section - always show */}
                       <div className="pt-3 border-t">
                         <p className="text-xs text-muted-foreground mb-2">Services</p>
-                        {serviceInstances.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {serviceInstances.map((instance) => (
-                              <Badge 
-                                key={instance.id} 
-                                variant="secondary"
-                                className="text-xs"
-                              >
+                        {serviceInstances.length > 0 ? <div className="flex flex-wrap gap-2">
+                            {serviceInstances.map(instance => <Badge key={instance.id} variant="secondary" className="text-xs">
                                 {instance.service_name}
-                                {instance.service_code && (
-                                  <span className="text-muted-foreground ml-1">({instance.service_code})</span>
-                                )}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground/60">No services assigned</p>
-                        )}
+                                {instance.service_code && <span className="text-muted-foreground ml-1">({instance.service_code})</span>}
+                              </Badge>)}
+                          </div> : <p className="text-sm text-muted-foreground/60">No services assigned</p>}
                       </div>
                     </CardContent>
                   </Card>
@@ -825,83 +747,54 @@ const CaseDetail = () => {
                   {/* Three-column grid for Client, Team, and Budget */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* Client Column */}
-                    <ClientInfoSection 
-                      caseId={id!}
-                      account={account ? {
-                        id: account.id,
-                        name: account.name,
-                        status: account.status,
-                        industry: account.industry,
-                        phone: account.phone,
-                        email: account.email,
-                      } : null}
-                      contact={contact ? {
-                        id: contact.id,
-                        first_name: contact.first_name,
-                        last_name: contact.last_name,
-                        status: contact.status,
-                        role: contact.role,
-                        phone: contact.phone,
-                        email: contact.email,
-                      } : null}
-                      accountName={account?.name}
-                      onUpdate={fetchCaseData}
-                    />
+                    <ClientInfoSection caseId={id!} account={account ? {
+                  id: account.id,
+                  name: account.name,
+                  status: account.status,
+                  industry: account.industry,
+                  phone: account.phone,
+                  email: account.email
+                } : null} contact={contact ? {
+                  id: contact.id,
+                  first_name: contact.first_name,
+                  last_name: contact.last_name,
+                  status: contact.status,
+                  role: contact.role,
+                  phone: contact.phone,
+                  email: contact.email
+                } : null} accountName={account?.name} onUpdate={fetchCaseData} />
 
                     {/* Team + Related Cases Column */}
                     <div className="space-y-4">
-                      <CaseTeamManager 
-                        caseId={id!} 
-                        caseManagerId={caseData.case_manager_id}
-                        caseManager2Id={caseData.case_manager_2_id}
-                        onUpdate={fetchCaseData} 
-                      />
-                      {caseData.source_request_id && (
-                        <SourceRequestCard sourceRequestId={caseData.source_request_id} />
-                      )}
+                      <CaseTeamManager caseId={id!} caseManagerId={caseData.case_manager_id} caseManager2Id={caseData.case_manager_2_id} onUpdate={fetchCaseData} />
+                      {caseData.source_request_id && <SourceRequestCard sourceRequestId={caseData.source_request_id} />}
                       <RelatedCases caseId={id!} currentInstanceNumber={caseData.instance_number} />
                     </div>
 
                     {/* Budget + Retainer Column */}
                     <div className="space-y-4">
-                      {organization?.id && (
-                        <BudgetStatusCard 
-                          caseId={id!} 
-                          organizationId={organization.id}
-                          refreshKey={budgetRefreshKey}
-                          onViewHistory={handleViewBudgetHistory}
-                        />
-                      )}
+                      {organization?.id && <BudgetStatusCard caseId={id!} organizationId={organization.id} refreshKey={budgetRefreshKey} onViewHistory={handleViewBudgetHistory} />}
                       {organization?.id && <RetainerFundsWidget caseId={id!} organizationId={organization.id} />}
                     </div>
                   </div>
                 </div>
-              </TabsContent>
-            )}
+              </TabsContent>}
 
             {/* Budget Tab */}
-            {!isVendor && (
-              <TabsContent value="budget" className="mt-0">
+            {!isVendor && <TabsContent value="budget" className="mt-0">
                 <div ref={budgetTabRef} className="space-y-6 scroll-mt-4">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <BudgetSummary 
-                      caseId={id!} 
-                      refreshKey={budgetRefreshKey} 
-                      onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} 
-                    />
+                    <BudgetSummary caseId={id!} refreshKey={budgetRefreshKey} onAdjustmentSuccess={() => setBudgetRefreshKey(k => k + 1)} />
                     <BudgetConsumptionSnapshot caseId={id!} refreshKey={budgetRefreshKey} />
                   </div>
                   <BudgetAdjustmentsHistory caseId={id!} refreshKey={budgetRefreshKey} highlight={highlightHistory} />
                 </div>
-              </TabsContent>
-            )}
+              </TabsContent>}
 
             {/* Subjects Tab */}
-            {!isVendor && (
-              <TabsContent value="subjects" className="mt-0">
+            {!isVendor && <TabsContent value="subjects" className="mt-0">
                 <SubjectsTab caseId={id!} caseTypeId={caseData?.case_type_id} isClosedCase={isClosed} />
-              </TabsContent>
-            )}
+              </TabsContent>}
 
             {/* Updates Tab */}
             <TabsContent value="updates" className="mt-0">
@@ -909,25 +802,19 @@ const CaseDetail = () => {
             </TabsContent>
 
             {/* Activities Tab */}
-            {!isVendor && (
-              <TabsContent value="activities" className="mt-0">
+            {!isVendor && <TabsContent value="activities" className="mt-0">
                 <CaseActivities caseId={id!} isClosedCase={isClosed} />
-              </TabsContent>
-            )}
+              </TabsContent>}
 
             {/* Calendar Tab */}
-            {!isVendor && (
-              <TabsContent value="calendar" className="mt-0">
+            {!isVendor && <TabsContent value="calendar" className="mt-0">
                 <CaseCalendar caseId={id!} isClosedCase={isClosed} />
-              </TabsContent>
-            )}
+              </TabsContent>}
 
             {/* Finances Tab */}
-            {!isVendor && (
-              <TabsContent value="finances" className="mt-0">
+            {!isVendor && <TabsContent value="finances" className="mt-0">
                 <CaseFinances caseId={id!} isClosedCase={isClosed} />
-              </TabsContent>
-            )}
+              </TabsContent>}
 
 
             {/* Attachments Tab */}
@@ -936,23 +823,14 @@ const CaseDetail = () => {
             </TabsContent>
 
             {/* Timeline Tab */}
-            {!isVendor && (
-              <TabsContent value="timeline" className="mt-0">
+            {!isVendor && <TabsContent value="timeline" className="mt-0">
                 <CaseTimeline caseId={id!} />
-              </TabsContent>
-            )}
+              </TabsContent>}
 
             {/* Reports Tab */}
-            {!isVendor && hasPermission('view_reports') && (
-              <TabsContent value="reports" className="mt-0">
-                <CaseReports 
-                  key={reportsRefreshKey}
-                  caseId={id!} 
-                  isClosedCase={isClosed}
-                  onGenerateReport={() => setReportDialogOpen(true)}
-                />
-              </TabsContent>
-            )}
+            {!isVendor && hasPermission('view_reports') && <TabsContent value="reports" className="mt-0">
+                <CaseReports key={reportsRefreshKey} caseId={id!} isClosedCase={isClosed} onGenerateReport={() => setReportDialogOpen(true)} />
+              </TabsContent>}
           </div>
         </div>
       </Tabs>
@@ -961,39 +839,15 @@ const CaseDetail = () => {
       
       <EmailComposer open={emailComposerOpen} onOpenChange={setEmailComposerOpen} defaultTo={contact?.first_name && contact?.last_name ? `${contact.first_name} ${contact.last_name}` : undefined} defaultSubject={`Update on Case: ${caseData?.title}`} caseId={id} />
       
-      {caseData && (
-        <GenerateReportDialog
-          open={reportDialogOpen}
-          onOpenChange={setReportDialogOpen}
-          caseId={id!}
-          caseData={{
-            title: caseData.title,
-            case_number: caseData.case_number,
-            case_manager_id: caseData.case_manager_id,
-          }}
-          onSuccess={() => setReportsRefreshKey(prev => prev + 1)}
-        />
-      )}
+      {caseData && <GenerateReportDialog open={reportDialogOpen} onOpenChange={setReportDialogOpen} caseId={id!} caseData={{
+      title: caseData.title,
+      case_number: caseData.case_number,
+      case_manager_id: caseData.case_manager_id
+    }} onSuccess={() => setReportsRefreshKey(prev => prev + 1)} />}
       
-      <ConfirmationDialog
-        open={reopenDialogOpen}
-        onOpenChange={setReopenDialogOpen}
-        title="Reopen Case"
-        description={`Reopening this case will create a new instance with case number ${caseData?.case_number}-${String((caseData?.instance_number || 1)).padStart(2, "0")}. All subjects will be copied to the new instance. Continue?`}
-        confirmLabel="Reopen Case"
-        cancelLabel="Cancel"
-        onConfirm={handleReopenCase}
-        variant="default"
-      />
+      <ConfirmationDialog open={reopenDialogOpen} onOpenChange={setReopenDialogOpen} title="Reopen Case" description={`Reopening this case will create a new instance with case number ${caseData?.case_number}-${String(caseData?.instance_number || 1).padStart(2, "0")}. All subjects will be copied to the new instance. Continue?`} confirmLabel="Reopen Case" cancelLabel="Cancel" onConfirm={handleReopenCase} variant="default" />
 
-      <CaseSummaryPdfDialog
-        open={summaryPdfDialogOpen}
-        onOpenChange={setSummaryPdfDialogOpen}
-        caseId={id!}
-        caseNumber={caseData?.case_number || ""}
-      />
-    </div>
-  );
+      <CaseSummaryPdfDialog open={summaryPdfDialogOpen} onOpenChange={setSummaryPdfDialogOpen} caseId={id!} caseNumber={caseData?.case_number || ""} />
+    </div>;
 };
-
 export default CaseDetail;
