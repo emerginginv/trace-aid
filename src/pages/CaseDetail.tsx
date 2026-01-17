@@ -42,9 +42,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
-import { getStatusStyleFromPicklist, isClosedStatus } from "@/lib/statusUtils";
 import { useCaseTypeQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
+import { useCaseLifecycleStatuses, STATUS_KEYS } from "@/hooks/use-case-lifecycle-statuses";
 interface Case {
   id: string;
   case_number: string;
@@ -111,12 +111,16 @@ const CaseDetail = () => {
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [caseStatuses, setCaseStatuses] = useState<Array<{
-    id: string;
-    value: string;
-    color: string;
-    status_type?: string;
-  }>>([]);
+  
+  // Use the new lifecycle statuses system
+  const { 
+    executionStatuses, 
+    getStatusByKey, 
+    getDisplayName, 
+    getStatusColor: getLifecycleStatusColor,
+    isClosedStatus: isClosedLifecycleStatus,
+    isLoading: statusesLoading 
+  } = useCaseLifecycleStatuses();
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
@@ -219,26 +223,9 @@ const CaseDetail = () => {
   };
   useEffect(() => {
     fetchCaseData();
-    fetchCaseStatuses();
     fetchUpdatesForReport();
     fetchUserProfilesForReport();
   }, [id]);
-  const fetchCaseStatuses = async () => {
-    try {
-      const {
-        getCurrentUserOrganizationId
-      } = await import("@/lib/organizationHelpers");
-      const organizationId = await getCurrentUserOrganizationId();
-      const {
-        data
-      } = await supabase.from("picklists").select("id, value, color, status_type").eq("type", "case_status").eq("is_active", true).or(`organization_id.eq.${organizationId},organization_id.is.null`).order("display_order");
-      if (data) {
-        setCaseStatuses(data);
-      }
-    } catch (error) {
-      console.error("Error fetching case statuses:", error);
-    }
-  };
   const fetchCaseData = async () => {
     try {
       const {
@@ -300,32 +287,46 @@ const CaseDetail = () => {
       setLoading(false);
     }
   };
-  const getStatusColor = (status: string) => {
-    const statusItem = caseStatuses.find(s => s.value === status);
-    if (statusItem?.color) {
-      return `border`;
+  // Helper to get status style for display (using lifecycle statuses)
+  const getStatusStyle = (statusKey: string) => {
+    const color = getLifecycleStatusColor(statusKey);
+    if (color) {
+      return {
+        backgroundColor: `${color}20`,
+        color: color,
+        borderColor: color,
+      };
     }
-    return "bg-muted";
+    return {};
   };
-  const getStatusStyle = (status: string) => getStatusStyleFromPicklist(status, caseStatuses);
+  
+  const getStatusColor = (statusKey: string) => {
+    return getLifecycleStatusColor(statusKey) ? 'border' : 'bg-muted';
+  };
+  
   const isClosedCase = () => {
-    if (!caseData) return false;
-    return isClosedStatus(caseData.status, caseStatuses);
+    if (!caseData?.status_key) return false;
+    return isClosedLifecycleStatus(caseData.status_key);
   };
-  const handleStatusChange = async (newStatus: string): Promise<boolean> => {
+  
+  const handleStatusChange = async (newStatusKey: string): Promise<boolean> => {
     if (!caseData) return false;
-    const oldStatus = caseData.status;
-    if (oldStatus === newStatus) return true;
-    const previousCaseData = {
-      ...caseData
-    };
-    const newStatusItem = caseStatuses.find(s => s.value === newStatus);
+    const oldStatusKey = caseData.status_key;
+    if (oldStatusKey === newStatusKey) return true;
+    const previousCaseData = { ...caseData };
+    
+    const newStatusItem = getStatusByKey(newStatusKey);
     const isClosing = newStatusItem?.status_type === 'closed';
-    const oldStatusItem = caseStatuses.find(s => s.value === oldStatus);
+    const oldStatusItem = oldStatusKey ? getStatusByKey(oldStatusKey) : null;
     const wasOpen = oldStatusItem?.status_type === 'open';
+    
+    // Get display name for the new status
+    const displayName = newStatusItem?.display_name || newStatusKey;
+    
     setCaseData({
       ...caseData,
-      status: newStatus,
+      status: displayName, // Update display status for backward compat
+      status_key: newStatusKey,
       ...(isClosing && wasOpen ? {
         closed_by_user_id: "pending",
         closed_at: new Date().toISOString()
@@ -333,7 +334,7 @@ const CaseDetail = () => {
     });
     toast({
       title: "Status updated",
-      description: isClosing && wasOpen ? "Case closed" : `Status changed to ${newStatus}`
+      description: isClosing && wasOpen ? "Case closed" : `Status changed to ${displayName}`
     });
     setUpdatingStatus(true);
     try {
@@ -348,7 +349,8 @@ const CaseDetail = () => {
       } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
       const updateData: any = {
-        status: newStatus
+        status: displayName, // Keep display name in status for backward compat
+        status_key: newStatusKey
       };
       if (isClosing && wasOpen) {
         updateData.closed_by_user_id = user.id;
@@ -358,7 +360,7 @@ const CaseDetail = () => {
         error
       } = await supabase.from("cases").update(updateData).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
-      let activityDescription = `Status changed from "${oldStatus}" to "${newStatus}" by ${userName}`;
+      let activityDescription = `Status changed from "${oldStatusItem?.display_name || oldStatusKey}" to "${displayName}" by ${userName}`;
       if (isClosing && wasOpen) {
         activityDescription = `Case closed by ${userName}`;
       }
@@ -375,10 +377,11 @@ const CaseDetail = () => {
       if (activityError) {
         console.error("Error creating activity log:", activityError);
       }
-      await NotificationHelpers.caseStatusChanged(caseData.case_number, newStatus, id!);
+      await NotificationHelpers.caseStatusChanged(caseData.case_number, displayName, id!);
       setCaseData(prev => prev ? {
         ...prev,
-        status: newStatus,
+        status: displayName,
+        status_key: newStatusKey,
         ...(isClosing && wasOpen ? {
           closed_by_user_id: user.id,
           closed_at: new Date().toISOString()
@@ -423,7 +426,8 @@ const CaseDetail = () => {
         data: profile
       } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
-      const openStatus = caseStatuses.find(s => s.status_type === "open");
+      // Find first open execution status for reopened case
+      const openStatus = executionStatuses.find(s => s.status_type === "open");
       if (!openStatus) {
         toast({
           title: "Error",
@@ -461,7 +465,8 @@ const CaseDetail = () => {
         case_number: newCaseNumber,
         title: caseData.title,
         description: caseData.description,
-        status: openStatus.value,
+        status: openStatus.display_name,
+        status_key: openStatus.status_key,
         account_id: caseData.account_id,
         contact_id: caseData.contact_id,
         case_manager_id: caseData.case_manager_id,
@@ -505,7 +510,7 @@ const CaseDetail = () => {
         description: `New case instance created from ${caseData.case_number} by ${userName}`,
         status: "completed"
       });
-      await NotificationHelpers.caseStatusChanged(newCaseNumber, openStatus.value, newCase.id);
+      await NotificationHelpers.caseStatusChanged(newCaseNumber, openStatus.display_name, newCase.id);
       toast({
         title: "Success",
         description: `Case reopened as ${newCaseNumber}`
@@ -630,26 +635,28 @@ const CaseDetail = () => {
         
         {/* Status + Actions - break under title until lg, then sit to the right */}
         <div className="flex items-center gap-2 shrink-0 ml-auto">
-          {/* Status Dropdown */}
-          {!isVendor && <Select value={caseData.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-              <SelectTrigger className={`w-[140px] h-9 text-sm ${getStatusColor(caseData.status)}`} style={getStatusStyle(caseData.status)}>
-                <SelectValue />
+          {/* Status Dropdown - now using lifecycle statuses */}
+          {!isVendor && <Select value={caseData.status_key || ''} onValueChange={handleStatusChange} disabled={updatingStatus || statusesLoading}>
+              <SelectTrigger className={`w-[140px] h-9 text-sm ${getStatusColor(caseData.status_key || '')}`} style={getStatusStyle(caseData.status_key || '')}>
+                <SelectValue placeholder="Select status">
+                  {getDisplayName(caseData.status_key || '') || caseData.status}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {caseStatuses.map(status => <SelectItem key={status.id} value={status.value}>
+                {executionStatuses.map(status => <SelectItem key={status.id} value={status.status_key}>
                     <span className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{
-                  backgroundColor: status.color || '#9ca3af'
-                }} />
-                      {status.value.charAt(0).toUpperCase() + status.value.slice(1)}
+                        backgroundColor: status.color || '#9ca3af'
+                      }} />
+                      {status.display_name}
                     </span>
                   </SelectItem>)}
               </SelectContent>
             </Select>}
           
           {/* Vendor Status Badge */}
-          {isVendor && <Badge className="border" style={getStatusStyle(caseData.status)}>
-              {caseData.status}
+          {isVendor && <Badge className="border" style={getStatusStyle(caseData.status_key || '')}>
+              {getDisplayName(caseData.status_key || '') || caseData.status}
             </Badge>}
           
           {/* Action Menu */}

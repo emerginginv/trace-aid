@@ -31,8 +31,8 @@ import { InlineEditCell } from "@/components/ui/inline-edit-cell";
 import { CaseCardManagerDisplay } from "@/components/cases/CaseCardManagerDisplay";
 import { CaseCardFinancialWidget } from "@/components/cases/CaseCardFinancialWidget";
 import { CaseCardFinancialSummary } from "@/components/cases/CaseCardFinancialSummary";
-import { getStatusStyleFromPicklist, isClosedStatus } from "@/lib/statusUtils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useCaseLifecycleStatuses } from "@/hooks/use-case-lifecycle-statuses";
 
 interface CaseManager {
   id: string;
@@ -60,6 +60,7 @@ interface Case {
   title: string;
   description: string;
   status: string;
+  status_key: string | null;
   due_date: string;
   created_at: string;
   case_manager_id: string | null;
@@ -98,15 +99,19 @@ const Cases = () => {
   // viewMode state removed - always use list view
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
-  const [statusPicklists, setStatusPicklists] = useState<Array<{
-    id: string;
-    value: string;
-    color: string;
-    status_type?: string;
-  }>>([]);
   const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
   const { sortColumn, sortDirection, handleSort } = useSortPreference("cases", "case_number", "desc");
   const [editingCase, setEditingCase] = useState<Case | null>(null);
+  
+  // Use the new lifecycle statuses system
+  const { 
+    executionStatuses, 
+    getStatusByKey, 
+    getDisplayName, 
+    getStatusColor: getLifecycleStatusColor,
+    isClosedStatus: isClosedLifecycleStatus,
+    isLoading: statusesLoading 
+  } = useCaseLifecycleStatuses();
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -119,7 +124,6 @@ const Cases = () => {
     if (organization?.id) {
       setFinancialsLoaded(false);
       fetchCases();
-      fetchPicklists();
     }
   }, [organization?.id]);
 
@@ -131,26 +135,6 @@ const Cases = () => {
     }
   }, [permissionsLoading, canViewFinances, cases.length, financialsLoaded]);
 
-  const fetchPicklists = async () => {
-    if (!organization?.id) return;
-    
-    try {
-      const { data: statusData } = await supabase
-        .from("picklists")
-        .select("id, value, color, status_type")
-        .eq("type", "case_status")
-        .eq("is_active", true)
-        .or(`organization_id.eq.${organization.id},organization_id.is.null`)
-        .order("display_order");
-      
-      if (statusData) {
-        setStatusPicklists(statusData);
-      }
-    } catch (error) {
-      console.error("Error fetching picklists:", error);
-    }
-  };
-
   const fetchCases = async () => {
     if (!organization?.id) return;
     
@@ -160,7 +144,7 @@ const Cases = () => {
       const { data: casesData, error: casesError } = await supabase
         .from("cases")
         .select(`
-          id, case_number, title, description, status, due_date, created_at,
+          id, case_number, title, description, status, status_key, due_date, created_at,
           case_manager_id, budget_dollars,
           reference_number, reference_number_2, reference_number_3,
           case_manager:profiles!cases_case_manager_id_fkey(
@@ -270,29 +254,47 @@ const Cases = () => {
     }
   };
 
-  const getStatusStyle = (status: string) => getStatusStyleFromPicklist(status, statusPicklists);
+  // Helper to get status style for display (using lifecycle statuses)
+  const getStatusStyle = (statusKey: string | null) => {
+    if (!statusKey) return {};
+    const color = getLifecycleStatusColor(statusKey);
+    if (color) {
+      return {
+        backgroundColor: `${color}20`,
+        color: color,
+        borderColor: color,
+      };
+    }
+    return {};
+  };
 
-  const isClosedCase = (status: string) => isClosedStatus(status, statusPicklists);
+  const isClosedCase = (statusKey: string | null) => {
+    if (!statusKey) return false;
+    return isClosedLifecycleStatus(statusKey);
+  };
 
   // Inline status update handler with optimistic UI
-  const handleInlineStatusChange = useCallback(async (caseId: string, newStatus: string): Promise<boolean> => {
+  const handleInlineStatusChange = useCallback(async (caseId: string, newStatusKey: string): Promise<boolean> => {
     const caseItem = cases.find(c => c.id === caseId);
     if (!caseItem) return false;
     
-    const oldStatus = caseItem.status;
-    if (oldStatus === newStatus) return true;
+    const oldStatusKey = caseItem.status_key;
+    if (oldStatusKey === newStatusKey) return true;
+    
+    const newStatusItem = getStatusByKey(newStatusKey);
+    const displayName = newStatusItem?.display_name || newStatusKey;
     
     // Optimistic update
     setCases(prev => prev.map(c => 
-      c.id === caseId ? { ...c, status: newStatus } : c
+      c.id === caseId ? { ...c, status: displayName, status_key: newStatusKey } : c
     ));
     
-    toast.success(`Status updated to ${newStatus}`);
+    toast.success(`Status updated to ${displayName}`);
     
     try {
       const { error } = await supabase
         .from("cases")
-        .update({ status: newStatus })
+        .update({ status: displayName, status_key: newStatusKey })
         .eq("id", caseId);
       
       if (error) throw error;
@@ -300,18 +302,18 @@ const Cases = () => {
     } catch (error) {
       // Rollback on error
       setCases(prev => prev.map(c => 
-        c.id === caseId ? { ...c, status: oldStatus } : c
+        c.id === caseId ? { ...c, status: caseItem.status, status_key: oldStatusKey } : c
       ));
       toast.error("Failed to update status. Change reverted.");
       return false;
     }
-  }, [cases]);
+  }, [cases, getStatusByKey]);
 
-  // Get status options for inline editing
-  const statusOptions = statusPicklists.map(s => ({
-    value: s.value,
-    label: s.value,
-    color: s.color
+  // Get status options for inline editing - using lifecycle statuses
+  const statusOptions = executionStatuses.map(s => ({
+    value: s.status_key,
+    label: s.display_name,
+    color: s.color || undefined
   }));
 
   const handleDeleteClick = (caseId: string) => {
@@ -395,22 +397,25 @@ const Cases = () => {
   }, []);
 
   // Bulk status change handler
-  const handleBulkStatusChange = useCallback(async (newStatus: string) => {
+  const handleBulkStatusChange = useCallback(async (newStatusKey: string) => {
     const selectedCases = cases.filter(c => selectedIds.has(c.id));
-    const oldStatuses = new Map(selectedCases.map(c => [c.id, c.status]));
+    const oldStatuses = new Map(selectedCases.map(c => [c.id, { status: c.status, status_key: c.status_key }]));
+    
+    const newStatusItem = getStatusByKey(newStatusKey);
+    const displayName = newStatusItem?.display_name || newStatusKey;
     
     // Optimistic update
     setCases(prev => prev.map(c => 
-      selectedIds.has(c.id) ? { ...c, status: newStatus } : c
+      selectedIds.has(c.id) ? { ...c, status: displayName, status_key: newStatusKey } : c
     ));
     
     const count = selectedIds.size;
-    toast.success(`Updated ${count} case${count !== 1 ? 's' : ''} to "${newStatus}"`);
+    toast.success(`Updated ${count} case${count !== 1 ? 's' : ''} to "${displayName}"`);
     
     try {
       const { error } = await supabase
         .from("cases")
-        .update({ status: newStatus })
+        .update({ status: displayName, status_key: newStatusKey })
         .in("id", Array.from(selectedIds));
       
       if (error) throw error;
@@ -419,12 +424,12 @@ const Cases = () => {
     } catch (error) {
       // Rollback on error
       setCases(prev => prev.map(c => {
-        const oldStatus = oldStatuses.get(c.id);
-        return oldStatus !== undefined ? { ...c, status: oldStatus } : c;
+        const old = oldStatuses.get(c.id);
+        return old ? { ...c, status: old.status, status_key: old.status_key } : c;
       }));
       toast.error("Failed to update cases. Changes reverted.");
     }
-  }, [cases, selectedIds]);
+  }, [cases, selectedIds, getStatusByKey]);
 
   // Bulk delete handler
   const pendingBulkDeletions = useRef<Map<string, { items: Case[]; timeoutId: NodeJS.Timeout }>>(new Map());
@@ -491,9 +496,9 @@ const Cases = () => {
       caseItem.reference_number?.toLowerCase().includes(query) ||
       caseItem.reference_number_2?.toLowerCase().includes(query) ||
       caseItem.reference_number_3?.toLowerCase().includes(query);
-    const matchesStatus = statusFilter === 'all' || caseItem.status === statusFilter;
-    const statusPicklist = statusPicklists.find(s => s.value === caseItem.status);
-    const matchesStatusType = statusTypeFilter === 'all' || statusPicklist?.status_type === statusTypeFilter;
+    const matchesStatus = statusFilter === 'all' || caseItem.status_key === statusFilter;
+    const statusInfo = caseItem.status_key ? getStatusByKey(caseItem.status_key) : null;
+    const matchesStatusType = statusTypeFilter === 'all' || statusInfo?.status_type === statusTypeFilter;
     return matchesSearch && matchesStatus && matchesStatusType;
   });
 
@@ -583,7 +588,9 @@ const Cases = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            {statusPicklists.map(status => <SelectItem key={status.id} value={status.value}>{status.value}</SelectItem>)}
+            {executionStatuses.map(status => (
+              <SelectItem key={status.id} value={status.status_key}>{status.display_name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <ColumnVisibility
@@ -637,13 +644,13 @@ const Cases = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  {statusPicklists.map(status => (
+                  {executionStatuses.map(status => (
                     <DropdownMenuItem 
                       key={status.id}
-                      onClick={() => handleBulkStatusChange(status.value)}
+                      onClick={() => handleBulkStatusChange(status.status_key)}
                     >
-                      <Badge className="border mr-2" style={getStatusStyle(status.value)}>
-                        {status.value}
+                      <Badge className="border mr-2" style={getStatusStyle(status.status_key)}>
+                        {status.display_name}
                       </Badge>
                     </DropdownMenuItem>
                   ))}
@@ -760,8 +767,8 @@ const Cases = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedCases.map(caseItem => {
-              const isClosed = isClosedCase(caseItem.status);
+              {sortedCases.map(caseItem => {
+              const isClosed = isClosedCase(caseItem.status_key);
               return <TableRow 
                   key={caseItem.id} 
                   className={`cursor-pointer hover:bg-muted/50 ${isClosed ? 'opacity-60' : ''} ${selectedIds.has(caseItem.id) ? 'bg-muted/30' : ''}`}
@@ -803,16 +810,16 @@ const Cases = () => {
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {hasPermission('edit_cases') ? (
                           <InlineEditCell
-                            value={caseItem.status}
+                            value={caseItem.status_key || ''}
                             options={statusOptions}
                             type="select"
                             onSave={(newValue) => handleInlineStatusChange(caseItem.id, newValue)}
                             displayAs="badge"
-                            badgeStyle={getStatusStyle(caseItem.status)}
+                            badgeStyle={getStatusStyle(caseItem.status_key)}
                           />
                         ) : (
-                          <Badge className="border" style={getStatusStyle(caseItem.status)}>
-                            {caseItem.status}
+                          <Badge className="border" style={getStatusStyle(caseItem.status_key)}>
+                            {getDisplayName(caseItem.status_key || '') || caseItem.status}
                           </Badge>
                         )}
                       </TableCell>
