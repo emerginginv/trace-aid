@@ -5,7 +5,7 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil } from "lucide-react";
+import { Plus, Briefcase, Search, LayoutGrid, List, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil, RefreshCw, X } from "lucide-react";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -32,6 +32,7 @@ import { CaseCardManagerDisplay } from "@/components/cases/CaseCardManagerDispla
 import { CaseCardFinancialWidget } from "@/components/cases/CaseCardFinancialWidget";
 import { CaseCardFinancialSummary } from "@/components/cases/CaseCardFinancialSummary";
 import { getStatusStyleFromPicklist, isClosedStatus } from "@/lib/statusUtils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CaseManager {
   id: string;
@@ -72,6 +73,7 @@ interface Case {
 }
 
 const COLUMNS: ColumnDefinition[] = [
+  { key: "select", label: "", hideable: false },
   { key: "case_number", label: "Case Number" },
   { key: "title", label: "Title" },
   { key: "status", label: "Status" },
@@ -105,6 +107,10 @@ const Cases = () => {
   const [statusTypeFilter, setStatusTypeFilter] = useState<string>('all');
   const { sortColumn, sortDirection, handleSort } = useSortPreference("cases", "case_number", "desc");
   const [editingCase, setEditingCase] = useState<Case | null>(null);
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("cases-columns", COLUMNS);
 
@@ -368,6 +374,113 @@ const Cases = () => {
     });
   };
 
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchQuery, statusFilter, statusTypeFilter]);
+
+  // Bulk selection handlers
+  const canBulkAction = hasPermission('edit_cases') || hasPermission('delete_cases');
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Bulk status change handler
+  const handleBulkStatusChange = useCallback(async (newStatus: string) => {
+    const selectedCases = cases.filter(c => selectedIds.has(c.id));
+    const oldStatuses = new Map(selectedCases.map(c => [c.id, c.status]));
+    
+    // Optimistic update
+    setCases(prev => prev.map(c => 
+      selectedIds.has(c.id) ? { ...c, status: newStatus } : c
+    ));
+    
+    const count = selectedIds.size;
+    toast.success(`Updated ${count} case${count !== 1 ? 's' : ''} to "${newStatus}"`);
+    
+    try {
+      const { error } = await supabase
+        .from("cases")
+        .update({ status: newStatus })
+        .in("id", Array.from(selectedIds));
+      
+      if (error) throw error;
+      
+      setSelectedIds(new Set()); // Clear selection on success
+    } catch (error) {
+      // Rollback on error
+      setCases(prev => prev.map(c => {
+        const oldStatus = oldStatuses.get(c.id);
+        return oldStatus !== undefined ? { ...c, status: oldStatus } : c;
+      }));
+      toast.error("Failed to update cases. Changes reverted.");
+    }
+  }, [cases, selectedIds]);
+
+  // Bulk delete handler
+  const pendingBulkDeletions = useRef<Map<string, { items: Case[]; timeoutId: NodeJS.Timeout }>>(new Map());
+
+  const handleBulkDeleteConfirm = useCallback(() => {
+    const selectedCasesList = cases.filter(c => selectedIds.has(c.id));
+    const idsToDelete = Array.from(selectedIds);
+    const batchKey = idsToDelete.join(',');
+    
+    // Close dialog and optimistically remove from UI
+    setBulkDeleteDialogOpen(false);
+    setCases(prev => prev.filter(c => !selectedIds.has(c.id)));
+    
+    const count = idsToDelete.length;
+    toast(`${count} case${count !== 1 ? 's' : ''} deleted`, {
+      description: "Click undo to restore",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const pending = pendingBulkDeletions.current.get(batchKey);
+          if (pending) {
+            clearTimeout(pending.timeoutId);
+            setCases(prev => [...prev, ...pending.items]);
+            pendingBulkDeletions.current.delete(batchKey);
+            toast.success("Cases restored");
+          }
+        },
+      },
+      duration: UNDO_DELAY,
+    });
+    
+    setSelectedIds(new Set());
+    
+    // Schedule actual deletion
+    const timeoutId = setTimeout(async () => {
+      const { error } = await supabase
+        .from("cases")
+        .delete()
+        .in("id", idsToDelete);
+      
+      if (error) {
+        const pending = pendingBulkDeletions.current.get(batchKey);
+        if (pending) {
+          setCases(prev => [...prev, ...pending.items]);
+          toast.error("Failed to delete cases. Items restored.");
+        }
+      }
+      pendingBulkDeletions.current.delete(batchKey);
+    }, UNDO_DELAY);
+    
+    pendingBulkDeletions.current.set(batchKey, {
+      items: selectedCasesList,
+      timeoutId,
+    });
+  }, [cases, selectedIds]);
+
 
   const filteredCases = cases.filter(caseItem => {
     const query = searchQuery.toLowerCase();
@@ -401,6 +514,15 @@ const Cases = () => {
     
     return 0;
   });
+
+  // Toggle select all - defined after sortedCases
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === sortedCases.length && sortedCases.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sortedCases.map(c => c.id)));
+    }
+  }, [selectedIds.size, sortedCases]);
 
   // Export columns definition
   const EXPORT_COLUMNS: ExportColumn[] = [
@@ -506,6 +628,57 @@ const Cases = () => {
       <div className="text-sm text-muted-foreground">
         Showing {sortedCases.length} case{sortedCases.length !== 1 ? 's' : ''}
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-muted rounded-lg">
+          <span className="text-sm font-medium">
+            {selectedIds.size} case{selectedIds.size !== 1 ? 's' : ''} selected
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {hasPermission('edit_cases') && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Change Status
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {statusPicklists.map(status => (
+                    <DropdownMenuItem 
+                      key={status.id}
+                      onClick={() => handleBulkStatusChange(status.value)}
+                    >
+                      <Badge className="border mr-2" style={getStatusStyle(status.value)}>
+                        {status.value}
+                      </Badge>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {hasPermission('delete_cases') && (
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => setBulkDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected
+              </Button>
+            )}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear Selection
+            </Button>
+          </div>
+        </div>
+      )}
 
       {cases.length === 0 ? <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -697,6 +870,15 @@ const Cases = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canBulkAction && (
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectedIds.size === sortedCases.length && sortedCases.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Select all"
+                      />
+                    </TableHead>
+                  )}
                   {isVisible("case_number") && (
                     <SortableTableHead
                       column="case_number"
@@ -752,7 +934,7 @@ const Cases = () => {
               const isClosed = isClosedCase(caseItem.status);
               return <TableRow 
                   key={caseItem.id} 
-                  className={`cursor-pointer hover:bg-muted/50 ${isClosed ? 'opacity-60' : ''}`}
+                  className={`cursor-pointer hover:bg-muted/50 ${isClosed ? 'opacity-60' : ''} ${selectedIds.has(caseItem.id) ? 'bg-muted/30' : ''}`}
                   onClick={() => navigate(`/cases/${caseItem.id}`)}
                   role="button"
                   tabIndex={0}
@@ -763,6 +945,15 @@ const Cases = () => {
                     }
                   }}
                 >
+                    {canBulkAction && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(caseItem.id)}
+                          onCheckedChange={() => toggleSelect(caseItem.id)}
+                          aria-label={`Select case ${caseItem.case_number}`}
+                        />
+                      </TableCell>
+                    )}
                     {isVisible("case_number") && (
                       <TableCell className={`font-medium ${isClosed ? 'text-muted-foreground' : ''}`}>
                         {caseItem.case_number}
@@ -858,6 +1049,14 @@ const Cases = () => {
         onConfirm={handleDeleteConfirm}
         title="Delete Case"
         description="Are you sure you want to delete this case? This action cannot be undone."
+      />
+
+      <ConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Selected Cases"
+        description={`Are you sure you want to delete ${selectedIds.size} case${selectedIds.size !== 1 ? 's' : ''}? This action cannot be undone.`}
       />
     </div>
   );
