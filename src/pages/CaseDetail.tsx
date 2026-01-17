@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail, FileText, Briefcase, Calendar, Users, Paperclip, ClipboardList, DollarSign, Clock, FilePenLine } from "lucide-react";
+import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail, FileText, Briefcase, Calendar, Users, Paperclip, ClipboardList, DollarSign, Clock, FilePenLine, History } from "lucide-react";
+import { CaseStatusHistoryModal } from "@/components/case-detail/CaseStatusHistoryModal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CaseDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -195,6 +196,7 @@ const CaseDetail = () => {
   const budgetTabRef = useRef<HTMLDivElement>(null);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [summaryPdfDialogOpen, setSummaryPdfDialogOpen] = useState(false);
+  const [statusHistoryModalOpen, setStatusHistoryModalOpen] = useState(false);
   const [updates, setUpdates] = useState<Array<{
     id: string;
     title: string;
@@ -940,6 +942,18 @@ const CaseDetail = () => {
               >
                 <ChevronLeft className="h-4 w-4 rotate-180" />
               </Button>
+
+              {/* Status History Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0"
+                onClick={() => setStatusHistoryModalOpen(true)}
+                title="View Status History"
+              >
+                <History className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4 rotate-180" />
+              </Button>
             </div>
           )}
           
@@ -1147,6 +1161,12 @@ const CaseDetail = () => {
       <ConfirmationDialog open={reopenDialogOpen} onOpenChange={setReopenDialogOpen} title="Reopen Case" description={`Reopening this case will create a new instance with case number ${caseData?.case_number}-${String(caseData?.instance_number || 1).padStart(2, "0")}. All subjects will be copied to the new instance. Continue?`} confirmLabel="Reopen Case" cancelLabel="Cancel" onConfirm={handleReopenCase} variant="default" />
 
       <CaseSummaryPdfDialog open={summaryPdfDialogOpen} onOpenChange={setSummaryPdfDialogOpen} caseId={id!} caseNumber={caseData?.case_number || ""} />
+
+      <CaseStatusHistoryModal 
+        caseId={id!} 
+        open={statusHistoryModalOpen} 
+        onOpenChange={setStatusHistoryModalOpen} 
+      />
     </div>;
 };
 export default CaseDetail;

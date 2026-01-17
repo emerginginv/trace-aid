@@ -10158,6 +10158,15 @@ export type Database = {
         Args: { p_service_instance_id: string }
         Returns: undefined
       }
+      update_status_history_dates: {
+        Args: {
+          p_entered_at?: string
+          p_exited_at?: string
+          p_history_id: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       update_trust_center_section: {
         Args: {
           p_content_markdown?: string
