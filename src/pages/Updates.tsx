@@ -4,7 +4,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { useCaseUpdatesQuery } from "@/hooks/queries";
-import { useViewMode } from "@/hooks/use-view-mode";
+// useViewMode hook removed - always use list view
 import { useUpdateEnrichment } from "@/hooks/use-enriched-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,6 @@ import { StatCardsGrid, StatCardConfig, StatCardsGridSkeleton } from "@/componen
 import { FilterToolbar } from "@/components/shared/FilterToolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { UserAvatar } from "@/components/shared/UserAvatar";
-import { UpdateCard } from "@/components/shared/UpdateCard";
 
 interface UpdateWithCase {
   id: string;
@@ -80,7 +79,7 @@ export default function Updates() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [specialFilter, setSpecialFilter] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useViewMode<'list' | 'cards'>('updates-view-mode', 'list');
+  // viewMode state removed - always use list view
 
   const [showCaseSelector, setShowCaseSelector] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -184,9 +183,6 @@ export default function Updates() {
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         filters={[{ value: typeFilter, onChange: (v) => { setTypeFilter(v); setSpecialFilter(null); }, options: UPDATE_TYPES, placeholder: "Update Type", width: "w-[180px]" }]}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showViewToggle
         showExport
         onExportCSV={() => exportToCSV(filteredUpdates, EXPORT_COLUMNS, "updates")}
         onExportPDF={() => exportToPDF(filteredUpdates, EXPORT_COLUMNS, "All Updates", "updates")}
@@ -195,13 +191,13 @@ export default function Updates() {
       />
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-48" />)}
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-16" />)}
         </div>
       ) : filteredUpdates.length === 0 ? (
         <EmptyState icon={FileText} title="No updates found" description="Try adjusting your filters" />
-      ) : viewMode === 'list' ? (
-        <div className="border rounded-lg overflow-hidden">
+      ) : (
+        <div className="border rounded-lg overflow-hidden overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -251,27 +247,6 @@ export default function Updates() {
               ))}
             </TableBody>
           </Table>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredUpdates.map((update) => (
-            <UpdateCard
-              key={update.id}
-              update={{
-                id: update.id,
-                title: update.title,
-                description: update.description,
-                update_type: update.update_type,
-                is_ai_summary: update.is_ai_summary,
-                created_at: update.created_at,
-                case_number: update.cases.case_number,
-                case_title: update.cases.title,
-                author_name: update.author?.full_name,
-                author_avatar: update.author?.avatar_url,
-              }}
-              onClick={() => navigateToUpdate(update)}
-            />
-          ))}
         </div>
       )}
 
