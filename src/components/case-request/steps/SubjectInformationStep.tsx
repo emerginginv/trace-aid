@@ -37,7 +37,6 @@ const COUNTRIES = [
 ];
 
 const RACES = [
-  { value: "", label: "Select Race" },
   { value: "Unknown", label: "Unknown" },
   { value: "White", label: "White/Caucasian" },
   { value: "Black", label: "Black/African American" },
