@@ -19,6 +19,7 @@ export type ProfileInput = Partial<Omit<Profile, 'id' | 'email' | 'created_at' |
 
 /**
  * React Query hook for fetching organization members' profiles.
+ * Uses the profiles_secure view to mask sensitive contact info for non-admin users.
  */
 export function useOrganizationProfilesQuery(options: { enabled?: boolean } = {}) {
   const { organization } = useOrganization();
@@ -40,8 +41,9 @@ export function useOrganizationProfilesQuery(options: { enabled?: boolean } = {}
 
       const userIds = members.map(m => m.user_id);
 
+      // Use profiles_secure view to mask sensitive data for non-admin users
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_secure' as 'profiles')
         .select('*')
         .in('id', userIds)
         .order('full_name', { ascending: true });
