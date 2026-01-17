@@ -9,8 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Trash2, Check, X, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, Clock } from "lucide-react";
+import { Search, Trash2, Check, X, CheckCircle2, XCircle, CalendarIcon, Clock, MoreVertical } from "lucide-react";
 import { ImportTemplateDropdown } from "@/components/ui/import-template-button";
+import { ExportDropdown } from "@/components/shared/ExportDropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -674,12 +682,10 @@ const TimeEntries = () => {
               { fileName: "09_TimeEntries.csv", label: "Time Entries" }
             ]}
           />
-          <Button variant="outline" size="icon" onClick={exportToCSV} title="Export CSV">
-            <FileSpreadsheet className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={exportToPDF} title="Export PDF">
-            <FileText className="h-4 w-4" />
-          </Button>
+          <ExportDropdown
+            onExportCSV={exportToCSV}
+            onExportPDF={exportToPDF}
+          />
         </div>
       </div>
 
@@ -774,7 +780,7 @@ const TimeEntries = () => {
                     onSort={handleSort}
                   />
                 )}
-                {isVisible("actions") && <TableHead className="w-[100px]">Actions</TableHead>}
+                {isVisible("actions") && <TableHead className="w-[60px]">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -834,39 +840,41 @@ const TimeEntries = () => {
                     )}
                     {isVisible("actions") && (
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1">
-                          {(entry.status === "pending" || entry.status === "draft") && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleApprove(entry.id)}
-                                className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                title="Approve"
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleReject(entry.id)}
-                                className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Reject"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteTimeEntry(entry.id)}
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover">
+                            {(entry.status === "pending" || entry.status === "draft") && (
+                              <>
+                                <DropdownMenuItem 
+                                  onClick={() => handleApprove(entry.id)}
+                                  className="text-emerald-600"
+                                >
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Approve
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleReject(entry.id)}
+                                  className="text-red-600"
+                                >
+                                  <X className="h-4 w-4 mr-2" />
+                                  Reject
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteTimeEntry(entry.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     )}
                   </TableRow>
