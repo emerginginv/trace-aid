@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, FileSpreadsheet, FileText, LayoutGrid, List, DollarSign, Pencil, Trash2, Loader2, History, Plus } from "lucide-react";
+import { Search, Download, FileSpreadsheet, FileText, DollarSign, Pencil, Trash2, Loader2, History, Plus, MoreVertical, ExternalLink } from "lucide-react";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 
 import { toast } from "sonner";
@@ -444,24 +444,6 @@ const Finance = () => {
           </DropdownMenuContent>
         </DropdownMenu>
         <ImportTemplateButton templateFileName="13_Retainers.csv" entityDisplayName="Retainers" />
-        <div className="flex gap-1 border rounded-md p-1 h-10">
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className="h-7 w-7 p-0"
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-            className="h-7 w-7 p-0"
-          >
-            <List className="h-3.5 w-3.5" />
-          </Button>
-        </div>
       </div>
 
       {/* Entry count */}
@@ -487,44 +469,6 @@ const Finance = () => {
             <p className="text-muted-foreground">No retainer funds match your search criteria</p>
           </CardContent>
         </Card>
-      ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedRetainerBalances.map((balance) => (
-            <Card 
-              key={balance.case_id} 
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/cases/${balance.case_id}`)}
-            >
-              <CardContent className="pt-6">
-                <div className="space-y-2">
-                  <div className="font-semibold text-lg">{balance.case_title}</div>
-                  <div className="text-sm text-muted-foreground">{balance.case_number}</div>
-                  <div className="text-2xl font-bold text-primary">
-                    ${balance.balance.toFixed(2)}
-                  </div>
-                  {balance.last_topup && (
-                    <div className="text-xs text-muted-foreground">
-                      Last top-up: {format(new Date(balance.last_topup), "MMM d, yyyy")}
-                    </div>
-                  )}
-                  <div className="flex gap-1 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openHistoryDialog(balance);
-                      }}
-                    >
-                      <History className="h-4 w-4 mr-1" />
-                      History
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
       ) : (
         <>
           {/* Mobile Card View */}
@@ -548,19 +492,34 @@ const Finance = () => {
                       Last top-up: {format(new Date(balance.last_topup), "MMM d, yyyy")}
                     </div>
                   )}
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openHistoryDialog(balance);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                  </div>
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <MoreVertical className="h-4 w-4 mr-1" />
+                            Actions
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-popover">
+                          <DropdownMenuItem onClick={() => openHistoryDialog(balance)}>
+                            <History className="h-4 w-4 mr-2" />
+                            View History
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedCaseId(balance.case_id);
+                            setShowRetainerForm(true);
+                          }}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Funds
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => navigate(`/cases/${balance.case_id}`)}>
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View Case
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                 </div>
               </Card>
             ))}
@@ -578,6 +537,7 @@ const Finance = () => {
                       sortColumn={sortColumn}
                       sortDirection={sortDirection}
                       onSort={handleSort}
+                      className="w-[200px]"
                     />
                   )}
                   {isVisible("case_number") && (
@@ -587,6 +547,7 @@ const Finance = () => {
                       sortColumn={sortColumn}
                       sortDirection={sortDirection}
                       onSort={handleSort}
+                      className="w-[140px]"
                     />
                   )}
                   {isVisible("balance") && (
@@ -596,7 +557,7 @@ const Finance = () => {
                       sortColumn={sortColumn}
                       sortDirection={sortDirection}
                       onSort={handleSort}
-                      className="text-right"
+                      className="w-[140px] text-right"
                     />
                   )}
                   {isVisible("last_topup") && (
@@ -606,10 +567,11 @@ const Finance = () => {
                       sortColumn={sortColumn}
                       sortDirection={sortDirection}
                       onSort={handleSort}
+                      className="w-[140px]"
                     />
                   )}
                   {isVisible("actions") && (
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -629,39 +591,50 @@ const Finance = () => {
                     }}
                   >
                     {isVisible("case_title") && (
-                      <TableCell className="font-medium">{balance.case_title}</TableCell>
+                      <TableCell className="font-medium w-[200px]">{balance.case_title}</TableCell>
                     )}
                     {isVisible("case_number") && (
-                      <TableCell>{balance.case_number}</TableCell>
+                      <TableCell className="w-[140px]">{balance.case_number}</TableCell>
                     )}
                     {isVisible("balance") && (
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="w-[140px] text-right font-medium">
                         ${balance.balance.toFixed(2)}
                       </TableCell>
                     )}
                     {isVisible("last_topup") && (
-                      <TableCell>
+                      <TableCell className="w-[140px]">
                         {balance.last_topup
                           ? format(new Date(balance.last_topup), "MMM d, yyyy")
                           : "N/A"}
                       </TableCell>
                     )}
                     {isVisible("actions") && (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openHistoryDialog(balance);
-                            }}
-                            title="View & Edit History"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <TableCell className="w-[60px]" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover">
+                            <DropdownMenuItem onClick={() => openHistoryDialog(balance)}>
+                              <History className="h-4 w-4 mr-2" />
+                              View History
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedCaseId(balance.case_id);
+                              setShowRetainerForm(true);
+                            }}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Funds
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => navigate(`/cases/${balance.case_id}`)}>
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              View Case
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     )}
                   </TableRow>
