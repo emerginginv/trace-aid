@@ -883,7 +883,8 @@ const AllExpenses = () => {
                 );
               })}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </Card>
       )}
 
