@@ -118,6 +118,14 @@ export function SubjectSummaryStep({
     setSelectedCategory(null);
   };
 
+  const handleMainBack = () => {
+    if (selectedCategory !== null) {
+      setSelectedCategory(null);
+    } else {
+      onBack();
+    }
+  };
+
   const handleAddSubjectOfType = (typeId: string) => {
     setSelectedCategory(null); // Reset selection after adding
     onAddSubjectOfType(typeId);
@@ -324,7 +332,7 @@ export function SubjectSummaryStep({
 
       {/* Navigation */}
       <div className="flex justify-between">
-        <Button type="button" variant="outline" onClick={onBack}>
+        <Button type="button" variant="outline" onClick={handleMainBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
