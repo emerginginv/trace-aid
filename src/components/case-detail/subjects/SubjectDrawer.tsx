@@ -5,6 +5,7 @@ import { PersonForm, PersonFormValues } from "./forms/PersonForm";
 import { VehicleForm, VehicleFormValues } from "./forms/VehicleForm";
 import { LocationForm, LocationFormValues } from "./forms/LocationForm";
 import { ItemForm, ItemFormValues } from "./forms/ItemForm";
+import { BusinessForm, BusinessFormValues } from "./forms/BusinessForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -415,6 +416,102 @@ export const SubjectDrawer = ({
     }
   };
 
+  const handleBusinessSubmit = async (values: BusinessFormValues, profileImageUrl: string | null) => {
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const details: Record<string, any> = {
+        business_type: values.business_type,
+        contact_person: values.contact_person,
+        phone: values.phone,
+        email: values.email,
+        website: values.website,
+        street: values.street,
+        city: values.city,
+        state: values.state,
+        zip: values.zip,
+        ein: values.ein,
+      };
+
+      Object.keys(details).forEach(key => {
+        if (!details[key]) delete details[key];
+      });
+
+      const subjectData = {
+        case_id: caseId,
+        organization_id: organizationId,
+        user_id: user.id,
+        subject_type: 'business' as const,
+        name: values.name,
+        display_name: values.name,
+        notes: values.notes || null,
+        details,
+        profile_image_url: profileImageUrl,
+        status: 'active' as const,
+      };
+
+      if (subject) {
+        const previousValues = {
+          name: subject.name,
+          display_name: subject.display_name,
+          notes: subject.notes,
+          details: subject.details,
+          profile_image_url: subject.profile_image_url,
+        };
+
+        const updateData = {
+          name: subjectData.name,
+          display_name: subjectData.display_name,
+          notes: subjectData.notes,
+          details: subjectData.details,
+          profile_image_url: subjectData.profile_image_url,
+        };
+
+        const { error } = await supabase
+          .from("case_subjects")
+          .update(updateData)
+          .eq("id", subject.id);
+        if (error) throw error;
+
+        await logSubjectAudit({
+          subject_id: subject.id,
+          case_id: caseId,
+          organization_id: organizationId,
+          action: 'updated',
+          previous_values: previousValues,
+          new_values: updateData,
+          changes: computeChanges(previousValues, updateData),
+        });
+      } else {
+        const { data: insertedData, error } = await supabase
+          .from("case_subjects")
+          .insert(subjectData)
+          .select('id')
+          .single();
+        if (error) throw error;
+
+        await logSubjectAudit({
+          subject_id: insertedData.id,
+          case_id: caseId,
+          organization_id: organizationId,
+          action: 'created',
+          new_values: subjectData,
+        });
+      }
+
+      toast({ title: "Success", description: subject ? "Business updated" : "Business added" });
+      onOpenChange(false);
+      onSuccess();
+    } catch (error) {
+      console.error("Error saving business:", error);
+      toast({ title: "Error", description: "Failed to save business", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const renderForm = () => {
     switch (category) {
       case 'person':
@@ -450,6 +547,15 @@ export const SubjectDrawer = ({
           <ItemForm
             subject={subject || undefined}
             onSubmit={handleItemSubmit}
+            isSubmitting={isSubmitting}
+            readOnly={readOnly}
+          />
+        );
+      case 'business':
+        return (
+          <BusinessForm
+            subject={subject || undefined}
+            onSubmit={handleBusinessSubmit}
             isSubmitting={isSubmitting}
             readOnly={readOnly}
           />

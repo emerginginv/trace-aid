@@ -1,53 +1,19 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { US_STATES } from "@/components/case-detail/subjects/types";
 import { SubjectData, createEmptySubject } from "@/hooks/useCaseRequestForm";
 import { CaseRequestFormConfig, isFieldVisible } from "@/types/case-request-form-config";
-import { Loader2, ArrowLeft, User, Upload, X, Edit2, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, User, Edit2, Trash2, Car, MapPin, Package, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState, useRef, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { PhoneInput } from "../PhoneInput";
-import { SSNInput } from "../SSNInput";
+import { useState } from "react";
 import { useSubjectTypesForPublicForm, useCaseTypesForPublicForm } from "@/hooks/queries/useCaseRequestFormBySlug";
+import { SubjectCategory } from "@/components/case-detail/subjects/types";
 
-const COUNTRIES = [
-  { value: "United States", label: "United States" },
-  { value: "Canada", label: "Canada" },
-  { value: "United Kingdom", label: "United Kingdom" },
-  { value: "Australia", label: "Australia" },
-  { value: "Mexico", label: "Mexico" },
-  { value: "Germany", label: "Germany" },
-  { value: "France", label: "France" },
-  { value: "Spain", label: "Spain" },
-  { value: "Other", label: "Other" },
-];
-
-const RACES = [
-  { value: "Unknown", label: "Unknown" },
-  { value: "White", label: "White/Caucasian" },
-  { value: "Black", label: "Black/African American" },
-  { value: "Hispanic", label: "Hispanic/Latino" },
-  { value: "Asian", label: "Asian" },
-  { value: "Native American", label: "Native American" },
-  { value: "Pacific Islander", label: "Pacific Islander" },
-  { value: "Mixed", label: "Mixed/Multi-racial" },
-  { value: "Other", label: "Other" },
-];
+// Import category-specific form components
+import { PersonFormFields } from "./subject-forms/PersonFormFields";
+import { VehicleFormFields } from "./subject-forms/VehicleFormFields";
+import { LocationFormFields } from "./subject-forms/LocationFormFields";
+import { ItemFormFields } from "./subject-forms/ItemFormFields";
+import { BusinessFormFields } from "./subject-forms/BusinessFormFields";
 
 interface SubjectInformationStepProps {
   fieldConfig: CaseRequestFormConfig;
@@ -63,6 +29,23 @@ interface SubjectInformationStepProps {
   onRemoveSubject?: (subjectId: string) => void;
 }
 
+// Category icon mapping
+const CATEGORY_ICONS: Record<SubjectCategory, React.ComponentType<{ className?: string }>> = {
+  person: User,
+  vehicle: Car,
+  location: MapPin,
+  item: Package,
+  business: Building2,
+};
+
+const CATEGORY_LABELS: Record<SubjectCategory, string> = {
+  person: 'Person Information',
+  vehicle: 'Vehicle Information',
+  location: 'Location Information',
+  item: 'Item Information',
+  business: 'Business Information',
+};
+
 export function SubjectInformationStep({
   fieldConfig,
   organizationId,
@@ -76,9 +59,8 @@ export function SubjectInformationStep({
   onEditSubject,
   onRemoveSubject,
 }: SubjectInformationStepProps) {
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(subject?.photo_url || null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<SubjectData>(subject || createEmptySubject(true, subjectTypeId || undefined));
 
   // Fetch subject types and case types
   const { data: subjectTypes } = useSubjectTypesForPublicForm(organizationId);
@@ -91,129 +73,13 @@ export function SubjectInformationStep({
     selectedCaseType.allowed_subject_types.includes(st.id)
   );
 
-  // Determine initial subject type
-  const initialSubjectTypeId = subject?.subject_type_id || subjectTypeId || selectedCaseType?.default_subject_type || null;
-  
-  const initialData = subject || createEmptySubject(true, initialSubjectTypeId || undefined);
-
-  const schema = z.object({
-    id: z.string(),
-    subject_type_id: z.string().nullable(),
-    is_primary: z.boolean(),
-    first_name: z.string().min(1, "First name is required"),
-    middle_name: z.string(),
-    last_name: z.string().min(1, "Last name is required"),
-    country: z.string(),
-    address1: z.string(),
-    address2: z.string(),
-    address3: z.string(),
-    city: z.string(),
-    state: z.string(),
-    zip: z.string(),
-    cell_phone: z.string(),
-    alias: z.string(),
-    date_of_birth: z.string(),
-    age: z.number().nullable(),
-    height: z.string(),
-    weight: z.string(),
-    race: z.string(),
-    sex: z.string(),
-    ssn: z.string(),
-    email: z.string().email().or(z.literal('')),
-    photo_url: z.string().nullable(),
-    custom_fields: z.record(z.any()),
-  });
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<SubjectData>({
-    resolver: zodResolver(schema),
-    defaultValues: initialData,
-  });
-
-  const selectedCountry = watch("country");
-  const selectedSex = watch("sex");
-  const selectedSubjectTypeId = watch("subject_type_id");
-  const watchedDOB = watch("date_of_birth");
-  const watchedSSN = watch("ssn");
-  const watchedCellPhone = watch("cell_phone");
-
-  // Get subject type name for display
-  const subjectTypeName = subjectTypes?.find(st => st.id === selectedSubjectTypeId)?.name;
-
-  // Auto-calculate age from DOB
-  useEffect(() => {
-    if (watchedDOB) {
-      const birthDate = new Date(watchedDOB);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      if (age >= 0 && age < 150) {
-        setValue("age", age);
-      }
-    }
-  }, [watchedDOB, setValue]);
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be less than 5MB');
-      return;
-    }
-
-    setIsUploadingPhoto(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `subject-photos/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('case-request-files')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('case-request-files')
-        .getPublicUrl(filePath);
-
-      setValue("photo_url", publicUrl);
-      setPhotoPreview(publicUrl);
-      toast.success('Photo uploaded successfully');
-    } catch (error) {
-      console.error('Photo upload error:', error);
-      toast.error('Failed to upload photo');
-    } finally {
-      setIsUploadingPhoto(false);
-    }
-  };
-
-  const removePhoto = () => {
-    setValue("photo_url", null);
-    setPhotoPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  // Determine category from selected subject type
+  const selectedSubjectType = allowedSubjectTypes?.find(st => st.id === (formData.subject_type_id || subjectTypeId));
+  const category: SubjectCategory = (selectedSubjectType?.category as SubjectCategory) || 'person';
 
   const showSubjectFields = isFieldVisible(fieldConfig, 'subjectInformation', 'primarySubject');
 
   if (!showSubjectFields) {
-    // Auto-skip if subjects not visible
     return (
       <div className="space-y-6">
         <Card>
@@ -241,14 +107,52 @@ export function SubjectInformationStep({
     return type?.name || 'Subject';
   };
 
-  // Helper to get display name for a subject
+  // Helper to get display name for a subject based on category
   const getSubjectDisplayName = (s: SubjectData) => {
-    const parts = [s.first_name, s.middle_name, s.last_name].filter(Boolean);
-    return parts.length > 0 ? parts.join(' ') : 'Unnamed Subject';
+    const subjectType = subjectTypes?.find(st => st.id === s.subject_type_id);
+    const cat = (subjectType?.category as SubjectCategory) || 'person';
+    
+    switch (cat) {
+      case 'person':
+        const parts = [s.first_name, s.middle_name, s.last_name].filter(Boolean);
+        return parts.length > 0 ? parts.join(' ') : 'Unnamed Person';
+      case 'vehicle':
+        const vehicleDetails = s.custom_fields || {};
+        const vehicleParts = [vehicleDetails.year, vehicleDetails.make, vehicleDetails.model].filter(Boolean);
+        return vehicleParts.length > 0 ? vehicleParts.join(' ') : 'Unnamed Vehicle';
+      case 'location':
+        return s.custom_fields?.name || 'Unnamed Location';
+      case 'item':
+        return s.custom_fields?.name || 'Unnamed Item';
+      case 'business':
+        return s.custom_fields?.name || 'Unnamed Business';
+      default:
+        return 'Unnamed Subject';
+    }
   };
 
+  // Get category icon for a subject
+  const getSubjectIcon = (s: SubjectData) => {
+    const subjectType = subjectTypes?.find(st => st.id === s.subject_type_id);
+    const cat = (subjectType?.category as SubjectCategory) || 'person';
+    return CATEGORY_ICONS[cat] || User;
+  };
+
+  const handleFormSubmit = async (data: SubjectData) => {
+    setIsSubmitting(true);
+    try {
+      onSubmit(data);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const CategoryIcon = CATEGORY_ICONS[category] || User;
+  const categoryLabel = CATEGORY_LABELS[category] || 'Subject Information';
+  const subjectTypeName = selectedSubjectType?.name;
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <div className="space-y-6">
       {/* Existing Subjects List */}
       {existingSubjects.length > 0 && !isEditing && (
         <Card>
@@ -259,63 +163,63 @@ export function SubjectInformationStep({
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-2">
-              {existingSubjects.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {s.photo_url ? (
-                      <img
-                        src={s.photo_url}
-                        alt={getSubjectDisplayName(s)}
-                        className="h-10 w-10 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                        <User className="h-5 w-5 text-muted-foreground" />
+              {existingSubjects.map((s) => {
+                const SubjectIcon = getSubjectIcon(s);
+                return (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {s.photo_url ? (
+                        <img
+                          src={s.photo_url}
+                          alt={getSubjectDisplayName(s)}
+                          className="h-10 w-10 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                          <SubjectIcon className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium truncate">{getSubjectDisplayName(s)}</span>
+                          <Badge variant="outline" className="text-xs flex-shrink-0">
+                            {getSubjectTypeName(s.subject_type_id)}
+                          </Badge>
+                          {s.is_primary && (
+                            <Badge variant="secondary" className="text-xs flex-shrink-0">Primary</Badge>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">{getSubjectDisplayName(s)}</span>
-                        <Badge variant="outline" className="text-xs flex-shrink-0">
-                          {getSubjectTypeName(s.subject_type_id)}
-                        </Badge>
-                        {s.is_primary && (
-                          <Badge variant="secondary" className="text-xs flex-shrink-0">Primary</Badge>
-                        )}
-                      </div>
-                      {s.email && (
-                        <p className="text-sm text-muted-foreground truncate">{s.email}</p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {onEditSubject && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEditSubject(s.id)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onRemoveSubject && !s.is_primary && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => onRemoveSubject(s.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {onEditSubject && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEditSubject(s.id)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onRemoveSubject && !s.is_primary && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => onRemoveSubject(s.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -324,283 +228,56 @@ export function SubjectInformationStep({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            {subjectTypeName ? `${subjectTypeName} Information` : (isEditing ? 'Edit Subject' : 'Subject Information')}
+            <CategoryIcon className="h-5 w-5" />
+            {subjectTypeName ? `${subjectTypeName} Information` : categoryLabel}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Subject Type Selection */}
-          {allowedSubjectTypes && allowedSubjectTypes.length > 0 && (
-            <div className="space-y-2">
-              <Label>Subject Type <span className="text-destructive">*</span></Label>
-              <Select
-                value={selectedSubjectTypeId || ''}
-                onValueChange={(value) => setValue("subject_type_id", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select subject type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allowedSubjectTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Full Name */}
-          <div className="space-y-2">
-            <Label>Full Name <span className="text-destructive">*</span></Label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="First Name"
-                    className="pl-9"
-                    {...register("first_name")}
-                  />
-                </div>
-                {errors.first_name && (
-                  <p className="text-xs text-destructive">{errors.first_name.message}</p>
-                )}
-              </div>
-              <Input placeholder="Middle Name" {...register("middle_name")} />
-              <div className="space-y-1">
-                <Input placeholder="Last Name" {...register("last_name")} />
-                {errors.last_name && (
-                  <p className="text-xs text-destructive">{errors.last_name.message}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Street Address */}
-          <div className="space-y-4">
-            <Label>Street Address</Label>
-            <Select
-              value={selectedCountry}
-              onValueChange={(value) => setValue("country", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select country" />
-              </SelectTrigger>
-              <SelectContent>
-                {COUNTRIES.map((country) => (
-                  <SelectItem key={country.value} value={country.value}>
-                    {country.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Input placeholder="Address 1" {...register("address1")} />
-            <Input placeholder="Address 2" {...register("address2")} />
-            <Input placeholder="Address 3" {...register("address3")} />
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input placeholder="City" {...register("city")} />
-              {selectedCountry === "United States" ? (
-                <Select
-                  value={watch("state")}
-                  onValueChange={(value) => setValue("state", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {US_STATES.map((state) => (
-                      <SelectItem key={state.value} value={state.value}>
-                        {state.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input placeholder="State/Province" {...register("state")} />
-              )}
-              <Input placeholder="Zip/Postal Code" {...register("zip")} />
-            </div>
-          </div>
-
-          {/* Contact & Personal Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cell_phone">Cell Phone</Label>
-              <PhoneInput
-                id="cell_phone"
-                value={watchedCellPhone}
-                onChange={(value) => setValue("cell_phone", value)}
-                placeholder="(555) 555-5555"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="alias">Alias</Label>
-              <Input id="alias" placeholder="Known aliases" {...register("alias")} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date_of_birth">Date of Birth</Label>
-              <Input
-                id="date_of_birth"
-                type="date"
-                {...register("date_of_birth")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="age">Age</Label>
-              <Input
-                id="age"
-                type="number"
-                placeholder="Auto-calculated"
-                readOnly
-                className="bg-muted"
-                {...register("age", { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="email@example.com"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="height">Height</Label>
-              <Input id="height" placeholder="e.g., 5'10&quot;" {...register("height")} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="weight">Weight</Label>
-              <Input id="weight" placeholder="e.g., 180 lbs" {...register("weight")} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="race">Race</Label>
-              <Select
-                value={watch("race")}
-                onValueChange={(value) => setValue("race", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select race" />
-                </SelectTrigger>
-                <SelectContent>
-                  {RACES.map((race) => (
-                    <SelectItem key={race.value} value={race.value}>
-                      {race.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Sex</Label>
-              <RadioGroup
-                value={selectedSex}
-                onValueChange={(value) => setValue("sex", value)}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="male" id="sex-male" />
-                  <Label htmlFor="sex-male" className="cursor-pointer">Male</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="female" id="sex-female" />
-                  <Label htmlFor="sex-female" className="cursor-pointer">Female</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="unknown" id="sex-unknown" />
-                  <Label htmlFor="sex-unknown" className="cursor-pointer">Unknown</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ssn">Social Security Number</Label>
-            <SSNInput
-              id="ssn"
-              value={watchedSSN}
-              onChange={(value) => setValue("ssn", value)}
+        <CardContent>
+          {/* Render category-specific form */}
+          {category === 'person' && (
+            <PersonFormFields
+              subject={formData}
+              subjectTypes={allowedSubjectTypes}
+              fieldConfig={fieldConfig}
+              onSubmit={handleFormSubmit}
+              isSubmitting={isSubmitting}
             />
-            <p className="text-xs text-muted-foreground">This field is encrypted and securely stored.</p>
-          </div>
-
-          {/* Photo Upload */}
-          {isFieldVisible(fieldConfig, 'subjectInformation', 'subjectPhoto') && (
-            <div className="space-y-2">
-              <Label>Photo</Label>
-              <div className="border-2 border-dashed rounded-lg p-6">
-                {photoPreview ? (
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={photoPreview}
-                      alt="Subject photo"
-                      className="h-24 w-24 object-cover rounded"
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">Photo uploaded</p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={removePhoto}
-                        className="text-destructive"
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center relative">
-                    <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Click to upload a photo
-                    </p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      disabled={isUploadingPhoto}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 relative"
-                      disabled={isUploadingPhoto}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {isUploadingPhoto ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        'Select Photo'
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+          )}
+          {category === 'vehicle' && (
+            <VehicleFormFields
+              subject={formData}
+              subjectTypes={allowedSubjectTypes}
+              fieldConfig={fieldConfig}
+              onSubmit={handleFormSubmit}
+              isSubmitting={isSubmitting}
+            />
+          )}
+          {category === 'location' && (
+            <LocationFormFields
+              subject={formData}
+              subjectTypes={allowedSubjectTypes}
+              fieldConfig={fieldConfig}
+              onSubmit={handleFormSubmit}
+              isSubmitting={isSubmitting}
+            />
+          )}
+          {category === 'item' && (
+            <ItemFormFields
+              subject={formData}
+              subjectTypes={allowedSubjectTypes}
+              fieldConfig={fieldConfig}
+              onSubmit={handleFormSubmit}
+              isSubmitting={isSubmitting}
+            />
+          )}
+          {category === 'business' && (
+            <BusinessFormFields
+              subject={formData}
+              subjectTypes={allowedSubjectTypes}
+              fieldConfig={fieldConfig}
+              onSubmit={handleFormSubmit}
+              isSubmitting={isSubmitting}
+            />
           )}
         </CardContent>
       </Card>
@@ -611,17 +288,7 @@ export function SubjectInformationStep({
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        <Button type="submit" size="lg" disabled={isSubmitting}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save & Continue"
-          )}
-        </Button>
       </div>
-    </form>
+    </div>
   );
 }
