@@ -994,6 +994,82 @@ export type Database = {
           },
         ]
       }
+      case_category_transition_log: {
+        Row: {
+          case_id: string
+          created_at: string | null
+          from_category_id: string | null
+          id: string
+          organization_id: string
+          to_category_id: string
+          transitioned_at: string
+          transitioned_by: string | null
+        }
+        Insert: {
+          case_id: string
+          created_at?: string | null
+          from_category_id?: string | null
+          id?: string
+          organization_id: string
+          to_category_id: string
+          transitioned_at?: string
+          transitioned_by?: string | null
+        }
+        Update: {
+          case_id?: string
+          created_at?: string | null
+          from_category_id?: string | null
+          id?: string
+          organization_id?: string
+          to_category_id?: string
+          transitioned_at?: string
+          transitioned_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_category_transition_log_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_category_transition_log_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_category_transition_log_from_category_id_fkey"
+            columns: ["from_category_id"]
+            isOneToOne: false
+            referencedRelation: "case_status_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_category_transition_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_category_transition_log_to_category_id_fkey"
+            columns: ["to_category_id"]
+            isOneToOne: false
+            referencedRelation: "case_status_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_category_transition_log_transitioned_by_fkey"
+            columns: ["transitioned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_finances: {
         Row: {
           account_id: string | null
@@ -2188,6 +2264,47 @@ export type Database = {
           },
         ]
       }
+      case_status_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          sort_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_status_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_status_history: {
         Row: {
           case_id: string
@@ -2201,8 +2318,10 @@ export type Database = {
           from_status: string | null
           from_status_key: string | null
           id: string
+          manual_override: boolean | null
           metadata: Json | null
           organization_id: string
+          status_id: string | null
           to_status: string
           to_status_key: string | null
         }
@@ -2218,8 +2337,10 @@ export type Database = {
           from_status?: string | null
           from_status_key?: string | null
           id?: string
+          manual_override?: boolean | null
           metadata?: Json | null
           organization_id: string
+          status_id?: string | null
           to_status: string
           to_status_key?: string | null
         }
@@ -2235,8 +2356,10 @@ export type Database = {
           from_status?: string | null
           from_status_key?: string | null
           id?: string
+          manual_override?: boolean | null
           metadata?: Json | null
           organization_id?: string
+          status_id?: string | null
           to_status?: string
           to_status_key?: string | null
         }
@@ -2267,6 +2390,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_history_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "case_statuses"
             referencedColumns: ["id"]
           },
         ]
@@ -2302,6 +2432,75 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "case_status_transitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_statuses: {
+        Row: {
+          category_id: string
+          color: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_first_status: boolean | null
+          is_read_only: boolean | null
+          is_reopenable: boolean | null
+          monitor_due_date: boolean | null
+          name: string
+          notes: string | null
+          organization_id: string
+          rank_order: number
+          updated_at: string | null
+          workflows: string[] | null
+        }
+        Insert: {
+          category_id: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_first_status?: boolean | null
+          is_read_only?: boolean | null
+          is_reopenable?: boolean | null
+          monitor_due_date?: boolean | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          rank_order?: number
+          updated_at?: string | null
+          workflows?: string[] | null
+        }
+        Update: {
+          category_id?: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_first_status?: boolean | null
+          is_read_only?: boolean | null
+          is_reopenable?: boolean | null
+          monitor_due_date?: boolean | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          rank_order?: number
+          updated_at?: string | null
+          workflows?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_statuses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "case_status_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_statuses_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -2624,10 +2823,13 @@ export type Database = {
           case_number: string
           case_type_id: string | null
           case_type_tag: string | null
+          category_entered_at: string | null
           closed_at: string | null
           closed_by_user_id: string | null
           contact_id: string | null
           created_at: string | null
+          current_category_id: string | null
+          current_status_id: string | null
           description: string | null
           draft_approved_at: string | null
           draft_approved_by: string | null
@@ -2657,6 +2859,7 @@ export type Database = {
           series_number: number | null
           source_request_id: string | null
           status: string
+          status_entered_at: string | null
           status_key: string | null
           title: string | null
           updated_at: string | null
@@ -2675,10 +2878,13 @@ export type Database = {
           case_number: string
           case_type_id?: string | null
           case_type_tag?: string | null
+          category_entered_at?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
           contact_id?: string | null
           created_at?: string | null
+          current_category_id?: string | null
+          current_status_id?: string | null
           description?: string | null
           draft_approved_at?: string | null
           draft_approved_by?: string | null
@@ -2708,6 +2914,7 @@ export type Database = {
           series_number?: number | null
           source_request_id?: string | null
           status?: string
+          status_entered_at?: string | null
           status_key?: string | null
           title?: string | null
           updated_at?: string | null
@@ -2726,10 +2933,13 @@ export type Database = {
           case_number?: string
           case_type_id?: string | null
           case_type_tag?: string | null
+          category_entered_at?: string | null
           closed_at?: string | null
           closed_by_user_id?: string | null
           contact_id?: string | null
           created_at?: string | null
+          current_category_id?: string | null
+          current_status_id?: string | null
           description?: string | null
           draft_approved_at?: string | null
           draft_approved_by?: string | null
@@ -2759,6 +2969,7 @@ export type Database = {
           series_number?: number | null
           source_request_id?: string | null
           status?: string
+          status_entered_at?: string | null
           status_key?: string | null
           title?: string | null
           updated_at?: string | null
@@ -2799,6 +3010,20 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_current_category_id_fkey"
+            columns: ["current_category_id"]
+            isOneToOne: false
+            referencedRelation: "case_status_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_current_status_id_fkey"
+            columns: ["current_status_id"]
+            isOneToOne: false
+            referencedRelation: "case_statuses"
             referencedColumns: ["id"]
           },
           {
