@@ -8,9 +8,10 @@ interface CaseRequestHeaderProps {
 
 export function CaseRequestHeader({ form }: CaseRequestHeaderProps) {
   // Use form-specific values with fallbacks to organization settings
+  // Note: Phone is intentionally NOT exposed from org_settings for security reasons
   const effectiveLogoUrl = form.logo_url || form.org_settings?.logo_url;
   const effectiveDisplayName = form.organization_display_name || form.org_settings?.company_name;
-  const effectivePhone = form.organization_phone || form.org_settings?.phone;
+  const effectivePhone = form.organization_phone; // No fallback - must be explicitly set on form
   const effectiveWebsite = form.organization_website || form.org_settings?.website_url;
 
   return (
