@@ -475,7 +475,7 @@ export function SubjectInformationStep({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center">
+                  <div className="text-center relative">
                     <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
                     <p className="mt-2 text-sm text-muted-foreground">
                       Click to upload a photo
