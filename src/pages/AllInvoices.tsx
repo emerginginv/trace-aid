@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
-import { Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck } from "lucide-react";
+import { Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck, MoreVertical } from "lucide-react";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { InvoiceCard } from "@/components/shared/InvoiceCard";
 
@@ -53,13 +53,13 @@ interface Case {
 
 const COLUMNS: ColumnDefinition[] = [
   { key: "invoice_number", label: "Invoice #" },
+  { key: "status", label: "Status" },
   { key: "case", label: "Case" },
   { key: "date", label: "Date" },
   { key: "due_date", label: "Due Date" },
   { key: "amount", label: "Total" },
   { key: "total_paid", label: "Paid" },
   { key: "balance_due", label: "Balance Due" },
-  { key: "status", label: "Status" },
   { key: "actions", label: "Actions", hideable: false },
 ];
 
@@ -596,10 +596,19 @@ const AllInvoices = () => {
             <Table>
               <TableHeader>
                 <TRow>
-                  {isVisible("invoice_number") && (
+                {isVisible("invoice_number") && (
                     <SortableTableHead
                       column="invoice_number"
                       label="Invoice #"
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  )}
+                  {isVisible("status") && (
+                    <SortableTableHead
+                      column="status"
+                      label="Status"
                       sortColumn={sortColumn}
                       sortDirection={sortDirection}
                       onSort={handleSort}
@@ -662,17 +671,8 @@ const AllInvoices = () => {
                       className="text-right"
                     />
                   )}
-                  {isVisible("status") && (
-                    <SortableTableHead
-                      column="status"
-                      label="Status"
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
-                      onSort={handleSort}
-                    />
-                  )}
                   {isVisible("actions") && (
-                    <th className="text-right p-2">Actions</th>
+                    <th className="p-2 w-[60px]"></th>
                   )}
                 </TRow>
               </TableHeader>
@@ -690,6 +690,19 @@ const AllInvoices = () => {
                     >
                       <TableCell className="font-medium">
                         {invoice.invoice_number || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                          invoice.status === "paid"
+                            ? "bg-green-100 text-green-700"
+                            : invoice.status === "partial"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : invoice.status === "sent"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}>
+                          {invoice.status || "Draft"}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
@@ -714,46 +727,31 @@ const AllInvoices = () => {
                       <TableCell className="text-right font-medium">
                         ${balanceDue.toFixed(2)}
                       </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                          invoice.status === "paid"
-                            ? "bg-green-100 text-green-700"
-                            : invoice.status === "partial"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : invoice.status === "sent"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100 text-gray-700"
-                        }`}>
-                          {invoice.status || "Draft"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setShowPayModal(invoice)}
-                            title="Record Payment"
-                          >
-                            <CircleDollarSign className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingInvoice(invoice.id)}
-                            title="Edit Invoice"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteInvoice(invoice.id)}
-                            title="Delete Invoice"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover">
+                            <DropdownMenuItem onClick={() => setShowPayModal(invoice)}>
+                              <CircleDollarSign className="h-4 w-4 mr-2" />
+                              Record Payment
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setEditingInvoice(invoice.id)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteInvoice(invoice.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
