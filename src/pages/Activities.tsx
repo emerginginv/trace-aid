@@ -70,12 +70,26 @@ const getStatCards = (typeFilter: string): StatCardConfig<ActivityCountKey>[] =>
   { key: 'completed', label: 'Completed', icon: CheckCircle, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', filterValue: 'completed' },
 ];
 
+// All valid statuses for filtering
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All Status' },
   { value: 'to_do', label: 'To Do' },
   { value: 'scheduled', label: 'Scheduled' },
-  { value: 'pending', label: 'Pending' },
   { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+// Type-specific statuses for bulk actions
+const TASK_STATUSES = [
+  { value: 'to_do', label: 'To Do' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+const SCHEDULED_STATUSES = [
+  { value: 'scheduled', label: 'Scheduled' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
@@ -250,6 +264,25 @@ export default function Activities() {
     }
   }, [selectedIds.size, filteredActivities]);
 
+  // Get appropriate bulk status options based on selected activities
+  const getBulkStatusOptions = useCallback(() => {
+    const selectedActivities = filteredActivities.filter(a => selectedIds.has(a.id));
+    const hasScheduled = selectedActivities.some(a => isScheduledActivity(a as any));
+    const hasTasks = selectedActivities.some(a => !isScheduledActivity(a as any));
+    
+    if (hasScheduled && hasTasks) {
+      // Mixed selection - only show common statuses
+      return [
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' },
+      ];
+    } else if (hasScheduled) {
+      return SCHEDULED_STATUSES;
+    } else {
+      return TASK_STATUSES;
+    }
+  }, [filteredActivities, selectedIds]);
+
   // Bulk status change handler
   const handleBulkStatusChange = useCallback(async (newStatus: string) => {
     const count = selectedIds.size;
@@ -263,7 +296,7 @@ export default function Activities() {
             completed: true, 
             completed_at: new Date().toISOString() 
           }),
-          ...(newStatus !== 'completed' && newStatus !== 'done' && { 
+          ...(newStatus !== 'completed' && { 
             completed: false, 
             completed_at: null 
           }),
@@ -452,7 +485,7 @@ export default function Activities() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  {STATUS_OPTIONS.filter(s => s.value !== 'all').map(status => (
+                  {getBulkStatusOptions().map(status => (
                     <DropdownMenuItem 
                       key={status.value}
                       onClick={() => handleBulkStatusChange(status.value)}

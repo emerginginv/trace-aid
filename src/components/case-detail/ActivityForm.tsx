@@ -24,12 +24,12 @@ import { useBudgetConsumption } from "@/hooks/useBudgetConsumption";
 import { BudgetBlockedDialog } from "./BudgetBlockedDialog";
 
 // Unified status values for all activity types
+// Tasks: to_do, in_progress, completed, cancelled
+// Scheduled: scheduled, completed, cancelled
 const UNIFIED_STATUSES = [
   "to_do", 
   "scheduled", 
   "in_progress", 
-  "blocked", 
-  "done", 
   "completed", 
   "cancelled"
 ] as const;
@@ -89,23 +89,22 @@ interface ActivityFormProps {
 }
 
 // Helper to get status options based on whether activity is scheduled
+// Tasks: to_do, in_progress, completed, cancelled
+// Scheduled: scheduled, completed, cancelled
 const getStatusOptions = (isScheduled: boolean) => {
   if (isScheduled) {
-    // Scheduled activities - event-like statuses first
+    // Scheduled activities - only 3 statuses
     return [
       { value: 'scheduled', label: 'Scheduled' },
-      { value: 'in_progress', label: 'In Progress' },
-      { value: 'blocked', label: 'Blocked' },
       { value: 'completed', label: 'Completed' },
       { value: 'cancelled', label: 'Cancelled' },
     ];
   } else {
-    // Unscheduled activities - task-like statuses first
+    // Tasks - only 4 statuses
     return [
       { value: 'to_do', label: 'To Do' },
       { value: 'in_progress', label: 'In Progress' },
-      { value: 'blocked', label: 'Blocked' },
-      { value: 'done', label: 'Done' },
+      { value: 'completed', label: 'Completed' },
       { value: 'cancelled', label: 'Cancelled' },
     ];
   }
@@ -432,7 +431,7 @@ export function ActivityForm({
         due_date: dueDate,
         status: effectiveValues.status,
         assigned_user_id: effectiveValues.assigned_user_id === "unassigned" ? null : (effectiveValues.assigned_user_id || null),
-        completed: effectiveValues.status === "done" || effectiveValues.status === "completed",
+        completed: effectiveValues.status === "completed",
         case_service_instance_id: caseServiceInstanceId,
       };
 
