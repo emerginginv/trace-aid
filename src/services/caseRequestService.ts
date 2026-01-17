@@ -89,6 +89,12 @@ export interface SubmitCaseRequestResult {
   requestId?: string;
   requestNumber?: string;
   error?: string;
+  warnings?: {
+    subjectsFailed?: boolean;
+    subjectsError?: string;
+    filesFailed?: boolean;
+    filesError?: string;
+  };
 }
 
 export async function submitCaseRequest(
@@ -170,6 +176,9 @@ export async function submitCaseRequest(
       };
     }
 
+    // Track warnings for partial failures
+    const warnings: SubmitCaseRequestResult['warnings'] = {};
+
     // 2. Insert subjects to case_request_subjects
     if (subjects.length > 0) {
       const subjectsToInsert = subjects.map((subject, index) => ({
@@ -206,7 +215,8 @@ export async function submitCaseRequest(
 
       if (subjectsError) {
         console.error('Error inserting subjects:', subjectsError);
-        // Don't fail the whole request, subjects are optional
+        warnings.subjectsFailed = true;
+        warnings.subjectsError = subjectsError.message;
       }
     }
 
@@ -228,7 +238,8 @@ export async function submitCaseRequest(
 
       if (filesError) {
         console.error('Error linking files:', filesError);
-        // Don't fail the whole request, files are optional
+        warnings.filesFailed = true;
+        warnings.filesError = filesError.message;
       }
     }
 
@@ -236,6 +247,7 @@ export async function submitCaseRequest(
       success: true,
       requestId: caseRequest.id,
       requestNumber: caseRequest.request_number || undefined,
+      warnings: Object.keys(warnings).length > 0 ? warnings : undefined,
     };
   } catch (error) {
     console.error('Unexpected error in submitCaseRequest:', error);

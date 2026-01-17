@@ -195,7 +195,22 @@ const handleAddSubject = () => {
       setIsComplete(true);
       clearForm();
       
-      toast.success('Case request submitted successfully!');
+      // Show appropriate toast based on warnings
+      if (result.warnings) {
+        if (result.warnings.subjectsFailed) {
+          toast.error('Warning: Subject information could not be saved. Please contact support.', {
+            duration: 8000,
+          });
+        }
+        if (result.warnings.filesFailed) {
+          toast.error('Warning: File attachments could not be saved. Please contact support.', {
+            duration: 8000,
+          });
+        }
+        toast.warning('Case request created with some issues. Please review the warnings above.');
+      } else {
+        toast.success('Case request submitted successfully!');
+      }
     } catch (error) {
       console.error('Submit error:', error);
       toast.error('Failed to submit case request. Please try again.');
