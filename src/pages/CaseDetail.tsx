@@ -45,13 +45,19 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { useCaseTypeQuery } from "@/hooks/queries/useCaseTypesQuery";
 import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
 import { useCaseLifecycleStatuses, STATUS_KEYS } from "@/hooks/use-case-lifecycle-statuses";
+import { useCaseStatuses } from "@/hooks/use-case-statuses";
+
 interface Case {
   id: string;
   case_number: string;
   title: string;
   description: string | null;
   status: string;
-  status_key: string | null; // Canonical status key from case_lifecycle_statuses
+  status_key: string | null; // Legacy - kept for backward compatibility
+  current_status_id: string | null; // New canonical status reference
+  current_category_id: string | null; // New category reference
+  status_entered_at: string | null;
+  category_entered_at: string | null;
   account_id: string | null;
   contact_id: string | null;
   due_date: string | null;
@@ -112,15 +118,32 @@ const CaseDetail = () => {
   const [deleting, setDeleting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   
-  // Use the new lifecycle statuses system
+  // Use BOTH status systems during transition
+  // Legacy system (for backward compat with status_key based code)
   const { 
     executionStatuses, 
     getStatusByKey, 
-    getDisplayName, 
+    getDisplayName: getLegacyDisplayName, 
     getStatusColor: getLifecycleStatusColor,
     isClosedStatus: isClosedLifecycleStatus,
-    isLoading: statusesLoading 
+    isLoading: legacyStatusesLoading 
   } = useCaseLifecycleStatuses();
+  
+  // New canonical status system (using current_status_id)
+  const {
+    statuses: newStatuses,
+    activeStatuses,
+    categories,
+    getStatusById,
+    getStatusDisplayName,
+    getStatusColor: getNewStatusColor,
+    isClosedCategory,
+    getNextStatus,
+    getPrevStatus,
+    isLoading: newStatusesLoading,
+  } = useCaseStatuses();
+  
+  const statusesLoading = legacyStatusesLoading || newStatusesLoading;
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
@@ -305,8 +328,150 @@ const CaseDetail = () => {
   };
   
   const isClosedCase = () => {
+    // Use new status system if current_status_id is set
+    if (caseData?.current_status_id) {
+      return isClosedCategory(caseData.current_status_id);
+    }
+    // Fall back to legacy system
     if (!caseData?.status_key) return false;
     return isClosedLifecycleStatus(caseData.status_key);
+  };
+  
+  // === NEW STATUS SYSTEM HELPERS ===
+  
+  /** Get current status display style using the new system */
+  const getCurrentStatusStyle = () => {
+    if (caseData?.current_status_id) {
+      const color = getNewStatusColor(caseData.current_status_id);
+      return {
+        backgroundColor: `${color}20`,
+        color: color,
+        borderColor: color,
+      };
+    }
+    // Fall back to legacy
+    return getStatusStyle(caseData?.status_key || '');
+  };
+  
+  /** Get current status display name using the new system */
+  const getCurrentStatusDisplayName = () => {
+    if (caseData?.current_status_id) {
+      return getStatusDisplayName(caseData.current_status_id);
+    }
+    // Fall back to legacy
+    return getLegacyDisplayName(caseData?.status_key || '') || caseData?.status || 'Unknown';
+  };
+  
+  /** Handle status change using the NEW canonical status system (current_status_id) */
+  const handleNewStatusChange = async (newStatusId: string): Promise<boolean> => {
+    if (!caseData) return false;
+    
+    const oldStatusId = caseData.current_status_id;
+    if (oldStatusId === newStatusId) return true;
+    
+    const previousCaseData = { ...caseData };
+    const newStatus = getStatusById(newStatusId);
+    if (!newStatus) {
+      toast({ title: "Error", description: "Status not found", variant: "destructive" });
+      return false;
+    }
+    
+    const wasClosedCategory = oldStatusId ? isClosedCategory(oldStatusId) : false;
+    const isNowClosedCategory = isClosedCategory(newStatusId);
+    const isClosing = !wasClosedCategory && isNowClosedCategory;
+    
+    // Optimistic update
+    setCaseData({
+      ...caseData,
+      current_status_id: newStatusId,
+      current_category_id: newStatus.category_id,
+      status: newStatus.name, // Keep display status in sync for backward compat
+      status_entered_at: new Date().toISOString(),
+      ...(isClosing ? {
+        closed_by_user_id: "pending",
+        closed_at: new Date().toISOString()
+      } : {})
+    });
+    
+    toast({
+      title: "Status updated",
+      description: isClosing ? "Case closed" : `Status changed to ${newStatus.name}`
+    });
+    
+    setUpdatingStatus(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      
+      const userName = profile?.full_name || user.email || "Unknown User";
+      
+      // Build update data - trigger will handle history tracking
+      const updateData: Record<string, unknown> = {
+        current_status_id: newStatusId,
+        status: newStatus.name, // Keep display status in sync
+      };
+      
+      if (isClosing) {
+        updateData.closed_by_user_id = user.id;
+        updateData.closed_at = new Date().toISOString();
+      }
+      
+      const { error } = await supabase
+        .from("cases")
+        .update(updateData)
+        .eq("id", id);
+      
+      if (error) throw error;
+      
+      // Log activity
+      const oldStatus = oldStatusId ? getStatusById(oldStatusId) : null;
+      const activityDescription = isClosing 
+        ? `Case closed by ${userName}`
+        : `Status changed from "${oldStatus?.name || 'Unknown'}" to "${newStatus.name}" by ${userName}`;
+      
+      await supabase.from("case_activities").insert({
+        case_id: id,
+        user_id: user.id,
+        activity_type: "Status Change",
+        title: isClosing ? "Case Closed" : "Status Changed",
+        description: activityDescription,
+        status: "completed"
+      });
+      
+      await NotificationHelpers.caseStatusChanged(caseData.case_number, newStatus.name, id!);
+      
+      // Confirm the update
+      setCaseData(prev => prev ? {
+        ...prev,
+        current_status_id: newStatusId,
+        current_category_id: newStatus.category_id,
+        status: newStatus.name,
+        status_entered_at: new Date().toISOString(),
+        ...(isClosing ? {
+          closed_by_user_id: user.id,
+          closed_at: new Date().toISOString()
+        } : {})
+      } : null);
+      
+      return true;
+    } catch (error) {
+      console.error("Error updating status:", error);
+      setCaseData(previousCaseData);
+      toast({
+        title: "Error",
+        description: "Failed to update case status. Change reverted.",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
   
   const handleStatusChange = async (newStatusKey: string): Promise<boolean> => {
@@ -635,29 +800,90 @@ const CaseDetail = () => {
         
         {/* Status + Actions - break under title until lg, then sit to the right */}
         <div className="flex items-center gap-2 shrink-0 ml-auto">
-          {/* Status Dropdown - now using lifecycle statuses */}
-          {!isVendor && <Select value={caseData.status_key || ''} onValueChange={handleStatusChange} disabled={updatingStatus || statusesLoading}>
-              <SelectTrigger className={`w-[140px] h-9 text-sm ${getStatusColor(caseData.status_key || '')}`} style={getStatusStyle(caseData.status_key || '')}>
-                <SelectValue placeholder="Select status">
-                  {getDisplayName(caseData.status_key || '') || caseData.status}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {executionStatuses.map(status => <SelectItem key={status.id} value={status.status_key}>
-                    <span className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{
-                        backgroundColor: status.color || '#9ca3af'
-                      }} />
-                      {status.display_name}
-                    </span>
-                  </SelectItem>)}
-              </SelectContent>
-            </Select>}
+          {/* Status Navigation - Prev/Next buttons + Status Dropdown */}
+          {!isVendor && (
+            <div className="flex items-center gap-1">
+              {/* Prev Status Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-2"
+                disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getPrevStatus(caseData.current_status_id)}
+                onClick={() => {
+                  if (caseData.current_status_id) {
+                    const prev = getPrevStatus(caseData.current_status_id);
+                    if (prev) handleNewStatusChange(prev.id);
+                  }
+                }}
+                title="Previous Status"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {/* Status Dropdown - Using new canonical status system */}
+              <Select 
+                value={caseData.current_status_id || ''} 
+                onValueChange={handleNewStatusChange} 
+                disabled={updatingStatus || statusesLoading}
+              >
+                <SelectTrigger 
+                  className="w-[140px] h-9 text-sm border" 
+                  style={getCurrentStatusStyle()}
+                >
+                  <SelectValue placeholder="Select status">
+                    {getCurrentStatusDisplayName()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(category => (
+                    <div key={category.id}>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                        {category.name}
+                      </div>
+                      {activeStatuses
+                        .filter(s => s.category_id === category.id)
+                        .sort((a, b) => a.rank_order - b.rank_order)
+                        .map(status => (
+                          <SelectItem key={status.id} value={status.id}>
+                            <span className="flex items-center gap-2">
+                              <span 
+                                className="w-2.5 h-2.5 rounded-full shrink-0" 
+                                style={{ backgroundColor: status.color || '#9ca3af' }} 
+                              />
+                              {status.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                    </div>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Next Status Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-2"
+                disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getNextStatus(caseData.current_status_id)}
+                onClick={() => {
+                  if (caseData.current_status_id) {
+                    const next = getNextStatus(caseData.current_status_id);
+                    if (next) handleNewStatusChange(next.id);
+                  }
+                }}
+                title="Next Status"
+              >
+                <ChevronLeft className="h-4 w-4 rotate-180" />
+              </Button>
+            </div>
+          )}
           
           {/* Vendor Status Badge */}
-          {isVendor && <Badge className="border" style={getStatusStyle(caseData.status_key || '')}>
-              {getDisplayName(caseData.status_key || '') || caseData.status}
-            </Badge>}
+          {isVendor && (
+            <Badge className="border" style={getCurrentStatusStyle()}>
+              {getCurrentStatusDisplayName()}
+            </Badge>
+          )}
           
           {/* Action Menu */}
           {!isVendor && <DropdownMenu>
