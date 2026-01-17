@@ -39,6 +39,7 @@ import { CaseTimeline } from "@/components/case-detail/CaseTimeline";
 import { ClientInfoSection } from "@/components/case-detail/ClientInfoSection";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStatusDisplay } from "@/hooks/use-status-display";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -110,6 +111,11 @@ const CaseDetail = () => {
   const {
     hasPermission
   } = usePermissions();
+  const {
+    canViewExactStatus,
+    getDisplayName: getStatusDisplayNameByPermission,
+    getDisplayStyle: getStatusDisplayStyleByPermission,
+  } = useStatusDisplay();
   const {
     organization
   } = useOrganization();
@@ -359,24 +365,21 @@ const CaseDetail = () => {
   
   // === NEW STATUS SYSTEM HELPERS ===
   
-  /** Get current status display style using the new system */
+  /** Get current status display style using the new system (respects view_exact_status permission) */
   const getCurrentStatusStyle = () => {
     if (caseData?.current_status_id) {
-      const color = getNewStatusColor(caseData.current_status_id);
-      return {
-        backgroundColor: `${color}20`,
-        color: color,
-        borderColor: color,
-      };
+      // Use permission-aware style
+      return getStatusDisplayStyleByPermission(caseData.current_status_id);
     }
     // Fall back to legacy
     return getStatusStyle(caseData?.status_key || '');
   };
   
-  /** Get current status display name using the new system */
+  /** Get current status display name using the new system (respects view_exact_status permission) */
   const getCurrentStatusDisplayName = () => {
     if (caseData?.current_status_id) {
-      return getStatusDisplayName(caseData.current_status_id);
+      // Use permission-aware display name
+      return getStatusDisplayNameByPermission(caseData.current_status_id);
     }
     // Fall back to legacy
     return getLegacyDisplayName(caseData?.status_key || '') || caseData?.status || 'Unknown';
@@ -867,8 +870,8 @@ const CaseDetail = () => {
         
         {/* Status + Actions - break under title until lg, then sit to the right */}
         <div className="flex items-center gap-2 shrink-0 ml-auto">
-          {/* Status Navigation - Prev/Next buttons + Status Dropdown */}
-          {!isVendor && (
+          {/* Status Navigation - Prev/Next buttons + Status Dropdown (only if user can view exact status) */}
+          {!isVendor && canViewExactStatus && (
             <div className="flex items-center gap-1">
               {/* Prev Status Button */}
               <Button
@@ -955,6 +958,13 @@ const CaseDetail = () => {
                 <ChevronLeft className="h-4 w-4 rotate-180" />
               </Button>
             </div>
+          )}
+          
+          {/* Category-only status badge (when user cannot view exact status) */}
+          {!isVendor && !canViewExactStatus && (
+            <Badge className="border" style={getCurrentStatusStyle()}>
+              {getCurrentStatusDisplayName()}
+            </Badge>
           )}
           
           {/* Vendor Status Badge */}

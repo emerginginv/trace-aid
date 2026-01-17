@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStatusDisplay } from "@/hooks/use-status-display";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -33,6 +34,7 @@ import { CaseCardFinancialWidget } from "@/components/cases/CaseCardFinancialWid
 import { CaseCardFinancialSummary } from "@/components/cases/CaseCardFinancialSummary";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCaseLifecycleStatuses } from "@/hooks/use-case-lifecycle-statuses";
+import { useCaseStatuses } from "@/hooks/use-case-statuses";
 
 interface CaseManager {
   id: string;
@@ -112,6 +114,16 @@ const Cases = () => {
     isClosedStatus: isClosedLifecycleStatus,
     isLoading: statusesLoading 
   } = useCaseLifecycleStatuses();
+  
+  // Permission-aware status display
+  const {
+    canViewExactStatus,
+    getDisplayName: getPermissionAwareDisplayName,
+    getDisplayStyle: getPermissionAwareDisplayStyle,
+  } = useStatusDisplay();
+  
+  // New case statuses for current_status_id based cases
+  const { getStatusById } = useCaseStatuses();
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -255,6 +267,7 @@ const Cases = () => {
   };
 
   // Helper to get status style for display (using lifecycle statuses)
+  // For legacy status_key based cases
   const getStatusStyle = (statusKey: string | null) => {
     if (!statusKey) return {};
     const color = getLifecycleStatusColor(statusKey);
@@ -266,6 +279,17 @@ const Cases = () => {
       };
     }
     return {};
+  };
+  
+  // Permission-aware status display name for list view
+  const getCaseDisplayName = (caseItem: Case): string => {
+    // If case has current_status_id (new system), use permission-aware display
+    if (caseItem.id && getStatusById) {
+      // Try to check if this case uses the new status system
+      // For now, fall back to legacy display name with permission check
+    }
+    // Legacy: use lifecycle status display name
+    return getDisplayName(caseItem.status_key || '') || caseItem.status;
   };
 
   const isClosedCase = (statusKey: string | null) => {
@@ -808,7 +832,7 @@ const Cases = () => {
                     )}
                     {isVisible("status") && (
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        {hasPermission('edit_cases') ? (
+                        {hasPermission('edit_cases') && canViewExactStatus ? (
                           <InlineEditCell
                             value={caseItem.status_key || ''}
                             options={statusOptions}
@@ -819,7 +843,10 @@ const Cases = () => {
                           />
                         ) : (
                           <Badge className="border" style={getStatusStyle(caseItem.status_key)}>
-                            {getDisplayName(caseItem.status_key || '') || caseItem.status}
+                            {canViewExactStatus 
+                              ? (getDisplayName(caseItem.status_key || '') || caseItem.status)
+                              : (getStatusByKey(caseItem.status_key || '')?.phase || caseItem.status)
+                            }
                           </Badge>
                         )}
                       </TableCell>

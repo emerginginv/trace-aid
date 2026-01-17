@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Link2, ExternalLink } from "lucide-react";
+import { Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -23,25 +23,50 @@ interface RelatedCase {
 interface PdfRelatedCasesProps {
   relatedCases: RelatedCase[];
   currentCaseId: string;
+  showExactStatus?: boolean; // Whether to show exact status or category only
 }
 
-export function PdfRelatedCases({ relatedCases, currentCaseId }: PdfRelatedCasesProps) {
+export function PdfRelatedCases({ relatedCases, currentCaseId, showExactStatus = true }: PdfRelatedCasesProps) {
   if (relatedCases.length === 0) {
     return null;
   }
 
+  // Helper to derive category from status name
+  const getCategoryFromStatus = (statusName: string): string => {
+    const lowerStatus = statusName.toLowerCase();
+    if (lowerStatus.includes('new') || lowerStatus.includes('pending') || lowerStatus.includes('draft')) {
+      return 'New';
+    }
+    if (lowerStatus.includes('open') || lowerStatus.includes('active') || lowerStatus.includes('investigation') || lowerStatus.includes('review')) {
+      return 'Open';
+    }
+    if (lowerStatus.includes('complete') || lowerStatus.includes('finished') || lowerStatus.includes('delivered')) {
+      return 'Complete';
+    }
+    if (lowerStatus.includes('closed') || lowerStatus.includes('cancelled') || lowerStatus.includes('archived')) {
+      return 'Closed';
+    }
+    return 'Open';
+  };
+
   const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
+    const displayStatus = showExactStatus ? status : getCategoryFromStatus(status);
+    
+    switch (displayStatus.toLowerCase()) {
       case "open":
         return <Badge className="bg-emerald-100 text-emerald-700 text-xs">Open</Badge>;
+      case "new":
+        return <Badge className="bg-blue-100 text-blue-700 text-xs">New</Badge>;
       case "in_progress":
         return <Badge className="bg-blue-100 text-blue-700 text-xs">In Progress</Badge>;
       case "pending":
         return <Badge className="bg-amber-100 text-amber-700 text-xs">Pending</Badge>;
+      case "complete":
+        return <Badge className="bg-amber-100 text-amber-700 text-xs">Complete</Badge>;
       case "closed":
         return <Badge className="bg-slate-100 text-slate-700 text-xs">Closed</Badge>;
       default:
-        return <Badge variant="outline" className="text-xs">{status}</Badge>;
+        return <Badge variant="outline" className="text-xs">{displayStatus}</Badge>;
     }
   };
 
