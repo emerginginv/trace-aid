@@ -10092,6 +10092,14 @@ export type Database = {
         Args: { p_limit?: number; p_query: string }
         Returns: Json
       }
+      sync_case_category_transitions: {
+        Args: {
+          p_organization_id: string
+          p_override_existing?: boolean
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       toggle_enforce_sso: {
         Args: { p_enforce: boolean; p_org_id: string }
         Returns: Json

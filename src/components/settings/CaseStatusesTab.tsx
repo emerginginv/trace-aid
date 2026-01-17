@@ -15,7 +15,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Pencil, Trash2, GripVertical, ArrowUpDown, RefreshCw, Check, X, Clock, Lock, RotateCcw, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, ArrowUpDown, RefreshCw, Check, X, Clock, Lock, RotateCcw, FileText, Database } from "lucide-react";
+import { SyncCasesModal } from "./SyncCasesModal";
 import { useCaseStatuses, useCaseStatusMutations, CaseStatus, CategoryName, CATEGORY_COLORS } from "@/hooks/use-case-statuses";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { toast } from "sonner";
@@ -117,6 +118,7 @@ export function CaseStatusesTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [editingStatus, setEditingStatus] = useState<CaseStatus | null>(null);
   const [deletingStatusId, setDeletingStatusId] = useState<string | null>(null);
   const [localStatuses, setLocalStatuses] = useState<CaseStatus[]>([]);
@@ -280,6 +282,10 @@ export function CaseStatusesTab() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setSyncModalOpen(true)}>
+            <Database className="h-4 w-4 mr-2" />
+            Sync Cases
+          </Button>
           <Button variant="outline" onClick={() => setReorderDialogOpen(true)}>
             <ArrowUpDown className="h-4 w-4 mr-2" />
             Reorder
@@ -290,6 +296,9 @@ export function CaseStatusesTab() {
           </Button>
         </div>
       </div>
+
+      {/* Sync Cases Modal */}
+      <SyncCasesModal open={syncModalOpen} onOpenChange={setSyncModalOpen} />
 
       {/* Categories and Statuses */}
       {categories.map((category) => {
