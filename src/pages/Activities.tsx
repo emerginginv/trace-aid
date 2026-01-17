@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
-import { useActivitiesQuery, isScheduledActivity } from "@/hooks/queries";
+import { useActivitiesQuery, isScheduledActivity, useDeleteActivity } from "@/hooks/queries";
 import { useViewMode } from "@/hooks/use-view-mode";
 import { useActivityEnrichment } from "@/hooks/use-enriched-data";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ClipboardList, Clock, CheckCircle, Calendar, MoreVertical, Eye, ExternalLink, MapPin, RefreshCw, X, Trash2 } from "lucide-react";
+import { ClipboardList, Clock, CheckCircle, Calendar, MoreVertical, ExternalLink, MapPin, RefreshCw, X, Trash2, Pencil } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -154,6 +154,11 @@ export default function Activities() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const pendingBulkDeletions = useRef<Map<string, { ids: string[]; timeoutId: NodeJS.Timeout }>>(new Map());
+
+  // Edit and delete state
+  const [editingActivity, setEditingActivity] = useState<ActivityWithCase | null>(null);
+  const [deleteActivityId, setDeleteActivityId] = useState<string | null>(null);
+  const deleteActivity = useDeleteActivity();
 
   // Use unified activities query
   const { data: rawActivities = [], isLoading } = useActivitiesQuery({ limit: 500 });
@@ -401,6 +406,19 @@ export default function Activities() {
     setShowCaseSelector(true);
   };
 
+  const handleDeleteActivity = useCallback(async () => {
+    if (!deleteActivityId) return;
+    
+    try {
+      await deleteActivity.mutateAsync(deleteActivityId);
+      setDeleteActivityId(null);
+      toast.success("Activity deleted successfully");
+    } catch (error) {
+      console.error("Delete failed:", error);
+      toast.error("Failed to delete activity");
+    }
+  }, [deleteActivityId, deleteActivity]);
+
   // Removed type-based icon/color functions - using unified ActivityCard
 
   return (
@@ -601,12 +619,30 @@ export default function Activities() {
                           <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigateToCase(activity.cases.id)}>
-                            <Eye className="h-4 w-4 mr-2" />View in Case
-                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/cases/${activity.cases.id}`)}>
                             <ExternalLink className="h-4 w-4 mr-2" />Go to Case
                           </DropdownMenuItem>
+                          
+                          {hasPermission('edit_activities') && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setEditingActivity(activity)}>
+                                <Pencil className="h-4 w-4 mr-2" />Edit
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          
+                          {hasPermission('delete_activities') && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteActivityId(activity.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -678,6 +714,38 @@ export default function Activities() {
         title="Delete Selected Activities"
         description={`Are you sure you want to delete ${selectedIds.size} activit${selectedIds.size !== 1 ? 'ies' : 'y'}? This action cannot be undone.`}
         onConfirm={handleBulkDeleteConfirm}
+        variant="destructive"
+        confirmLabel="Delete"
+      />
+
+      {/* Edit Activity Form */}
+      {editingActivity && organization?.id && (
+        <ActivityForm
+          caseId={editingActivity.case_id}
+          activityType={editingActivity.is_scheduled ? 'event' : 'task'}
+          users={users}
+          open={!!editingActivity}
+          onOpenChange={(open) => {
+            if (!open) setEditingActivity(null);
+          }}
+          onSuccess={() => {
+            setEditingActivity(null);
+            queryClient.invalidateQueries({ queryKey: ['activities'] });
+          }}
+          editingActivity={editingActivity}
+          organizationId={organization.id}
+        />
+      )}
+
+      {/* Single Activity Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={!!deleteActivityId}
+        onOpenChange={(open) => {
+          if (!open) setDeleteActivityId(null);
+        }}
+        title="Delete Activity"
+        description="Are you sure you want to delete this activity? This action cannot be undone."
+        onConfirm={handleDeleteActivity}
         variant="destructive"
         confirmLabel="Delete"
       />
