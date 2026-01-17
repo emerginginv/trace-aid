@@ -284,6 +284,10 @@ export function CaseStatusesTab() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setMigrationModalOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" />
+            Migration
+          </Button>
           <Button variant="outline" onClick={() => setSyncModalOpen(true)}>
             <Database className="h-4 w-4 mr-2" />
             Sync Cases
@@ -298,6 +302,9 @@ export function CaseStatusesTab() {
           </Button>
         </div>
       </div>
+
+      {/* Migration Modal */}
+      <StatusMigrationModal open={migrationModalOpen} onOpenChange={setMigrationModalOpen} />
 
       {/* Sync Cases Modal */}
       <SyncCasesModal open={syncModalOpen} onOpenChange={setSyncModalOpen} />
