@@ -557,7 +557,7 @@ const Finance = () => {
                       sortColumn={sortColumn}
                       sortDirection={sortDirection}
                       onSort={handleSort}
-                      className="w-[140px] text-right"
+                      className="w-[140px]"
                     />
                   )}
                   {isVisible("last_topup") && (
@@ -597,7 +597,7 @@ const Finance = () => {
                       <TableCell className="w-[140px]">{balance.case_number}</TableCell>
                     )}
                     {isVisible("balance") && (
-                      <TableCell className="w-[140px] text-right font-medium">
+                      <TableCell className="w-[140px] font-medium">
                         ${balance.balance.toFixed(2)}
                       </TableCell>
                     )}
