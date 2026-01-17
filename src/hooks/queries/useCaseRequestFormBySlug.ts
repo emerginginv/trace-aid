@@ -5,7 +5,7 @@ import { validateFormConfig, CaseRequestFormConfig } from "@/types/case-request-
 export interface OrganizationSettings {
   company_name: string | null;
   logo_url: string | null;
-  phone: string | null;
+  square_logo_url: string | null;
   website_url: string | null;
 }
 
@@ -52,10 +52,10 @@ export function useCaseRequestFormBySlug(slug: string | undefined) {
       if (error) throw error;
       if (!data) throw new Error('Form not found or is not active');
 
-      // Fetch organization settings for fallbacks
+      // Fetch organization branding from secure public view (only exposes minimal fields)
       const { data: orgSettings } = await supabase
-        .from('organization_settings')
-        .select('company_name, logo_url, phone, website_url')
+        .from('organization_public_branding')
+        .select('company_name, logo_url, square_logo_url, website_url')
         .eq('organization_id', data.organization_id)
         .maybeSingle();
 

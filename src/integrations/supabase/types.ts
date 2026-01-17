@@ -9542,6 +9542,38 @@ export type Database = {
           },
         ]
       }
+      organization_public_branding: {
+        Row: {
+          company_name: string | null
+          logo_url: string | null
+          organization_id: string | null
+          square_logo_url: string | null
+          website_url: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          logo_url?: string | null
+          organization_id?: string | null
+          square_logo_url?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          logo_url?: string | null
+          organization_id?: string | null
+          square_logo_url?: string | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles_secure: {
         Row: {
           address: string | null
