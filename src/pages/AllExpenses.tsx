@@ -6,11 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Pencil, Trash2, Check, X, Plus, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, Receipt } from "lucide-react";
+import { Search, Pencil, Trash2, Check, X, Plus, Download, FileSpreadsheet, FileText, CheckCircle2, XCircle, CalendarIcon, Receipt, MoreVertical } from "lucide-react";
 import { ImportTemplateDropdown } from "@/components/ui/import-template-button";
 
 import { ResponsiveButton } from "@/components/ui/responsive-button";
@@ -62,6 +62,7 @@ const AllExpenses = () => {
     const cols: ColumnDefinition[] = [
       { key: "select", label: "Select", hideable: false },
       { key: "date", label: "Date" },
+      { key: "status", label: "Status" },
       { key: "case", label: "Case" },
       { key: "category", label: "Type" },
       { key: "quantity", label: "Quantity" },
@@ -73,7 +74,6 @@ const AllExpenses = () => {
     }
     
     cols.push(
-      { key: "status", label: "Status" },
       { key: "actions", label: "Actions", hideable: false }
     );
     
@@ -680,6 +680,15 @@ const AllExpenses = () => {
                     onSort={handleSort}
                   />
                 )}
+                {isVisible("status") && (
+                  <SortableTableHead
+                    column="status"
+                    label="Status"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
                 {isVisible("case") && (
                   <SortableTableHead
                     column="case"
@@ -727,17 +736,8 @@ const AllExpenses = () => {
                     className="text-right"
                   />
                 )}
-                {isVisible("status") && (
-                  <SortableTableHead
-                    column="status"
-                    label="Status"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
                 {isVisible("actions") && (
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-[60px]">Actions</TableHead>
                 )}
               </TableRow>
             </TableHeader>
@@ -758,6 +758,11 @@ const AllExpenses = () => {
                     </TableCell>
                     <TableCell>
                       {format(new Date(expense.created_at), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      <span className={getStatusBadge(expense.status)}>
+                        {getStatusDisplay(expense.status)}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div>
@@ -782,102 +787,98 @@ const AllExpenses = () => {
                       </>
                     )}
                     <TableCell>
-                      <span className={getStatusBadge(expense.status)}>
-                        {getStatusDisplay(expense.status)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {isPending && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={async () => {
-                                const { error } = await supabase
-                                  .from("expense_entries")
-                                  .update({ status: "approved" })
-                                  .eq("id", expense.id);
-                                
-                                if (error) {
-                                  toast.error("Failed to approve expense");
-                                } else {
-                                  toast.success("Expense approved");
-                                  fetchExpenseData();
-                                }
-                              }}
-                              title="Approve expense"
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={async () => {
-                                const { error } = await supabase
-                                  .from("expense_entries")
-                                  .update({ status: "declined" as any })
-                                  .eq("id", expense.id);
-                                
-                                if (error) {
-                                  toast.error("Failed to reject expense");
-                                } else {
-                                  toast.success("Expense rejected");
-                                  fetchExpenseData();
-                                }
-                              }}
-                              title="Reject expense"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={async () => {
-                            const { data, error } = await supabase
-                              .from("expense_entries")
-                              .select("*")
-                              .eq("id", expense.id)
-                              .single();
-                            
-                            if (error) {
-                              toast.error("Failed to load expense details");
-                            } else {
-                              setEditingExpense(data);
-                              setShowExpenseForm(true);
-                            }
-                          }}
-                          title="Edit expense"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={async () => {
-                            if (confirm("Are you sure you want to delete this expense?")) {
-                              const { error } = await supabase
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-popover">
+                          {isPending && (
+                            <>
+                              <DropdownMenuItem 
+                                onClick={async () => {
+                                  const { error } = await supabase
+                                    .from("expense_entries")
+                                    .update({ status: "approved" })
+                                    .eq("id", expense.id);
+                                  
+                                  if (error) {
+                                    toast.error("Failed to approve expense");
+                                  } else {
+                                    toast.success("Expense approved");
+                                    fetchExpenseData();
+                                  }
+                                }}
+                                className="text-green-600"
+                              >
+                                <Check className="h-4 w-4 mr-2" />
+                                Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={async () => {
+                                  const { error } = await supabase
+                                    .from("expense_entries")
+                                    .update({ status: "declined" as any })
+                                    .eq("id", expense.id);
+                                  
+                                  if (error) {
+                                    toast.error("Failed to reject expense");
+                                  } else {
+                                    toast.success("Expense rejected");
+                                    fetchExpenseData();
+                                  }
+                                }}
+                                className="text-red-600"
+                              >
+                                <X className="h-4 w-4 mr-2" />
+                                Reject
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
+                          <DropdownMenuItem 
+                            onClick={async () => {
+                              const { data, error } = await supabase
                                 .from("expense_entries")
-                                .delete()
-                                .eq("id", expense.id);
+                                .select("*")
+                                .eq("id", expense.id)
+                                .single();
                               
                               if (error) {
-                                toast.error("Failed to delete expense");
+                                toast.error("Failed to load expense details");
                               } else {
-                                toast.success("Expense deleted");
-                                fetchExpenseData();
+                                setEditingExpense(data);
+                                setShowExpenseForm(true);
                               }
-                            }
-                          }}
-                          title="Delete expense"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                            }}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={async () => {
+                              if (confirm("Are you sure you want to delete this expense?")) {
+                                const { error } = await supabase
+                                  .from("expense_entries")
+                                  .delete()
+                                  .eq("id", expense.id);
+                                
+                                if (error) {
+                                  toast.error("Failed to delete expense");
+                                } else {
+                                  toast.success("Expense deleted");
+                                  fetchExpenseData();
+                                }
+                              }
+                            }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 );
