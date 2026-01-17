@@ -1243,6 +1243,62 @@ export type Database = {
           },
         ]
       }
+      case_lifecycle_statuses: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          organization_id: string | null
+          phase: string
+          phase_order: number
+          status_key: string
+          status_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          organization_id?: string | null
+          phase: string
+          phase_order: number
+          status_key: string
+          status_type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          organization_id?: string | null
+          phase?: string
+          phase_order?: number
+          status_key?: string
+          status_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_lifecycle_statuses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_number_format_audit_log: {
         Row: {
           action: string
@@ -1580,6 +1636,7 @@ export type Database = {
           source_type: string | null
           source_user_agent: string | null
           status: string
+          status_key: string | null
           submitted_at: string
           submitted_client_address1: string | null
           submitted_client_address2: string | null
@@ -1626,6 +1683,7 @@ export type Database = {
           source_type?: string | null
           source_user_agent?: string | null
           status?: string
+          status_key?: string | null
           submitted_at?: string
           submitted_client_address1?: string | null
           submitted_client_address2?: string | null
@@ -1672,6 +1730,7 @@ export type Database = {
           source_type?: string | null
           source_user_agent?: string | null
           status?: string
+          status_key?: string | null
           submitted_at?: string
           submitted_client_address1?: string | null
           submitted_client_address2?: string | null
@@ -2053,6 +2112,44 @@ export type Database = {
           },
         ]
       }
+      case_status_transitions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          from_status_key: string
+          id: string
+          is_active: boolean | null
+          organization_id: string | null
+          to_status_key: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          from_status_key: string
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          to_status_key: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          from_status_key?: string
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          to_status_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_status_transitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_subjects: {
         Row: {
           archived_at: string | null
@@ -2401,6 +2498,7 @@ export type Database = {
           series_number: number | null
           source_request_id: string | null
           status: string
+          status_key: string | null
           title: string | null
           updated_at: string | null
           use_primary_subject_as_title: boolean | null
@@ -2451,6 +2549,7 @@ export type Database = {
           series_number?: number | null
           source_request_id?: string | null
           status?: string
+          status_key?: string | null
           title?: string | null
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null
@@ -2501,6 +2600,7 @@ export type Database = {
           series_number?: number | null
           source_request_id?: string | null
           status?: string
+          status_key?: string | null
           title?: string | null
           updated_at?: string | null
           use_primary_subject_as_title?: boolean | null
@@ -9348,6 +9448,14 @@ export type Database = {
         Returns: boolean
       }
       revoke_invitation: { Args: { p_invite_id: string }; Returns: Json }
+      seed_case_lifecycle_statuses: {
+        Args: { org_id: string }
+        Returns: undefined
+      }
+      seed_case_status_transitions: {
+        Args: { org_id: string }
+        Returns: undefined
+      }
       set_org_legal_hold: {
         Args: {
           p_enable: boolean
