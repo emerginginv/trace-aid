@@ -84,6 +84,7 @@ const TimeEntries = () => {
     const baseColumns: ColumnDefinition[] = [
       { key: "select", label: "Select", hideable: false },
       { key: "date", label: "Date" },
+      { key: "status", label: "Status" },
       { key: "case", label: "Case" },
       { key: "investigator", label: "Investigator" },
       { key: "description", label: "Description" },
@@ -99,7 +100,6 @@ const TimeEntries = () => {
     }
     
     baseColumns.push(
-      { key: "status", label: "Status" },
       { key: "actions", label: "Actions", hideable: false }
     );
     
@@ -714,6 +714,15 @@ const TimeEntries = () => {
                     onSort={handleSort}
                   />
                 )}
+                {isVisible("status") && (
+                  <SortableTableHead
+                    column="status"
+                    label="Status"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                )}
                 {isVisible("case") && (
                   <SortableTableHead
                     column="case"
@@ -771,15 +780,6 @@ const TimeEntries = () => {
                     className="text-right"
                   />
                 )}
-                {isVisible("status") && (
-                  <SortableTableHead
-                    column="status"
-                    label="Status"
-                    sortColumn={sortColumn}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                )}
                 {isVisible("actions") && <TableHead className="w-[60px]">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -810,6 +810,9 @@ const TimeEntries = () => {
                     {isVisible("date") && (
                       <TableCell>{format(new Date(entry.date), "MMM d, yyyy")}</TableCell>
                     )}
+                    {isVisible("status") && (
+                      <TableCell>{getStatusBadge(entry)}</TableCell>
+                    )}
                     {isVisible("case") && (
                       <TableCell>
                         <div className="font-medium">{entry.case_number}</div>
@@ -834,9 +837,6 @@ const TimeEntries = () => {
                       <TableCell className="text-right font-medium">
                         ${entry.pay_total.toFixed(2)}
                       </TableCell>
-                    )}
-                    {isVisible("status") && (
-                      <TableCell>{getStatusBadge(entry)}</TableCell>
                     )}
                     {isVisible("actions") && (
                       <TableCell onClick={(e) => e.stopPropagation()}>
