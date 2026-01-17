@@ -1258,6 +1258,7 @@ export type Database = {
           assigned_at: string
           assigned_by: string | null
           case_id: string
+          confirmed_at: string | null
           id: string
           investigator_id: string
           organization_id: string
@@ -1267,6 +1268,7 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string | null
           case_id: string
+          confirmed_at?: string | null
           id?: string
           investigator_id: string
           organization_id: string
@@ -1276,6 +1278,7 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string | null
           case_id?: string
+          confirmed_at?: string | null
           id?: string
           investigator_id?: string
           organization_id?: string
@@ -2324,6 +2327,7 @@ export type Database = {
           status_id: string | null
           to_status: string
           to_status_key: string | null
+          trigger_id: string | null
         }
         Insert: {
           case_id: string
@@ -2343,6 +2347,7 @@ export type Database = {
           status_id?: string | null
           to_status: string
           to_status_key?: string | null
+          trigger_id?: string | null
         }
         Update: {
           case_id?: string
@@ -2362,6 +2367,7 @@ export type Database = {
           status_id?: string | null
           to_status?: string
           to_status_key?: string | null
+          trigger_id?: string | null
         }
         Relationships: [
           {
@@ -2397,6 +2403,13 @@ export type Database = {
             columns: ["status_id"]
             isOneToOne: false
             referencedRelation: "case_statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_history_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "case_status_triggers"
             referencedColumns: ["id"]
           },
         ]
@@ -2435,6 +2448,149 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_status_trigger_log: {
+        Row: {
+          case_id: string
+          event_type: Database["public"]["Enums"]["case_status_trigger_event"]
+          from_status_id: string | null
+          id: string
+          organization_id: string
+          reason: string | null
+          result: string
+          to_status_id: string | null
+          trigger_id: string | null
+          triggered_at: string
+          triggered_by: string | null
+        }
+        Insert: {
+          case_id: string
+          event_type: Database["public"]["Enums"]["case_status_trigger_event"]
+          from_status_id?: string | null
+          id?: string
+          organization_id: string
+          reason?: string | null
+          result: string
+          to_status_id?: string | null
+          trigger_id?: string | null
+          triggered_at?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          case_id?: string
+          event_type?: Database["public"]["Enums"]["case_status_trigger_event"]
+          from_status_id?: string | null
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          result?: string
+          to_status_id?: string | null
+          trigger_id?: string | null
+          triggered_at?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_status_trigger_log_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_trigger_log_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_trigger_log_from_status_id_fkey"
+            columns: ["from_status_id"]
+            isOneToOne: false
+            referencedRelation: "case_statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_trigger_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_trigger_log_to_status_id_fkey"
+            columns: ["to_status_id"]
+            isOneToOne: false
+            referencedRelation: "case_statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_trigger_log_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "case_status_triggers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_trigger_log_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_status_triggers: {
+        Row: {
+          allow_override_manual: boolean
+          created_at: string
+          enabled: boolean
+          event_type: Database["public"]["Enums"]["case_status_trigger_event"]
+          id: string
+          organization_id: string
+          target_status_id: string
+          updated_at: string
+          workflow: string
+        }
+        Insert: {
+          allow_override_manual?: boolean
+          created_at?: string
+          enabled?: boolean
+          event_type: Database["public"]["Enums"]["case_status_trigger_event"]
+          id?: string
+          organization_id: string
+          target_status_id: string
+          updated_at?: string
+          workflow?: string
+        }
+        Update: {
+          allow_override_manual?: boolean
+          created_at?: string
+          enabled?: boolean
+          event_type?: Database["public"]["Enums"]["case_status_trigger_event"]
+          id?: string
+          organization_id?: string
+          target_status_id?: string
+          updated_at?: string
+          workflow?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_status_triggers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_triggers_target_status_id_fkey"
+            columns: ["target_status_id"]
+            isOneToOne: false
+            referencedRelation: "case_statuses"
             referencedColumns: ["id"]
           },
         ]
@@ -9170,6 +9326,14 @@ export type Database = {
         Args: { p_invoice_id: string; p_user_id: string }
         Returns: Json
       }
+      fire_status_trigger: {
+        Args: {
+          p_case_id: string
+          p_event_type: Database["public"]["Enums"]["case_status_trigger_event"]
+          p_triggered_by?: string
+        }
+        Returns: Json
+      }
       generate_audit_bundle: {
         Args: {
           p_date_from: string
@@ -9625,6 +9789,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"][]
       }
       has_active_dpa: { Args: { p_organization_id: string }; Returns: boolean }
+      has_case_reached_status: {
+        Args: { p_case_id: string; p_target_status_id: string }
+        Returns: boolean
+      }
       has_permission: {
         Args: { _feature_key: string; _user_id: string }
         Returns: boolean
@@ -10070,6 +10238,13 @@ export type Database = {
       app_role: "admin" | "member" | "manager" | "investigator" | "vendor"
       backup_status: "pending" | "running" | "success" | "failed"
       backup_type: "database" | "storage" | "config"
+      case_status_trigger_event:
+        | "investigator_assigned"
+        | "investigator_confirmed"
+        | "invoice_created"
+        | "all_invoices_paid"
+        | "report_uploaded"
+        | "case_approved"
       component_status:
         | "operational"
         | "degraded"
@@ -10286,6 +10461,14 @@ export const Constants = {
       app_role: ["admin", "member", "manager", "investigator", "vendor"],
       backup_status: ["pending", "running", "success", "failed"],
       backup_type: ["database", "storage", "config"],
+      case_status_trigger_event: [
+        "investigator_assigned",
+        "investigator_confirmed",
+        "invoice_created",
+        "all_invoices_paid",
+        "report_uploaded",
+        "case_approved",
+      ],
       component_status: [
         "operational",
         "degraded",
