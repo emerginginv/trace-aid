@@ -263,6 +263,9 @@ const caseTypeId = state.formData.step1?.case_type_id || '';
             onSubmit={handleSubjectSubmit}
             onBack={goBack}
             isEditing={!!editingSubjectId}
+            existingSubjects={state.formData.subjects.filter(s => s.id !== editingSubjectId)}
+            onEditSubject={handleEditSubject}
+            onRemoveSubject={removeSubject}
           />
         )}
 
