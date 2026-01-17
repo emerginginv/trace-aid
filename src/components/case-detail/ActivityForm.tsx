@@ -21,6 +21,9 @@ import { useNavigate } from "react-router-dom";
 // Note: Billing CTAs removed - billing now initiated only from Update Details page
 import { getBudgetForecastWarningMessage } from "@/lib/budgetUtils";
 import { useBudgetConsumption } from "@/hooks/useBudgetConsumption";
+import { useCaseStatusActions } from "@/hooks/use-case-status-actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { BudgetBlockedDialog } from "./BudgetBlockedDialog";
 
 // Unified status values for all activity types
@@ -86,6 +89,7 @@ interface ActivityFormProps {
   prefilledDate?: Date;
   organizationId: string;
   onDuplicate?: (activityData: any) => void;
+  caseStatusKey?: string | null;
 }
 
 // Helper to get status options based on whether activity is scheduled
@@ -121,7 +125,12 @@ export function ActivityForm({
   prefilledDate,
   organizationId,
   onDuplicate,
+  caseStatusKey,
 }: ActivityFormProps) {
+  // Status-based action gating
+  const { canAddEvents, canAddTasks, canEditActivities, restrictionReason } = useCaseStatusActions(caseStatusKey);
+  const canCreate = activityType === "event" ? canAddEvents : canAddTasks;
+  const canEdit = editingActivity ? canEditActivities : true;
   const [caseTitle, setCaseTitle] = useState<string>("");
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);

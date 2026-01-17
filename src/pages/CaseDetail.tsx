@@ -804,7 +804,7 @@ const CaseDetail = () => {
 
             {/* Activities Tab */}
             {!isVendor && <TabsContent value="activities" className="mt-0">
-                <CaseActivities caseId={id!} isClosedCase={isClosed} />
+                <CaseActivities caseId={id!} isClosedCase={isClosed} caseStatusKey={caseData?.status_key} />
               </TabsContent>}
 
             {/* Calendar Tab */}
@@ -814,13 +814,13 @@ const CaseDetail = () => {
 
             {/* Finances Tab */}
             {!isVendor && <TabsContent value="finances" className="mt-0">
-                <CaseFinances caseId={id!} isClosedCase={isClosed} />
+                <CaseFinances caseId={id!} isClosedCase={isClosed} caseStatusKey={caseData?.status_key} />
               </TabsContent>}
 
 
             {/* Attachments Tab */}
             <TabsContent value="attachments" className="mt-0">
-              <CaseAttachments caseId={id!} isClosedCase={isClosed} />
+              <CaseAttachments caseId={id!} isClosedCase={isClosed} caseStatusKey={caseData?.status_key} />
             </TabsContent>
 
             {/* Timeline Tab */}
