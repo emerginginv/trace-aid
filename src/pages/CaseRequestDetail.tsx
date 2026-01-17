@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -130,6 +130,9 @@ export default function CaseRequestDetail() {
   const [showAcceptDialog, setShowAcceptDialog] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
 
+  // Compute permission as boolean to stabilize effect dependencies
+  const canViewCaseRequests = hasPermission('view_case_requests');
+
   // Breadcrumbs
   useSetBreadcrumbs([
     { label: "Cases", href: "/cases" },
@@ -138,11 +141,14 @@ export default function CaseRequestDetail() {
   ]);
 
   useEffect(() => {
-    if (organization?.id && id && hasPermission('view_case_requests')) {
+    if (organization?.id && id && canViewCaseRequests) {
       fetchRequest();
       fetchSubjectTypes();
+    } else if (!permissionsLoading && !canViewCaseRequests) {
+      // If permissions loaded and user can't view, stop loading
+      setLoading(false);
     }
-  }, [organization?.id, id, hasPermission]);
+  }, [organization?.id, id, canViewCaseRequests, permissionsLoading]);
 
   const fetchRequest = async () => {
     if (!organization?.id || !id) return;
@@ -440,8 +446,8 @@ export default function CaseRequestDetail() {
     }
   };
 
-  // Permission check
-  if (permissionsLoading || loading) {
+  // Show skeleton only during initial load (permissions loading OR data loading without existing request)
+  if (permissionsLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-4">
@@ -459,7 +465,8 @@ export default function CaseRequestDetail() {
     );
   }
 
-  if (!hasPermission('view_case_requests')) {
+  // Check permission after permissions have loaded
+  if (!canViewCaseRequests) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Alert>
@@ -467,6 +474,25 @@ export default function CaseRequestDetail() {
             You don't have permission to view case requests.
           </AlertDescription>
         </Alert>
+      </div>
+    );
+  }
+
+  // Show skeleton only during initial data load (when we don't have request yet)
+  if (loading && !request) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-12 w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              <Skeleton className="h-48" />
+              <Skeleton className="h-64" />
+            </div>
+            <Skeleton className="h-64" />
+          </div>
+        </div>
       </div>
     );
   }

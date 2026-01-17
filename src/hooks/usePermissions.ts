@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "./useUserRole";
 
@@ -49,9 +50,10 @@ export function usePermissions() {
     refetchOnWindowFocus: false,
   });
 
-  const hasPermission = (featureKey: string): boolean => {
+  // Memoize hasPermission to prevent re-renders and effect re-triggers
+  const hasPermission = useCallback((featureKey: string): boolean => {
     return permissions[featureKey] ?? false;
-  };
+  }, [permissions]);
 
   return {
     permissions,
