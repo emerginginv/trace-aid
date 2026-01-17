@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Pencil, Clock, User, FolderOpen, AlertTriangle } from "lucide-react";
 import { useCaseStatusHistoryWithTransitions, CaseCategoryTransition } from "@/hooks/use-case-status-history-extended";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStatusDisplay } from "@/hooks/use-status-display";
 import { EditStatusDatesDialog } from "./EditStatusDatesDialog";
 import { formatDurationDetailed } from "@/hooks/use-case-status-history";
 
@@ -36,6 +37,7 @@ interface TimelineEntry {
 
 export function CaseStatusHistoryModal({ caseId, open, onOpenChange }: CaseStatusHistoryModalProps) {
   const { hasPermission } = usePermissions();
+  const { canViewExactStatus } = useStatusDisplay();
   const canEditDates = hasPermission('edit_status_dates');
   
   const { 
@@ -116,6 +118,24 @@ export function CaseStatusHistoryModal({ caseId, open, onOpenChange }: CaseStatu
     });
   };
   
+  // Helper to get category name from status (for non-exact status viewers)
+  const getCategoryFromStatus = (status: string): string => {
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus.includes('new') || lowerStatus.includes('pending') || lowerStatus.includes('draft')) {
+      return 'New';
+    }
+    if (lowerStatus.includes('open') || lowerStatus.includes('active') || lowerStatus.includes('investigation') || lowerStatus.includes('review')) {
+      return 'Open';
+    }
+    if (lowerStatus.includes('complete') || lowerStatus.includes('finished') || lowerStatus.includes('delivered')) {
+      return 'Complete';
+    }
+    if (lowerStatus.includes('closed') || lowerStatus.includes('cancelled') || lowerStatus.includes('archived')) {
+      return 'Closed';
+    }
+    return 'Open'; // Default fallback
+  };
+  
   const mergedTimeline = buildMergedTimeline();
 
   return (
@@ -175,7 +195,9 @@ export function CaseStatusHistoryModal({ caseId, open, onOpenChange }: CaseStatu
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-medium">
-                                {item.statusEntry.to_status}
+                                {canViewExactStatus 
+                                  ? item.statusEntry.to_status 
+                                  : getCategoryFromStatus(item.statusEntry.to_status)}
                               </span>
                               {item.statusEntry.exited_at === null && (
                                 <Badge variant="secondary" className="text-xs">

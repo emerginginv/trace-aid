@@ -8,6 +8,7 @@ import { Loader2, FolderOpen } from "lucide-react";
 import { format } from "date-fns";
 import { getStatusStyleFromPicklist } from "@/lib/statusUtils";
 import { useCaseStatusPicklists } from "@/hooks/use-case-status-picklists";
+import { useStatusDisplay } from "@/hooks/use-status-display";
 
 interface RelatedCase {
   id: string;
@@ -29,6 +30,7 @@ export function RelatedCases({ caseId, currentInstanceNumber }: RelatedCasesProp
   const [relatedCases, setRelatedCases] = useState<RelatedCase[]>([]);
   const [loading, setLoading] = useState(true);
   const { caseStatuses } = useCaseStatusPicklists();
+  const { canViewExactStatus } = useStatusDisplay();
 
   useEffect(() => {
     fetchRelatedCases();
@@ -51,6 +53,27 @@ export function RelatedCases({ caseId, currentInstanceNumber }: RelatedCasesProp
   };
 
   const getStatusStyle = (status: string) => getStatusStyleFromPicklist(status, caseStatuses);
+  
+  // Helper to get category name from status (for non-exact status viewers)
+  const getStatusCategory = (status: string): string => {
+    // Try to find in picklist and get status_type
+    const statusItem = caseStatuses.find(s => s.value === status);
+    // Common mapping based on status phases
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus.includes('new') || lowerStatus.includes('pending') || lowerStatus.includes('draft')) {
+      return 'New';
+    }
+    if (lowerStatus.includes('open') || lowerStatus.includes('active') || lowerStatus.includes('investigation') || lowerStatus.includes('review')) {
+      return 'Open';
+    }
+    if (lowerStatus.includes('complete') || lowerStatus.includes('finished') || lowerStatus.includes('delivered')) {
+      return 'Complete';
+    }
+    if (lowerStatus.includes('closed') || lowerStatus.includes('cancelled') || lowerStatus.includes('archived') || statusItem?.status_type === 'closed') {
+      return 'Closed';
+    }
+    return 'Open'; // Default fallback
+  };
 
   // Only show if there are multiple instances
   if (relatedCases.length <= 1) {
@@ -109,7 +132,7 @@ export function RelatedCases({ caseId, currentInstanceNumber }: RelatedCasesProp
                     className="border"
                     style={getStatusStyle(relatedCase.status)}
                   >
-                    {relatedCase.status}
+                    {canViewExactStatus ? relatedCase.status : getStatusCategory(relatedCase.status)}
                   </Badge>
                 </div>
               </Link>
