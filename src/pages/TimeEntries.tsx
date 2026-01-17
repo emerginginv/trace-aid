@@ -820,7 +820,7 @@ const TimeEntries = () => {
                       <TableCell>{entry.user_name || "Unknown"}</TableCell>
                     )}
                     {isVisible("description") && (
-                      <TableCell className="max-w-[200px] truncate">{entry.description || "-"}</TableCell>
+                      <TableCell className="max-w-[200px] truncate font-semibold">{entry.description || "-"}</TableCell>
                     )}
                     {isVisible("hours") && (
                       <TableCell className="text-right">{entry.hours?.toFixed(1) || "-"}</TableCell>
