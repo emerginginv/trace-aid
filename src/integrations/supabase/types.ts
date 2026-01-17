@@ -1503,6 +1503,82 @@ export type Database = {
           },
         ]
       }
+      case_request_status_history: {
+        Row: {
+          case_request_id: string
+          change_reason: string | null
+          changed_at: string
+          changed_by: string | null
+          created_at: string | null
+          duration_seconds: number | null
+          entered_at: string
+          exited_at: string | null
+          from_status: string | null
+          from_status_key: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string
+          to_status: string
+          to_status_key: string | null
+        }
+        Insert: {
+          case_request_id: string
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          entered_at?: string
+          exited_at?: string | null
+          from_status?: string | null
+          from_status_key?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          to_status: string
+          to_status_key?: string | null
+        }
+        Update: {
+          case_request_id?: string
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          entered_at?: string
+          exited_at?: string | null
+          from_status?: string | null
+          from_status_key?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          to_status?: string
+          to_status_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_request_status_history_case_request_id_fkey"
+            columns: ["case_request_id"]
+            isOneToOne: false
+            referencedRelation: "case_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_request_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_request_status_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_request_subjects: {
         Row: {
           address1: string | null
@@ -2105,6 +2181,89 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "case_services_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_status_history: {
+        Row: {
+          case_id: string
+          change_reason: string | null
+          changed_at: string
+          changed_by: string | null
+          created_at: string | null
+          duration_seconds: number | null
+          entered_at: string
+          exited_at: string | null
+          from_status: string | null
+          from_status_key: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string
+          to_status: string
+          to_status_key: string | null
+        }
+        Insert: {
+          case_id: string
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          entered_at?: string
+          exited_at?: string | null
+          from_status?: string | null
+          from_status_key?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          to_status: string
+          to_status_key?: string | null
+        }
+        Update: {
+          case_id?: string
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          entered_at?: string
+          exited_at?: string | null
+          from_status?: string | null
+          from_status_key?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          to_status?: string
+          to_status_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_status_history_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_history_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases_with_budget_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_status_history_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
