@@ -55,9 +55,9 @@ const STATUS_CONFIG: Record<ActivityDisplayStatus, {
  * Derive the display status from activity data.
  * This centralizes status logic so it's not duplicated across components.
  * 
- * Status rules:
- * - TASKS: Can be to_do, in_progress, completed, cancelled (can also show overdue if past due)
- * - SCHEDULED activities: Can be scheduled, completed, cancelled (never "overdue")
+ * Status rules (STRICTLY ENFORCED):
+ * - TASKS (is_scheduled = false/null): Can ONLY be to_do, in_progress, completed, cancelled, overdue
+ * - SCHEDULED activities (is_scheduled = true): Can ONLY be scheduled, completed, cancelled
  */
 export function deriveActivityDisplayStatus(activity: {
   status?: string;
@@ -76,28 +76,34 @@ export function deriveActivityDisplayStatus(activity: {
   
   if (isComplete) return 'completed';
 
-  // Check in_progress - applies to tasks only but we show it if set
-  if (activity.status === 'in_progress') return 'in_progress';
+  // Determine if this is a SCHEDULED activity based on is_scheduled flag
+  // NOT based on status field (which may be incorrect legacy data)
+  const isScheduledActivity = activity.is_scheduled === true;
 
-  // Check if this is a SCHEDULED activity (event/appointment)
-  // Scheduled activities don't have "overdue" - they either happened or were missed
-  if (activity.is_scheduled || activity.status === 'scheduled') {
+  if (isScheduledActivity) {
+    // SCHEDULED activities: can only be scheduled, completed, cancelled
+    // We already handled completed and cancelled above
     return 'scheduled';
-  }
+  } else {
+    // TASKS: can only be to_do, in_progress, completed, cancelled (+ overdue display)
+    // Check in_progress
+    if (activity.status === 'in_progress') return 'in_progress';
 
-  // For TASKS only - check if overdue (has due date in the past and not complete)
-  if (activity.due_date) {
-    try {
-      const dueDate = parseISO(activity.due_date);
-      if (isPast(dueDate) && !isToday(dueDate)) {
-        return 'overdue';
+    // Check if overdue (has due date in the past and not complete)
+    if (activity.due_date) {
+      try {
+        const dueDate = parseISO(activity.due_date);
+        if (isPast(dueDate) && !isToday(dueDate)) {
+          return 'overdue';
+        }
+      } catch {
+        // Invalid date format, continue
       }
-    } catch {
-      // Invalid date format, continue
     }
-  }
 
-  return 'to_do';
+    // Default task status
+    return 'to_do';
+  }
 }
 
 /**
