@@ -411,28 +411,6 @@ export default function Activities() {
         showAddButton={hasPermission('add_activities')}
         addButtonLabel="Add Activity"
         onAddClick={() => handleAddActivity('task')}
-        actions={
-          hasPermission('add_activities') ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Add Scheduled
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleAddActivity('event')}>
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Scheduled Activity
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleAddActivity('task')}>
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Task
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : undefined
-        }
       />
 
       <StatCardsGrid
