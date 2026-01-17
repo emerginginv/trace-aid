@@ -36,6 +36,7 @@ import { AttachmentAccessLogDialog } from "./AttachmentAccessLogDialog";
 import { CaseAccessAuditPanel } from "./CaseAccessAuditPanel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCaseStatusActions } from "@/hooks/use-case-status-actions";
 import { ContextualHelp } from "@/components/help-center";
 
 import { ColumnVisibility } from "@/components/ui/column-visibility";
@@ -84,6 +85,7 @@ interface CaseAttachmentsProps {
   caseId: string;
   caseNumber?: string;
   isClosedCase?: boolean;
+  caseStatusKey?: string | null;
 }
 
 const COLUMNS: ColumnDefinition[] = [
@@ -96,7 +98,7 @@ const COLUMNS: ColumnDefinition[] = [
   { key: "actions", label: "Actions", hideable: false },
 ];
 
-export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false }: CaseAttachmentsProps) => {
+export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false, caseStatusKey }: CaseAttachmentsProps) => {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { logPreview } = usePreviewLogging();
@@ -104,6 +106,9 @@ export const CaseAttachments = ({ caseId, caseNumber = "", isClosedCase = false 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  
+  // Status-based action gating
+  const { canAddAttachments: canAddByStatus, isReadOnly: statusReadOnly } = useCaseStatusActions(caseStatusKey);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState<string>("all");

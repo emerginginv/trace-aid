@@ -17,6 +17,9 @@ import { toast } from "@/hooks/use-toast";
 import { FinanceFormFields } from "./FinanceFormFields";
 import { NotificationHelpers } from "@/lib/notificationHelpers";
 import { useNavigate } from "react-router-dom";
+import { useCaseStatusActions } from "@/hooks/use-case-status-actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const formSchema = z.object({
   finance_type: z.enum(["expense", "time"]),
@@ -65,15 +68,19 @@ interface FinanceFormProps {
   editingFinance?: any;
   defaultFinanceType?: "expense" | "time";
   organizationId: string;
+  caseStatusKey?: string | null;
 }
 
-export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFinance, defaultFinanceType = "expense", organizationId }: FinanceFormProps) => {
+export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFinance, defaultFinanceType = "expense", organizationId, caseStatusKey }: FinanceFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [users, setUsers] = useState<{id: string; email: string; full_name: string | null}[]>([]);
   const [caseTitle, setCaseTitle] = useState<string>("");
   const navigate = useNavigate();
+  
+  // Status-based action gating
+  const { canAddTimeEntries, canAddExpenses, restrictionReason } = useCaseStatusActions(caseStatusKey);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -326,13 +333,30 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Status-based restriction alert */}
+            {restrictionReason && !editingFinance && (
+              (defaultFinanceType === 'time' && !canAddTimeEntries) || 
+              (defaultFinanceType === 'expense' && !canAddExpenses)
+            ) && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{restrictionReason}</AlertDescription>
+              </Alert>
+            )}
+            
             <FinanceFormFields form={form} subjects={subjects} activities={activities} users={users} />
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || (!editingFinance && (
+                  (defaultFinanceType === 'time' && !canAddTimeEntries) || 
+                  (defaultFinanceType === 'expense' && !canAddExpenses)
+                ))}
+              >
                 {isSubmitting ? (editingFinance ? "Updating..." : "Adding...") : (editingFinance ? "Update Transaction" : "Add Transaction")}
               </Button>
             </div>

@@ -73,7 +73,7 @@ const TIME_COLUMNS: ColumnDefinition[] = [
   { key: "actions", label: "Actions", hideable: false },
 ];
 
-export const CaseFinances = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
+export const CaseFinances = ({ caseId, isClosedCase = false, caseStatusKey }: { caseId: string; isClosedCase?: boolean; caseStatusKey?: string | null }) => {
   const { organization } = useOrganization();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const [finances, setFinances] = useState<Finance[]>([]);

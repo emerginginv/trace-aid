@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EXPENSE_CATEGORIES } from "@/hooks/useExpenseBillingItemCreation";
 import { useStaffPricingItems } from "@/hooks/useStaffPricing";
+import { useCaseStatusActions } from "@/hooks/use-case-status-actions";
 
 interface TimeEntry {
   id: string;
@@ -63,6 +64,7 @@ interface TimeExpensesPanelProps {
   caseId: string;
   organizationId: string;
   onSaveComplete: () => void;
+  caseStatusKey?: string | null;
 }
 
 export const TimeExpensesPanel = ({
@@ -72,7 +74,14 @@ export const TimeExpensesPanel = ({
   caseId,
   organizationId,
   onSaveComplete,
+  caseStatusKey,
 }: TimeExpensesPanelProps) => {
+  // Status-based action gating
+  const { 
+    canAddTimeEntries: canAddTimeByStatus, 
+    canAddExpenses: canAddExpensesByStatus,
+    restrictionReason: statusRestrictionReason 
+  } = useCaseStatusActions(caseStatusKey);
   // Context data
   const [updateTitle, setUpdateTitle] = useState("");
   const [eventName, setEventName] = useState("");
@@ -256,13 +265,19 @@ export const TimeExpensesPanel = ({
   const expenseSubtotal = expenseEntries.reduce((sum, e) => sum + e.quantity * e.rate, 0);
   const grandTotal = timeSubtotal + expenseSubtotal;
 
-  // Determine if time entries are allowed based on budget strategy
-  // Time tracking is disabled only for 'money_only' strategy
+  // Determine if time entries are allowed based on budget strategy AND status
+  // Time tracking is disabled only for 'money_only' strategy or when status doesn't allow
   const timeEntriesEnabled = useMemo(() => {
+    // Status-based check first
+    if (!canAddTimeByStatus) return false;
+    // Then budget strategy check
     if (appliedBudgetStrategy === 'money_only') return false;
     // hours_only, both, disabled, or null all allow time entries
     return true;
-  }, [appliedBudgetStrategy]);
+  }, [appliedBudgetStrategy, canAddTimeByStatus]);
+  
+  // Expenses enabled based on status
+  const expensesEnabled = canAddExpensesByStatus;
 
   // Check if there's any data entered
   const hasData = timeEntries.length > 0 || expenseEntries.length > 0;

@@ -20,6 +20,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 // Note: Billing CTAs removed - billing now initiated only from Update Details page
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useCaseStatusActions } from "@/hooks/use-case-status-actions";
 
 interface Activity {
   id: string;
@@ -50,13 +51,23 @@ interface User {
 interface CaseActivitiesProps {
   caseId: string;
   isClosedCase?: boolean;
+  caseStatusKey?: string | null;
 }
 
 // View filter types for unified display
 type ViewFilter = "all" | "scheduled" | "unscheduled";
 
-export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesProps) {
+export function CaseActivities({ caseId, isClosedCase = false, caseStatusKey }: CaseActivitiesProps) {
   const { organization } = useOrganization();
+  
+  // Status-based action gating
+  const { 
+    canAddEvents: canAddEventsByStatus, 
+    canAddTasks: canAddTasksByStatus, 
+    canEditActivities: canEditByStatus, 
+    restrictionReason: statusRestrictionReason 
+  } = useCaseStatusActions(caseStatusKey);
+  
   const [activities, setActivities] = useState<Activity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -76,9 +87,13 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewActivities = hasPermission("view_activities");
-  const canAddActivities = hasPermission("add_activities");
-  const canEditActivities = hasPermission("edit_activities");
+  const canAddActivitiesPerm = hasPermission("add_activities");
+  const canEditActivitiesPerm = hasPermission("edit_activities");
   const canDeleteActivities = hasPermission("delete_activities");
+  
+  // Combined permission + status checks
+  const canAddActivity = canAddActivitiesPerm && (canAddEventsByStatus || canAddTasksByStatus) && !isClosedCase;
+  const canEditActivities = canEditActivitiesPerm && canEditByStatus && !isClosedCase;
 
   useEffect(() => {
     fetchUsers();
@@ -410,7 +425,8 @@ export function CaseActivities({ caseId, isClosedCase = false }: CaseActivitiesP
           </div>
           <Button 
             onClick={() => openForm("task")} 
-            disabled={!canAddActivities || isClosedCase}
+            disabled={!canAddActivity}
+            title={statusRestrictionReason || undefined}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Activity
