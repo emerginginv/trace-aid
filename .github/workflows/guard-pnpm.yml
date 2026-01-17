@@ -1,0 +1,34 @@
+name: Guard: pnpm lockfile required
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure pnpm-lock.yaml exists
+        run: |
+          if [ ! -f pnpm-lock.yaml ]; then
+            echo "❌ pnpm-lock.yaml is missing. Do not remove it."
+            exit 1
+          fi
+
+      - name: Ensure pnpm is the package manager
+        run: |
+          if grep -q '"packageManager": "npm' package.json; then
+            echo "❌ npm is not allowed. Use pnpm."
+            exit 1
+          fi
+
+      - name: Ensure no npm install usage
+        run: |
+          if grep -R "npm install" .; then
+            echo "❌ npm install detected. Use pnpm install --frozen-lockfile."
+            exit 1
+          fi
