@@ -73,13 +73,25 @@ export function CaseRequestWizard({
   const handleStep2Submit = async (data: typeof INITIAL_STEP2_DATA) => {
     updateStep2(data);
     
+    // Clear any stale subject type/editing state
+    setNewSubjectTypeId(null);
+    setEditingSubjectId(null);
+    
     // Check if we need to add a primary subject
     if (state.formData.subjects.length === 0) {
       const primarySubject = createEmptySubject(true);
       addSubject(primarySubject);
+      goNext(); // → Step 3 for primary subject entry
+    } else {
+      // Subjects already exist - skip to Step 4 (Summary)
+      goToStep(4);
     }
-    
-    goNext();
+  };
+
+  const handleStep3Back = () => {
+    setNewSubjectTypeId(null);
+    setEditingSubjectId(null);
+    goBack();
   };
 
   const handleSubjectSubmit = (data: SubjectData) => {
@@ -261,7 +273,7 @@ const caseTypeId = state.formData.step1?.case_type_id || '';
             subject={currentSubject}
             subjectTypeId={newSubjectTypeId}
             onSubmit={handleSubjectSubmit}
-            onBack={goBack}
+            onBack={handleStep3Back}
             isEditing={!!editingSubjectId}
             existingSubjects={state.formData.subjects.filter(s => s.id !== editingSubjectId)}
             onEditSubject={handleEditSubject}
