@@ -1053,9 +1053,7 @@ export function ActivityForm({
                   </Button>
                 )}
                 <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
-                  {editingActivity 
-                    ? `Update ${isScheduled ? "Event" : "Task"}` 
-                    : `Add ${isScheduled ? "Event" : "Task"}`}
+                  {editingActivity ? "Update Activity" : "Add Activity"}
                 </Button>
               </div>
             </div>
