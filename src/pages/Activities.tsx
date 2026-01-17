@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -7,12 +7,14 @@ import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { useActivitiesQuery, isScheduledActivity } from "@/hooks/queries";
 import { useViewMode } from "@/hooks/use-view-mode";
 import { useActivityEnrichment } from "@/hooks/use-enriched-data";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClipboardList, Clock, CheckCircle, Calendar, MoreVertical, Eye, ExternalLink, MapPin } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ClipboardList, Clock, CheckCircle, Calendar, MoreVertical, Eye, ExternalLink, MapPin, RefreshCw, X, Trash2 } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -26,6 +28,10 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { ActivityCard } from "@/components/shared/ActivityCard";
 import { ActivityStatusPill, deriveActivityDisplayStatus } from "@/components/shared/ActivityStatusPill";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { toast } from "sonner";
+
+const UNDO_DELAY = 5000;
 
 interface ActivityWithCase {
   id: string;
@@ -93,6 +99,7 @@ export default function Activities() {
   const { organization } = useOrganization();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const { navigateWithSource } = useNavigationSource();
+  const queryClient = useQueryClient();
 
   // Get initial type filter from URL params (for backwards compatibility with /tasks and /events redirects)
   const initialTypeFilter = searchParams.get('type') === 'task' ? 'unscheduled' 
@@ -109,6 +116,11 @@ export default function Activities() {
   const [showActivityForm, setShowActivityForm] = useState(false);
   const [activityFormType, setActivityFormType] = useState<'task' | 'event'>('task');
   const [users, setUsers] = useState<{ id: string; email: string; full_name: string | null }[]>([]);
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const pendingBulkDeletions = useRef<Map<string, { ids: string[]; timeoutId: NodeJS.Timeout }>>(new Map());
 
   // Use unified activities query
   const { data: rawActivities = [], isLoading } = useActivitiesQuery({ limit: 500 });
@@ -188,6 +200,113 @@ export default function Activities() {
       return true;
     });
   }, [enrichedActivities, statusFilter, typeFilter, searchQuery]);
+
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchQuery, statusFilter, typeFilter]);
+
+  // Check if user can perform bulk actions
+  const canBulkAction = hasPermission('edit_activities') || hasPermission('delete_activities');
+
+  // Toggle individual selection
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Toggle select all
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === filteredActivities.length && filteredActivities.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredActivities.map(a => a.id)));
+    }
+  }, [selectedIds.size, filteredActivities]);
+
+  // Bulk status change handler
+  const handleBulkStatusChange = useCallback(async (newStatus: string) => {
+    const count = selectedIds.size;
+    
+    try {
+      const { error } = await supabase
+        .from("case_activities")
+        .update({ 
+          status: newStatus,
+          ...(newStatus === 'completed' && { 
+            completed: true, 
+            completed_at: new Date().toISOString() 
+          }),
+          ...(newStatus !== 'completed' && newStatus !== 'done' && { 
+            completed: false, 
+            completed_at: null 
+          }),
+        })
+        .in("id", Array.from(selectedIds));
+      
+      if (error) throw error;
+      
+      toast.success(`Updated ${count} activit${count !== 1 ? 'ies' : 'y'} to "${STATUS_OPTIONS.find(s => s.value === newStatus)?.label || newStatus}"`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+    } catch (error) {
+      console.error("Bulk status update failed:", error);
+      toast.error("Failed to update activities.");
+    }
+  }, [selectedIds, queryClient]);
+
+  // Bulk delete handler
+  const handleBulkDeleteConfirm = useCallback(() => {
+    const idsToDelete = Array.from(selectedIds);
+    const batchKey = idsToDelete.join(',');
+    
+    setBulkDeleteDialogOpen(false);
+    
+    const count = idsToDelete.length;
+    toast(`${count} activit${count !== 1 ? 'ies' : 'y'} deleted`, {
+      description: "Click undo to restore",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const pending = pendingBulkDeletions.current.get(batchKey);
+          if (pending) {
+            clearTimeout(pending.timeoutId);
+            pendingBulkDeletions.current.delete(batchKey);
+            queryClient.invalidateQueries({ queryKey: ['activities'] });
+            toast.success("Activities restored");
+          }
+        },
+      },
+      duration: UNDO_DELAY,
+    });
+    
+    setSelectedIds(new Set());
+    
+    const timeoutId = setTimeout(async () => {
+      const { error } = await supabase
+        .from("case_activities")
+        .delete()
+        .in("id", idsToDelete);
+      
+      if (error) {
+        toast.error("Failed to delete activities.");
+      }
+      pendingBulkDeletions.current.delete(batchKey);
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+    }, UNDO_DELAY);
+    
+    pendingBulkDeletions.current.set(batchKey, {
+      ids: idsToDelete,
+      timeoutId,
+    });
+  }, [selectedIds, queryClient]);
 
   const loading = isLoading || enriching;
 
@@ -298,6 +417,55 @@ export default function Activities() {
         importEntityDisplayName="Activities"
       />
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-muted rounded-lg">
+          <span className="text-sm font-medium">
+            {selectedIds.size} activit{selectedIds.size !== 1 ? 'ies' : 'y'} selected
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {hasPermission('edit_activities') && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Change Status
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {STATUS_OPTIONS.filter(s => s.value !== 'all').map(status => (
+                    <DropdownMenuItem 
+                      key={status.value}
+                      onClick={() => handleBulkStatusChange(status.value)}
+                    >
+                      {status.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {hasPermission('delete_activities') && (
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => setBulkDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected
+              </Button>
+            )}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-48" />)}
@@ -309,6 +477,15 @@ export default function Activities() {
           <Table>
             <TableHeader>
               <TableRow>
+                {canBulkAction && (
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedIds.size === filteredActivities.length && filteredActivities.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="w-[300px]">Title</TableHead>
                 <TableHead>Case</TableHead>
                 <TableHead>Status</TableHead>
@@ -329,6 +506,15 @@ export default function Activities() {
                 
                 return (
                   <TableRow key={activity.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigateToCase(activity.cases.id)}>
+                    {canBulkAction && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(activity.id)}
+                          onCheckedChange={() => toggleSelect(activity.id)}
+                          aria-label={`Select ${activity.title}`}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
                         <div className="font-medium">{activity.title}</div>
@@ -444,6 +630,17 @@ export default function Activities() {
           organizationId={organization.id}
         />
       )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title="Delete Selected Activities"
+        description={`Are you sure you want to delete ${selectedIds.size} activit${selectedIds.size !== 1 ? 'ies' : 'y'}? This action cannot be undone.`}
+        onConfirm={handleBulkDeleteConfirm}
+        variant="destructive"
+        confirmLabel="Delete"
+      />
     </div>
   );
 }
