@@ -24,6 +24,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AIBadge } from "@/components/ui/ai-badge";
 import { AISummaryDialog } from "./AISummaryDialog";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
+import { useCaseStatusActions } from "@/hooks/use-case-status-actions";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TimelineEntry {
   time: string;
@@ -57,7 +59,14 @@ const COLUMNS: ColumnDefinition[] = [
   { key: "actions", label: "Actions", hideable: false },
 ];
 
-export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; isClosedCase?: boolean }) => {
+interface CaseUpdatesProps {
+  caseId: string;
+  caseStatusKey?: string | null;
+  /** @deprecated Use caseStatusKey instead */
+  isClosedCase?: boolean;
+}
+
+export const CaseUpdates = ({ caseId, caseStatusKey, isClosedCase = false }: CaseUpdatesProps) => {
   const navigate = useNavigate();
   const { navigateWithSource } = useNavigationSource();
   const { organization } = useOrganization();
@@ -67,6 +76,11 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
   const [editingUpdate, setEditingUpdate] = useState<Update | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+  
+  // Status-authoritative behavior
+  const statusActions = useCaseStatusActions(caseStatusKey);
+  const canAddUpdatesByStatus = statusActions.canAddUpdates;
+  const canEditUpdatesByStatus = statusActions.canEditUpdates;
   
   // AI Summary selection state
   const [selectedUpdateIds, setSelectedUpdateIds] = useState<Set<string>>(new Set());
@@ -81,9 +95,12 @@ export const CaseUpdates = ({ caseId, isClosedCase = false }: { caseId: string; 
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const canViewUpdates = hasPermission("view_updates");
-  const canAddUpdates = hasPermission("add_updates");
+  const canAddUpdatesPermission = hasPermission("add_updates");
   const canEditUpdates = hasPermission("edit_updates");
   const canDeleteUpdates = hasPermission("delete_updates");
+  
+  // Combined status + permission check
+  const canAddUpdates = canAddUpdatesPermission && canAddUpdatesByStatus;
 
   const { visibility, isVisible, toggleColumn, resetToDefaults } = useColumnVisibility("case-updates-columns", COLUMNS);
 
