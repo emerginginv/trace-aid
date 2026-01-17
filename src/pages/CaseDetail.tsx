@@ -51,6 +51,7 @@ interface Case {
   title: string;
   description: string | null;
   status: string;
+  status_key: string | null; // Canonical status key from case_lifecycle_statuses
   account_id: string | null;
   contact_id: string | null;
   due_date: string | null;
@@ -798,7 +799,7 @@ const CaseDetail = () => {
 
             {/* Updates Tab */}
             <TabsContent value="updates" className="mt-0">
-              <CaseUpdates caseId={id!} isClosedCase={isClosed} />
+              <CaseUpdates caseId={id!} caseStatusKey={caseData?.status_key} />
             </TabsContent>
 
             {/* Activities Tab */}
