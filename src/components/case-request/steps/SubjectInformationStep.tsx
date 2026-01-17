@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { US_STATES } from "@/components/case-detail/subjects/types";
 import { SubjectData, createEmptySubject } from "@/hooks/useCaseRequestForm";
 import { CaseRequestFormConfig, isFieldVisible } from "@/types/case-request-form-config";
-import { Loader2, ArrowLeft, User, Upload, X } from "lucide-react";
+import { Loader2, ArrowLeft, User, Upload, X, Edit2, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -57,6 +58,9 @@ interface SubjectInformationStepProps {
   onSubmit: (data: SubjectData) => void;
   onBack: () => void;
   isEditing?: boolean;
+  existingSubjects?: SubjectData[];
+  onEditSubject?: (subjectId: string) => void;
+  onRemoveSubject?: (subjectId: string) => void;
 }
 
 export function SubjectInformationStep({
@@ -68,6 +72,9 @@ export function SubjectInformationStep({
   onSubmit,
   onBack,
   isEditing = false,
+  existingSubjects = [],
+  onEditSubject,
+  onRemoveSubject,
 }: SubjectInformationStepProps) {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(subject?.photo_url || null);
@@ -227,8 +234,93 @@ export function SubjectInformationStep({
     );
   }
 
+  // Helper to get subject type name
+  const getSubjectTypeName = (subjectTypeId: string | null) => {
+    if (!subjectTypeId || !subjectTypes) return 'Subject';
+    const type = subjectTypes.find(t => t.id === subjectTypeId);
+    return type?.name || 'Subject';
+  };
+
+  // Helper to get display name for a subject
+  const getSubjectDisplayName = (s: SubjectData) => {
+    const parts = [s.first_name, s.middle_name, s.last_name].filter(Boolean);
+    return parts.length > 0 ? parts.join(' ') : 'Unnamed Subject';
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Existing Subjects List */}
+      {existingSubjects.length > 0 && !isEditing && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium">
+              Added Subjects ({existingSubjects.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              {existingSubjects.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {s.photo_url ? (
+                      <img
+                        src={s.photo_url}
+                        alt={getSubjectDisplayName(s)}
+                        className="h-10 w-10 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                        <User className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">{getSubjectDisplayName(s)}</span>
+                        <Badge variant="outline" className="text-xs flex-shrink-0">
+                          {getSubjectTypeName(s.subject_type_id)}
+                        </Badge>
+                        {s.is_primary && (
+                          <Badge variant="secondary" className="text-xs flex-shrink-0">Primary</Badge>
+                        )}
+                      </div>
+                      {s.email && (
+                        <p className="text-sm text-muted-foreground truncate">{s.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {onEditSubject && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditSubject(s.id)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onRemoveSubject && !s.is_primary && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => onRemoveSubject(s.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
