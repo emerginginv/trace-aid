@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Phone, Building2, MapPin, CheckCircle2, ArrowRight } from "lucide-react";
+import { DelayedTooltip } from "@/components/ui/tooltip";
 
 interface RequestStatusPanelProps {
   status: string;
@@ -45,6 +46,18 @@ export function RequestStatusPanel({
   ].filter(Boolean).join(' • ');
 
   const isApproved = status.toLowerCase() === 'approved' && approvedCaseId;
+  const isDeclined = status.toLowerCase() === 'declined';
+  const isPending = status.toLowerCase() === 'pending';
+
+  // Status tooltips
+  const getStatusTooltip = () => {
+    if (isPending) return "This request is awaiting review by staff";
+    if (isApproved) return "This request was converted to an active case";
+    if (isDeclined) return "This request was rejected without creating a case";
+    return null;
+  };
+
+  const statusTooltip = getStatusTooltip();
 
   return (
     <Card>
@@ -53,7 +66,15 @@ export function RequestStatusPanel({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-3">
-          <StatusBadge status={status} showPulse={status.toLowerCase() === 'pending'} />
+          {statusTooltip ? (
+            <DelayedTooltip content={statusTooltip}>
+              <div>
+                <StatusBadge status={status} showPulse={isPending} />
+              </div>
+            </DelayedTooltip>
+          ) : (
+            <StatusBadge status={status} showPulse={isPending} />
+          )}
         </div>
 
         <div className="text-sm text-muted-foreground">
@@ -83,6 +104,9 @@ export function RequestStatusPanel({
                     View Case
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
+                  <p className="text-xs text-green-600 dark:text-green-500 mt-2">
+                    This request has been converted to a case. All further work should be done in the case record.
+                  </p>
                 </div>
               </div>
             </div>
