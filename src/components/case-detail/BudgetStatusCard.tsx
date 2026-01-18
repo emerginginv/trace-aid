@@ -282,12 +282,12 @@ export function BudgetStatusCard({
           </div>
         )}
 
-        {/* Dual Progress Circles - Side by Side */}
-        <div className={`flex items-center ${showBothCircles ? 'justify-center gap-6' : 'justify-center'}`}>
+        {/* Dual Progress Circles - Stacked on mobile, side by side on larger screens */}
+        <div className={`flex items-center flex-col xs:flex-row ${showBothCircles ? 'justify-center gap-4 xs:gap-6' : 'justify-center'}`}>
           {/* Hours Donut */}
           {hasHoursBudget && summary && (
             <div className="flex flex-col items-center">
-              <div className={`relative w-24 h-24 ${hoursUtilization >= 100 ? "animate-pulse" : ""}`}>
+              <div className={`relative w-20 h-20 xs:w-24 xs:h-24 ${hoursUtilization >= 100 ? "animate-pulse" : ""}`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -326,7 +326,7 @@ export function BudgetStatusCard({
           {/* Dollars Donut */}
           {hasDollarsBudget && summary && (
             <div className="flex flex-col items-center">
-              <div className={`relative w-24 h-24 ${dollarsUtilization >= 100 ? "animate-pulse" : ""}`}>
+              <div className={`relative w-20 h-20 xs:w-24 xs:h-24 ${dollarsUtilization >= 100 ? "animate-pulse" : ""}`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -389,7 +389,7 @@ export function BudgetStatusCard({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col xs:flex-row gap-2 pt-2">
           {canModifyBudget && (
             <BudgetSetupForm
               caseId={caseId}
