@@ -834,18 +834,18 @@ const Cases = () => {
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {hasPermission('edit_cases') && canViewExactStatus ? (
                           <InlineEditCell
-                            value={caseItem.status_key || ''}
+                            value={caseItem.status_key || caseItem.status || ''}
                             options={statusOptions}
                             type="select"
                             onSave={(newValue) => handleInlineStatusChange(caseItem.id, newValue)}
                             displayAs="badge"
-                            badgeStyle={getStatusStyle(caseItem.status_key)}
+                            badgeStyle={getStatusStyle(caseItem.status_key || caseItem.status)}
                           />
                         ) : (
-                          <Badge className="border" style={getStatusStyle(caseItem.status_key)}>
+                          <Badge className="border" style={getStatusStyle(caseItem.status_key || caseItem.status)}>
                             {canViewExactStatus 
-                              ? (getDisplayName(caseItem.status_key || '') || caseItem.status)
-                              : (getStatusByKey(caseItem.status_key || '')?.phase || caseItem.status)
+                              ? (getDisplayName(caseItem.status_key || '') || caseItem.status || 'Unknown')
+                              : (getStatusByKey(caseItem.status_key || '')?.phase || caseItem.status || 'Unknown')
                             }
                           </Badge>
                         )}
