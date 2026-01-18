@@ -6,6 +6,8 @@ import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   ArrowLeft,
   User,
@@ -44,7 +46,6 @@ import {
   SocialMediaLinksWidget,
   LinkedEntitiesPanel,
 } from "@/components/case-detail/subjects";
-import { CoverImageUpload } from "@/components/case-detail/subjects/CoverImageUpload";
 import { logSubjectAudit } from "@/lib/subjectAuditLogger";
 
 const getCategoryIcon = (category: SubjectCategory) => {
@@ -99,189 +100,206 @@ const getStateLabel = (value: string | null | undefined): string => {
   return state?.label || value;
 };
 
-const SubjectDetail = () => {
-  const { caseId, subjectId } = useParams();
+interface SubjectType {
+  id: string;
+  name: string;
+  category: SubjectCategory;
+}
+
+export default function SubjectDetail() {
+  const { subjectId, caseId } = useParams<{ subjectId: string; caseId?: string }>();
   const navigate = useNavigate();
-  const { getBackRoute } = useNavigationSource();
+  const { getBackPath } = useNavigationSource();
+  const setBreadcrumbs = useSetBreadcrumbs();
+
   const [subject, setSubject] = useState<Subject | null>(null);
-  const [caseInfo, setCaseInfo] = useState<{ title: string; case_number: string } | null>(null);
-  const [signedImageUrl, setSignedImageUrl] = useState<string | null>(null);
-  const [signedCoverUrl, setSignedCoverUrl] = useState<string | null>(null);
+  const [subjectType, setSubjectType] = useState<SubjectType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [imageModalOpen, setImageModalOpen] = useState(false);
-  const [coverModalOpen, setCoverModalOpen] = useState(false);
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  
-  // Calculate fallback route and context-aware back route
-  const fallbackRoute = `/cases/${caseId}?tab=subjects`;
-  const backRoute = getBackRoute(fallbackRoute);
-
-  useSetBreadcrumbs(
-    subject && caseInfo
-      ? [
-          { label: "Cases", href: "/cases" },
-          { label: caseInfo.case_number, href: `/cases/${caseId}` },
-          { label: "Subjects", href: `/cases/${caseId}?tab=subjects` },
-          { label: subject.display_name || subject.name },
-        ]
-      : []
-  );
+  const [signedProfileUrl, setSignedProfileUrl] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [caseName, setCaseName] = useState<string>("");
+  const [caseNumber, setCaseNumber] = useState<string>("");
 
   useEffect(() => {
-    fetchSubjectDetails();
-  }, [subjectId, caseId]);
+    if (subjectId) {
+      loadSubject();
+    }
+  }, [subjectId]);
 
   useEffect(() => {
-    if (subject?.profile_image_url) {
-      generateSignedUrl(subject.profile_image_url, 'profile');
+    if (subject?.case_id) {
+      loadCaseInfo();
     }
-    if (subject?.cover_image_url) {
-      generateSignedUrl(subject.cover_image_url, 'cover');
-    }
-  }, [subject?.profile_image_url, subject?.cover_image_url]);
+  }, [subject?.case_id]);
 
-  const generateSignedUrl = async (filePath: string, type: 'profile' | 'cover') => {
+  useEffect(() => {
+    if (subject && caseName) {
+      const displayName = getDisplayName();
+      setBreadcrumbs([
+        { label: "Cases", href: "/cases" },
+        { label: caseNumber || caseName, href: `/cases/${subject.case_id}` },
+        { label: "Subjects", href: `/cases/${subject.case_id}` },
+        { label: displayName },
+      ]);
+    }
+  }, [subject, caseName, caseNumber, setBreadcrumbs]);
+
+  const loadSubject = async () => {
+    if (!subjectId) return;
+
+    setLoading(true);
     try {
-      if (filePath.includes('?token=')) {
-        if (type === 'profile') {
-          setSignedImageUrl(filePath);
-        } else {
-          setSignedCoverUrl(filePath);
-        }
-        return;
-      }
-      
-      let path = filePath;
-      if (filePath.includes('/storage/v1/object/')) {
-        const match = filePath.match(/\/storage\/v1\/object\/(?:public|sign)\/([^?]+)/);
-        if (match) path = match[1];
-      }
-      
-      if (path.startsWith('subject-profile-images/')) {
-        path = path.replace('subject-profile-images/', '');
-      }
-      
-      const { data, error } = await supabase.storage
-        .from('subject-profile-images')
-        .createSignedUrl(path, 3600);
-      
-      if (error) throw error;
-      
-      if (type === 'profile') {
-        setSignedImageUrl(data.signedUrl);
-      } else {
-        setSignedCoverUrl(data.signedUrl);
-      }
-    } catch (error) {
-      console.error(`Error generating signed URL for ${type}:`, error);
-    }
-  };
-
-  const fetchSubjectDetails = async () => {
-    try {
-      if (!caseId || !subjectId) return;
-
-      const { data: subjectData, error: subjectError } = await supabase
+      const { data, error } = await supabase
         .from("case_subjects")
         .select("*")
         .eq("id", subjectId)
-        .eq("case_id", caseId)
         .single();
 
-      if (subjectError) throw subjectError;
-      
-      const typedSubject: Subject = {
-        ...subjectData,
-        details: (subjectData.details as Record<string, any>) || {},
-        subject_type: subjectData.subject_type as SubjectCategory,
-        status: subjectData.status as 'active' | 'archived',
-      };
-      setSubject(typedSubject);
+      if (error) throw error;
 
-      const { data: caseData, error: caseError } = await supabase
-        .from("cases")
-        .select("title, case_number")
-        .eq("id", caseId)
-        .single();
+      setSubject(data);
 
-      if (caseError) throw caseError;
-      setCaseInfo(caseData);
+      // Load subject type info
+      if (data.subject_type_id) {
+        const { data: typeData } = await supabase
+          .from("subject_types")
+          .select("id, name, category")
+          .eq("id", data.subject_type_id)
+          .single();
+        
+        if (typeData) {
+          setSubjectType(typeData);
+        }
+      }
+
+      // Generate signed URL for profile image
+      if (data.profile_image_url) {
+        try {
+          if (data.profile_image_url.startsWith('data:') || 
+              data.profile_image_url.startsWith('http://') || 
+              data.profile_image_url.startsWith('https://')) {
+            setSignedProfileUrl(data.profile_image_url);
+          } else {
+            let filePath = data.profile_image_url;
+            if (filePath.includes('subject-profile-images/')) {
+              filePath = filePath.split('subject-profile-images/').pop() || filePath;
+            }
+            const { data: signedData } = await supabase.storage
+              .from('subject-profile-images')
+              .createSignedUrl(filePath, 3600);
+            if (signedData?.signedUrl) {
+              setSignedProfileUrl(signedData.signedUrl);
+            }
+          }
+        } catch (err) {
+          console.error('Error generating signed URL:', err);
+        }
+      }
     } catch (error) {
-      toast.error("Error loading subject details");
-      console.error(error);
+      console.error("Error loading subject:", error);
+      toast.error("Failed to load subject");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleArchive = async () => {
-    if (!subject) return;
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const previousValues = { status: subject.status, archived_at: subject.archived_at, archived_by: subject.archived_by };
-
-      const { error } = await supabase
-        .from('case_subjects')
-        .update({
-          status: 'archived',
-          archived_at: new Date().toISOString(),
-          archived_by: user.id,
-        })
-        .eq('id', subject.id);
-
-      if (error) throw error;
-
-      // Log audit for archive action
-      await logSubjectAudit({
-        subject_id: subject.id,
-        case_id: caseId!,
-        organization_id: subject.organization_id,
-        action: 'archived',
-        previous_values: previousValues,
-        new_values: { status: 'archived', archived_at: new Date().toISOString(), archived_by: user.id },
-      });
-
-      toast.success('Subject archived');
-      fetchSubjectDetails();
-    } catch (error) {
-      toast.error('Failed to archive subject');
-      console.error(error);
+  const loadCaseInfo = async () => {
+    if (!subject?.case_id) return;
+    
+    const { data, error } = await supabase
+      .from("cases")
+      .select("name, case_number")
+      .eq("id", subject.case_id)
+      .single();
+    
+    if (data) {
+      setCaseName(data.name);
+      setCaseNumber(data.case_number || "");
     }
   };
 
-  const handleUnarchive = async () => {
+  const handleArchiveToggle = async () => {
     if (!subject) return;
-    try {
-      const previousValues = { status: subject.status, archived_at: subject.archived_at, archived_by: subject.archived_by };
 
+    const newArchivedState = !subject.archived;
+
+    try {
       const { error } = await supabase
-        .from('case_subjects')
-        .update({
-          status: 'active',
-          archived_at: null,
-          archived_by: null,
-        })
-        .eq('id', subject.id);
+        .from("case_subjects")
+        .update({ archived: newArchivedState })
+        .eq("id", subject.id);
 
       if (error) throw error;
 
-      // Log audit for restore action
       await logSubjectAudit({
-        subject_id: subject.id,
-        case_id: caseId!,
-        organization_id: subject.organization_id,
-        action: 'restored',
-        previous_values: previousValues,
-        new_values: { status: 'active', archived_at: null, archived_by: null },
+        subjectId: subject.id,
+        caseId: subject.case_id,
+        action: newArchivedState ? 'archive' : 'unarchive',
+        fieldName: 'archived',
+        oldValue: String(!newArchivedState),
+        newValue: String(newArchivedState),
       });
 
-      toast.success('Subject unarchived');
-      fetchSubjectDetails();
+      setSubject({ ...subject, archived: newArchivedState });
+      toast.success(newArchivedState ? "Subject archived" : "Subject unarchived");
     } catch (error) {
-      toast.error('Failed to unarchive subject');
-      console.error(error);
+      console.error("Error toggling archive status:", error);
+      toast.error("Failed to update archive status");
+    }
+  };
+
+  const handleDrawerClose = () => {
+    setIsDrawerOpen(false);
+    loadSubject();
+  };
+
+  const getDisplayName = (): string => {
+    if (!subject) return "Subject";
+    const category = subjectType?.category || 'person';
+
+    switch (category) {
+      case 'person':
+        const nameParts = [subject.first_name, subject.middle_name, subject.last_name].filter(Boolean);
+        return nameParts.length > 0 ? nameParts.join(' ') : 'Unnamed Person';
+      case 'vehicle':
+        const vehicleParts = [subject.vehicle_year, subject.vehicle_make, subject.vehicle_model].filter(Boolean);
+        return vehicleParts.length > 0 ? vehicleParts.join(' ') : 'Unnamed Vehicle';
+      case 'location':
+        return subject.location_name || subject.address1 || 'Unnamed Location';
+      case 'item':
+        return subject.item_description || 'Unnamed Item';
+      default:
+        return 'Subject';
+    }
+  };
+
+  const getQuickInfo = (): string | null => {
+    if (!subject) return null;
+    const category = subjectType?.category || 'person';
+    
+    if (category === 'person' && subject.date_of_birth) {
+      return format(new Date(subject.date_of_birth), "MMM d, yyyy");
+    } else if (category === 'vehicle' && subject.vehicle_license_plate) {
+      return subject.vehicle_license_plate;
+    } else if (category === 'location') {
+      const parts = [subject.city, subject.state].filter(Boolean);
+      return parts.length > 0 ? parts.join(", ") : null;
+    } else if (category === 'item') {
+      const parts = [subject.item_brand, subject.item_model].filter(Boolean);
+      return parts.length > 0 ? parts.join(" ") : null;
+    }
+    return null;
+  };
+
+  const handleBackClick = () => {
+    const backPath = getBackPath();
+    if (backPath) {
+      navigate(backPath);
+    } else if (subject?.case_id) {
+      navigate(`/cases/${subject.case_id}`);
+    } else {
+      navigate("/cases");
     }
   };
 
@@ -291,419 +309,340 @@ const SubjectDetail = () => {
 
   if (!subject) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(backRoute)}>
+      <div className="container mx-auto py-8 px-4">
+        <Card className="p-8 text-center">
+          <h2 className="text-xl font-semibold mb-2">Subject not found</h2>
+          <p className="text-muted-foreground mb-4">The subject you're looking for doesn't exist or has been removed.</p>
+          <Button onClick={handleBackClick}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            Go Back
           </Button>
-        </div>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Subject not found</p>
-          </CardContent>
         </Card>
       </div>
     );
   }
 
-  const Icon = getCategoryIcon(subject.subject_type);
-  const isArchived = subject.status === 'archived';
-  const details = subject.details || {};
+  const category = subjectType?.category || 'person';
+  const CategoryIcon = getCategoryIcon(category);
+  const displayName = getDisplayName();
+  const quickInfo = getQuickInfo();
+
+  const formatAddress = () => {
+    const parts = [
+      subject.address1,
+      subject.address2,
+      subject.address3,
+      [subject.city, getStateLabel(subject.state)].filter(Boolean).join(", "),
+      subject.zip,
+      subject.country
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : null;
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Header Actions */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => navigate(backRoute)}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <div className="flex items-center gap-2">
-          {isArchived ? (
-            <Button variant="outline" onClick={handleUnarchive}>
-              <ArchiveRestore className="w-4 h-4 mr-2" />
-              Unarchive
+    <div className="container mx-auto py-6 px-4 space-y-6">
+      {/* Hero Header - Matching ContactDetail design */}
+      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-secondary/5 via-background to-primary/5">
+        <div className="absolute inset-0 bg-grid-primary/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
+        <div className="relative p-6 md:p-8">
+          {/* Navigation */}
+          <div className="flex items-center justify-between mb-6">
+            <Button variant="ghost" size="sm" onClick={handleBackClick} className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
-          ) : (
-            <Button variant="outline" onClick={handleArchive}>
-              <Archive className="w-4 h-4 mr-2" />
-              Archive
-            </Button>
-          )}
-          {!isArchived && (
-            <Button onClick={() => setEditDrawerOpen(true)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit {SUBJECT_CATEGORY_SINGULAR[subject.subject_type]}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Hero Section */}
-      <Card className="overflow-hidden">
-        <div className="relative">
-          <div className="h-48 relative overflow-hidden">
-            <CoverImageUpload
-              subjectId={subject.id}
-              currentCoverUrl={subject.cover_image_url}
-              signedCoverUrl={signedCoverUrl}
-              onCoverChange={async (url) => {
-                setSubject(prev => prev ? { ...prev, cover_image_url: url } : null);
-                if (url) {
-                  // Clear old signed URL first to show loading state
-                  setSignedCoverUrl(null);
-                  // Generate new signed URL
-                  await generateSignedUrl(url, 'cover');
-                } else {
-                  setSignedCoverUrl(null);
-                }
-              }}
-              onImageClick={signedCoverUrl ? () => setCoverModalOpen(true) : undefined}
-              readOnly={isArchived}
-            />
-          </div>
-          
-          <div className="absolute -bottom-16 left-8">
-            {signedImageUrl ? (
-              <div 
-                className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-card shadow-xl bg-card cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
-                onClick={() => setImageModalOpen(true)}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleArchiveToggle}
+                className="gap-2"
               >
-                <img
-                  src={signedImageUrl}
-                  alt={subject.display_name || subject.name}
-                  className="w-full h-full object-cover"
-                />
+                {subject.archived ? (
+                  <>
+                    <ArchiveRestore className="w-4 h-4" />
+                    <span className="hidden sm:inline">Unarchive</span>
+                  </>
+                ) : (
+                  <>
+                    <Archive className="w-4 h-4" />
+                    <span className="hidden sm:inline">Archive</span>
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDrawerOpen(true)}
+                className="gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                <span className="hidden sm:inline">Edit</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Subject Info */}
+          <div className="flex flex-col md:flex-row md:items-start gap-6">
+            {/* Avatar */}
+            <Avatar 
+              className="w-16 h-16 md:w-20 md:h-20 ring-4 ring-background shadow-xl cursor-pointer hover:ring-primary/20 transition-all"
+              onClick={() => signedProfileUrl && setIsProfileModalOpen(true)}
+            >
+              {signedProfileUrl ? (
+                <AvatarImage src={signedProfileUrl} alt={displayName} className="object-cover" />
+              ) : null}
+              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary text-xl md:text-2xl font-semibold">
+                {category === 'person' ? (
+                  getInitials(displayName) || <User className="w-8 h-8" />
+                ) : (
+                  <CategoryIcon className="w-8 h-8" />
+                )}
+              </AvatarFallback>
+            </Avatar>
+
+            {/* Details */}
+            <div className="flex-1 min-w-0 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">
+                  {displayName}
+                </h1>
+                {subject.is_primary && (
+                  <Badge variant="default" className="shrink-0">Primary</Badge>
+                )}
+                {subject.archived && (
+                  <Badge variant="secondary" className="shrink-0">Archived</Badge>
+                )}
               </div>
-            ) : subject.subject_type === 'person' ? (
-              <div className="w-32 h-32 rounded-2xl border-4 border-card shadow-xl bg-muted flex items-center justify-center">
-                <span className="text-3xl font-bold text-muted-foreground">
-                  {getInitials(subject.display_name || subject.name)}
+
+              {/* Quick Info & Badges */}
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                {subjectType && (
+                  <Badge variant="outline" className="gap-1 capitalize">
+                    <CategoryIcon className="w-3 h-3" />
+                    {subjectType.name}
+                  </Badge>
+                )}
+                {category === 'person' && subject.role && (
+                  <Badge variant="secondary" className="capitalize">{getRoleLabel(subject.role)}</Badge>
+                )}
+                {category === 'vehicle' && subject.vehicle_body_style && (
+                  <Badge variant="secondary" className="capitalize">{getVehicleTypeLabel(subject.vehicle_body_style)}</Badge>
+                )}
+                {category === 'location' && subject.location_type && (
+                  <Badge variant="secondary" className="capitalize">{getLocationTypeLabel(subject.location_type)}</Badge>
+                )}
+                {category === 'item' && subject.item_type && (
+                  <Badge variant="secondary" className="capitalize">{getItemTypeLabel(subject.item_type)}</Badge>
+                )}
+                {quickInfo && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {quickInfo}
+                  </span>
+                )}
+              </div>
+
+              {/* Timestamps */}
+              <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Created: {format(new Date(subject.created_at), "MMM d, yyyy")}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Updated: {format(new Date(subject.updated_at), "MMM d, yyyy")}
                 </span>
               </div>
-            ) : (
-              <div className="w-32 h-32 rounded-2xl border-4 border-card shadow-xl bg-muted flex items-center justify-center">
-                <Icon className="h-14 w-14 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-
-          <div className="absolute top-4 right-4 flex items-center gap-2">
-            <Badge variant="outline" className="bg-card/80 backdrop-blur-sm">
-              {SUBJECT_CATEGORY_SINGULAR[subject.subject_type]}
-            </Badge>
-            {subject.is_primary && (
-              <Badge className="bg-primary text-white">
-                Primary
-              </Badge>
-            )}
-            {isArchived && (
-              <Badge variant="destructive">
-                Archived
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        <div className="pt-20 pb-6 px-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {subject.display_name || subject.name}
-              </h1>
-              {subject.subject_type === 'person' && subject.role && (
-                <Badge variant="outline" className="mt-2">
-                  {getRoleLabel(subject.role)}
-                </Badge>
-              )}
-              {subject.subject_type === 'vehicle' && details.vehicle_type && (
-                <Badge variant="outline" className="mt-2">
-                  {getVehicleTypeLabel(details.vehicle_type)}
-                </Badge>
-              )}
-              {subject.subject_type === 'location' && details.location_type && (
-                <Badge variant="outline" className="mt-2">
-                  {getLocationTypeLabel(details.location_type)}
-                </Badge>
-              )}
-              {subject.subject_type === 'item' && details.item_type && (
-                <Badge variant="outline" className="mt-2">
-                  {getItemTypeLabel(details.item_type)}
-                </Badge>
-              )}
-            </div>
-            <div className="text-right text-sm text-muted-foreground space-y-1">
-              <p className="flex items-center gap-1 justify-end">
-                <Calendar className="h-3.5 w-3.5" />
-                Created {format(new Date(subject.created_at), 'MMM d, yyyy')}
-              </p>
-              <p className="flex items-center gap-1 justify-end">
-                <Clock className="h-3.5 w-3.5" />
-                Updated {format(new Date(subject.updated_at), 'MMM d, yyyy')}
-              </p>
             </div>
           </div>
         </div>
-      </Card>
-
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* PERSON Details */}
-        {subject.subject_type === 'person' && (
-          <>
-            {/* Core Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Core Information</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y divide-border">
-                <SubjectDetailField icon={User} label="Full Name" value={subject.display_name || subject.name} />
-                <SubjectDetailField icon={Tag} label="Role" value={getRoleLabel(subject.role)} />
-                <SubjectDetailField icon={Calendar} label="Date of Birth" value={details.date_of_birth ? format(new Date(details.date_of_birth), 'MMMM d, yyyy') : null} />
-                {details.aliases && details.aliases.length > 0 ? (
-                  <div className="flex items-start gap-3 py-3">
-                    <div className="flex-shrink-0 mt-0.5">
-                      <Tag className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground">Aliases</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {details.aliases.map((alias: string, i: number) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {alias}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <SubjectDetailField icon={Tag} label="Aliases" value={null} />
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Physical Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Physical Description</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y divide-border">
-                <SubjectDetailField icon={Ruler} label="Height" value={details.height} />
-                <SubjectDetailField icon={Weight} label="Weight" value={details.weight} />
-                <SubjectDetailField icon={Palette} label="Hair Color" value={details.hair_color} />
-                <SubjectDetailField icon={Palette} label="Eye Color" value={details.eye_color} />
-                <SubjectDetailField icon={FileText} label="Identifying Marks" value={details.identifying_marks} />
-              </CardContent>
-            </Card>
-
-            {/* Social Media Links */}
-            <SocialMediaLinksWidget
-              subjectId={subject.id}
-              organizationId={subject.organization_id}
-              readOnly={isArchived}
-            />
-
-            {/* Linked Entities */}
-            <LinkedEntitiesPanel
-              subjectId={subject.id}
-              caseId={caseId!}
-              organizationId={subject.organization_id}
-              subjectType={subject.subject_type}
-            />
-          </>
-        )}
-
-        {/* VEHICLE Details */}
-        {subject.subject_type === 'vehicle' && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Vehicle Information</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y divide-border">
-                <SubjectDetailField icon={Car} label="Vehicle Type" value={getVehicleTypeLabel(details.vehicle_type)} />
-                <SubjectDetailField icon={Calendar} label="Year" value={details.year} />
-                <SubjectDetailField icon={Car} label="Make" value={details.make} />
-                <SubjectDetailField icon={Car} label="Model" value={details.model} />
-                <SubjectDetailField icon={Palette} label="Color" value={details.color} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Registration</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y divide-border">
-                <SubjectDetailField icon={Hash} label="License Plate" value={details.license_plate} />
-                <SubjectDetailField icon={MapPin} label="State" value={getStateLabel(details.state)} />
-                <SubjectDetailField icon={Hash} label="VIN" value={details.vin} />
-                <SubjectDetailField icon={User} label="Registered Owner" value={details.registered_owner} />
-              </CardContent>
-            </Card>
-
-            <LinkedEntitiesPanel
-              subjectId={subject.id}
-              caseId={caseId!}
-              organizationId={subject.organization_id}
-              subjectType={subject.subject_type}
-            />
-          </>
-        )}
-
-        {/* LOCATION Details */}
-        {subject.subject_type === 'location' && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Location Information</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y divide-border">
-                <SubjectDetailField icon={MapPin} label="Location Name" value={subject.display_name || subject.name} />
-                <SubjectDetailField icon={Tag} label="Location Type" value={getLocationTypeLabel(details.location_type)} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Address</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y divide-border">
-                <SubjectDetailField icon={MapPin} label="Street" value={details.street} />
-                <SubjectDetailField icon={Building2} label="City" value={details.city} />
-                <SubjectDetailField icon={MapPin} label="State" value={getStateLabel(details.state)} />
-                <SubjectDetailField icon={Hash} label="Zip Code" value={details.zip} />
-                {(details.latitude || details.longitude) && (
-                  <SubjectDetailField 
-                    icon={Globe} 
-                    label="Coordinates" 
-                    value={details.latitude && details.longitude ? `${details.latitude}, ${details.longitude}` : null} 
-                  />
-                )}
-              </CardContent>
-            </Card>
-
-            <LinkedEntitiesPanel
-              subjectId={subject.id}
-              caseId={caseId!}
-              organizationId={subject.organization_id}
-              subjectType={subject.subject_type}
-            />
-          </>
-        )}
-
-        {/* ITEM Details */}
-        {subject.subject_type === 'item' && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Item Information</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y divide-border">
-                <SubjectDetailField icon={Package} label="Item Name" value={subject.display_name || subject.name} />
-                <SubjectDetailField icon={Tag} label="Item Type" value={getItemTypeLabel(details.item_type)} />
-                <SubjectDetailField icon={FileText} label="Description" value={details.description} />
-                <SubjectDetailField icon={Tag} label="Brand" value={details.brand} />
-                <SubjectDetailField icon={Tag} label="Model" value={details.model} />
-                <SubjectDetailField icon={Palette} label="Color" value={details.color} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Identifiers</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y divide-border">
-                <SubjectDetailField icon={Hash} label="Serial Number" value={details.serial_number} />
-                <SubjectDetailField icon={Ruler} label="Dimensions" value={details.dimensions} />
-                <SubjectDetailField icon={FileText} label="Condition" value={details.condition} />
-                <SubjectDetailField 
-                  icon={FileText} 
-                  label="Evidence Reference" 
-                  value={details.evidence_reference}
-                  isLink={!!details.evidence_reference}
-                  href={details.evidence_reference}
-                />
-              </CardContent>
-            </Card>
-
-            <LinkedEntitiesPanel
-              subjectId={subject.id}
-              caseId={caseId!}
-              organizationId={subject.organization_id}
-              subjectType={subject.subject_type}
-            />
-          </>
-        )}
-
-        {/* Notes Card - All types */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-lg">Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {subject.notes ? (
-              <p className="text-foreground whitespace-pre-wrap">{subject.notes}</p>
-            ) : (
-              <p className="text-muted-foreground/60 italic">No notes added</p>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Case Info Card */}
-      {caseInfo && (
+      {/* Associated Case Card */}
+      {subject.case_id && caseName && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Associated Case</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Associated Case
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <Link
-              to={`/cases/${caseId}`}
-              className="flex items-center gap-3 text-primary hover:underline"
+            <Link 
+              to={`/cases/${subject.case_id}`}
+              className="text-primary hover:underline font-medium"
             >
-              <FileText className="h-5 w-5" />
-              <div>
-                <p className="font-medium">{caseInfo.case_number}</p>
-                <p className="text-sm text-muted-foreground">{caseInfo.title}</p>
-              </div>
+              {caseNumber && `${caseNumber} - `}{caseName}
             </Link>
           </CardContent>
         </Card>
       )}
 
-      {/* Image Modal */}
-      <ProfileImageModal
-        isOpen={imageModalOpen}
-        onClose={() => setImageModalOpen(false)}
-        imageUrl={signedImageUrl}
-        alt={subject?.display_name || subject?.name || "Profile image"}
-      />
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Core Information Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CategoryIcon className="w-4 h-4" />
+                {category === 'person' ? 'Core Information' : 
+                 category === 'vehicle' ? 'Vehicle Information' :
+                 category === 'location' ? 'Location Information' : 'Item Information'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {category === 'person' && (
+                <>
+                  <SubjectDetailField icon={<User className="w-4 h-4" />} label="First Name" value={subject.first_name} />
+                  <SubjectDetailField icon={<User className="w-4 h-4" />} label="Middle Name" value={subject.middle_name} />
+                  <SubjectDetailField icon={<User className="w-4 h-4" />} label="Last Name" value={subject.last_name} />
+                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Alias" value={subject.alias} />
+                  <SubjectDetailField icon={<FileText className="w-4 h-4" />} label="Role" value={getRoleLabel(subject.role)} />
+                  <SubjectDetailField 
+                    icon={<Calendar className="w-4 h-4" />} 
+                    label="Date of Birth" 
+                    value={subject.date_of_birth ? format(new Date(subject.date_of_birth), "MMM d, yyyy") : null} 
+                  />
+                  <SubjectDetailField icon={<Hash className="w-4 h-4" />} label="SSN" value={subject.ssn ? `***-**-${subject.ssn.slice(-4)}` : null} />
+                  <SubjectDetailField icon={<User className="w-4 h-4" />} label="Sex" value={subject.sex} />
+                  <SubjectDetailField icon={<Globe className="w-4 h-4" />} label="Race" value={subject.race} />
+                </>
+              )}
+              
+              {category === 'vehicle' && (
+                <>
+                  <SubjectDetailField icon={<Calendar className="w-4 h-4" />} label="Year" value={subject.vehicle_year} />
+                  <SubjectDetailField icon={<Car className="w-4 h-4" />} label="Make" value={subject.vehicle_make} />
+                  <SubjectDetailField icon={<Car className="w-4 h-4" />} label="Model" value={subject.vehicle_model} />
+                  <SubjectDetailField icon={<Palette className="w-4 h-4" />} label="Color" value={subject.vehicle_color} />
+                  <SubjectDetailField icon={<Hash className="w-4 h-4" />} label="License Plate" value={subject.vehicle_license_plate} />
+                  <SubjectDetailField icon={<Hash className="w-4 h-4" />} label="VIN" value={subject.vehicle_vin} />
+                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Body Style" value={getVehicleTypeLabel(subject.vehicle_body_style)} />
+                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Fuel Type" value={subject.vehicle_fuel_type} />
+                </>
+              )}
+              
+              {category === 'location' && (
+                <>
+                  <SubjectDetailField icon={<Building2 className="w-4 h-4" />} label="Name" value={subject.location_name} />
+                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Type" value={getLocationTypeLabel(subject.location_type)} />
+                  <div className="md:col-span-2">
+                    <SubjectDetailField icon={<MapPin className="w-4 h-4" />} label="Address" value={formatAddress()} />
+                  </div>
+                </>
+              )}
+              
+              {category === 'item' && (
+                <>
+                  <SubjectDetailField icon={<Package className="w-4 h-4" />} label="Description" value={subject.item_description} />
+                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Type" value={getItemTypeLabel(subject.item_type)} />
+                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Brand" value={subject.item_brand} />
+                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Model" value={subject.item_model} />
+                  <SubjectDetailField icon={<Hash className="w-4 h-4" />} label="Serial Number" value={subject.item_serial_number} />
+                  <SubjectDetailField icon={<Palette className="w-4 h-4" />} label="Color" value={subject.item_color} />
+                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Value" value={subject.item_value ? `$${Number(subject.item_value).toLocaleString()}` : null} />
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Cover Image Modal */}
-      <ProfileImageModal
-        isOpen={coverModalOpen}
-        onClose={() => setCoverModalOpen(false)}
-        imageUrl={signedCoverUrl}
-        alt={`${subject?.display_name || subject?.name || "Subject"} cover image`}
-      />
+          {/* Physical Description - Only for persons */}
+          {category === 'person' && (subject.height || subject.weight || subject.eye_color || subject.hair_color || subject.distinguishing_features) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Ruler className="w-4 h-4" />
+                  Physical Description
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SubjectDetailField icon={<Ruler className="w-4 h-4" />} label="Height" value={subject.height} />
+                <SubjectDetailField icon={<Weight className="w-4 h-4" />} label="Weight" value={subject.weight} />
+                <SubjectDetailField icon={<Palette className="w-4 h-4" />} label="Eye Color" value={subject.eye_color} />
+                <SubjectDetailField icon={<Palette className="w-4 h-4" />} label="Hair Color" value={subject.hair_color} />
+                {subject.distinguishing_features && (
+                  <div className="md:col-span-2">
+                    <SubjectDetailField icon={<FileText className="w-4 h-4" />} label="Distinguishing Features" value={subject.distinguishing_features} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Contact Information - For persons with address */}
+          {category === 'person' && (subject.cell_phone || subject.email || formatAddress()) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  Contact Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SubjectDetailField icon={<Globe className="w-4 h-4" />} label="Phone" value={subject.cell_phone} />
+                <SubjectDetailField icon={<Globe className="w-4 h-4" />} label="Email" value={subject.email} />
+                {formatAddress() && (
+                  <div className="md:col-span-2">
+                    <SubjectDetailField icon={<MapPin className="w-4 h-4" />} label="Address" value={formatAddress()} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Social Media */}
+          {category === 'person' && (
+            <SocialMediaLinksWidget subjectId={subject.id} readOnly />
+          )}
+
+          {/* Linked Entities */}
+          <LinkedEntitiesPanel subjectId={subject.id} readOnly />
+        </div>
+
+        {/* Right Column - Notes */}
+        <div className="space-y-6">
+          {/* Notes Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {subject.notes ? (
+                <p className="text-sm whitespace-pre-wrap">{subject.notes}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No notes added</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Edit Drawer */}
-      {subject && caseId && (
-        <SubjectDrawer
-          open={editDrawerOpen}
-          onOpenChange={setEditDrawerOpen}
-          subject={subject}
-          category={subject.subject_type}
-          caseId={caseId}
-          organizationId={subject.organization_id}
-          onSuccess={fetchSubjectDetails}
-          signedProfileImageUrl={signedImageUrl}
-        />
-      )}
+      <SubjectDrawer
+        isOpen={isDrawerOpen}
+        onClose={handleDrawerClose}
+        caseId={subject.case_id}
+        subjectId={subject.id}
+      />
+
+      {/* Profile Image Modal */}
+      <Dialog open={isProfileModalOpen} onOpenChange={setIsProfileModalOpen}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+          {signedProfileUrl && (
+            <img
+              src={signedProfileUrl}
+              alt={displayName}
+              className="w-full h-auto max-h-[80vh] object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default SubjectDetail;
+}
