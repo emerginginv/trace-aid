@@ -842,7 +842,7 @@ const Cases = () => {
                             badgeStyle={getStatusStyle(caseItem.status_key || caseItem.status)}
                           />
                         ) : (
-                          <Badge className="border" style={getStatusStyle(caseItem.status_key || caseItem.status)}>
+                          <Badge className="border capitalize" style={getStatusStyle(caseItem.status_key || caseItem.status)}>
                             {canViewExactStatus 
                               ? (getDisplayName(caseItem.status_key || '') || caseItem.status || 'Unknown')
                               : (getStatusByKey(caseItem.status_key || '')?.phase || caseItem.status || 'Unknown')

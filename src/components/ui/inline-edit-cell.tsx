@@ -187,13 +187,22 @@ export function InlineEditCell({
     );
   }
 
+  // Helper to capitalize text for display
+  const formatDisplayValue = (val: string) => {
+    if (!val) return val;
+    return val
+      .split(/[_-]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   const displayContent =
     displayAs === "badge" ? (
       <Badge
         className={cn("border cursor-pointer transition-all hover:ring-2 hover:ring-primary/20", className)}
         style={badgeStyle}
       >
-        {value}
+        {formatDisplayValue(value)}
       </Badge>
     ) : (
       <span
