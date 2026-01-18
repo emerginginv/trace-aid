@@ -28,6 +28,7 @@ import { NewContactModal } from "./NewContactModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { HelpTooltip, DelayedTooltip } from "@/components/ui/tooltip";
 
 interface Account {
   id: string;
@@ -255,6 +256,9 @@ export function ClientMatchingSection({
         <AlertDescription className="text-success-800 dark:text-success-300">
           <span className="font-medium">Client matched:</span> {selectedAccount?.name}
           {selectedContact && ` - ${formatContactName(selectedContact)}`}
+          <span className="block text-sm mt-1 text-success-700 dark:text-success-400">
+            You can now accept this request to create a case.
+          </span>
         </AlertDescription>
       </Alert>
     );
@@ -265,17 +269,19 @@ export function ClientMatchingSection({
       <Alert className="bg-warning-50 border-warning-200 dark:bg-warning-900/20 dark:border-warning-800">
         <AlertCircle className="h-4 w-4 text-warning-600 dark:text-warning-400" />
         <AlertDescription className="text-warning-800 dark:text-warning-300">
-          This request was entered using the public request form, so you'll have to
-          match it to an existing client before you can accept the request.
+          <span className="font-medium">Client matching required.</span> This request was submitted through the public form and is not linked to your client records. Match it to an existing client or create a new one before accepting.
         </AlertDescription>
       </Alert>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Client Selection with Searchable Dropdown */}
         <div className="space-y-2">
-          <Label htmlFor="client">
-            Client <span className="text-destructive">*</span>
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor="client">
+              Client <span className="text-destructive">*</span>
+            </Label>
+            <HelpTooltip content="The account that will be billed for this case" />
+          </div>
           <div className="flex gap-2">
             <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
               <PopoverTrigger asChild>
@@ -330,21 +336,28 @@ export function ClientMatchingSection({
                 </Command>
               </PopoverContent>
             </Popover>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setShowCreateAccount(true)}
-              title="Create new client"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+            <DelayedTooltip content="Create a new client account from this request's information">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setShowCreateAccount(true)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DelayedTooltip>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Select the client this case should be associated with.
+          </p>
         </div>
 
         {/* Contact Selection */}
         <div className="space-y-2">
-          <Label htmlFor="contact">Primary Contact</Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor="contact">Primary Contact</Label>
+            <HelpTooltip content="The person at the client company who will receive case updates" />
+          </div>
           <div className="flex gap-2">
             <Select
               value={selectedContactId}
@@ -367,23 +380,34 @@ export function ClientMatchingSection({
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setShowCreateContact(true)}
-              disabled={!selectedClientId}
-              title="Create new contact"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+            <DelayedTooltip content="Create a new contact from the requester's information">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setShowCreateContact(true)}
+                disabled={!selectedClientId}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DelayedTooltip>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Optional. Links a specific contact to the case.
+          </p>
         </div>
       </div>
 
-      <Button onClick={handleMatchClient} disabled={!selectedClientId || isLoading}>
-        {isLoading ? "Matching..." : "Match Client"}
-      </Button>
+      <div className="flex items-center gap-4">
+        <DelayedTooltip content="Link this request to the selected client">
+          <Button onClick={handleMatchClient} disabled={!selectedClientId || isLoading}>
+            {isLoading ? "Matching..." : "Match Client"}
+          </Button>
+        </DelayedTooltip>
+        <p className="text-sm text-muted-foreground">
+          Matching saves the client association. You can still change it before accepting.
+        </p>
+      </div>
 
       {/* Account Creation Dialog */}
       <AccountForm

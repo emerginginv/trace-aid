@@ -9,12 +9,14 @@ import {
   Eye,
   Edit,
   Link as LinkIcon,
-  Loader2
+  Loader2,
+  HelpCircle
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { DelayedTooltip } from "@/components/ui/tooltip";
 
 interface HistoryEvent {
   id: string;
@@ -39,6 +41,17 @@ interface RequestHistoryTabProps {
   matchedAccountId: string | null;
   declineReason: string | null;
 }
+
+// Event type tooltips for explaining what each event means
+const EVENT_TOOLTIPS: Record<string, string> = {
+  created: "The request was created via the public submission form",
+  viewed: "A staff member opened this request",
+  client_matched: "The request was linked to a client account",
+  contact_matched: "A primary contact was assigned to the request",
+  approved: "The request was accepted and a case was created",
+  declined: "The request was rejected without creating a case",
+  edited: "Request details were modified by staff",
+};
 
 export function RequestHistoryTab({
   requestId,
@@ -250,6 +263,12 @@ export function RequestHistoryTab({
 
   return (
     <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Request History</CardTitle>
+        <CardDescription>
+          This timeline shows all activity on this request, including when it was submitted, who reviewed it, and any changes to client matching.
+        </CardDescription>
+      </CardHeader>
       <CardContent className="py-6">
         <div className="relative">
           {/* Timeline line */}
@@ -259,16 +278,28 @@ export function RequestHistoryTab({
             {displayEvents.map((event, index) => {
               const Icon = getEventIcon(event.action);
               const colorClass = getEventColor(event.action);
+              const tooltip = EVENT_TOOLTIPS[event.action];
 
               return (
                 <div key={event.id} className="relative flex gap-4">
-                  {/* Icon */}
-                  <div className={cn(
-                    "relative z-10 flex h-10 w-10 items-center justify-center rounded-full",
-                    colorClass
-                  )}>
-                    <Icon className="h-5 w-5" />
-                  </div>
+                  {/* Icon with tooltip */}
+                  {tooltip ? (
+                    <DelayedTooltip content={tooltip}>
+                      <div className={cn(
+                        "relative z-10 flex h-10 w-10 items-center justify-center rounded-full cursor-help",
+                        colorClass
+                      )}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                    </DelayedTooltip>
+                  ) : (
+                    <div className={cn(
+                      "relative z-10 flex h-10 w-10 items-center justify-center rounded-full",
+                      colorClass
+                    )}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                  )}
 
                   {/* Content */}
                   <div className="flex-1 pt-0.5">

@@ -623,9 +623,20 @@ export default function CaseRequestDetail() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Accept Case Request</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will create a new case from this request and mark the request as approved.
-              The subjects and files will be copied to the new case.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>This will create a new case from this request:</p>
+                <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
+                  <li>A unique case number will be generated</li>
+                  <li>Subject information will be transferred to the case</li>
+                  <li>Uploaded files will be copied to case attachments</li>
+                  <li>You will be assigned as the initial Case Manager</li>
+                  <li>The request will be marked as Approved</li>
+                </ul>
+                <p className="text-sm font-medium text-warning-600 dark:text-warning-400">
+                  This action cannot be reversed. The case can be closed but not deleted.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -642,19 +653,29 @@ export default function CaseRequestDetail() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Decline Case Request</AlertDialogTitle>
-            <AlertDialogDescription>
-              Provide a reason for declining this request (optional).
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Declining this request marks it as rejected. The request data remains available for reference but no case will be created.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Provide a reason to help staff understand why this request was declined. The requester will not see this reason unless you contact them separately.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
-            <Label htmlFor="decline-reason">Reason</Label>
+          <div className="py-4 space-y-2">
+            <Label htmlFor="decline-reason">Reason for Declining</Label>
             <Textarea
               id="decline-reason"
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
-              placeholder="Enter reason for declining..."
+              placeholder="e.g., Duplicate request, Out of service area, Insufficient information..."
               className="mt-2"
             />
+            <p className="text-xs text-muted-foreground">
+              Optional. Visible only to staff with request access.
+            </p>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
@@ -674,9 +695,23 @@ export default function CaseRequestDetail() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Case Request</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the case request
-              and all associated files.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>This permanently deletes the case request and all associated data:</p>
+                <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
+                  <li>All uploaded files will be removed from storage</li>
+                  <li>All request history will be erased</li>
+                  <li>This action cannot be undone</li>
+                </ul>
+                <p className="text-sm text-muted-foreground">
+                  Consider declining the request instead if you want to preserve the submission record.
+                </p>
+                <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                  <p className="text-sm text-destructive dark:text-destructive-foreground">
+                    ⚠️ Deleting requests may affect compliance records. Ensure this is appropriate for your organization's retention policies.
+                  </p>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
