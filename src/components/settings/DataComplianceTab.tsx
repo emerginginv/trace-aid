@@ -40,8 +40,10 @@ import {
   UserX,
   FileText,
   Calendar,
-  Settings
+  Settings,
+  Info
 } from "lucide-react";
+import { HelpTooltip } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -546,9 +548,10 @@ export function DataComplianceTab() {
               <CardTitle className="flex items-center gap-2">
                 <FileArchive className="h-5 w-5" />
                 Data Exports
+                <HelpTooltip content="Export your organization's data for compliance, backup, or data portability purposes. Exports are securely generated and available for 7 days." />
               </CardTitle>
               <CardDescription>
-                Export your organization's data for backup or migration
+                Export your organization's data for backup or migration. Large exports may take several hours.
               </CardDescription>
             </div>
             <Button onClick={() => setShowExportDialog(true)}>

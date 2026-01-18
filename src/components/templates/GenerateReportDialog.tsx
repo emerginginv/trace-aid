@@ -6,11 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { getDocxTemplates, generateDocxReport, saveGeneratedReport, type DocxTemplate } from "@/lib/docxTemplateEngine";
 import { AttachmentEvidenceSelector } from "./AttachmentEvidenceSelector";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
-import { FileText, Download, Loader2, Clock } from "lucide-react";
+import { FileText, Download, Loader2, Clock, Info } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface GenerateReportDialogProps {
@@ -139,9 +141,12 @@ export const GenerateReportDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Generate Report</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Generate Report
+            <HelpTooltip content="Reports capture a point-in-time snapshot of case data. Changes made after generation are not reflected in previously generated reports." />
+          </DialogTitle>
           <DialogDescription>
-            Select a DOCX template to generate a report for case {caseData.case_number}
+            Generate a professional case report using your organization's templates for case {caseData.case_number}.
           </DialogDescription>
         </DialogHeader>
 
@@ -160,8 +165,19 @@ export const GenerateReportDialog = ({
               </div>
             ) : (
               <>
+                {/* Pre-generation reminder */}
+                <Alert className="bg-muted/50 border-muted">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Verify all updates, expenses, and attachments are complete before generating. Reports capture data as it exists now and cannot be modified after creation.
+                  </AlertDescription>
+                </Alert>
+
                 <div className="space-y-2">
-                  <Label htmlFor="template">Template</Label>
+                  <Label htmlFor="template" className="flex items-center gap-1.5">
+                    Template
+                    <HelpTooltip content="Select the DOCX template that defines your report structure and formatting. Templates are managed in Settings → Report Templates." />
+                  </Label>
                   <Select 
                     value={selectedTemplateId} 
                     onValueChange={setSelectedTemplateId}
@@ -190,8 +206,11 @@ export const GenerateReportDialog = ({
                       )}
                       
                       {selectedTemplate.detectedVariables && selectedTemplate.detectedVariables.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          <span className="text-xs text-muted-foreground">Variables:</span>
+                        <div className="flex flex-wrap gap-1 items-center">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            Variables:
+                            <HelpTooltip content="These placeholders will be replaced with actual case data when the report is generated." />
+                          </span>
                           {selectedTemplate.detectedVariables.slice(0, 5).map((v, i) => (
                             <Badge key={i} variant="outline" className="text-xs">
                               {v}
@@ -222,6 +241,7 @@ export const GenerateReportDialog = ({
                     >
                       <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                       Include Activity Timelines
+                      <HelpTooltip content="Activity timelines capture minute-by-minute field observations from updates. Only updates with timelines attached will contribute data." />
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       Include chronological activity logs from updates that have timelines

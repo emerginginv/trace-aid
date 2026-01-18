@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Loader2, FileDown, Printer, FileText, FileWarning } from "lucide-react";
+import { Loader2, FileDown, Printer, FileText, FileWarning, Info } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { fetchCaseSummaryData, type CaseSummaryData } from "@/lib/caseSummaryData";
 import { CaseSummaryContent } from "./CaseSummaryContent";
 import { loadHtml2Pdf, isPreviewEnvironment } from "@/lib/dynamicImports";
+import { HelpTooltip, DelayedTooltip } from "@/components/ui/tooltip";
 
 // Base document width in pixels (8.5in at 96dpi)
 const BASE_DOC_WIDTH = 816;
@@ -192,16 +193,43 @@ export function CaseSummaryPdfDialog({
     }, 500);
   };
 
-  const sectionLabels: Record<keyof typeof sections, string> = {
-    generalInfo: "General Information",
-    clientContact: "Client & Contact Details",
-    subjects: "Subjects",
-    budget: "Budget Summary",
-    financials: "Financial Details",
-    activities: "Activities",
-    updates: "Notes & Updates",
-    attachments: "Attachments",
-    relatedCases: "Related Cases",
+  const sectionLabels: Record<keyof typeof sections, { label: string; tooltip: string }> = {
+    generalInfo: { 
+      label: "General Information", 
+      tooltip: "Case number, title, status, dates, classification. Excludes internal notes." 
+    },
+    clientContact: { 
+      label: "Client & Contact Details", 
+      tooltip: "Client organization name, claim reference, primary contacts. Excludes billing information." 
+    },
+    subjects: { 
+      label: "Subjects", 
+      tooltip: "All case subjects with profile details. Excludes internal risk assessments." 
+    },
+    budget: { 
+      label: "Budget Summary", 
+      tooltip: "Budget allocations and consumption percentages. Excludes internal rate information." 
+    },
+    financials: { 
+      label: "Financial Details", 
+      tooltip: "Time entries, expenses, and invoice status with amounts and descriptions." 
+    },
+    activities: { 
+      label: "Activities", 
+      tooltip: "Scheduled and completed activities with dates and assignees." 
+    },
+    updates: { 
+      label: "Notes & Updates", 
+      tooltip: "Case updates with timestamps and content. Includes activity timelines if present." 
+    },
+    attachments: { 
+      label: "Attachments", 
+      tooltip: "List of attached files with metadata. Does not embed actual file contents." 
+    },
+    relatedCases: { 
+      label: "Related Cases", 
+      tooltip: "Links to connected cases for cross-reference." 
+    },
   };
 
   return (
@@ -211,9 +239,10 @@ export function CaseSummaryPdfDialog({
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Generate Case Summary
+            <HelpTooltip content="The PDF captures current case data at the moment of generation. Updates made after generation will not appear in downloaded summaries." />
           </DialogTitle>
           <DialogDescription>
-            Create a comprehensive PDF summary for case {caseNumber}
+            Create a comprehensive PDF summary for internal use or client distribution. Select which sections to include.
           </DialogDescription>
         </DialogHeader>
 
@@ -221,9 +250,10 @@ export function CaseSummaryPdfDialog({
         {isPreview && (
           <div className="flex items-center gap-3 p-3 bg-muted rounded-md mb-2">
             <FileWarning className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              PDF download is available in production builds only. Print preview is still available.
-            </p>
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium">PDF download requires production environment</p>
+              <p className="text-xs mt-0.5">Use Print Preview to review the output - it renders the same content that would appear in the PDF.</p>
+            </div>
           </div>
         )}
 
@@ -265,7 +295,7 @@ export function CaseSummaryPdfDialog({
             </div>
           </div>
           <div className="space-y-3">
-            {Object.entries(sectionLabels).map(([key, label]) => (
+            {Object.entries(sectionLabels).map(([key, { label, tooltip }]) => (
               <div key={key} className="flex items-center space-x-2">
                 <Checkbox
                   id={key}
@@ -274,9 +304,12 @@ export function CaseSummaryPdfDialog({
                 />
                 <Label 
                   htmlFor={key} 
-                  className="text-sm cursor-pointer"
+                  className="text-sm cursor-pointer flex items-center gap-1.5"
                 >
                   {label}
+                  <DelayedTooltip content={tooltip}>
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </DelayedTooltip>
                 </Label>
               </div>
             ))}
