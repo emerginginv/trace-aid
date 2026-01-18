@@ -18,26 +18,24 @@ import {
 } from "@/components/dashboard";
 import { usePendingCaseRequests } from "@/hooks/usePendingCaseRequests";
 import { usePermissions } from "@/hooks/usePermissions";
+import { formatCurrency } from "@/lib/formatters";
 import { Briefcase, CheckCircle2, TrendingUp, Building2, Wallet, Receipt, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Dashboard = () => {
   useSetBreadcrumbs([{ label: "Dashboard" }]);
 
-  const { isVendor, isAdmin, isManager, loading: roleLoading } = useUserRole();
+  const { isVendor, loading: roleLoading } = useUserRole();
   const { organization } = useOrganization();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, canViewAllItems, canViewCaseRequests } = usePermissions();
 
   // Pending case requests for dashboard widget
-  const canViewRequests = hasPermission("view_case_requests");
   const { requests: pendingRequests, count: pendingRequestsCount, isLoading: requestsLoading } = usePendingCaseRequests(5);
 
   // Filter states for each container
   const [activitiesFilter, setActivitiesFilter] = useState<'my' | 'all'>('my');
   const [updatesFilter, setUpdatesFilter] = useState<'my' | 'all'>('my');
   const [expensesFilter, setExpensesFilter] = useState<'my' | 'all'>('my');
-
-  const canViewAll = isAdmin || isManager;
 
   // Use the dashboard data hook
   const {
@@ -171,10 +169,7 @@ const Dashboard = () => {
                   <span>Client Retainers</span>
                 </div>
                 <p className="text-xl font-bold text-emerald-500">
-                  ${financialSummary.totalRetainerFunds.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(financialSummary.totalRetainerFunds)}
                 </p>
               </div>
 
@@ -185,10 +180,7 @@ const Dashboard = () => {
                   <span>Outstanding Expenses</span>
                 </div>
                 <p className="text-xl font-bold text-amber-500">
-                  ${financialSummary.outstandingExpenses.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(financialSummary.outstandingExpenses)}
                 </p>
               </div>
 
@@ -199,10 +191,7 @@ const Dashboard = () => {
                   <span>Unpaid Invoices</span>
                 </div>
                 <p className="text-xl font-bold text-blue-500">
-                  ${financialSummary.unpaidInvoices.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(financialSummary.unpaidInvoices)}
                 </p>
               </div>
             </div>
@@ -213,7 +202,7 @@ const Dashboard = () => {
       {/* Main Dashboard Grid with Panel Components */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 border border-border rounded-lg p-3 sm:p-4">
         {/* Pending Case Requests - Top priority for admin/manager */}
-        {canViewRequests && (
+        {canViewCaseRequests && (
           <DashboardCaseRequestsPanel
             requests={pendingRequests}
             count={pendingRequestsCount}
@@ -226,7 +215,7 @@ const Dashboard = () => {
           activities={unifiedActivities}
           filter={activitiesFilter}
           onFilterChange={setActivitiesFilter}
-          canViewAll={canViewAll}
+          canViewAll={canViewAllItems}
           onActivityToggle={handleTaskToggle}
           onActivityEdit={(activity) => setEditingActivity(activity as any)}
         />
@@ -236,7 +225,7 @@ const Dashboard = () => {
           updates={updates}
           filter={updatesFilter}
           onFilterChange={setUpdatesFilter}
-          canViewAll={canViewAll}
+          canViewAll={canViewAllItems}
           onUpdateClick={(update) => setEditingUpdate(update)}
           expandedId={expandedUpdate}
           onExpandedChange={setExpandedUpdate}
@@ -248,7 +237,7 @@ const Dashboard = () => {
           expenses={expenses}
           filter={expensesFilter}
           onFilterChange={setExpensesFilter}
-          canViewAll={canViewAll}
+          canViewAll={canViewAllItems}
           onExpenseClick={(expense) => setEditingExpense(expense)}
           expandedId={expandedExpense}
           onExpandedChange={setExpandedExpense}
