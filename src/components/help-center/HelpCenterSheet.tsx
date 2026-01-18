@@ -219,8 +219,8 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
               <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                 {renderIcon(category.icon)}
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-foreground text-base">{category.name}</h3>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <h3 className="font-medium text-foreground text-base truncate">{category.name}</h3>
                 <p className="text-sm text-muted-foreground truncate">
                   {category.description || `${categoryArticles.length} articles`}
                 </p>
@@ -273,10 +273,10 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
               <div className="flex-shrink-0 w-8 h-8 rounded-md bg-muted text-muted-foreground flex items-center justify-center">
                 {renderIcon(category.icon)}
               </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-foreground text-sm">{article.title}</h4>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <h4 className="font-medium text-foreground text-sm truncate">{article.title}</h4>
                 <p className="text-sm text-muted-foreground truncate">{article.summary}</p>
-                <span className="text-xs text-primary mt-1 inline-block">{category.name}</span>
+                <span className="text-xs text-primary mt-1 inline-block truncate">{category.name}</span>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
             </button>
@@ -321,8 +321,8 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
                 )}
               >
                 <BookOpen className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-foreground text-sm">{article.title}</h4>
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <h4 className="font-medium text-foreground text-sm truncate">{article.title}</h4>
                   <p className="text-sm text-muted-foreground truncate">{article.summary}</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -544,7 +544,7 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
+      <SheetContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-lg p-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             {showBackButton && (
