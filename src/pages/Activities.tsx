@@ -461,6 +461,11 @@ export default function Activities() {
         importEntityDisplayName="Activities"
       />
 
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {filteredActivities.length} activit{filteredActivities.length !== 1 ? 'ies' : 'y'}
+      </div>
+
       {/* Bulk Actions Bar */}
       {selectedIds.size > 0 && (
         <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-muted rounded-lg">

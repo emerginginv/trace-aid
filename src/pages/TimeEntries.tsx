@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import html2pdf from "html2pdf.js";
@@ -538,36 +539,61 @@ const TimeEntries = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className={`grid gap-4 ${canViewRates ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2'}`}>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{totalHours.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">Total Hours</p>
+      {/* Stat Cards - Matching Subjects style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-blue-500/10">
+              <Clock className="h-6 w-6 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{totalHours.toFixed(1)}</p>
+              <p className="text-sm text-muted-foreground">Total Hours</p>
+            </div>
           </CardContent>
         </Card>
-        {canViewRates && (
-          <Card>
-            <CardContent className="pt-4">
-              <div className="text-2xl font-bold">${totalPayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-              <p className="text-xs text-muted-foreground">Total Pay</p>
-            </CardContent>
-          </Card>
-        )}
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{pendingCount}</div>
-            <p className="text-xs text-muted-foreground">Pending Approval</p>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", timeStatusFilter === 'pending' && "ring-2 ring-primary")}
+          onClick={() => setTimeStatusFilter(timeStatusFilter === 'pending' ? 'all' : 'pending')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-amber-500/10">
+              <Clock className="h-6 w-6 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{pendingCount}</p>
+              <p className="text-sm text-muted-foreground">Pending</p>
+            </div>
           </CardContent>
         </Card>
-        {canViewRates && (
-          <Card>
-            <CardContent className="pt-4">
-              <div className="text-2xl font-bold text-emerald-600">${approvedPayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-              <p className="text-xs text-muted-foreground">Approved (Ready for Billing)</p>
-            </CardContent>
-          </Card>
-        )}
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", timeStatusFilter === 'approved' && "ring-2 ring-primary")}
+          onClick={() => setTimeStatusFilter(timeStatusFilter === 'approved' ? 'all' : 'approved')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-emerald-500/10">
+              <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{timeEntries.filter(e => e.status === 'approved').length}</p>
+              <p className="text-sm text-muted-foreground">Approved</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", timeStatusFilter === 'declined' && "ring-2 ring-primary")}
+          onClick={() => setTimeStatusFilter(timeStatusFilter === 'declined' ? 'all' : 'declined')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-red-500/10">
+              <XCircle className="h-6 w-6 text-red-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{timeEntries.filter(e => e.status === 'declined' || e.status === 'rejected').length}</p>
+              <p className="text-sm text-muted-foreground">Declined</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Bulk Action Toolbar */}
@@ -687,6 +713,11 @@ const TimeEntries = () => {
             onExportPDF={exportToPDF}
           />
         </div>
+      </div>
+
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {sortedTimeEntries.length} time entr{sortedTimeEntries.length !== 1 ? 'ies' : 'y'}
       </div>
 
       {/* Time Entries Table */}
