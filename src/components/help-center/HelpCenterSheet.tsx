@@ -544,7 +544,7 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-lg p-0 flex flex-col overflow-hidden">
+      <SheetContent className="w-[min(32rem,calc(100vw-1rem))] max-w-full p-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             {showBackButton && (
