@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -373,6 +374,13 @@ export default function Subjects() {
 
   return (
     <div className="space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="subjects-list-welcome"
+        title="Subjects"
+        welcome="This is your cross-case subject directory. See everyone you're tracking across all investigations."
+        whatToDoFirst="Use the category cards to filter by type. Click any row to view the full profile."
+        whatNotToWorryAbout="Subjects are created from within cases, not here. This page is for finding existing subjects."
+      />
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">All Subjects</h1>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
@@ -614,6 +615,13 @@ const Cases = () => {
           </AlertDescription>
         </Alert>}
       
+      <FirstTimeGuidance
+        guidanceKey="cases-list-welcome"
+        title="Cases"
+        welcome="This is your case directory. Every investigation starts and lives here."
+        whatToDoFirst="Click 'New Case' to create your first case, or use search to find existing work."
+        whatNotToWorryAbout="Column customization and bulk actions become useful as your case volume grows."
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{isVendor ? 'My Cases' : 'Cases'}</h1>
