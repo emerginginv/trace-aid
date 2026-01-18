@@ -1,23 +1,27 @@
 import { Route, Navigate } from "react-router-dom";
+import { Suspense } from "react";
 import { RouteWrapper } from "./RouteWrapper";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import DashboardLayout from "@/layouts/DashboardLayout";
-import Settings from "@/pages/Settings";
-import ImportReview from "@/pages/ImportReview";
-import Accounts from "@/pages/Accounts";
-import AccountDetail from "@/pages/AccountDetail";
-import AccountEdit from "@/pages/AccountEdit";
-import Contacts from "@/pages/Contacts";
-import ContactDetail from "@/pages/ContactDetail";
-import ContactEdit from "@/pages/ContactEdit";
-import UserProfile from "@/pages/UserProfile";
-import UserProfileDetail from "@/pages/UserProfileDetail";
-import Notifications from "@/pages/Notifications";
-import TestNotifications from "@/pages/TestNotifications";
-import AttachmentViewer from "@/pages/AttachmentViewer";
+import { LazyLoadFallback } from "@/components/ui/LazyLoadFallback";
+import {
+  Settings,
+  ImportReview,
+  Accounts,
+  AccountDetail,
+  AccountEdit,
+  Contacts,
+  ContactDetail,
+  ContactEdit,
+  UserProfile,
+  UserProfileDetail,
+  Notifications,
+  TestNotifications,
+  AttachmentViewer,
+} from "./lazyPages";
 
 /**
  * Routes related to settings, user profile, and configuration.
+ * All pages are lazy-loaded for better initial bundle size.
  */
 export const settingsRoutes = (
   <>
@@ -25,7 +29,9 @@ export const settingsRoutes = (
       path="/settings"
       element={
         <RouteWrapper blockVendors>
-          <Settings />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Settings />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -37,7 +43,9 @@ export const settingsRoutes = (
       path="/import/review"
       element={
         <RouteWrapper blockVendors>
-          <ImportReview />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <ImportReview />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -53,7 +61,9 @@ export const settingsRoutes = (
       path="/users/:id"
       element={
         <ProtectedRoute blockVendors>
-          <UserProfileDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <UserProfileDetail />
+          </Suspense>
         </ProtectedRoute>
       }
     />
@@ -61,7 +71,9 @@ export const settingsRoutes = (
       path="/profile"
       element={
         <ProtectedRoute>
-          <UserProfile />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <UserProfile />
+          </Suspense>
         </ProtectedRoute>
       }
     />
@@ -69,7 +81,9 @@ export const settingsRoutes = (
       path="/notifications"
       element={
         <RouteWrapper>
-          <Notifications />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Notifications />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -77,7 +91,9 @@ export const settingsRoutes = (
       path="/test-notifications"
       element={
         <RouteWrapper>
-          <TestNotifications />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <TestNotifications />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -85,7 +101,9 @@ export const settingsRoutes = (
       path="/accounts"
       element={
         <RouteWrapper blockVendors>
-          <Accounts />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Accounts />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -93,7 +111,9 @@ export const settingsRoutes = (
       path="/accounts/:id"
       element={
         <RouteWrapper blockVendors>
-          <AccountDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <AccountDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -101,7 +121,9 @@ export const settingsRoutes = (
       path="/accounts/:id/edit"
       element={
         <RouteWrapper blockVendors>
-          <AccountEdit />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <AccountEdit />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -109,7 +131,9 @@ export const settingsRoutes = (
       path="/contacts"
       element={
         <RouteWrapper blockVendors>
-          <Contacts />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Contacts />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -117,7 +141,9 @@ export const settingsRoutes = (
       path="/contacts/:id"
       element={
         <RouteWrapper blockVendors>
-          <ContactDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <ContactDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -125,7 +151,9 @@ export const settingsRoutes = (
       path="/contacts/:id/edit"
       element={
         <RouteWrapper blockVendors>
-          <ContactEdit />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <ContactEdit />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -133,7 +161,9 @@ export const settingsRoutes = (
       path="/attachments/:id/view"
       element={
         <RouteWrapper>
-          <AttachmentViewer />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <AttachmentViewer />
+          </Suspense>
         </RouteWrapper>
       }
     />

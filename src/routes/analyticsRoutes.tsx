@@ -1,14 +1,19 @@
 import { Route } from "react-router-dom";
+import { Suspense } from "react";
 import { RouteWrapper } from "./RouteWrapper";
-import Analytics from "@/pages/Analytics";
-import CaseAnalytics from "@/pages/CaseAnalytics";
-import BudgetAnalytics from "@/pages/BudgetAnalytics";
-import TimeExpenseAnalytics from "@/pages/TimeExpenseAnalytics";
-import ActivityAnalytics from "@/pages/ActivityAnalytics";
-import SystemSecurityAnalytics from "@/pages/SystemSecurityAnalytics";
+import { LazyLoadFallback } from "@/components/ui/LazyLoadFallback";
+import {
+  Analytics,
+  CaseAnalytics,
+  BudgetAnalytics,
+  TimeExpenseAnalytics,
+  ActivityAnalytics,
+  SystemSecurityAnalytics,
+} from "./lazyPages";
 
 /**
  * Routes related to analytics and reporting.
+ * All pages are lazy-loaded for better initial bundle size.
  */
 export const analyticsRoutes = (
   <>
@@ -16,7 +21,9 @@ export const analyticsRoutes = (
       path="/analytics"
       element={
         <RouteWrapper blockVendors>
-          <Analytics />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Analytics />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -24,7 +31,9 @@ export const analyticsRoutes = (
       path="/analytics/cases"
       element={
         <RouteWrapper blockVendors>
-          <CaseAnalytics />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <CaseAnalytics />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -32,7 +41,9 @@ export const analyticsRoutes = (
       path="/analytics/finances"
       element={
         <RouteWrapper blockVendors>
-          <BudgetAnalytics />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <BudgetAnalytics />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -40,7 +51,9 @@ export const analyticsRoutes = (
       path="/analytics/time-expense"
       element={
         <RouteWrapper blockVendors>
-          <TimeExpenseAnalytics />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <TimeExpenseAnalytics />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -48,7 +61,9 @@ export const analyticsRoutes = (
       path="/analytics/activities"
       element={
         <RouteWrapper blockVendors>
-          <ActivityAnalytics />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <ActivityAnalytics />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -56,7 +71,9 @@ export const analyticsRoutes = (
       path="/analytics/system"
       element={
         <RouteWrapper requiredRole="admin">
-          <SystemSecurityAnalytics />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <SystemSecurityAnalytics />
+          </Suspense>
         </RouteWrapper>
       }
     />

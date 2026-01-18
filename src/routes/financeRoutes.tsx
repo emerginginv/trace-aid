@@ -1,20 +1,25 @@
 import { Route, Navigate } from "react-router-dom";
+import { Suspense } from "react";
 import { RouteWrapper } from "./RouteWrapper";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/layouts/DashboardLayout";
-import Finance from "@/pages/Finance";
-import AllExpenses from "@/pages/AllExpenses";
-import TimeEntries from "@/pages/TimeEntries";
-import TimeEntryDetail from "@/pages/TimeEntryDetail";
-import AllInvoices from "@/pages/AllInvoices";
-import InvoiceDetail from "@/pages/InvoiceDetail";
-import ExpenseDetail from "@/pages/ExpenseDetail";
-import Expenses from "@/pages/Expenses";
-import Billing from "@/pages/Billing";
-import BillingReviewQueue from "@/pages/BillingReviewQueue";
+import { LazyLoadFallback } from "@/components/ui/LazyLoadFallback";
+import {
+  Finance,
+  AllExpenses,
+  TimeEntries,
+  TimeEntryDetail,
+  AllInvoices,
+  InvoiceDetail,
+  ExpenseDetail,
+  Expenses,
+  Billing,
+  BillingReviewQueue,
+} from "./lazyPages";
 
 /**
  * Routes related to finances, billing, and invoicing.
+ * All pages are lazy-loaded for better initial bundle size.
  */
 export const financeRoutes = (
   <>
@@ -24,7 +29,9 @@ export const financeRoutes = (
       element={
         <ProtectedRoute skipBillingGate>
           <DashboardLayout>
-            <Billing />
+            <Suspense fallback={<LazyLoadFallback />}>
+              <Billing />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       }
@@ -33,7 +40,9 @@ export const financeRoutes = (
       path="/retainers"
       element={
         <RouteWrapper blockVendors>
-          <Finance />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Finance />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -41,7 +50,9 @@ export const financeRoutes = (
       path="/time-entries"
       element={
         <RouteWrapper blockVendors>
-          <TimeEntries />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <TimeEntries />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -49,7 +60,9 @@ export const financeRoutes = (
       path="/time-entries/:id"
       element={
         <RouteWrapper blockVendors>
-          <TimeEntryDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <TimeEntryDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -57,7 +70,9 @@ export const financeRoutes = (
       path="/expenses"
       element={
         <RouteWrapper blockVendors>
-          <AllExpenses />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <AllExpenses />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -65,7 +80,9 @@ export const financeRoutes = (
       path="/expenses/:id"
       element={
         <RouteWrapper blockVendors>
-          <ExpenseDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <ExpenseDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -73,7 +90,9 @@ export const financeRoutes = (
       path="/my-expenses"
       element={
         <RouteWrapper>
-          <Expenses />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Expenses />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -81,7 +100,9 @@ export const financeRoutes = (
       path="/invoices"
       element={
         <RouteWrapper blockVendors blockInvestigators>
-          <AllInvoices />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <AllInvoices />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -89,7 +110,9 @@ export const financeRoutes = (
       path="/invoices/:id"
       element={
         <RouteWrapper blockVendors blockInvestigators>
-          <InvoiceDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <InvoiceDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -97,7 +120,9 @@ export const financeRoutes = (
       path="/billing-review"
       element={
         <RouteWrapper blockVendors>
-          <BillingReviewQueue />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <BillingReviewQueue />
+          </Suspense>
         </RouteWrapper>
       }
     />

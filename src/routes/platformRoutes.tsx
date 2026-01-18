@@ -1,18 +1,23 @@
 import { Route } from "react-router-dom";
+import { Suspense } from "react";
 import { RouteWrapper } from "./RouteWrapper";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { Onboarding } from "@/components/Onboarding";
-import Dashboard from "@/pages/Dashboard";
-import SupportConsole from "@/pages/SupportConsole";
-import PlatformCompliance from "@/pages/PlatformCompliance";
-import PlatformResilience from "@/pages/PlatformResilience";
-import PlatformSecurity from "@/pages/PlatformSecurity";
-import TrustCenterAdmin from "@/pages/TrustCenterAdmin";
-import CustomerSuccess from "@/pages/CustomerSuccess";
-import Marketplace from "@/pages/Marketplace";
+import { LazyLoadFallback, PageLoadFallback } from "@/components/ui/LazyLoadFallback";
+import {
+  Onboarding,
+  Dashboard,
+  SupportConsole,
+  PlatformCompliance,
+  PlatformResilience,
+  PlatformSecurity,
+  TrustCenterAdmin,
+  CustomerSuccess,
+  Marketplace,
+} from "./lazyPages";
 
 /**
  * Routes for dashboard, onboarding, and platform administration.
+ * All pages are lazy-loaded for better initial bundle size.
  */
 export const platformRoutes = (
   <>
@@ -20,7 +25,9 @@ export const platformRoutes = (
       path="/onboarding"
       element={
         <ProtectedRoute skipBillingGate>
-          <Onboarding />
+          <Suspense fallback={<PageLoadFallback />}>
+            <Onboarding />
+          </Suspense>
         </ProtectedRoute>
       }
     />
@@ -28,7 +35,9 @@ export const platformRoutes = (
       path="/dashboard"
       element={
         <RouteWrapper>
-          <Dashboard />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Dashboard />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -36,7 +45,9 @@ export const platformRoutes = (
       path="/support-console"
       element={
         <RouteWrapper>
-          <SupportConsole />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <SupportConsole />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -44,7 +55,9 @@ export const platformRoutes = (
       path="/platform-compliance"
       element={
         <RouteWrapper>
-          <PlatformCompliance />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <PlatformCompliance />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -52,7 +65,9 @@ export const platformRoutes = (
       path="/platform-resilience"
       element={
         <RouteWrapper>
-          <PlatformResilience />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <PlatformResilience />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -60,7 +75,9 @@ export const platformRoutes = (
       path="/trust-admin"
       element={
         <RouteWrapper>
-          <TrustCenterAdmin />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <TrustCenterAdmin />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -68,7 +85,9 @@ export const platformRoutes = (
       path="/platform-security"
       element={
         <RouteWrapper>
-          <PlatformSecurity />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <PlatformSecurity />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -76,7 +95,9 @@ export const platformRoutes = (
       path="/customer-success"
       element={
         <RouteWrapper>
-          <CustomerSuccess />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <CustomerSuccess />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -84,7 +105,9 @@ export const platformRoutes = (
       path="/marketplace"
       element={
         <ProtectedRoute>
-          <Marketplace />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Marketplace />
+          </Suspense>
         </ProtectedRoute>
       }
     />
