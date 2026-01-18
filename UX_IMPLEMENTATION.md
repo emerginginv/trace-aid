@@ -33,8 +33,17 @@ Your PI Case Manager has been transformed into a premium user experience with co
 - ✅ Loading skeleton (card, list, table, profile variants)
 - ✅ Confirmation dialog for destructive actions
 - ✅ Tooltip system (300ms delay)
+- ✅ **Inline Help Standards** - See [TOOLTIP_INLINE_HELP_STANDARDS.md](./TOOLTIP_INLINE_HELP_STANDARDS.md)
 
-### 4. **Accessibility** ✅
+### 4. **Contextual Guidance System** ✅
+- ✅ `DelayedTooltip` - Label clarification (max 80 chars)
+- ✅ `HelpTooltip` - Field-level explanations (max 150 chars)
+- ✅ `ContextualHelp` - Deep workflow guidance with Help Center links
+- ✅ Inline help text - Always-visible format constraints (max 250 chars)
+- ✅ Warning alerts - Non-blocking consequence notices
+- ✅ First-time vs repeat user patterns documented
+
+### 5. **Accessibility** ✅
 - ✅ Touch targets minimum 44px
 - ✅ Keyboard navigation support
 - ✅ Screen reader ARIA labels

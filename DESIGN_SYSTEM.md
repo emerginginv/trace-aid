@@ -496,6 +496,27 @@ import { Download } from "lucide-react";
 
 ---
 
+## 💡 Inline Help & Tooltip Standards
+
+See **[TOOLTIP_INLINE_HELP_STANDARDS.md](./TOOLTIP_INLINE_HELP_STANDARDS.md)** for the complete ruleset on contextual guidance.
+
+### Quick Reference
+
+| Type | Max Length | When to Use |
+|------|------------|-------------|
+| Tooltip | 80 chars | Label clarification, abbreviations |
+| Help Icon | 150 chars | Field-level "why" explanations |
+| Inline Help | 250 chars | Format constraints, irreversible fields |
+| Warning | 50 words | Consequences, compliance implications |
+
+### Key Principles
+- **Professional tone**: No marketing copy, no condescension
+- **Context-aware**: Specific to the field, not generic
+- **Action-oriented**: Tell users what to do, not just what exists
+- **Clutter-free**: Only show help when truly needed
+
+---
+
 ## 🎯 Implementation Guidelines
 
 ### Component Creation
