@@ -61,6 +61,7 @@ import SecurityReport from "./pages/SecurityReport";
 import StatusPage from "./pages/StatusPage";
 import CustomerSuccess from "./pages/CustomerSuccess";
 import Marketplace from "./pages/Marketplace";
+import Documentation from "./pages/Documentation";
 import NotFound from "./pages/NotFound";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -668,6 +669,17 @@ const App = () => {
           element={
             <ProtectedRoute>
               <Marketplace />
+            </ProtectedRoute>
+          }
+        />
+        {/* Documentation - Testing Checklists & Guides */}
+        <Route
+          path="/documentation"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Documentation />
+              </DashboardLayout>
             </ProtectedRoute>
           }
         />
