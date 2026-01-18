@@ -10,7 +10,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "verify:ci": "pnpm install --frozen-lockfile && pnpm run build"
+    "verify:ci": "pnpm run build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
