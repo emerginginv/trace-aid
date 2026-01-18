@@ -620,7 +620,7 @@ const Finance = () => {
                     />
                   )}
                   {isVisible("actions") && (
-                    <TableHead className="w-[60px]">Actions</TableHead>
+                    <TableHead className="w-[60px] text-right">Actions</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
