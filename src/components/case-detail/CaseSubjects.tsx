@@ -103,8 +103,24 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
     setFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this subject?")) return;
+  const handleDelete = async (id: string, subjectName: string) => {
+    // Check if subject is linked to multiple cases
+    const { data: linkedCases } = await supabase
+      .from("case_subjects")
+      .select("case_id")
+      .eq("id", id);
+    
+    const linkedCount = (linkedCases?.length || 1) - 1;
+    
+    let confirmMessage = `Remove "${subjectName}" from this case?\n\nThis subject and their linked evidence will be removed from this case.`;
+    
+    if (linkedCount > 0) {
+      confirmMessage += `\n\nNote: The subject profile remains in the system as they are linked to ${linkedCount} other case${linkedCount > 1 ? 's' : ''}.`;
+    }
+    
+    confirmMessage += `\n\nIf this subject was added in error, deletion is appropriate. For inactive subjects, consider marking as 'No longer relevant' instead.`;
+    
+    if (!confirm(confirmMessage)) return;
 
     try {
       const { error } = await supabase
@@ -116,7 +132,7 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
 
       toast({
         title: "Success",
-        description: "Subject deleted successfully",
+        description: "Subject removed from case",
       });
       fetchSubjects();
     } catch (error) {
@@ -576,7 +592,7 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(subject.id)}
+                        onClick={() => handleDelete(subject.id, subject.name)}
                         disabled={isClosedCase}
                       >
                         <Trash2 className="h-4 w-4" />

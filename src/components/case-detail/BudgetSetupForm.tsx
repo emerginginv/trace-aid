@@ -321,6 +321,12 @@ export function BudgetSetupForm({
                         />
                       </div>
                     </FormControl>
+                    {field.value === 0 && hardCap && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1.5">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        A budget of 0 hours will immediately block all time entries.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -349,6 +355,12 @@ export function BudgetSetupForm({
                         />
                       </div>
                     </FormControl>
+                    {field.value === 0 && hardCap && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1.5">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        A budget of $0 will immediately block all billable entries.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
