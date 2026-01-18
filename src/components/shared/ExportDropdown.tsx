@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { DelayedTooltip } from '@/components/ui/tooltip';
 
 export interface ExportDropdownProps {
   /** Called when CSV export is triggered */
@@ -72,32 +73,38 @@ export function ExportDropdown({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant={variant}
-          size={size}
-          disabled={disabled || isExporting}
-        >
-          {isExporting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
-          )}
-          {!iconOnly && <span className="ml-2">{label}</span>}
-        </Button>
-      </DropdownMenuTrigger>
+      <DelayedTooltip content="Export the current view to a file for offline use or external analysis">
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant={variant}
+            size={size}
+            disabled={disabled || isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {!iconOnly && <span className="ml-2">{label}</span>}
+          </Button>
+        </DropdownMenuTrigger>
+      </DelayedTooltip>
       <DropdownMenuContent align="end" className="bg-popover">
         {onExportCSV && (
-          <DropdownMenuItem onClick={onExportCSV}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Export as CSV
-          </DropdownMenuItem>
+          <DelayedTooltip content="Download raw data as a spreadsheet file. Includes visible columns only - can be opened in Excel or Google Sheets." side="left">
+            <DropdownMenuItem onClick={onExportCSV} className="cursor-pointer">
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export as CSV
+            </DropdownMenuItem>
+          </DelayedTooltip>
         )}
         {onExportPDF && (
-          <DropdownMenuItem onClick={onExportPDF}>
-            <FileText className="h-4 w-4 mr-2" />
-            Export as PDF
-          </DropdownMenuItem>
+          <DelayedTooltip content="Download a formatted PDF document. Layout matches the current table view with headers and totals." side="left">
+            <DropdownMenuItem onClick={onExportPDF} className="cursor-pointer">
+              <FileText className="h-4 w-4 mr-2" />
+              Export as PDF
+            </DropdownMenuItem>
+          </DelayedTooltip>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

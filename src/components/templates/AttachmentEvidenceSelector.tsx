@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AttachmentPreviewThumbnail } from "@/components/case-detail/AttachmentPreviewThumbnail";
-import { ChevronDown, ChevronRight, Paperclip, FileText, Image, Link2 } from "lucide-react";
+import { HelpTooltip, DelayedTooltip } from "@/components/ui/tooltip";
+import { ChevronDown, ChevronRight, Paperclip, FileText, Image, Link2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 
 interface CaseAttachment {
@@ -157,6 +159,9 @@ export const AttachmentEvidenceSelector = ({
     return null;
   }
 
+  // Count unlinked selected attachments for warning
+  const unlinkedSelectedCount = selectedIds.filter(id => !linkedAttachmentIds.has(id)).length;
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="border rounded-lg overflow-hidden">
       <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
@@ -164,6 +169,7 @@ export const AttachmentEvidenceSelector = ({
           {isOpen ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
           <Paperclip className="h-4 w-4 flex-shrink-0" />
           <span className="font-medium text-sm truncate">Evidence Attachments</span>
+          <HelpTooltip content="Select which attachments to include as evidence references in your report. Linked attachments have a clear evidence chain." />
           <Badge variant="secondary" className="text-xs flex-shrink-0">
             {selectedIds.length}/{attachments.length}
           </Badge>
@@ -175,21 +181,29 @@ export const AttachmentEvidenceSelector = ({
           <div className="flex flex-col gap-2">
             <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full">
               <TabsList className="h-auto flex-wrap gap-1 w-full justify-start">
-                <TabsTrigger value="all" className="text-xs px-2 h-7">
-                  All ({attachments.length})
-                </TabsTrigger>
-                <TabsTrigger value="update-linked" className="text-xs px-2 h-7">
-                  <Link2 className="h-3 w-3 mr-1" />
-                  Linked ({[...linkedAttachmentIds].length})
-                </TabsTrigger>
-                <TabsTrigger value="documents" className="text-xs px-2 h-7">
-                  <FileText className="h-3 w-3 mr-1" />
-                  Docs
-                </TabsTrigger>
-                <TabsTrigger value="images" className="text-xs px-2 h-7">
-                  <Image className="h-3 w-3 mr-1" />
-                  Images
-                </TabsTrigger>
+                <DelayedTooltip content="Show all case attachments regardless of type or linking status">
+                  <TabsTrigger value="all" className="text-xs px-2 h-7">
+                    All ({attachments.length})
+                  </TabsTrigger>
+                </DelayedTooltip>
+                <DelayedTooltip content="Attachments associated with case updates - provides evidence chain for defensibility">
+                  <TabsTrigger value="update-linked" className="text-xs px-2 h-7">
+                    <Link2 className="h-3 w-3 mr-1" />
+                    Linked ({[...linkedAttachmentIds].length})
+                  </TabsTrigger>
+                </DelayedTooltip>
+                <DelayedTooltip content="PDFs, Word documents, and text files">
+                  <TabsTrigger value="documents" className="text-xs px-2 h-7">
+                    <FileText className="h-3 w-3 mr-1" />
+                    Docs
+                  </TabsTrigger>
+                </DelayedTooltip>
+                <DelayedTooltip content="Photos and image evidence files">
+                  <TabsTrigger value="images" className="text-xs px-2 h-7">
+                    <Image className="h-3 w-3 mr-1" />
+                    Images
+                  </TabsTrigger>
+                </DelayedTooltip>
               </TabsList>
             </Tabs>
 
@@ -248,13 +262,15 @@ export const AttachmentEvidenceSelector = ({
                       </div>
 
                       {linkedUpdates.length > 0 && (
-                        <Badge variant="outline" className="text-xs flex-shrink-0">
-                          <Link2 className="h-3 w-3 mr-1" />
-                          {linkedUpdates.length === 1 
-                            ? linkedUpdates[0].update_title.slice(0, 15) + (linkedUpdates[0].update_title.length > 15 ? "..." : "")
-                            : `${linkedUpdates.length} updates`
-                          }
-                        </Badge>
+                        <DelayedTooltip content="This attachment is linked to a case update, creating a clear evidence chain for defensibility.">
+                          <Badge variant="outline" className="text-xs flex-shrink-0 cursor-help">
+                            <Link2 className="h-3 w-3 mr-1" />
+                            {linkedUpdates.length === 1 
+                              ? linkedUpdates[0].update_title.slice(0, 15) + (linkedUpdates[0].update_title.length > 15 ? "..." : "")
+                              : `${linkedUpdates.length} updates`
+                            }
+                          </Badge>
+                        </DelayedTooltip>
                       )}
                     </label>
                   );
@@ -266,6 +282,16 @@ export const AttachmentEvidenceSelector = ({
           <p className="text-xs text-muted-foreground">
             {selectedCount} of {filteredAttachments.length} {filter !== "all" ? "filtered " : ""}attachments will be included in <code className="bg-muted px-1 rounded">{"{{Files.*}}"}</code> variables
           </p>
+
+          {/* Warning for unlinked attachments */}
+          {unlinkedSelectedCount > 0 && (
+            <Alert className="bg-amber-500/10 border-amber-500/30 py-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+              <AlertDescription className="text-xs text-amber-700 dark:text-amber-400">
+                {unlinkedSelectedCount} selected attachment{unlinkedSelectedCount > 1 ? 's are' : ' is'} not linked to case updates. Unlinked attachments may be harder to explain in legal proceedings.
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>
