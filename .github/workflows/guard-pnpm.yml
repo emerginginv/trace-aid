@@ -1,5 +1,4 @@
-name: Guard: pnpm lockfile required
-
+name: "Guard: pnpm lockfile required"
 on:
   push:
     branches: [main]
