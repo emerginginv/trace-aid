@@ -26,8 +26,8 @@ jobs:
           fi
 
       - name: Ensure no npm install usage
-        run: |
-          if grep -R "npm install" .; then
-            echo "❌ npm install detected. Use pnpm install --frozen-lockfile."
-            exit 1
-          fi
+  run: |
+    if grep -R -E '(^|[^p])npm install' .; then
+      echo "❌ npm install detected. Use pnpm install --frozen-lockfile."
+      exit 1
+    fi
