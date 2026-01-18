@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Pencil, Clock, User, FolderOpen, AlertTriangle } from "lucide-react";
+import { Pencil, Clock, User, FolderOpen, AlertTriangle, Info } from "lucide-react";
 import { useCaseStatusHistoryWithTransitions, CaseCategoryTransition } from "@/hooks/use-case-status-history-extended";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStatusDisplay } from "@/hooks/use-status-display";
 import { EditStatusDatesDialog } from "./EditStatusDatesDialog";
 import { formatDurationDetailed } from "@/hooks/use-case-status-history";
+import { DelayedTooltip, HelpTooltip } from "@/components/ui/tooltip";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CaseStatusHistoryModalProps {
   caseId: string;
@@ -146,7 +148,15 @@ export function CaseStatusHistoryModal({ caseId, open, onOpenChange }: CaseStatu
             <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               Status History
+              <HelpTooltip 
+                content="Complete audit trail of all status changes, including timestamps, durations, and who made each change"
+                side="right"
+              />
             </DialogTitle>
+            <DialogDescription>
+              <strong>Current Status</strong> shows where the case is now. <strong>Status History</strong> tracks every status 
+              the case has been in, including how long it spent in each. This history is preserved for compliance and reporting.
+            </DialogDescription>
           </DialogHeader>
           
           <ScrollArea className="flex-1 -mx-6 px-6">
@@ -163,15 +173,20 @@ export function CaseStatusHistoryModal({ caseId, open, onOpenChange }: CaseStatu
                 {mergedTimeline.map((item, index) => (
                   <div key={item.id}>
                     {item.type === 'category' && item.categoryTransition && (
-                      <div className="my-4 flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border border-dashed">
-                        <FolderOpen className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">
-                          Category: {item.categoryTransition.from_category_name || 'None'} → {item.categoryTransition.to_category_name}
-                        </span>
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {formatDateTime(item.categoryTransition.transitioned_at)}
-                        </span>
-                      </div>
+                      <DelayedTooltip
+                        content="Case moved between major workflow phases"
+                        side="right"
+                      >
+                        <div className="my-4 flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border border-dashed cursor-help">
+                          <FolderOpen className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">
+                            Category: {item.categoryTransition.from_category_name || 'None'} → {item.categoryTransition.to_category_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {formatDateTime(item.categoryTransition.transitioned_at)}
+                          </span>
+                        </div>
+                      </DelayedTooltip>
                     )}
                     
                     {item.type === 'status' && item.statusEntry && (
@@ -200,62 +215,87 @@ export function CaseStatusHistoryModal({ caseId, open, onOpenChange }: CaseStatu
                                   : getCategoryFromStatus(item.statusEntry.to_status)}
                               </span>
                               {item.statusEntry.exited_at === null && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Current
-                                </Badge>
+                                <DelayedTooltip content="Case is currently in this status" side="top">
+                                  <Badge variant="secondary" className="text-xs cursor-help">
+                                    Current
+                                  </Badge>
+                                </DelayedTooltip>
                               )}
                               {item.statusEntry.manual_override && (
-                                <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-300">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  Manual Override
-                                </Badge>
+                                <DelayedTooltip content="Dates were manually adjusted - original values preserved in audit log" side="top">
+                                  <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-300 cursor-help">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Manual Override
+                                  </Badge>
+                                </DelayedTooltip>
                               )}
                             </div>
                             
-                            {canEditDates && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 shrink-0"
-                                onClick={() => handleEditClick(item.statusEntry!)}
-                                title="Edit dates"
+                            {canEditDates ? (
+                              <DelayedTooltip
+                                content="Adjust entry and exit times for this status record"
+                                side="left"
                               >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 shrink-0"
+                                  onClick={() => handleEditClick(item.statusEntry!)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </DelayedTooltip>
+                            ) : (
+                              <DelayedTooltip
+                                content="You don't have permission to edit status dates"
+                                side="left"
+                              >
+                                <span className="h-7 w-7 p-0 shrink-0 flex items-center justify-center text-muted-foreground/50 cursor-not-allowed">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </span>
+                              </DelayedTooltip>
                             )}
                           </div>
                           
                           <div className="mt-1.5 space-y-1 text-sm text-muted-foreground">
                             <div className="flex items-center gap-4">
-                              <span>
-                                <span className="text-xs uppercase tracking-wide">Entered:</span>{' '}
-                                {formatDateTime(item.statusEntry.entered_at)}
-                              </span>
+                              <DelayedTooltip content="When the case entered this status" side="top">
+                                <span className="cursor-help">
+                                  <span className="text-xs uppercase tracking-wide">Entered:</span>{' '}
+                                  {formatDateTime(item.statusEntry.entered_at)}
+                                </span>
+                              </DelayedTooltip>
                             </div>
                             
                             {item.statusEntry.exited_at && (
-                              <div>
-                                <span className="text-xs uppercase tracking-wide">Exited:</span>{' '}
-                                {formatDateTime(item.statusEntry.exited_at)}
-                              </div>
+                              <DelayedTooltip content="When the case left this status for the next one" side="top">
+                                <div className="cursor-help inline-block">
+                                  <span className="text-xs uppercase tracking-wide">Exited:</span>{' '}
+                                  {formatDateTime(item.statusEntry.exited_at)}
+                                </div>
+                              </DelayedTooltip>
                             )}
                             
                             <div className="flex items-center gap-4 flex-wrap">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {item.statusEntry.computed_duration_seconds !== null
-                                  ? formatDurationDetailed(item.statusEntry.computed_duration_seconds)
-                                  : 'Ongoing'}
-                                {item.statusEntry.exited_at === null && (
-                                  <span className="text-xs">(ongoing)</span>
-                                )}
-                              </span>
+                              <DelayedTooltip content="Time spent in this status (calculated from entry to exit)" side="top">
+                                <span className="flex items-center gap-1 cursor-help">
+                                  <Clock className="h-3 w-3" />
+                                  {item.statusEntry.computed_duration_seconds !== null
+                                    ? formatDurationDetailed(item.statusEntry.computed_duration_seconds)
+                                    : 'Ongoing'}
+                                  {item.statusEntry.exited_at === null && (
+                                    <span className="text-xs">(ongoing)</span>
+                                  )}
+                                </span>
+                              </DelayedTooltip>
                               
                               {item.statusEntry.changed_by_name && (
-                                <span className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {item.statusEntry.changed_by_name}
-                                </span>
+                                <DelayedTooltip content="Staff member who made this status change" side="top">
+                                  <span className="flex items-center gap-1 cursor-help">
+                                    <User className="h-3 w-3" />
+                                    {item.statusEntry.changed_by_name}
+                                  </span>
+                                </DelayedTooltip>
                               )}
                             </div>
                             
