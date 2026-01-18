@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Clock, Loader2 } from "lucide-react";
+import { AlertTriangle, Clock, Loader2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { formatDurationDetailed } from "@/hooks/use-case-status-history";
+import { HelpTooltip, DelayedTooltip } from "@/components/ui/tooltip";
 
 interface StatusHistoryEntry {
   id: string;
@@ -156,7 +157,13 @@ export function EditStatusDatesDialog({
           
           {/* Entered At */}
           <div className="space-y-2">
-            <Label htmlFor="entered-at">Entry Time</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="entered-at">Entry Time</Label>
+              <HelpTooltip 
+                content="When this status became active" 
+                side="right"
+              />
+            </div>
             <Input
               id="entered-at"
               type="datetime-local"
@@ -164,11 +171,22 @@ export function EditStatusDatesDialog({
               onChange={(e) => setEnteredAt(e.target.value)}
               className="w-full"
             />
+            <p className="text-xs text-muted-foreground">
+              The timestamp when this case entered this status. Changing this will recalculate duration.
+            </p>
           </div>
           
           {/* Exited At */}
           <div className="space-y-2">
-            <Label htmlFor="exited-at">Exit Time</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="exited-at">Exit Time</Label>
+              {historyEntry.exited_at !== null && (
+                <HelpTooltip 
+                  content="When the case left this status" 
+                  side="right"
+                />
+              )}
+            </div>
             <Input
               id="exited-at"
               type="datetime-local"
@@ -177,32 +195,43 @@ export function EditStatusDatesDialog({
               disabled={historyEntry.exited_at === null}
               className="w-full"
             />
-            {historyEntry.exited_at === null && (
+            {historyEntry.exited_at === null ? (
               <p className="text-xs text-muted-foreground">
-                This is the current status - exit time cannot be set
+                This is the current status - exit time cannot be set until a new status is selected.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                The timestamp when this case moved to the next status. Changing this adjusts the next status entry time automatically.
               </p>
             )}
           </div>
           
           {/* Duration Preview */}
           {durationPreview && (
-            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">
-                Duration: {' '}
-                <span className={durationPreview.valid ? 'font-medium' : 'text-destructive'}>
-                  {durationPreview.text}
+            <DelayedTooltip content="Calculated time between entry and exit (or now if current)" side="right">
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md cursor-help">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">
+                  Duration: {' '}
+                  <span className={durationPreview.valid ? 'font-medium' : 'text-destructive'}>
+                    {durationPreview.text}
+                  </span>
                 </span>
-              </span>
-            </div>
+              </div>
+            </DelayedTooltip>
           )}
           
           {/* Warning */}
           <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-              Editing dates will mark this entry as manually overridden. 
-              If you change the exit time, the next entry's start time will be adjusted automatically.
+            <AlertDescription className="text-sm text-amber-800 dark:text-amber-200 space-y-2">
+              <p>
+                Editing dates will mark this entry as manually overridden. Original timestamps are preserved in the audit log. 
+                If you change the exit time, the next entry's start time will be adjusted automatically to maintain timeline continuity.
+              </p>
+              <p className="text-xs opacity-80">
+                All date changes are logged with your user ID and timestamp. Manual overrides are flagged in reports for compliance review.
+              </p>
             </AlertDescription>
           </Alert>
           

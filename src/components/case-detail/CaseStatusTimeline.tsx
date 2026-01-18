@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Clock, User, ArrowRight, History } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { DelayedTooltip, HelpTooltip } from "@/components/ui/tooltip";
 
 interface CaseStatusTimelineProps {
   caseId: string;
@@ -37,8 +38,14 @@ export function CaseStatusTimeline({ caseId }: CaseStatusTimelineProps) {
           <CardTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
             Status History
+            <HelpTooltip 
+              content="Status determines what actions are available and how this case appears in reports"
+              side="right"
+            />
           </CardTitle>
-          <CardDescription>Time spent in each status</CardDescription>
+          <CardDescription>
+            Time spent in each status. Update status when the case moves to a new phase of work or a major milestone is reached.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -164,19 +171,23 @@ export function CaseStatusTimeline({ caseId }: CaseStatusTimelineProps) {
           </p>
           
           <div className="flex items-center gap-4 mt-2 text-sm">
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              <span>
-                {duration !== null ? formatDuration(duration) : "—"}
-                {isCurrent && <span className="text-primary ml-1">(ongoing)</span>}
+            <DelayedTooltip content="Time spent in this status (calculated from entry to exit)" side="top">
+              <span className="flex items-center gap-1.5 text-muted-foreground cursor-help">
+                <Clock className="h-3.5 w-3.5" />
+                <span>
+                  {duration !== null ? formatDuration(duration) : "—"}
+                  {isCurrent && <span className="text-primary ml-1">(ongoing)</span>}
+                </span>
               </span>
-            </span>
+            </DelayedTooltip>
             
             {entry.changed_by_name && (
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <User className="h-3.5 w-3.5" />
-                <span>{entry.changed_by_name}</span>
-              </span>
+              <DelayedTooltip content="Staff member who made this status change" side="top">
+                <span className="flex items-center gap-1.5 text-muted-foreground cursor-help">
+                  <User className="h-3.5 w-3.5" />
+                  <span>{entry.changed_by_name}</span>
+                </span>
+              </DelayedTooltip>
             )}
           </div>
 

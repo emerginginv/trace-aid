@@ -41,6 +41,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStatusDisplay } from "@/hooks/use-status-display";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DelayedTooltip } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
@@ -874,89 +875,129 @@ const CaseDetail = () => {
           {!isVendor && canViewExactStatus && (
             <div className="flex items-center gap-1">
               {/* Prev Status Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 px-2"
-                disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getPrevStatus(caseData.current_status_id)}
-                onClick={() => {
-                  if (caseData.current_status_id) {
-                    const prev = getPrevStatus(caseData.current_status_id);
-                    if (prev) handleNewStatusChange(prev.id);
-                  }
-                }}
-                title="Previous Status"
+              <DelayedTooltip
+                content={
+                  !caseData.current_status_id || !getPrevStatus(caseData.current_status_id)
+                    ? "Already at first status in this phase"
+                    : "Move to previous status in workflow"
+                }
+                side="bottom"
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-2"
+                  disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getPrevStatus(caseData.current_status_id)}
+                  onClick={() => {
+                    if (caseData.current_status_id) {
+                      const prev = getPrevStatus(caseData.current_status_id);
+                      if (prev) handleNewStatusChange(prev.id);
+                    }
+                  }}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </DelayedTooltip>
 
               {/* Status Dropdown - Using new canonical status system */}
-              <Select 
-                value={caseData.current_status_id || ''} 
-                onValueChange={handleNewStatusChange} 
-                disabled={updatingStatus || statusesLoading}
+              <DelayedTooltip
+                content="Current case status - affects workflow, reporting, and visibility"
+                side="bottom"
               >
-                <SelectTrigger 
-                  className="w-[140px] h-9 text-sm border" 
-                  style={getCurrentStatusStyle()}
-                >
-                  <SelectValue placeholder="Select status">
-                    {getCurrentStatusDisplayName()}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(category => (
-                    <div key={category.id}>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
-                        {category.name}
-                      </div>
-                      {activeStatuses
-                        .filter(s => s.category_id === category.id)
-                        .sort((a, b) => a.rank_order - b.rank_order)
-                        .map(status => (
-                          <SelectItem key={status.id} value={status.id}>
-                            <span className="flex items-center gap-2">
-                              <span 
-                                className="w-2.5 h-2.5 rounded-full shrink-0" 
-                                style={{ backgroundColor: status.color || '#9ca3af' }} 
-                              />
-                              {status.name}
-                            </span>
-                          </SelectItem>
-                        ))}
-                    </div>
-                  ))}
-                </SelectContent>
-              </Select>
+                <div>
+                  <Select 
+                    value={caseData.current_status_id || ''} 
+                    onValueChange={handleNewStatusChange} 
+                    disabled={updatingStatus || statusesLoading}
+                  >
+                    <SelectTrigger 
+                      className="w-[140px] h-9 text-sm border" 
+                      style={getCurrentStatusStyle()}
+                    >
+                      <SelectValue placeholder="Select status">
+                        {getCurrentStatusDisplayName()}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(category => (
+                        <div key={category.id}>
+                          <DelayedTooltip
+                            content={
+                              category.name.toLowerCase().includes('intake') 
+                                ? "Initial assessment and setup statuses"
+                                : category.name.toLowerCase().includes('execution') || category.name.toLowerCase().includes('active')
+                                ? "Active investigation and work statuses"
+                                : category.name.toLowerCase().includes('closed') || category.name.toLowerCase().includes('complete')
+                                ? "Completed or cancelled case statuses"
+                                : `${category.name} workflow statuses`
+                            }
+                            side="left"
+                          >
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                              {category.name}
+                            </div>
+                          </DelayedTooltip>
+                          {activeStatuses
+                            .filter(s => s.category_id === category.id)
+                            .sort((a, b) => a.rank_order - b.rank_order)
+                            .map(status => (
+                              <SelectItem key={status.id} value={status.id}>
+                                <span className="flex items-center gap-2">
+                                  <span 
+                                    className="w-2.5 h-2.5 rounded-full shrink-0" 
+                                    style={{ backgroundColor: status.color || '#9ca3af' }} 
+                                  />
+                                  {status.name}
+                                </span>
+                              </SelectItem>
+                            ))}
+                        </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </DelayedTooltip>
 
               {/* Next Status Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 px-2"
-                disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getNextStatus(caseData.current_status_id)}
-                onClick={() => {
-                  if (caseData.current_status_id) {
-                    const next = getNextStatus(caseData.current_status_id);
-                    if (next) handleNewStatusChange(next.id);
-                  }
-                }}
-                title="Next Status"
+              <DelayedTooltip
+                content={
+                  !caseData.current_status_id || !getNextStatus(caseData.current_status_id)
+                    ? "Already at final status in this phase"
+                    : "Move to next status in workflow"
+                }
+                side="bottom"
               >
-                <ChevronLeft className="h-4 w-4 rotate-180" />
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-2"
+                  disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getNextStatus(caseData.current_status_id)}
+                  onClick={() => {
+                    if (caseData.current_status_id) {
+                      const next = getNextStatus(caseData.current_status_id);
+                      if (next) handleNewStatusChange(next.id);
+                    }
+                  }}
+                >
+                  <ChevronLeft className="h-4 w-4 rotate-180" />
+                </Button>
+              </DelayedTooltip>
 
               {/* Status History Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-9 w-9 p-0"
-                onClick={() => setStatusHistoryModalOpen(true)}
-                title="View Status History"
+              <DelayedTooltip
+                content="View complete status history with timestamps and durations"
+                side="bottom"
               >
-                <History className="h-4 w-4" />
-                <ChevronLeft className="h-4 w-4 rotate-180" />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 w-9 p-0"
+                  onClick={() => setStatusHistoryModalOpen(true)}
+                >
+                  <History className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4 rotate-180" />
+                </Button>
+              </DelayedTooltip>
             </div>
           )}
           
