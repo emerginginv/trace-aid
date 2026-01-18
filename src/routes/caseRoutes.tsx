@@ -1,25 +1,30 @@
 import { Route, Navigate } from "react-router-dom";
+import { Suspense } from "react";
 import { RouteWrapper } from "./RouteWrapper";
-import Cases from "@/pages/Cases";
-import CaseDetail from "@/pages/CaseDetail";
-import { CaseWizard } from "@/components/case-wizard";
-import SubjectDetail from "@/pages/SubjectDetail";
-import Subjects from "@/pages/Subjects";
-import Activities from "@/pages/Activities";
-import Updates from "@/pages/Updates";
-import UpdateDetail from "@/pages/UpdateDetail";
-import CaseUpdateDetail from "@/pages/CaseUpdateDetail";
-import Calendar from "@/pages/Calendar";
-import NewExpenseEntry from "@/pages/NewExpenseEntry";
-import ExpenseEntryDetail from "@/pages/ExpenseEntryDetail";
-import EditExpenseEntry from "@/pages/EditExpenseEntry";
-import NewCaseUpdate from "@/pages/NewCaseUpdate";
-import CaseRequests from "@/pages/CaseRequests";
-import CaseRequestDetail from "@/pages/CaseRequestDetail";
-import NewCaseRequest from "@/pages/NewCaseRequest";
+import { LazyLoadFallback } from "@/components/ui/LazyLoadFallback";
+import {
+  Cases,
+  CaseDetail,
+  CaseWizard,
+  SubjectDetail,
+  Subjects,
+  Activities,
+  Updates,
+  UpdateDetail,
+  CaseUpdateDetail,
+  Calendar,
+  NewExpenseEntry,
+  ExpenseEntryDetail,
+  EditExpenseEntry,
+  NewCaseUpdate,
+  CaseRequests,
+  CaseRequestDetail,
+  NewCaseRequest,
+} from "./lazyPages";
 
 /**
  * Routes related to case management.
+ * All pages are lazy-loaded for better initial bundle size.
  */
 export const caseRoutes = (
   <>
@@ -27,7 +32,9 @@ export const caseRoutes = (
       path="/cases"
       element={
         <RouteWrapper>
-          <Cases />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Cases />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -35,7 +42,9 @@ export const caseRoutes = (
       path="/cases/requests"
       element={
         <RouteWrapper blockVendors>
-          <CaseRequests />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <CaseRequests />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -43,7 +52,9 @@ export const caseRoutes = (
       path="/cases/requests/new"
       element={
         <RouteWrapper blockVendors>
-          <NewCaseRequest />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <NewCaseRequest />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -51,7 +62,9 @@ export const caseRoutes = (
       path="/cases/requests/:id"
       element={
         <RouteWrapper blockVendors>
-          <CaseRequestDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <CaseRequestDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -59,7 +72,9 @@ export const caseRoutes = (
       path="/cases/new"
       element={
         <RouteWrapper>
-          <CaseWizard />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <CaseWizard />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -67,7 +82,9 @@ export const caseRoutes = (
       path="/cases/:id"
       element={
         <RouteWrapper>
-          <CaseDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <CaseDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -75,7 +92,9 @@ export const caseRoutes = (
       path="/cases/:caseId/subjects/:subjectId"
       element={
         <RouteWrapper>
-          <SubjectDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <SubjectDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -83,7 +102,9 @@ export const caseRoutes = (
       path="/cases/:caseId/updates/new"
       element={
         <RouteWrapper>
-          <NewCaseUpdate />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <NewCaseUpdate />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -91,7 +112,9 @@ export const caseRoutes = (
       path="/cases/:caseId/updates/:updateId"
       element={
         <RouteWrapper>
-          <CaseUpdateDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <CaseUpdateDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -99,7 +122,9 @@ export const caseRoutes = (
       path="/cases/:caseId/expenses/new"
       element={
         <RouteWrapper>
-          <NewExpenseEntry />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <NewExpenseEntry />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -107,7 +132,9 @@ export const caseRoutes = (
       path="/cases/:caseId/expenses/:expenseId/edit"
       element={
         <RouteWrapper>
-          <EditExpenseEntry />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <EditExpenseEntry />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -115,7 +142,9 @@ export const caseRoutes = (
       path="/cases/:caseId/expenses/:expenseId"
       element={
         <RouteWrapper>
-          <ExpenseEntryDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <ExpenseEntryDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -123,7 +152,9 @@ export const caseRoutes = (
       path="/subjects"
       element={
         <RouteWrapper blockVendors>
-          <Subjects />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Subjects />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -132,7 +163,9 @@ export const caseRoutes = (
       path="/activities"
       element={
         <RouteWrapper blockVendors>
-          <Activities />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Activities />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -149,7 +182,9 @@ export const caseRoutes = (
       path="/updates"
       element={
         <RouteWrapper blockVendors>
-          <Updates />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Updates />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -157,7 +192,9 @@ export const caseRoutes = (
       path="/updates/:id"
       element={
         <RouteWrapper>
-          <UpdateDetail />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <UpdateDetail />
+          </Suspense>
         </RouteWrapper>
       }
     />
@@ -165,7 +202,9 @@ export const caseRoutes = (
       path="/calendar"
       element={
         <RouteWrapper blockVendors>
-          <Calendar />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <Calendar />
+          </Suspense>
         </RouteWrapper>
       }
     />
