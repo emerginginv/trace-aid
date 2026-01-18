@@ -11,7 +11,7 @@ Navigate to your Vercel project → **Settings** → **General** → **Build & D
 | **Framework Preset** | Vite |
 | **Build Command** | `pnpm run build` |
 | **Output Directory** | `dist` |
-| **Install Command** | `npm install -g pnpm@9 && pnpm install --frozen-lockfile` |
+| **Install Command** | `pnpm install --frozen-lockfile` |
 
 ### Node.js Version
 
@@ -40,7 +40,7 @@ This repo includes the following build configuration:
 
 ```json
 {
-  "installCommand": "npm install -g pnpm@9 && pnpm install --frozen-lockfile",
+  "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm run build"
 }
 ```
@@ -86,7 +86,7 @@ Ensure these files are deleted from the repo:
 
 Verify Vercel Install Command is exactly:
 ```
-npm install -g pnpm@9 && pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile
 ```
 
 ---
@@ -113,7 +113,7 @@ This project has experienced repeated CI failures. To prevent regression:
 ### Required Install Command
 
 ```
-npm install -g pnpm@9 && pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile
 ```
 
 ### If Build Errors Appear
