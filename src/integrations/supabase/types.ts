@@ -9780,6 +9780,10 @@ export type Database = {
         Args: { file_path: string }
         Returns: boolean
       }
+      can_access_subject_case: {
+        Args: { p_subject_id: string }
+        Returns: boolean
+      }
       can_access_subject_profile_image: {
         Args: { file_path: string }
         Returns: boolean
