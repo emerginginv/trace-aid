@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   FileText, 
   User, 
@@ -17,7 +18,8 @@ import {
   DollarSign,
   Clock,
   FileCheck,
-  Users
+  Users,
+  Shield
 } from "lucide-react";
 import { useCaseTypesForPublicForm, useCaseServicesForPublicForm, useSubjectTypesForPublicForm } from "@/hooks/queries/useCaseRequestFormBySlug";
 import { Step1Data, Step2Data, SubjectData, FileData } from "@/hooks/useCaseRequestForm";
@@ -125,7 +127,7 @@ export function CaseSummaryStep({
           Review Your Request
         </h2>
         <p className="text-muted-foreground mt-1">
-          Please review all information before submitting
+          Please review all information before submitting. Click "Edit" on any section to make changes.
         </p>
       </div>
 
@@ -425,6 +427,16 @@ export function CaseSummaryStep({
           </div>
         </div>
       </div>
+
+      {/* Privacy Notice */}
+      <Alert className="bg-muted/50">
+        <Shield className="h-4 w-4" />
+        <AlertDescription className="text-sm">
+          By submitting this request, you confirm that you are authorized to provide this information 
+          and that it is accurate to the best of your knowledge. Your submission is encrypted and 
+          only accessible by authorized staff.
+        </AlertDescription>
+      </Alert>
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4 border-t">
