@@ -204,12 +204,16 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
         <div className="text-sm">
           <span className="font-medium text-muted-foreground">SSN:</span>{" "}
           <span className="font-mono">{details.ssn}</span>
+          <span className="ml-1 text-xs text-muted-foreground">(Admin/Manager only)</span>
         </div>
       )}
       {details.ssn && !canViewSSN && (
         <div className="text-sm">
           <span className="font-medium text-muted-foreground">SSN:</span>{" "}
-          <span className="text-muted-foreground italic">Hidden (Admin only)</span>
+          <span className="text-muted-foreground italic flex items-center gap-1">
+            <ShieldAlert className="h-3 w-3" />
+            Hidden - Admin/Manager only
+          </span>
         </div>
       )}
       {details.phone && (
@@ -442,12 +446,32 @@ export const CaseSubjects = ({ caseId, isClosedCase = false }: { caseId: string;
 
   if (!canViewSubjects) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center">
+          <div className="rounded-full bg-muted p-3 mb-4">
+            <ShieldAlert className="h-8 w-8 text-muted-foreground" />
+          </div>
+          
           <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
-          <p className="text-muted-foreground text-center">
-            You don't have permission to view subjects. Contact your administrator for access.
+          
+          <p className="text-muted-foreground mb-4 max-w-md">
+            Subject information is restricted to protect personal data. Your role does not include subject access for this case.
+          </p>
+          
+          <div className="bg-muted/50 rounded-lg p-4 mb-4 max-w-md">
+            <div className="flex items-start gap-2 text-sm text-left">
+              <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-medium">Why?</span>
+                <p className="text-muted-foreground mt-1">
+                  Subject profiles may contain sensitive information like SSNs, addresses, and personal identifiers that require controlled access.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-sm text-muted-foreground max-w-md">
+            Contact your administrator if you believe you need access.
           </p>
         </CardContent>
       </Card>
