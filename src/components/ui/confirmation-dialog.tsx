@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react";
+import { AlertTriangle, Info, CheckCircle, XCircle, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ConfirmationDialogProps {
@@ -17,6 +17,10 @@ interface ConfirmationDialogProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
+  /** Additional consequence explanation - explains what will happen */
+  consequence?: string;
+  /** Corrective guidance - how to avoid or what to do instead */
+  guidance?: string;
   confirmLabel?: string;
   cancelLabel?: string;
   onConfirm: () => void;
@@ -30,6 +34,8 @@ export function ConfirmationDialog({
   onOpenChange,
   title,
   description,
+  consequence,
+  guidance,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   onConfirm,
@@ -86,6 +92,21 @@ export function ConfirmationDialog({
               <AlertDialogDescription className="mt-2">
                 {description}
               </AlertDialogDescription>
+              
+              {/* Consequence section */}
+              {consequence && (
+                <div className="mt-3 p-3 rounded-md bg-muted/50 border border-border/50">
+                  <p className="text-sm text-muted-foreground">{consequence}</p>
+                </div>
+              )}
+              
+              {/* Guidance section */}
+              {guidance && (
+                <div className="mt-3 flex items-start gap-2">
+                  <Lightbulb className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                  <p className="text-sm text-muted-foreground">{guidance}</p>
+                </div>
+              )}
             </div>
           </div>
         </AlertDialogHeader>
@@ -136,6 +157,8 @@ export function useConfirmation() {
     open: boolean;
     title: string;
     description: string;
+    consequence?: string;
+    guidance?: string;
     variant: "default" | "destructive" | "warning" | "success";
     confirmLabel: string;
     cancelLabel: string;
@@ -145,6 +168,8 @@ export function useConfirmation() {
     open: false,
     title: "",
     description: "",
+    consequence: undefined,
+    guidance: undefined,
     variant: "default",
     confirmLabel: "Confirm",
     cancelLabel: "Cancel",
@@ -156,6 +181,8 @@ export function useConfirmation() {
     (options: {
       title: string;
       description: string;
+      consequence?: string;
+      guidance?: string;
       variant?: "default" | "destructive" | "warning" | "success";
       confirmLabel?: string;
       cancelLabel?: string;
@@ -165,6 +192,8 @@ export function useConfirmation() {
           open: true,
           title: options.title,
           description: options.description,
+          consequence: options.consequence,
+          guidance: options.guidance,
           variant: options.variant || "default",
           confirmLabel: options.confirmLabel || "Confirm",
           cancelLabel: options.cancelLabel || "Cancel",
@@ -194,6 +223,8 @@ export function useConfirmation() {
         }}
         title={state.title}
         description={state.description}
+        consequence={state.consequence}
+        guidance={state.guidance}
         variant={state.variant}
         confirmLabel={state.confirmLabel}
         cancelLabel={state.cancelLabel}
