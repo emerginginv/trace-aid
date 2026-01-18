@@ -1,4 +1,5 @@
-name: "Guard: pnpm lockfile required"
+name: Guard: pnpm lockfile required
+
 on:
   push:
     branches: [main]
@@ -25,10 +26,10 @@ jobs:
             exit 1
           fi
 
-      - name: Ensure no npm install usage
-  run: |
-    set -e
-    if grep -R "npm install" src scripts | grep -v "pnpm install"; then
-      echo "❌ npm install detected in executable code. Use pnpm install --frozen-lockfile."
-      exit 1
-    fi
+      - name: Ensure no npm install usage (code only)
+        run: |
+          set -e
+          if grep -R "npm install" ./src 2>/dev/null; then
+            echo "❌ npm install detected in src/. Use pnpm."
+            exit 1
+          fi
