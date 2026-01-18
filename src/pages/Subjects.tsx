@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -11,15 +11,18 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
-import { User, Car, MapPin, Package, Building2, Search, MoreVertical, Eye, ExternalLink, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { User, Car, MapPin, Package, Building2, Search, MoreVertical, ExternalLink, Download, FileSpreadsheet, FileText, Pencil, Trash2, RefreshCw, Archive, ArchiveRestore, X } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useSubjectProfileImages } from "@/hooks/use-subject-profile-images";
 import { SubjectCategory, SUBJECT_CATEGORY_LABELS, PERSON_ROLES } from "@/components/case-detail/subjects/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 interface SubjectWithCase {
   id: string;
@@ -89,7 +92,16 @@ export default function Subjects() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("active");
-  // viewMode state removed - always use list view
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [singleDeleteId, setSingleDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Permission checks
+  const canEditSubjects = hasPermission("edit_subjects");
+  const canDeleteSubjects = hasPermission("delete_subjects");
 
   const [counts, setCounts] = useState<SubjectCounts>({
     person: 0,
@@ -198,6 +210,112 @@ export default function Subjects() {
       return true;
     });
   }, [subjects, categoryFilter, statusFilter, searchQuery]);
+
+  // Selection handlers
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === filteredSubjects.length && filteredSubjects.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredSubjects.map(s => s.id)));
+    }
+  }, [filteredSubjects, selectedIds.size]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  // Single delete handler
+  const handleDelete = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("case_subjects")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        toast.error("Failed to delete subject");
+        console.error("Delete error:", error);
+        return;
+      }
+
+      toast.success("Subject deleted successfully");
+      fetchSubjects();
+      setSingleDeleteId(null);
+    } catch (error) {
+      console.error("Error deleting subject:", error);
+      toast.error("Failed to delete subject");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Bulk status change handler
+  const handleBulkStatusChange = async (newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from("case_subjects")
+        .update({ status: newStatus })
+        .in("id", Array.from(selectedIds));
+
+      if (error) {
+        toast.error("Failed to update subjects");
+        console.error("Bulk status update error:", error);
+        return;
+      }
+
+      toast.success(`Updated ${selectedIds.size} subject${selectedIds.size !== 1 ? 's' : ''} to ${newStatus}`);
+      setSelectedIds(new Set());
+      fetchSubjects();
+    } catch (error) {
+      console.error("Error updating subjects:", error);
+      toast.error("Failed to update subjects");
+    }
+  };
+
+  // Bulk delete handler
+  const handleBulkDeleteConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("case_subjects")
+        .delete()
+        .in("id", Array.from(selectedIds));
+
+      if (error) {
+        toast.error("Failed to delete subjects");
+        console.error("Bulk delete error:", error);
+        return;
+      }
+
+      toast.success(`Deleted ${selectedIds.size} subject${selectedIds.size !== 1 ? 's' : ''}`);
+      setSelectedIds(new Set());
+      setBulkDeleteDialogOpen(false);
+      fetchSubjects();
+    } catch (error) {
+      console.error("Error deleting subjects:", error);
+      toast.error("Failed to delete subjects");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Navigate to edit
+  const navigateToEdit = (subject: SubjectWithCase) => {
+    navigateWithSource(navigate, `/cases/${subject.cases.id}/subjects/${subject.id}?edit=true`, 'subjects_list');
+  };
 
   const subjectsForImages = filteredSubjects.map(s => ({
     id: s.id,
@@ -336,6 +454,51 @@ export default function Subjects() {
         <ImportTemplateButton templateFileName="05_Subjects.csv" entityDisplayName="Subjects" />
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-muted rounded-lg">
+          <span className="text-sm font-medium">
+            {selectedIds.size} subject{selectedIds.size !== 1 ? 's' : ''} selected
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {canEditSubjects && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Change Status
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleBulkStatusChange('active')}>
+                    <ArchiveRestore className="h-4 w-4 mr-2" />
+                    Set Active
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkStatusChange('archived')}>
+                    <Archive className="h-4 w-4 mr-2" />
+                    Set Archived
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {canDeleteSubjects && (
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => setBulkDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              <X className="h-4 w-4 mr-2" />
+              Clear Selection
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Entry count */}
       <div className="text-sm text-muted-foreground">
         Showing {filteredSubjects.length} subject{filteredSubjects.length !== 1 ? 's' : ''}
@@ -359,6 +522,12 @@ export default function Subjects() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">
+                  <Checkbox
+                    checked={selectedIds.size === filteredSubjects.length && filteredSubjects.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead className="w-[280px]">Subject</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Case</TableHead>
@@ -378,6 +547,12 @@ export default function Subjects() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => navigateToSubject(subject)}
                   >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(subject.id)}
+                        onCheckedChange={() => toggleSelect(subject.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {subject.subject_type === 'person' ? (
@@ -430,14 +605,28 @@ export default function Subjects() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigateToSubject(subject)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/cases/${subject.cases.id}`)}>
                             <ExternalLink className="h-4 w-4 mr-2" />
                             Go to Case
                           </DropdownMenuItem>
+                          {canEditSubjects && (
+                            <DropdownMenuItem onClick={() => navigateToEdit(subject)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit Subject
+                            </DropdownMenuItem>
+                          )}
+                          {canDeleteSubjects && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => setSingleDeleteId(subject.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Subject
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -455,6 +644,30 @@ export default function Subjects() {
           Showing {filteredSubjects.length} of {subjects.length} subjects
         </p>
       )}
+
+      {/* Single Delete Confirmation */}
+      <ConfirmationDialog
+        open={!!singleDeleteId}
+        onOpenChange={(open) => !open && setSingleDeleteId(null)}
+        title="Delete Subject"
+        description="Are you sure you want to delete this subject? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={isDeleting}
+        onConfirm={() => singleDeleteId && handleDelete(singleDeleteId)}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title="Delete Subjects"
+        description={`Are you sure you want to delete ${selectedIds.size} subject${selectedIds.size !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmLabel="Delete All"
+        variant="destructive"
+        loading={isDeleting}
+        onConfirm={handleBulkDeleteConfirm}
+      />
     </div>
   );
 }
