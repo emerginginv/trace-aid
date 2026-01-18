@@ -750,7 +750,7 @@ const AllInvoices = () => {
                         {invoice.invoice_number || "N/A"}
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium capitalize ${
                           invoice.status === "paid"
                             ? "bg-green-100 text-green-700"
                             : invoice.status === "partial"
