@@ -134,7 +134,12 @@ export function RelatedCasesWidget({ entityType, entityId }: RelatedCasesWidgetP
 
   const getStatusLabel = (status: string) => {
     const statusItem = caseStatuses.find((s) => s.value === status);
-    return statusItem?.value || status;
+    const label = statusItem?.value || status;
+    // Capitalize for professional display
+    return label
+      .split(/[_-]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   };
 
   const getInvestigatorNames = (caseItem: CaseItem) => {

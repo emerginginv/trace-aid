@@ -119,8 +119,14 @@ export function StatusBadge({
   showPulse = true,
   size = "default",
 }: StatusBadgeProps) {
+  // Format status for display if not found in config
+  const formatStatusLabel = (s: string) => 
+    s.split(/[_-]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+
   const config = statusConfig[status.toLowerCase()] || {
-    label: status,
+    label: formatStatusLabel(status),
     className: "bg-muted text-muted-foreground border border-border",
   };
 
