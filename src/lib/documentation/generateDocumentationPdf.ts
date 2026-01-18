@@ -84,7 +84,15 @@ function parseMarkdown(content: string): DocumentBlock[] {
         
         // Skip separator row (index 1), process data rows
         for (let j = 2; j < tableLines.length; j++) {
-          rows.push(parseTableRow(tableLines[j]));
+          const row = parseTableRow(tableLines[j]);
+          // Normalize row length to header length to keep autoTable stable
+          if (row.length < headers.length) {
+            rows.push([...row, ...Array(headers.length - row.length).fill('')]);
+          } else if (row.length > headers.length) {
+            rows.push(row.slice(0, headers.length));
+          } else {
+            rows.push(row);
+          }
         }
         
         blocks.push({ type: 'table', content: '', headers, rows });
@@ -378,21 +386,22 @@ export async function generateDocumentationPdfBlob(params: GeneratePdfParams): P
             didDrawCell: (data) => {
               // Handle checkbox cells
               if (data.section === 'body') {
-                const cellText = block.rows![data.row.index][data.column.index];
+                const cellText = block.rows?.[data.row.index]?.[data.column.index] ?? '';
+                if (!cellText) return;
+
                 const { hasCheckbox, checked } = cellHasCheckbox(cellText);
-                
-                if (hasCheckbox) {
-                  // Clear the cell text and draw checkbox instead
-                  const cellX = data.cell.x + data.cell.width / 2 - 1.75;
-                  const cellY = data.cell.y + data.cell.height / 2 + 1;
-                  drawCheckbox(doc, cellX, cellY, checked, 3.5);
-                }
+                if (!hasCheckbox) return;
+
+                // Draw checkbox centered in the cell
+                const cellX = data.cell.x + data.cell.width / 2 - 1.75;
+                const cellY = data.cell.y + data.cell.height / 2 + 1;
+                drawCheckbox(doc, cellX, cellY, checked, 3.5);
               }
             },
             didParseCell: (data) => {
               // Clear text for checkbox cells (we'll draw the checkbox instead)
               if (data.section === 'body') {
-                const cellText = block.rows![data.row.index]?.[data.column.index] || '';
+                const cellText = block.rows?.[data.row.index]?.[data.column.index] ?? '';
                 const { hasCheckbox } = cellHasCheckbox(cellText);
                 if (hasCheckbox) {
                   data.cell.text = [''];
