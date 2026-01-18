@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClipboardList, Clock, CheckCircle, Calendar, MoreVertical, ExternalLink, MapPin, RefreshCw, X, Trash2, Pencil } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
@@ -94,9 +94,9 @@ const SCHEDULED_STATUSES = [
 ];
 
 const TYPE_FILTER_OPTIONS = [
-  { value: 'all', label: 'All Types' },
+  { value: 'all', label: 'All Activities' },
   { value: 'scheduled', label: 'Scheduled' },
-  { value: 'unscheduled', label: 'Unscheduled (Tasks)' },
+  { value: 'unscheduled', label: 'Tasks' },
 ];
 
 // Status badge styles removed - now using unified ActivityStatusPill
@@ -438,20 +438,12 @@ export default function Activities() {
         isLoading={loading}
       />
 
-      {/* Type Filter Tabs */}
-      <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
-          <TabsTrigger value="unscheduled">Tasks</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
       <FilterToolbar
         searchPlaceholder="Search activities or cases..."
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         filters={[
+          { value: typeFilter, onChange: setTypeFilter, options: TYPE_FILTER_OPTIONS, placeholder: "Activity Type" },
           { value: statusFilter, onChange: setStatusFilter, options: STATUS_OPTIONS, placeholder: "Status" }
         ]}
         showExport
