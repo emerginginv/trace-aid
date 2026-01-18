@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
+import { useBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,23 +32,30 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ContactDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { 
-  Subject, 
   SubjectCategory, 
   PERSON_ROLES, 
   VEHICLE_TYPES, 
   LOCATION_TYPES, 
   ITEM_TYPES, 
   US_STATES, 
-  SUBJECT_CATEGORY_SINGULAR,
-  ProfileImageModal,
   SubjectDrawer,
   SubjectDetailField,
   SocialMediaLinksWidget,
   LinkedEntitiesPanel,
 } from "@/components/case-detail/subjects";
 import { logSubjectAudit } from "@/lib/subjectAuditLogger";
+import { Database } from "@/integrations/supabase/types";
 
-const getCategoryIcon = (category: SubjectCategory) => {
+// Use the database row type directly
+type CaseSubjectRow = Database['public']['Tables']['case_subjects']['Row'];
+
+interface SubjectTypeInfo {
+  id: string;
+  name: string;
+  category: string;
+}
+
+const getCategoryIcon = (category: string) => {
   switch (category) {
     case 'person':
       return User;
@@ -58,6 +65,8 @@ const getCategoryIcon = (category: SubjectCategory) => {
       return MapPin;
     case 'item':
       return Package;
+    default:
+      return User;
   }
 };
 
@@ -65,6 +74,7 @@ const getInitials = (name: string): string => {
   return name
     .split(' ')
     .map(part => part[0])
+    .filter(Boolean)
     .join('')
     .toUpperCase()
     .slice(0, 2);
@@ -100,26 +110,77 @@ const getStateLabel = (value: string | null | undefined): string => {
   return state?.label || value;
 };
 
-interface SubjectType {
-  id: string;
-  name: string;
-  category: SubjectCategory;
-}
-
 export default function SubjectDetail() {
-  const { subjectId, caseId } = useParams<{ subjectId: string; caseId?: string }>();
+  const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
-  const { getBackPath } = useNavigationSource();
-  const setBreadcrumbs = useSetBreadcrumbs();
+  const { getBackRoute } = useNavigationSource();
+  const { setItems: setBreadcrumbs } = useBreadcrumbs();
 
-  const [subject, setSubject] = useState<Subject | null>(null);
-  const [subjectType, setSubjectType] = useState<SubjectType | null>(null);
+  const [subject, setSubject] = useState<CaseSubjectRow | null>(null);
+  const [subjectType, setSubjectType] = useState<SubjectTypeInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [signedProfileUrl, setSignedProfileUrl] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [caseName, setCaseName] = useState<string>("");
   const [caseNumber, setCaseNumber] = useState<string>("");
+
+  // Helper to safely get details fields
+  const getDetail = useCallback((key: string): any => {
+    if (!subject?.details) return null;
+    const details = subject.details as Record<string, any>;
+    return details[key] ?? null;
+  }, [subject?.details]);
+
+  // Convert DB row to Subject type for drawer
+  const convertToSubject = useCallback(() => {
+    if (!subject) return null;
+    return {
+      id: subject.id,
+      case_id: subject.case_id,
+      organization_id: subject.organization_id,
+      subject_type: (subjectType?.category || subject.subject_type || 'person') as SubjectCategory,
+      name: subject.name,
+      display_name: subject.display_name,
+      details: (subject.details || {}) as Record<string, any>,
+      notes: subject.notes,
+      status: subject.status as 'active' | 'archived',
+      role: subject.role,
+      profile_image_url: subject.profile_image_url,
+      cover_image_url: subject.cover_image_url,
+      is_primary: subject.is_primary,
+      created_at: subject.created_at,
+      updated_at: subject.updated_at,
+      archived_at: subject.archived_at,
+      archived_by: subject.archived_by,
+    };
+  }, [subject, subjectType]);
+
+  const getDisplayName = useCallback((): string => {
+    if (!subject) return "Subject";
+    const category = subjectType?.category || subject.subject_type || 'person';
+
+    switch (category) {
+      case 'person':
+        const firstName = getDetail('first_name');
+        const middleName = getDetail('middle_name');
+        const lastName = getDetail('last_name');
+        const nameParts = [firstName, middleName, lastName].filter(Boolean);
+        return nameParts.length > 0 ? nameParts.join(' ') : (subject.display_name || subject.name || 'Unnamed Person');
+      case 'vehicle':
+        const year = getDetail('vehicle_year');
+        const make = getDetail('vehicle_make');
+        const model = getDetail('vehicle_model');
+        const vehicleParts = [year, make, model].filter(Boolean);
+        return vehicleParts.length > 0 ? vehicleParts.join(' ') : (subject.display_name || subject.name || 'Unnamed Vehicle');
+      case 'location':
+        return getDetail('location_name') || getDetail('address1') || subject.display_name || subject.name || 'Unnamed Location';
+      case 'item':
+        return getDetail('item_description') || subject.display_name || subject.name || 'Unnamed Item';
+      default:
+        return subject.display_name || subject.name || 'Subject';
+    }
+  }, [subject, subjectType, getDetail]);
 
   useEffect(() => {
     if (subjectId) {
@@ -135,15 +196,15 @@ export default function SubjectDetail() {
 
   useEffect(() => {
     if (subject && caseName) {
-      const displayName = getDisplayName();
+      const name = getDisplayName();
       setBreadcrumbs([
         { label: "Cases", href: "/cases" },
         { label: caseNumber || caseName, href: `/cases/${subject.case_id}` },
         { label: "Subjects", href: `/cases/${subject.case_id}` },
-        { label: displayName },
+        { label: name },
       ]);
     }
-  }, [subject, caseName, caseNumber, setBreadcrumbs]);
+  }, [subject, caseName, caseNumber, setBreadcrumbs, getDisplayName]);
 
   const loadSubject = async () => {
     if (!subjectId) return;
@@ -169,7 +230,7 @@ export default function SubjectDetail() {
           .single();
         
         if (typeData) {
-          setSubjectType(typeData);
+          setSubjectType(typeData as SubjectTypeInfo);
         }
       }
 
@@ -207,42 +268,59 @@ export default function SubjectDetail() {
   const loadCaseInfo = async () => {
     if (!subject?.case_id) return;
     
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("cases")
-      .select("name, case_number")
+      .select("case_number")
       .eq("id", subject.case_id)
       .single();
     
     if (data) {
-      setCaseName(data.name);
+      setCaseName(data.case_number || "Case");
       setCaseNumber(data.case_number || "");
     }
   };
 
+  const isArchived = subject?.status === 'archived' || !!subject?.archived_at;
+
   const handleArchiveToggle = async () => {
     if (!subject) return;
 
-    const newArchivedState = !subject.archived;
+    const newStatus = isArchived ? 'active' : 'archived';
+    const now = new Date().toISOString();
 
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+
+      const updateData: any = {
+        status: newStatus,
+        archived_at: newStatus === 'archived' ? now : null,
+        archived_by: newStatus === 'archived' ? userId : null,
+      };
+
       const { error } = await supabase
         .from("case_subjects")
-        .update({ archived: newArchivedState })
+        .update(updateData)
         .eq("id", subject.id);
 
       if (error) throw error;
 
       await logSubjectAudit({
-        subjectId: subject.id,
-        caseId: subject.case_id,
-        action: newArchivedState ? 'archive' : 'unarchive',
-        fieldName: 'archived',
-        oldValue: String(!newArchivedState),
-        newValue: String(newArchivedState),
+        subject_id: subject.id,
+        case_id: subject.case_id,
+        organization_id: subject.organization_id,
+        action: isArchived ? 'restored' : 'archived',
+        previous_values: { status: subject.status },
+        new_values: { status: newStatus },
       });
 
-      setSubject({ ...subject, archived: newArchivedState });
-      toast.success(newArchivedState ? "Subject archived" : "Subject unarchived");
+      setSubject({ 
+        ...subject, 
+        status: newStatus,
+        archived_at: updateData.archived_at,
+        archived_by: updateData.archived_by,
+      });
+      toast.success(isArchived ? "Subject unarchived" : "Subject archived");
     } catch (error) {
       console.error("Error toggling archive status:", error);
       toast.error("Failed to update archive status");
@@ -254,53 +332,41 @@ export default function SubjectDetail() {
     loadSubject();
   };
 
-  const getDisplayName = (): string => {
-    if (!subject) return "Subject";
-    const category = subjectType?.category || 'person';
-
-    switch (category) {
-      case 'person':
-        const nameParts = [subject.first_name, subject.middle_name, subject.last_name].filter(Boolean);
-        return nameParts.length > 0 ? nameParts.join(' ') : 'Unnamed Person';
-      case 'vehicle':
-        const vehicleParts = [subject.vehicle_year, subject.vehicle_make, subject.vehicle_model].filter(Boolean);
-        return vehicleParts.length > 0 ? vehicleParts.join(' ') : 'Unnamed Vehicle';
-      case 'location':
-        return subject.location_name || subject.address1 || 'Unnamed Location';
-      case 'item':
-        return subject.item_description || 'Unnamed Item';
-      default:
-        return 'Subject';
-    }
-  };
-
   const getQuickInfo = (): string | null => {
     if (!subject) return null;
-    const category = subjectType?.category || 'person';
+    const category = subjectType?.category || subject.subject_type || 'person';
     
-    if (category === 'person' && subject.date_of_birth) {
-      return format(new Date(subject.date_of_birth), "MMM d, yyyy");
-    } else if (category === 'vehicle' && subject.vehicle_license_plate) {
-      return subject.vehicle_license_plate;
+    if (category === 'person') {
+      const dob = getDetail('date_of_birth');
+      if (dob) return format(new Date(dob), "MMM d, yyyy");
+    } else if (category === 'vehicle') {
+      return getDetail('vehicle_license_plate') || null;
     } else if (category === 'location') {
-      const parts = [subject.city, subject.state].filter(Boolean);
+      const parts = [getDetail('city'), getDetail('state')].filter(Boolean);
       return parts.length > 0 ? parts.join(", ") : null;
     } else if (category === 'item') {
-      const parts = [subject.item_brand, subject.item_model].filter(Boolean);
+      const parts = [getDetail('item_brand'), getDetail('item_model')].filter(Boolean);
       return parts.length > 0 ? parts.join(" ") : null;
     }
     return null;
   };
 
   const handleBackClick = () => {
-    const backPath = getBackPath();
-    if (backPath) {
-      navigate(backPath);
-    } else if (subject?.case_id) {
-      navigate(`/cases/${subject.case_id}`);
-    } else {
-      navigate("/cases");
-    }
+    const backRoute = getBackRoute(subject?.case_id ? `/cases/${subject.case_id}` : "/cases");
+    navigate(backRoute);
+  };
+
+  const formatAddress = (): string | null => {
+    if (!subject) return null;
+    const parts = [
+      getDetail('address1'),
+      getDetail('address2'),
+      getDetail('address3'),
+      [getDetail('city'), getStateLabel(getDetail('state'))].filter(Boolean).join(", "),
+      getDetail('zip'),
+      getDetail('country')
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : null;
   };
 
   if (loading) {
@@ -322,22 +388,10 @@ export default function SubjectDetail() {
     );
   }
 
-  const category = subjectType?.category || 'person';
+  const category = subjectType?.category || subject.subject_type || 'person';
   const CategoryIcon = getCategoryIcon(category);
   const displayName = getDisplayName();
   const quickInfo = getQuickInfo();
-
-  const formatAddress = () => {
-    const parts = [
-      subject.address1,
-      subject.address2,
-      subject.address3,
-      [subject.city, getStateLabel(subject.state)].filter(Boolean).join(", "),
-      subject.zip,
-      subject.country
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(", ") : null;
-  };
 
   return (
     <div className="container mx-auto py-6 px-4 space-y-6">
@@ -358,7 +412,7 @@ export default function SubjectDetail() {
                 onClick={handleArchiveToggle}
                 className="gap-2"
               >
-                {subject.archived ? (
+                {isArchived ? (
                   <>
                     <ArchiveRestore className="w-4 h-4" />
                     <span className="hidden sm:inline">Unarchive</span>
@@ -410,7 +464,7 @@ export default function SubjectDetail() {
                 {subject.is_primary && (
                   <Badge variant="default" className="shrink-0">Primary</Badge>
                 )}
-                {subject.archived && (
+                {isArchived && (
                   <Badge variant="secondary" className="shrink-0">Archived</Badge>
                 )}
               </div>
@@ -426,14 +480,14 @@ export default function SubjectDetail() {
                 {category === 'person' && subject.role && (
                   <Badge variant="secondary" className="capitalize">{getRoleLabel(subject.role)}</Badge>
                 )}
-                {category === 'vehicle' && subject.vehicle_body_style && (
-                  <Badge variant="secondary" className="capitalize">{getVehicleTypeLabel(subject.vehicle_body_style)}</Badge>
+                {category === 'vehicle' && getDetail('vehicle_body_style') && (
+                  <Badge variant="secondary" className="capitalize">{getVehicleTypeLabel(getDetail('vehicle_body_style'))}</Badge>
                 )}
-                {category === 'location' && subject.location_type && (
-                  <Badge variant="secondary" className="capitalize">{getLocationTypeLabel(subject.location_type)}</Badge>
+                {category === 'location' && getDetail('location_type') && (
+                  <Badge variant="secondary" className="capitalize">{getLocationTypeLabel(getDetail('location_type'))}</Badge>
                 )}
-                {category === 'item' && subject.item_type && (
-                  <Badge variant="secondary" className="capitalize">{getItemTypeLabel(subject.item_type)}</Badge>
+                {category === 'item' && getDetail('item_type') && (
+                  <Badge variant="secondary" className="capitalize">{getItemTypeLabel(getDetail('item_type'))}</Badge>
                 )}
                 {quickInfo && (
                   <span className="flex items-center gap-1">
@@ -496,61 +550,61 @@ export default function SubjectDetail() {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {category === 'person' && (
                 <>
-                  <SubjectDetailField icon={<User className="w-4 h-4" />} label="First Name" value={subject.first_name} />
-                  <SubjectDetailField icon={<User className="w-4 h-4" />} label="Middle Name" value={subject.middle_name} />
-                  <SubjectDetailField icon={<User className="w-4 h-4" />} label="Last Name" value={subject.last_name} />
-                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Alias" value={subject.alias} />
-                  <SubjectDetailField icon={<FileText className="w-4 h-4" />} label="Role" value={getRoleLabel(subject.role)} />
+                  <SubjectDetailField icon={User} label="First Name" value={getDetail('first_name')} />
+                  <SubjectDetailField icon={User} label="Middle Name" value={getDetail('middle_name')} />
+                  <SubjectDetailField icon={User} label="Last Name" value={getDetail('last_name')} />
+                  <SubjectDetailField icon={Tag} label="Alias" value={getDetail('alias')} />
+                  <SubjectDetailField icon={FileText} label="Role" value={getRoleLabel(subject.role)} />
                   <SubjectDetailField 
-                    icon={<Calendar className="w-4 h-4" />} 
+                    icon={Calendar} 
                     label="Date of Birth" 
-                    value={subject.date_of_birth ? format(new Date(subject.date_of_birth), "MMM d, yyyy") : null} 
+                    value={getDetail('date_of_birth') ? format(new Date(getDetail('date_of_birth')), "MMM d, yyyy") : null} 
                   />
-                  <SubjectDetailField icon={<Hash className="w-4 h-4" />} label="SSN" value={subject.ssn ? `***-**-${subject.ssn.slice(-4)}` : null} />
-                  <SubjectDetailField icon={<User className="w-4 h-4" />} label="Sex" value={subject.sex} />
-                  <SubjectDetailField icon={<Globe className="w-4 h-4" />} label="Race" value={subject.race} />
+                  <SubjectDetailField icon={Hash} label="SSN" value={getDetail('ssn') ? `***-**-${getDetail('ssn').slice(-4)}` : null} />
+                  <SubjectDetailField icon={User} label="Sex" value={getDetail('sex')} />
+                  <SubjectDetailField icon={Globe} label="Race" value={getDetail('race')} />
                 </>
               )}
               
               {category === 'vehicle' && (
                 <>
-                  <SubjectDetailField icon={<Calendar className="w-4 h-4" />} label="Year" value={subject.vehicle_year} />
-                  <SubjectDetailField icon={<Car className="w-4 h-4" />} label="Make" value={subject.vehicle_make} />
-                  <SubjectDetailField icon={<Car className="w-4 h-4" />} label="Model" value={subject.vehicle_model} />
-                  <SubjectDetailField icon={<Palette className="w-4 h-4" />} label="Color" value={subject.vehicle_color} />
-                  <SubjectDetailField icon={<Hash className="w-4 h-4" />} label="License Plate" value={subject.vehicle_license_plate} />
-                  <SubjectDetailField icon={<Hash className="w-4 h-4" />} label="VIN" value={subject.vehicle_vin} />
-                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Body Style" value={getVehicleTypeLabel(subject.vehicle_body_style)} />
-                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Fuel Type" value={subject.vehicle_fuel_type} />
+                  <SubjectDetailField icon={Calendar} label="Year" value={getDetail('vehicle_year')} />
+                  <SubjectDetailField icon={Car} label="Make" value={getDetail('vehicle_make')} />
+                  <SubjectDetailField icon={Car} label="Model" value={getDetail('vehicle_model')} />
+                  <SubjectDetailField icon={Palette} label="Color" value={getDetail('vehicle_color')} />
+                  <SubjectDetailField icon={Hash} label="License Plate" value={getDetail('vehicle_license_plate')} />
+                  <SubjectDetailField icon={Hash} label="VIN" value={getDetail('vehicle_vin')} />
+                  <SubjectDetailField icon={Tag} label="Body Style" value={getVehicleTypeLabel(getDetail('vehicle_body_style'))} />
+                  <SubjectDetailField icon={Tag} label="Fuel Type" value={getDetail('vehicle_fuel_type')} />
                 </>
               )}
               
               {category === 'location' && (
                 <>
-                  <SubjectDetailField icon={<Building2 className="w-4 h-4" />} label="Name" value={subject.location_name} />
-                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Type" value={getLocationTypeLabel(subject.location_type)} />
+                  <SubjectDetailField icon={Building2} label="Name" value={getDetail('location_name')} />
+                  <SubjectDetailField icon={Tag} label="Type" value={getLocationTypeLabel(getDetail('location_type'))} />
                   <div className="md:col-span-2">
-                    <SubjectDetailField icon={<MapPin className="w-4 h-4" />} label="Address" value={formatAddress()} />
+                    <SubjectDetailField icon={MapPin} label="Address" value={formatAddress()} />
                   </div>
                 </>
               )}
               
               {category === 'item' && (
                 <>
-                  <SubjectDetailField icon={<Package className="w-4 h-4" />} label="Description" value={subject.item_description} />
-                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Type" value={getItemTypeLabel(subject.item_type)} />
-                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Brand" value={subject.item_brand} />
-                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Model" value={subject.item_model} />
-                  <SubjectDetailField icon={<Hash className="w-4 h-4" />} label="Serial Number" value={subject.item_serial_number} />
-                  <SubjectDetailField icon={<Palette className="w-4 h-4" />} label="Color" value={subject.item_color} />
-                  <SubjectDetailField icon={<Tag className="w-4 h-4" />} label="Value" value={subject.item_value ? `$${Number(subject.item_value).toLocaleString()}` : null} />
+                  <SubjectDetailField icon={Package} label="Description" value={getDetail('item_description')} />
+                  <SubjectDetailField icon={Tag} label="Type" value={getItemTypeLabel(getDetail('item_type'))} />
+                  <SubjectDetailField icon={Tag} label="Brand" value={getDetail('item_brand')} />
+                  <SubjectDetailField icon={Tag} label="Model" value={getDetail('item_model')} />
+                  <SubjectDetailField icon={Hash} label="Serial Number" value={getDetail('item_serial_number')} />
+                  <SubjectDetailField icon={Palette} label="Color" value={getDetail('item_color')} />
+                  <SubjectDetailField icon={Tag} label="Value" value={getDetail('item_value') ? `$${Number(getDetail('item_value')).toLocaleString()}` : null} />
                 </>
               )}
             </CardContent>
           </Card>
 
           {/* Physical Description - Only for persons */}
-          {category === 'person' && (subject.height || subject.weight || subject.eye_color || subject.hair_color || subject.distinguishing_features) && (
+          {category === 'person' && (getDetail('height') || getDetail('weight') || getDetail('eye_color') || getDetail('hair_color') || getDetail('distinguishing_features')) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -559,13 +613,13 @@ export default function SubjectDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SubjectDetailField icon={<Ruler className="w-4 h-4" />} label="Height" value={subject.height} />
-                <SubjectDetailField icon={<Weight className="w-4 h-4" />} label="Weight" value={subject.weight} />
-                <SubjectDetailField icon={<Palette className="w-4 h-4" />} label="Eye Color" value={subject.eye_color} />
-                <SubjectDetailField icon={<Palette className="w-4 h-4" />} label="Hair Color" value={subject.hair_color} />
-                {subject.distinguishing_features && (
+                <SubjectDetailField icon={Ruler} label="Height" value={getDetail('height')} />
+                <SubjectDetailField icon={Weight} label="Weight" value={getDetail('weight')} />
+                <SubjectDetailField icon={Palette} label="Eye Color" value={getDetail('eye_color')} />
+                <SubjectDetailField icon={Palette} label="Hair Color" value={getDetail('hair_color')} />
+                {getDetail('distinguishing_features') && (
                   <div className="md:col-span-2">
-                    <SubjectDetailField icon={<FileText className="w-4 h-4" />} label="Distinguishing Features" value={subject.distinguishing_features} />
+                    <SubjectDetailField icon={FileText} label="Distinguishing Features" value={getDetail('distinguishing_features')} />
                   </div>
                 )}
               </CardContent>
@@ -573,7 +627,7 @@ export default function SubjectDetail() {
           )}
 
           {/* Contact Information - For persons with address */}
-          {category === 'person' && (subject.cell_phone || subject.email || formatAddress()) && (
+          {category === 'person' && (getDetail('cell_phone') || getDetail('email') || formatAddress()) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -582,11 +636,11 @@ export default function SubjectDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SubjectDetailField icon={<Globe className="w-4 h-4" />} label="Phone" value={subject.cell_phone} />
-                <SubjectDetailField icon={<Globe className="w-4 h-4" />} label="Email" value={subject.email} />
+                <SubjectDetailField icon={Globe} label="Phone" value={getDetail('cell_phone')} />
+                <SubjectDetailField icon={Globe} label="Email" value={getDetail('email')} />
                 {formatAddress() && (
                   <div className="md:col-span-2">
-                    <SubjectDetailField icon={<MapPin className="w-4 h-4" />} label="Address" value={formatAddress()} />
+                    <SubjectDetailField icon={MapPin} label="Address" value={formatAddress()} />
                   </div>
                 )}
               </CardContent>
@@ -595,11 +649,11 @@ export default function SubjectDetail() {
 
           {/* Social Media */}
           {category === 'person' && (
-            <SocialMediaLinksWidget subjectId={subject.id} readOnly />
+            <SocialMediaLinksWidget subjectId={subject.id} organizationId={subject.organization_id} readOnly />
           )}
 
           {/* Linked Entities */}
-          <LinkedEntitiesPanel subjectId={subject.id} readOnly />
+          <LinkedEntitiesPanel subjectId={subject.id} caseId={subject.case_id} organizationId={subject.organization_id} subjectType={category as SubjectCategory} />
         </div>
 
         {/* Right Column - Notes */}
@@ -625,10 +679,17 @@ export default function SubjectDetail() {
 
       {/* Edit Drawer */}
       <SubjectDrawer
-        isOpen={isDrawerOpen}
-        onClose={handleDrawerClose}
+        open={isDrawerOpen}
+        onOpenChange={(open) => {
+          if (!open) handleDrawerClose();
+          else setIsDrawerOpen(true);
+        }}
+        subject={convertToSubject()}
+        category={(subjectType?.category || subject.subject_type || 'person') as SubjectCategory}
         caseId={subject.case_id}
-        subjectId={subject.id}
+        organizationId={subject.organization_id}
+        onSuccess={handleDrawerClose}
+        signedProfileImageUrl={signedProfileUrl}
       />
 
       {/* Profile Image Modal */}
