@@ -106,7 +106,7 @@ function DraggableEvent({ event, canDrag, onClick, userColor, userName }: Dragga
         }
       }}
       className={cn(
-        "text-xs rounded px-2 py-1 truncate border-l-2 transition-all text-white",
+        "text-xs rounded px-2 py-1 truncate border-l-2 transition-all text-white max-w-full block",
         isDragging && "opacity-50 shadow-lg",
         canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
         "hover:opacity-80"
@@ -745,7 +745,7 @@ export const CaseCalendar = forwardRef<
                     <div
                       onClick={() => handleDayClick(day)}
                       className={cn(
-                        "min-h-[100px] border-b border-r p-2 cursor-pointer hover:bg-muted/50 transition-colors relative group",
+                        "min-h-[100px] border-b border-r p-2 cursor-pointer hover:bg-muted/50 transition-colors relative group overflow-hidden min-w-0",
                         !isCurrentMonth && "bg-muted/20 text-muted-foreground",
                         isDayToday && "bg-primary/5 ring-1 ring-primary/20"
                       )}
@@ -757,7 +757,7 @@ export const CaseCalendar = forwardRef<
                         <Plus className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0 overflow-hidden">
                         {dayEvents.slice(0, 3).map(event => (
                           <DraggableEvent
                             key={event.id}
@@ -801,7 +801,7 @@ export const CaseCalendar = forwardRef<
 
         {/* Task List - Right Side */}
         {showTaskList && (
-        <div className="w-full lg:w-96 border rounded-lg bg-card">
+        <div className="w-full lg:w-[25%] lg:max-w-80 lg:min-w-64 shrink-0 border rounded-lg bg-card">
           <div className="p-4 border-b">
             <h3 className="font-semibold text-lg mb-3">Tasks</h3>
             
