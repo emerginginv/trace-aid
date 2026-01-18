@@ -1,10 +1,9 @@
-import { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Search, 
@@ -25,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Database } from "@/integrations/supabase/types";
+import { ViewportSafeRightPanel } from "./ViewportSafeRightPanel";
 
 type HelpCategory = Database["public"]["Tables"]["help_categories"]["Row"];
 type HelpArticle = Database["public"]["Tables"]["help_articles"]["Row"];
@@ -55,60 +55,26 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BookOpen,
 };
 
-// Viewport clamping constants
-const VIEWPORT_MARGIN_PX = 16;
-const MAX_PANEL_PX = 512; // 32rem
-
 export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCenterSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewState, setViewState] = useState<ViewState>({ type: "categories" });
   const [hasNavigatedToFeature, setHasNavigatedToFeature] = useState(false);
-  const [panelWidth, setPanelWidth] = useState<number | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
 
-  // Viewport clamp calculation
-  const clampToViewport = useCallback(() => {
-    const vw = window.visualViewport?.width ?? window.innerWidth;
-    const available = Math.max(0, vw - VIEWPORT_MARGIN_PX * 2);
-    const safeWidth = Math.min(MAX_PANEL_PX, available);
-    setPanelWidth(safeWidth);
-
-    // Post-render validation: if still off-screen, force correction
-    requestAnimationFrame(() => {
-      const rect = contentRef.current?.getBoundingClientRect();
-      if (rect) {
-        const currentVw = window.visualViewport?.width ?? window.innerWidth;
-        if (rect.right > currentVw || rect.left < 0) {
-          const correctedWidth = Math.max(0, currentVw - VIEWPORT_MARGIN_PX * 2);
-          setPanelWidth(correctedWidth);
-        }
-      }
-    });
-  }, []);
-
-  // Clamp on open, resize, and view changes
-  useLayoutEffect(() => {
+  // Prevent horizontal document scroll while the Help Center is open.
+  useEffect(() => {
     if (!open) return;
-    
-    clampToViewport();
 
-    const handleResize = () => clampToViewport();
-    
-    window.addEventListener("resize", handleResize);
-    window.visualViewport?.addEventListener("resize", handleResize);
+    const prevHtmlOverflowX = document.documentElement.style.overflowX;
+    const prevBodyOverflowX = document.body.style.overflowX;
+
+    document.documentElement.style.overflowX = "hidden";
+    document.body.style.overflowX = "hidden";
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-      window.visualViewport?.removeEventListener("resize", handleResize);
+      document.documentElement.style.overflowX = prevHtmlOverflowX;
+      document.body.style.overflowX = prevBodyOverflowX;
     };
-  }, [open, clampToViewport]);
-
-  // Re-clamp when view state changes (category/article navigation)
-  useEffect(() => {
-    if (open) {
-      clampToViewport();
-    }
-  }, [open, viewState, clampToViewport]);
+  }, [open]);
 
   // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
@@ -679,15 +645,7 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent 
-        ref={contentRef}
-        className="p-0 flex flex-col"
-        style={{
-          right: VIEWPORT_MARGIN_PX,
-          width: panelWidth ?? MAX_PANEL_PX,
-          maxWidth: `calc(100dvw - ${VIEWPORT_MARGIN_PX * 2}px)`,
-        }}
-      >
+      <ViewportSafeRightPanel className="p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             {showBackButton && (
@@ -702,7 +660,7 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
             )}
             <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
           </div>
-          
+
           {viewState.type === "categories" && (
             <div className="relative mt-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -716,17 +674,16 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
           )}
         </SheetHeader>
 
-        <ScrollArea className="flex-1 px-6 py-4">
-          {searchQuery.trim() 
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4">
+          {searchQuery.trim()
             ? renderSearchResults()
             : viewState.type === "categories"
               ? renderCategoriesList()
               : viewState.type === "category"
                 ? renderCategoryView()
-                : renderArticleView()
-          }
-        </ScrollArea>
-      </SheetContent>
+                : renderArticleView()}
+        </div>
+      </ViewportSafeRightPanel>
     </Sheet>
   );
 }
