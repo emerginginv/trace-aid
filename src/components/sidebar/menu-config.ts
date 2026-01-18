@@ -14,6 +14,7 @@ import {
   FileEdit,
   Clock,
   FileInput,
+  BookOpen,
 } from "lucide-react";
 import { MenuGroup } from "./types";
 
@@ -131,6 +132,12 @@ export const menuGroups: MenuGroup[] = [
         title: "Analytics",
         icon: BarChart3,
         url: "/analytics",
+        roles: ["admin", "manager"],
+      },
+      {
+        title: "Documentation",
+        icon: BookOpen,
+        url: "/documentation",
         roles: ["admin", "manager"],
       },
     ],
