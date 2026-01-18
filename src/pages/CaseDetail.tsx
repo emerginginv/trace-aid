@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Edit, Trash2, Info, MoreVertical, Mail, FileText, Briefcase, Calendar, Users, Paperclip, ClipboardList, DollarSign, Clock, FilePenLine, History } from "lucide-react";
 import { CaseStatusHistoryModal } from "@/components/case-detail/CaseStatusHistoryModal";
+import { CaseLifecycleBanner } from "@/components/case-detail/CaseLifecycleBanner";
+import { LifecycleProgressIndicator } from "@/components/case-detail/LifecycleProgressIndicator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CaseDetailSkeleton } from "@/components/ui/detail-page-skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -849,6 +851,12 @@ const CaseDetail = () => {
           </AlertDescription>
         </Alert>}
       
+      {/* Lifecycle Banner */}
+      <CaseLifecycleBanner 
+        statusKey={caseData.status_key || caseData.status?.toLowerCase().replace(/\s+/g, '_') || null}
+        phase="execution"
+      />
+
       {/* Header */}
       <div className="flex items-start gap-3 md:gap-4 min-w-0">
         {/* Back button + Title row */}

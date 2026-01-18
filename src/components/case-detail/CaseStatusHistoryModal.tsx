@@ -159,6 +159,16 @@ export function CaseStatusHistoryModal({ caseId, open, onOpenChange }: CaseStatu
             </DialogDescription>
           </DialogHeader>
           
+          {/* Audit Trail Info */}
+          <Alert variant="default" className="mb-4 border-primary/20 bg-primary/5">
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-xs ml-2">
+              Every status change is permanently logged. This audit trail proves work authorization, 
+              documents case progression for billing disputes, and provides evidence of proper procedure 
+              for legal proceedings. Records cannot be deleted.
+            </AlertDescription>
+          </Alert>
+          
           <ScrollArea className="flex-1 -mx-6 px-6">
             {isLoading ? (
               <div className="py-8 text-center text-muted-foreground">
