@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Clock, TrendingUp, CheckCircle } from "lucide-react";
 import type { Finance, Invoice } from "@/hooks/useCaseFinances";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface FinancesSummaryCardsProps {
   finances: Finance[];
@@ -31,7 +32,10 @@ export function FinancesSummaryCards({ finances, invoices, retainerTotal }: Fina
     <div className="grid gap-4 md:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Time</CardTitle>
+          <CardTitle className="text-sm font-medium flex items-center gap-1">
+            Total Time
+            <HelpTooltip content="Sum of all billable hours logged for this case" />
+          </CardTitle>
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -41,7 +45,10 @@ export function FinancesSummaryCards({ finances, invoices, retainerTotal }: Fina
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+          <CardTitle className="text-sm font-medium flex items-center gap-1">
+            Total Expenses
+            <HelpTooltip content="Sum of all reimbursable expenses incurred during investigation" />
+          </CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -51,7 +58,10 @@ export function FinancesSummaryCards({ finances, invoices, retainerTotal }: Fina
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Billable (Uninvoiced)</CardTitle>
+          <CardTitle className="text-sm font-medium flex items-center gap-1">
+            Billable (Uninvoiced)
+            <HelpTooltip content="Approved time and expenses not yet included in an invoice - ready for billing" />
+          </CardTitle>
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -61,7 +71,10 @@ export function FinancesSummaryCards({ finances, invoices, retainerTotal }: Fina
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
+          <CardTitle className="text-sm font-medium flex items-center gap-1">
+            Total Billed
+            <HelpTooltip content="Sum of all invoices generated for this case" />
+          </CardTitle>
           <CheckCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>

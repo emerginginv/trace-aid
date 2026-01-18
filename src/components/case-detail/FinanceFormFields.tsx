@@ -11,6 +11,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { UseFormReturn } from "react-hook-form";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface FinanceFormFieldsProps {
   form: UseFormReturn<any>;
@@ -109,7 +110,10 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
         name="finance_type"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Type</FormLabel>
+            <FormLabel className="flex items-center gap-1">
+              Type
+              <HelpTooltip content="Choose whether this is a reimbursable expense or billable time" />
+            </FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
                 <SelectTrigger>
@@ -131,10 +135,14 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
         name="description"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Description</FormLabel>
+            <FormLabel className="flex items-center gap-1">
+              Description
+              <HelpTooltip content="Detailed narrative of what this expense covers. Descriptions appear on invoices and in audit reports." />
+            </FormLabel>
             <FormControl>
-              <Input placeholder="Transaction description" {...field} />
+              <Input placeholder="e.g., 'Mileage to subject's workplace' rather than 'Travel'" {...field} />
             </FormControl>
+            <p className="text-xs text-muted-foreground">Be specific - descriptions appear on invoices and in audit reports</p>
             <FormMessage />
           </FormItem>
         )}
@@ -177,7 +185,10 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Quantity (default: 1)</FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Quantity
+                  <HelpTooltip content="Number of units (e.g., miles, hours, items)" />
+                </FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
@@ -196,7 +207,10 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
             name="unit_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Unit Price <span className="text-destructive">*</span></FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Unit Price <span className="text-destructive">*</span>
+                  <HelpTooltip content="Cost per unit - required for all expenses. Expenses without unit prices cannot be saved." />
+                </FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
@@ -206,6 +220,7 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
                     {...field} 
                   />
                 </FormControl>
+                <p className="text-xs text-muted-foreground">Unit price × quantity = total amount</p>
                 <FormMessage />
               </FormItem>
             )}
@@ -243,7 +258,10 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
             name="hours"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Hours</FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Hours
+                  <HelpTooltip content="Billable hours worked. Use 0.25 hour increments (15 minutes)." />
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -258,6 +276,7 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
                     }}
                   />
                 </FormControl>
+                <p className="text-xs text-muted-foreground">Be accurate - this affects billing and your work record</p>
                 <FormMessage />
               </FormItem>
             )}
@@ -267,7 +286,10 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
             name="hourly_rate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Hourly Rate</FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Hourly Rate
+                  <HelpTooltip content="Rate per hour for this work. Should match your pricing profile unless client has negotiated different terms." />
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -299,7 +321,10 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
             name="category"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Category</FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Category
+                  <HelpTooltip content="Expense category for reporting and filtering. Categories help organize expenses for client reports and tax documentation." />
+                </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -342,7 +367,10 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
         name="date"
         render={({ field }) => (
           <FormItem className="flex flex-col">
-            <FormLabel>Date</FormLabel>
+            <FormLabel className="flex items-center gap-1">
+              Date
+              <HelpTooltip content="When this expense was incurred. Use the actual date of the expense, not the date you're entering it." />
+            </FormLabel>
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
                 <FormControl>
@@ -426,7 +454,10 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
         name="status"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Status</FormLabel>
+            <FormLabel className="flex items-center gap-1">
+              Status
+              <HelpTooltip content="Current approval state. Pending entries require approval before they appear on invoices." />
+            </FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
                 <SelectTrigger>
@@ -451,9 +482,12 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
           control={form.control}
           name="subject_id"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Link to Subject (Optional)</FormLabel>
-              <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
+          <FormItem>
+            <FormLabel className="flex items-center gap-1">
+              Link to Subject (Optional)
+              <HelpTooltip content="Associate this expense with a specific subject. Linking to subjects helps track per-subject costs and proves relevance in reports." />
+            </FormLabel>
+            <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select subject" />
@@ -479,9 +513,12 @@ export const FinanceFormFields = ({ form, subjects, activities, users }: Finance
           control={form.control}
           name="activity_id"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Link to Activity (Optional)</FormLabel>
-              <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
+          <FormItem>
+            <FormLabel className="flex items-center gap-1">
+              Link to Activity (Optional)
+              <HelpTooltip content="Associate this expense with a scheduled activity. Linked expenses appear in activity reports and help justify scheduled work." />
+            </FormLabel>
+            <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select activity" />

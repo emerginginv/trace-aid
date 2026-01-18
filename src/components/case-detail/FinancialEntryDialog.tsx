@@ -16,6 +16,7 @@ import { Plus, Trash2, CalendarIcon, Clock, DollarSign, FileText } from "lucide-
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface TimeRow {
   id: string;
@@ -317,15 +318,19 @@ export const FinancialEntryDialog = ({
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Financial Entry
+            <HelpTooltip content="Record multiple time and expense entries for a single work session. All entries share the same date and become part of the permanent case record." />
           </DialogTitle>
           <DialogDescription>
-            Record a batch of time and expense entries for a single work session
+            Record a batch of time and expense entries for a single work session. All entries will use the same date and can optionally create a case update for documentation.
           </DialogDescription>
         </DialogHeader>
 
         {/* Entry Date */}
         <div className="space-y-2">
-          <Label>Entry Date</Label>
+          <Label className="flex items-center gap-1">
+            Entry Date
+            <HelpTooltip content="All entries in this batch will use this date. Use the actual date of the work, not today's date." />
+          </Label>
           <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -361,6 +366,7 @@ export const FinancialEntryDialog = ({
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <h3 className="font-semibold">Time Entries</h3>
+              <HelpTooltip content="Record hours worked during this session. Each row creates a separate time entry linked to this case." />
               {timeRows.length > 0 && (
                 <Badge variant="secondary">{timeRows.length} rows</Badge>
               )}
@@ -486,6 +492,7 @@ export const FinancialEntryDialog = ({
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
               <h3 className="font-semibold">Expense Entries</h3>
+              <HelpTooltip content="Record expenses incurred during this session. Include receipts as attachments to case updates." />
               {expenseRows.length > 0 && (
                 <Badge variant="secondary">{expenseRows.length} rows</Badge>
               )}
@@ -498,7 +505,7 @@ export const FinancialEntryDialog = ({
 
           {expenseRows.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-md">
-              No expense entries. Click "Add Expense" to record costs incurred.
+              No expense entries. Click "Add Expense" to record costs incurred (mileage, meals, equipment, etc.).
             </p>
           ) : (
             <div className="space-y-3">

@@ -23,6 +23,7 @@ import { BudgetStrategyBadge, BudgetDisabledMessage } from "./BudgetStrategyBadg
 import { getBudgetStatusStyles, formatBudgetCurrency, formatBudgetHours } from "@/lib/budgetUtils";
 import { ContextualHelp } from "@/components/help-center";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { DelayedTooltip, HelpTooltip } from "@/components/ui/tooltip";
 
 interface BudgetSummaryData {
   budget_hours_authorized: number;
@@ -231,24 +232,27 @@ export function BudgetStatusCard({
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Budget Status
+            <HelpTooltip content="Budget tracks authorized work limits versus actual consumption. This is for internal cost control - it does not affect what clients are invoiced." />
             <ContextualHelp feature="case_budgets" />
           </CardTitle>
-          <Badge 
-            variant={budget.hard_cap ? "destructive" : "secondary"} 
-            className="text-xs flex items-center gap-1"
-          >
-            {budget.hard_cap ? (
-              <>
-                <ShieldAlert className="h-3 w-3" />
-                Hard Cap
-              </>
-            ) : (
-              <>
-                <Shield className="h-3 w-3" />
-                Soft Cap
-              </>
-            )}
-          </Badge>
+          <DelayedTooltip content={budget.hard_cap ? "Work will be BLOCKED when budget is exceeded" : "Warnings shown but work can continue past budget"}>
+            <Badge 
+              variant={budget.hard_cap ? "destructive" : "secondary"} 
+              className="text-xs flex items-center gap-1 cursor-help"
+            >
+              {budget.hard_cap ? (
+                <>
+                  <ShieldAlert className="h-3 w-3" />
+                  Hard Cap
+                </>
+              ) : (
+                <>
+                  <Shield className="h-3 w-3" />
+                  Soft Cap
+                </>
+              )}
+            </Badge>
+          </DelayedTooltip>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -393,23 +397,27 @@ export function BudgetStatusCard({
               onSuccess={handleBudgetSuccess}
               existingBudget={budget}
               triggerButton={
-                <Button variant="outline" size="sm" className="flex-1">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Adjust
-                </Button>
+                <DelayedTooltip content="Modify budget limits or cap type">
+                  <Button variant="outline" size="sm" className="flex-1">
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    Adjust
+                  </Button>
+                </DelayedTooltip>
               }
             />
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1"
-            onClick={onViewHistory}
-            disabled={!onViewHistory}
-          >
-            <History className="h-3 w-3 mr-1" />
-            History
-          </Button>
+          <DelayedTooltip content="View budget change history for audit purposes">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1"
+              onClick={onViewHistory}
+              disabled={!onViewHistory}
+            >
+              <History className="h-3 w-3 mr-1" />
+              History
+            </Button>
+          </DelayedTooltip>
         </div>
       </CardContent>
     </Card>
