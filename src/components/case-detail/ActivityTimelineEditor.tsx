@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, Clock } from "lucide-react";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 export interface TimelineEntry {
   time: string;
@@ -66,10 +67,17 @@ export function ActivityTimelineEditor({
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <Clock className="h-4 w-4 text-primary" />
-        Activity Timeline
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <Clock className="h-4 w-4 text-primary" />
+          Activity Timeline
+          <HelpTooltip content="Record minute-by-minute observations. Example: '06:00 - Arrived at subject residence' → '08:15 - Subject departed in blue Honda'. These entries appear in formatted reports." />
+        </div>
       </div>
+      
+      <p className="text-xs text-muted-foreground">
+        <strong>Tip:</strong> Use for surveillance logs, detailed field notes, or any activity requiring timestamped documentation. Entries should reflect actual observation times.
+      </p>
 
       {value.length === 0 ? (
         <p className="text-sm text-muted-foreground">

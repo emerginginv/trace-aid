@@ -7,6 +7,7 @@ import { TimelineEntryComponent, TimelineFilters } from "./timeline";
 import { useCaseTimeline } from "@/hooks/use-case-timeline";
 import { TimelineEntry, TimelineEntryType } from "@/types/timeline";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface CaseTimelineProps {
   caseId: string;
@@ -62,9 +63,12 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
           <div className="flex items-start gap-3">
             <History className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
-              <CardTitle className="text-lg">Timeline</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-1.5">
+                Timeline
+                <HelpTooltip content="Complete chronological history of all case activity. This is your audit trail - every update, event, subject, and attachment is logged with timestamps." />
+              </CardTitle>
               <CardDescription className="mt-1">
-                Chronological history of all case activity
+                Permanent record of updates, events, subjects, and attachments
               </CardDescription>
             </div>
           </div>

@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TimelineEntry as TimelineEntryType } from "@/types/timeline";
+import { DelayedTooltip } from "@/components/ui/tooltip";
 
 interface TimelineEntryProps {
   entry: TimelineEntryType;
@@ -25,36 +26,42 @@ const entryTypeConfig = {
     label: 'Case',
     badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
     dotClass: 'bg-slate-400',
+    tooltip: 'Case creation or major case-level event',
   },
   subject: {
     icon: Users,
     label: 'Subject',
     badgeClass: 'bg-blue-100 text-blue-700 border-blue-200',
     dotClass: 'bg-blue-500',
+    tooltip: 'Person, location, vehicle, or entity added to the case',
   },
   update: {
     icon: FilePenLine,
     label: 'Update',
     badgeClass: 'bg-purple-100 text-purple-700 border-purple-200',
     dotClass: 'bg-purple-500',
+    tooltip: 'Narrative documentation of work performed',
   },
   event: {
     icon: Calendar,
     label: 'Event',
     badgeClass: 'bg-orange-100 text-orange-700 border-orange-200',
     dotClass: 'bg-orange-500',
+    tooltip: 'Scheduled work assignment - costs from linked updates',
   },
   attachment: {
     icon: Paperclip,
     label: 'Attachment',
     badgeClass: 'bg-green-100 text-green-700 border-green-200',
     dotClass: 'bg-green-500',
+    tooltip: 'File uploaded to the case',
   },
   system: {
     icon: Settings,
     label: 'System',
     badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
     dotClass: 'bg-slate-400',
+    tooltip: 'Automated system entry like status changes',
   },
 };
 
@@ -85,9 +92,11 @@ export function TimelineEntryComponent({ entry, onNavigate, isLast }: TimelineEn
         {/* Header row with timestamp and badge */}
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className={cn("text-xs font-medium", config.badgeClass)}>
-              {config.label}
-            </Badge>
+            <DelayedTooltip content={config.tooltip}>
+              <Badge variant="outline" className={cn("text-xs font-medium cursor-help", config.badgeClass)}>
+                {config.label}
+              </Badge>
+            </DelayedTooltip>
             <span className="text-xs text-muted-foreground">
               {formattedDate} at {formattedTime}
             </span>

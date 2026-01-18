@@ -18,6 +18,7 @@ import { ExternalLink, Paperclip, Link2 } from "lucide-react";
 import { AttachmentPicker } from "./AttachmentPicker";
 import { ActivityTimelineEditor, TimelineEntry } from "./ActivityTimelineEditor";
 import { format } from "date-fns";
+import { HelpTooltip } from "@/components/ui/tooltip";
 // Note: Billing CTAs removed - billing now initiated only from Update Details page
 
 const formSchema = z.object({
@@ -357,7 +358,9 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingUpdate ? "Edit" : "Add"} Update</DialogTitle>
-          <DialogDescription>Add a new progress note or activity log</DialogDescription>
+          <DialogDescription>
+            Document work performed, observations made, or communications. Updates become part of the permanent case record and appear in reports.
+          </DialogDescription>
           {caseTitle && (
             <button
               onClick={() => {
@@ -379,7 +382,10 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel className="flex items-center gap-1.5">
+                    Title
+                    <HelpTooltip content="Brief summary shown in timelines and reports. Example: 'Day 1 Surveillance - No Activity' or 'Client Call - Budget Extension'" />
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Update title" {...field} />
                   </FormControl>
@@ -393,7 +399,10 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
               name="update_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Update Type</FormLabel>
+                  <FormLabel className="flex items-center gap-1.5">
+                    Update Type
+                    <HelpTooltip content="Categorizes the update for filtering and reporting. Choose the type that best describes this activity." />
+                  </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -422,6 +431,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                   <FormLabel className="flex items-center gap-2">
                     <Link2 className="h-4 w-4" />
                     Related Task/Event (Optional)
+                    <HelpTooltip content="Link this update to a scheduled activity. This associates your time entries and documentation with the planned work for accurate reporting." />
                   </FormLabel>
                   <Select 
                     onValueChange={(val) => field.onChange(val === "none" ? "" : val)} 
@@ -452,7 +462,7 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Optionally link this update to a specific task or event
+                    Linking associates this update's time and expenses with the event for billing and reports
                   </p>
                   <FormMessage />
                 </FormItem>
@@ -464,7 +474,10 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel className="flex items-center gap-1.5">
+                    Description
+                    <HelpTooltip content="Detailed narrative of observations, findings, or communications. This appears in case reports. Include relevant details: times, locations, and what you observed." />
+                  </FormLabel>
                   <FormControl>
                     <RichTextEditor 
                       value={field.value || ""} 
@@ -491,12 +504,13 @@ export const UpdateForm = ({ caseId, open, onOpenChange, onSuccess, editingUpdat
               <div className="space-y-1 leading-none">
                 <Label 
                   htmlFor="include-timeline" 
-                  className="text-sm font-medium cursor-pointer"
+                  className="text-sm font-medium cursor-pointer flex items-center gap-1.5"
                 >
                   Include activity timeline
+                  <HelpTooltip content="Add timestamped entries for detailed field logs. Ideal for surveillance where you need to record minute-by-minute observations." />
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Add chronological activity entries to this update (e.g., surveillance log)
+                  Chronological log of movements and observations - appears in reports but does not create separate billing entries
                 </p>
               </div>
             </div>

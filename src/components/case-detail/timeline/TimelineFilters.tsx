@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TimelineEntryType } from "@/types/timeline";
+import { DelayedTooltip } from "@/components/ui/tooltip";
 
 interface TimelineFiltersProps {
   entryTypeFilter: 'all' | TimelineEntryType;
@@ -25,7 +26,9 @@ export function TimelineFilters({
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
+        <DelayedTooltip content="Filter timeline by entry type to focus on specific activities">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+        </DelayedTooltip>
         <Select 
           value={entryTypeFilter} 
           onValueChange={(value) => onEntryTypeChange(value as 'all' | TimelineEntryType)}
@@ -44,15 +47,17 @@ export function TimelineFilters({
         </Select>
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-9"
-        onClick={() => onSortDirectionChange(sortDirection === 'asc' ? 'desc' : 'asc')}
-      >
-        <ArrowUpDown className="h-4 w-4 mr-2" />
-        {sortDirection === 'asc' ? 'Oldest First' : 'Newest First'}
-      </Button>
+      <DelayedTooltip content={sortDirection === 'desc' ? "Showing newest first - click to show oldest first" : "Showing oldest first - click to show newest first"}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9"
+          onClick={() => onSortDirectionChange(sortDirection === 'asc' ? 'desc' : 'asc')}
+        >
+          <ArrowUpDown className="h-4 w-4 mr-2" />
+          {sortDirection === 'asc' ? 'Oldest First' : 'Newest First'}
+        </Button>
+      </DelayedTooltip>
     </div>
   );
 }
