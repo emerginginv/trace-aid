@@ -566,11 +566,7 @@ const Cases = () => {
   const handleExportCSV = () => exportToCSV(sortedCases, EXPORT_COLUMNS, "cases");
   const handleExportPDF = () => exportToPDF(sortedCases, EXPORT_COLUMNS, "Cases Report", "cases");
 
-  if (loading) {
-    return <CasesPageSkeleton />;
-  }
-
-  // Calculate stat counts for cases
+  // Calculate stat counts for cases - must be before early returns
   const statCounts = useMemo(() => {
     return cases.reduce((acc, c) => {
       const statusKey = c.status_key || c.status || '';
@@ -582,6 +578,10 @@ const Cases = () => {
       return acc;
     }, { open: 0, active: 0, onHold: 0, closed: 0 });
   }, [cases]);
+
+  if (loading) {
+    return <CasesPageSkeleton />;
+  }
 
   return (
     <div className="space-y-6">
