@@ -16,12 +16,12 @@ interface DashboardStatsCardsProps {
 
 export function DashboardStatsCards({ stats }: DashboardStatsCardsProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
       {stats.map((stat, index) => (
-        <Card key={index} className="relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-            <div className={`p-2 rounded-full ${stat.bgColor}`}>
+        <Card key={index} className="relative overflow-hidden min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+            <CardTitle className="text-sm font-medium truncate min-w-0">{stat.title}</CardTitle>
+            <div className={`p-2 rounded-full shrink-0 ${stat.bgColor}`}>
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </div>
           </CardHeader>

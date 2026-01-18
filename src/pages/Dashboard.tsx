@@ -148,7 +148,7 @@ const Dashboard = () => {
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {/* Stats Overview + Financial Summary Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 border border-border rounded-lg p-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 border border-border rounded-lg p-3 sm:p-4">
         {/* Stats Cards - Left Half */}
         <DashboardStatsCards stats={statCards} />
 
@@ -163,7 +163,7 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-3">
               {/* Retainer Funds */}
               <div className="p-3 rounded-xl bg-card/80 border border-border">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
@@ -211,7 +211,7 @@ const Dashboard = () => {
       </div>
 
       {/* Main Dashboard Grid with Panel Components */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border border-border rounded-lg p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 border border-border rounded-lg p-3 sm:p-4">
         {/* Pending Case Requests - Top priority for admin/manager */}
         {canViewRequests && (
           <DashboardCaseRequestsPanel
