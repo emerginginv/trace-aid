@@ -1,6 +1,4 @@
-import React, { useState, useRef } from "react";
-import { createRoot } from "react-dom/client";
-import { flushSync } from "react-dom";
+import React, { useState } from "react";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,10 +16,10 @@ import {
   FileCheck,
   Loader2
 } from "lucide-react";
-import html2pdf from "html2pdf.js";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { PrintableDocument } from "@/components/documentation/PrintableDocument";
+import { generateDocumentationPdfBlob } from "@/lib/documentation/generateDocumentationPdf";
+import { toast } from "sonner";
 
 // Documentation files available for viewing/download
 const DOCUMENTATION_FILES = [
@@ -266,7 +264,6 @@ export default function Documentation() {
   const [content, setContent] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
 
   const selectedDocInfo = DOCUMENTATION_FILES.find(d => d.id === selectedDoc);
 
@@ -299,88 +296,33 @@ export default function Documentation() {
     setDownloading(true);
     
     try {
-      // Create a temporary container for the print-optimized version
-      // Position it on-screen but invisible to ensure html2canvas can capture it
-      const printContainer = document.createElement('div');
-      printContainer.setAttribute('data-pdf-root', 'true');
-      printContainer.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 210mm;
-        min-height: 297mm;
-        background-color: #ffffff;
-        color: #000000;
-        z-index: -9999;
-        overflow: visible;
-        box-sizing: border-box;
-        padding: 0;
-        margin: 0;
-      `;
-      document.body.appendChild(printContainer);
-
-      // Use flushSync to ensure synchronous rendering before capture
-      const root = createRoot(printContainer);
-      flushSync(() => {
-        root.render(
-          <PrintableDocument 
-            content={content} 
-            title={selectedDocInfo.title} 
-            category={selectedDocInfo.category}
-          />
-        );
+      // Generate PDF directly from markdown data (no DOM rendering)
+      const pdfBlob = await generateDocumentationPdfBlob({
+        title: selectedDocInfo.title,
+        category: selectedDocInfo.category,
+        content: content,
       });
 
-      // Wait for paint to complete (needed for html2canvas)
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            // Double RAF ensures layout/paint is complete
-            resolve();
-          });
-        });
-      });
-
-      // Additional wait for any async content (images, fonts)
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // Verify container has content before proceeding
-      if (!printContainer.innerHTML || printContainer.innerHTML.trim().length === 0) {
-        throw new Error('Print container is empty - content failed to render');
+      // Validate blob size (safety check)
+      if (pdfBlob.size < 1000) {
+        console.warn('Generated PDF is suspiciously small:', pdfBlob.size, 'bytes');
       }
 
+      // Download the PDF
       const filename = `${selectedDocInfo.title.replace(/[^a-zA-Z0-9]/g, '-')}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
-      await (html2pdf() as any)
-        .set({
-          margin: [12, 12, 16, 12], // top, left, bottom, right - extra bottom for page numbers
-          filename,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { 
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff',
-            // Ensure we capture the element even if it's behind other content
-            foreignObjectRendering: false,
-            removeContainer: false,
-            allowTaint: true,
-          },
-          jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait' 
-          },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-        })
-        .from(printContainer)
-        .save();
-
-      // Cleanup
-      root.unmount();
-      document.body.removeChild(printContainer);
+      toast.success('PDF downloaded successfully');
     } catch (error) {
       console.error("Error generating PDF:", error);
+      toast.error('Failed to generate PDF');
     } finally {
       setDownloading(false);
     }
@@ -488,7 +430,7 @@ export default function Documentation() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : content ? (
-                <div ref={printRef} className="p-6 bg-background">
+                <div className="p-6 bg-background">
                   <MarkdownRenderer content={content} />
                 </div>
               ) : (
