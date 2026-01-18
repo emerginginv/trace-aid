@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -422,6 +423,13 @@ export default function Activities() {
 
   return (
     <div className="space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="activities-list-welcome"
+        title="Activities"
+        welcome="All your tasks and scheduled events, across every case, in one place."
+        whatToDoFirst="Check the Due Soon card to prioritize urgent work. Click any activity to jump to its case."
+        whatNotToWorryAbout="Calendar sync and bulk status changes are power features for later."
+      />
       <PageHeader
         title="Activities"
         description="View and manage all activities across cases"

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -469,6 +470,13 @@ const AllExpenses = () => {
 
   return (
     <div className="space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="expenses-welcome"
+        title="Expenses"
+        welcome="All reimbursable expenses across your cases. Track mileage, meals, equipment, and more."
+        whatToDoFirst="Add expenses as you incur them. Include descriptions that make sense to a client or auditor."
+        whatNotToWorryAbout="Categories and receipt attachments help organization but aren't required to start."
+      />
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Expenses</h1>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
@@ -530,6 +531,13 @@ const TimeEntries = () => {
 
   return (
     <div className="space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="time-entries-welcome"
+        title="Time Entries"
+        welcome="Track billable hours here. Every entry links to a case for accurate invoicing."
+        whatToDoFirst="Log time as you work, not at the end of the week. Fresh entries are more accurate."
+        whatNotToWorryAbout="Approval workflows are for teams. Individual users can log and track immediately."
+      />
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">

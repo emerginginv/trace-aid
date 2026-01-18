@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -368,6 +369,13 @@ const AllInvoices = () => {
 
   return (
     <div className="space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="invoices-welcome"
+        title="Invoices"
+        welcome="All invoices across your organization. Track what's been billed and what's outstanding."
+        whatToDoFirst="Invoices are generated from case finances. Log time and expenses first, then create invoices."
+        whatNotToWorryAbout="Payment tracking and aging reports become relevant once you have invoices to manage."
+      />
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Invoices</h1>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -196,6 +197,13 @@ export function CaseWizard() {
 
   return (
     <div className="container max-w-3xl py-8">
+      <FirstTimeGuidance
+        guidanceKey="case-wizard-welcome"
+        title="Case Creation"
+        welcome="Let's create a case step by step. You can add or change details later."
+        whatToDoFirst="Start with a descriptive title and select your client. Everything else is optional."
+        whatNotToWorryAbout="Subjects, activities, and attachments can be added after the case is created."
+      />
       {/* Header */}
       <div className="mb-6">
         <Button

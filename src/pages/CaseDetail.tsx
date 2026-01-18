@@ -1,4 +1,5 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -827,6 +828,13 @@ const CaseDetail = () => {
       </div>;
   };
   return <div className="space-y-4 sm:space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="case-detail-welcome"
+        title="Case Detail"
+        welcome="You're inside a case. The tabs above organize everything - subjects, updates, finances, and more."
+        whatToDoFirst="Add a subject or create your first update to start documenting."
+        whatNotToWorryAbout="Budget warnings and invoicing matter later. Focus on the investigation first."
+      />
       {isVendor && <Alert className="bg-muted/50 border-primary/20">
           <Info className="h-4 w-4" />
           <AlertDescription>

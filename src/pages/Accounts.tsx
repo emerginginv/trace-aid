@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -289,6 +290,13 @@ const Accounts = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="accounts-welcome"
+        title="Accounts"
+        welcome="Client accounts represent the organizations you work for. Each case links to an account."
+        whatToDoFirst="Create an account for your primary client. Add contacts and billing details as you go."
+        whatNotToWorryAbout="Retainers and billing preferences are configured later. Start with basic company info."
+      />
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Accounts</h1>

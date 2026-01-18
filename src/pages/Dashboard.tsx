@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import VendorDashboard from "./VendorDashboard";
@@ -137,6 +138,13 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="dashboard-welcome"
+        title="Dashboard"
+        welcome="Welcome to your command center. This dashboard shows your most important items at a glance."
+        whatToDoFirst="Check the Activities panel for upcoming tasks. Click any item to jump directly to that case."
+        whatNotToWorryAbout="Financial summaries will populate as you add data. They're empty until you start working."
+      />
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {/* Stats Overview + Financial Summary Row */}

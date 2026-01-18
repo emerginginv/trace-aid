@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
@@ -506,6 +507,13 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="settings-welcome"
+        title="Settings"
+        welcome="Configure your organization settings, users, and preferences."
+        whatToDoFirst="Start with your organization profile and branding. User management is straightforward."
+        whatNotToWorryAbout="Integrations and advanced permissions can wait. Focus on the essentials first."
+      />
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="text-muted-foreground">

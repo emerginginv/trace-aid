@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { useNavigate } from "react-router-dom";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -230,6 +231,13 @@ export default function Updates() {
 
   return (
     <div className="space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="updates-list-welcome"
+        title="Updates"
+        welcome="Case updates are the narrative of your investigations. This shows every update across all cases."
+        whatToDoFirst="Filter by case or update type to find what you need. Each update links to its source case."
+        whatNotToWorryAbout="Activity timelines and media attachments are advanced features. Plain text updates work great."
+      />
       <PageHeader
         title="All Updates"
         titleComponent={

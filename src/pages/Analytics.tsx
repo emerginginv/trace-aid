@@ -1,4 +1,5 @@
 import { BarChart3 } from "lucide-react";
+import { FirstTimeGuidance } from "@/components/shared/FirstTimeGuidance";
 import { ANALYTICS_CATEGORIES } from "@/lib/analytics/categories";
 import { AnalyticsCategoryCard } from "@/components/analytics/AnalyticsCategoryCard";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
@@ -7,6 +8,13 @@ import { ContextualHelp } from "@/components/help-center";
 const Analytics = () => {
   useSetBreadcrumbs([{ label: "Analytics" }]);
   return <div className="space-y-6">
+      <FirstTimeGuidance
+        guidanceKey="analytics-welcome"
+        title="Analytics"
+        welcome="Insights into your operations. Charts and metrics that help you understand performance."
+        whatToDoFirst="Explore the dashboard tabs. Data populates automatically as you work."
+        whatNotToWorryAbout="Empty charts are normal for new accounts. They fill in as you log cases and time."
+      />
       {/* Header Section with Gradient Background */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 p-8 border border-border/50">
         <div className="relative z-10">
