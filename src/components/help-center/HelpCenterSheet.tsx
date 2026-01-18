@@ -439,6 +439,12 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
     let currentListType: 'ol' | 'ul' | null = null;
     let listKey = 0;
 
+    // Table state
+    let inTable = false;
+    let tableHeaders: string[] = [];
+    let tableRows: string[][] = [];
+    let tableKey = 0;
+
     const flushList = () => {
       if (currentListItems.length === 0) return;
       
@@ -464,8 +470,85 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
       currentListType = null;
     };
 
+    const flushTable = () => {
+      if (tableHeaders.length === 0 && tableRows.length === 0) return;
+      
+      elements.push(
+        <div key={`table-wrapper-${tableKey}`} className="overflow-x-auto my-4">
+          <table className="w-full text-sm border-collapse border border-border">
+            {tableHeaders.length > 0 && (
+              <thead>
+                <tr className="bg-muted/50">
+                  {tableHeaders.map((header, idx) => (
+                    <th 
+                      key={idx} 
+                      className="text-left p-2 font-semibold border border-border text-xs"
+                    >
+                      {processInlineFormatting(header.trim())}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {tableRows.map((row, rowIdx) => (
+                <tr key={rowIdx} className={rowIdx % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                  {row.map((cell, cellIdx) => (
+                    <td key={cellIdx} className="p-2 border border-border text-xs">
+                      {processInlineFormatting(cell.trim())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      
+      tableHeaders = [];
+      tableRows = [];
+      inTable = false;
+      tableKey++;
+    };
+
     lines.forEach((line, idx) => {
       const trimmed = line.trim();
+      
+      // Check if this is a table row (starts and ends with |)
+      const isTableRow = trimmed.startsWith('|') && trimmed.endsWith('|');
+      
+      // If we were in a table but this line isn't a table row, flush the table
+      if (inTable && !isTableRow) {
+        flushTable();
+      }
+      
+      // Handle table rows
+      if (isTableRow) {
+        // Parse cells: split by | and filter empty cells from edges
+        const cells = trimmed.split('|').slice(1, -1);
+        
+        // Check if this is a separator row (contains only dashes and colons)
+        const isSeparator = cells.every(cell => /^[\s:-]+$/.test(cell));
+        
+        if (isSeparator) {
+          // Skip separator rows, they just indicate we have a header
+          inTable = true;
+          return;
+        }
+        
+        if (!inTable) {
+          // First table row becomes the header
+          tableHeaders = cells;
+          inTable = true;
+        } else if (tableHeaders.length === 0) {
+          // No headers yet, this is the header
+          tableHeaders = cells;
+        } else {
+          // Data row
+          tableRows.push(cells);
+        }
+        return;
+      }
       
       // Empty line - flush list and add spacing
       if (!trimmed) {
@@ -555,6 +638,8 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
       );
     });
 
+    // Flush any remaining content
+    flushTable();
     flushList();
     return elements;
   };
