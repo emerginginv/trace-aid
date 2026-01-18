@@ -39,14 +39,14 @@ export function BudgetWarningBanner({
     
     if (status === "over") {
       const overBy = Math.abs(remaining);
-      return `Over ${typeLabel} by ${formatValue(overBy)}`;
+      return `Over ${typeLabel} by ${formatValue(overBy)}. New entries may be blocked (hard cap) or require justification (soft cap).`;
     }
     
     if (status === "critical") {
-      return `${typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)} at ${Math.round(utilizationPct)}% — Only ${formatValue(remaining)} left`;
+      return `${typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)} at ${Math.round(utilizationPct)}% — Only ${formatValue(remaining)} left. Consider requesting budget increase if more work is needed.`;
     }
     
-    return `Approaching ${typeLabel} limit — ${Math.round(utilizationPct)}% used`;
+    return `Approaching ${typeLabel} limit — ${formatValue(remaining)} remaining. Consider requesting budget increase if more work is needed.`;
   };
 
   const getVariant = (): "destructive" | "default" => {

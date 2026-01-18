@@ -229,7 +229,7 @@ export function BudgetSetupForm({
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Budget" : "Set Budget"}</DialogTitle>
           <DialogDescription>
-            Define budget constraints for this case. Budgets do not calculate invoices - they constrain how much work may be performed.
+            Define budget constraints for this case. Budgets control how much work may be performed - they do not calculate invoices but rather limit work authorization.
           </DialogDescription>
         </DialogHeader>
 
@@ -389,7 +389,12 @@ export function BudgetSetupForm({
               <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/30">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-700 dark:text-amber-400">
-                  Hard cap enabled. Users will not be able to log any work once the budget is reached.
+                  <strong>Hard cap enabled.</strong> When the budget is reached:
+                  <ul className="list-disc list-inside mt-1 text-sm">
+                    <li>Time entries will be blocked</li>
+                    <li>Expense entries will be blocked</li>
+                    <li>An administrator must increase the budget to continue work</li>
+                  </ul>
                 </AlertDescription>
               </Alert>
             )}

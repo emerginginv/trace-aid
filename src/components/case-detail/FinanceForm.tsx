@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ExternalLink } from "lucide-react";
+import { CalendarIcon, ExternalLink, Info } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { useCaseStatusActions } from "@/hooks/use-case-status-actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 const formSchema = z.object({
   finance_type: z.enum(["expense", "time"]),
@@ -315,8 +316,13 @@ export const FinanceForm = ({ caseId, open, onOpenChange, onSuccess, editingFina
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editingFinance ? "Edit" : "Add"} Financial Transaction</DialogTitle>
-          <DialogDescription>Record an expense or time entry</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            {editingFinance ? "Edit" : "Add"} Financial Transaction
+            <HelpTooltip content="Entries are linked to this case for billing and audit purposes. Complete all fields to ensure accurate tracking." />
+          </DialogTitle>
+          <DialogDescription>
+            Record an expense or time entry. Entries become part of the permanent case record and support billing accuracy.
+          </DialogDescription>
           {caseTitle && (
             <button
               onClick={() => {

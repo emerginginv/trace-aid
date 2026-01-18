@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, AlertCircle } from "lucide-react";
 import type { Invoice } from "@/hooks/useCaseFinances";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface FinancialSummaryCardsProps {
   invoices: Invoice[];
@@ -36,7 +37,10 @@ export function FinancialSummaryCards({ invoices, retainerTotal, invoiceTotal }:
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400">Total Retainer</CardTitle>
+            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400 flex items-center gap-1">
+              Total Retainer
+              <HelpTooltip content="Funds held on account from client - drawn down as work is invoiced" />
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
@@ -45,7 +49,10 @@ export function FinancialSummaryCards({ invoices, retainerTotal, invoiceTotal }:
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Unpaid Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
+              Unpaid Invoices
+              <HelpTooltip content="Invoices that are pending, sent, partial, or overdue - awaiting payment" />
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -55,7 +62,10 @@ export function FinancialSummaryCards({ invoices, retainerTotal, invoiceTotal }:
         </Card>
         <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">Total Invoiced</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
+              Total Invoiced
+              <HelpTooltip content="Sum of all invoices generated for this case" />
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
