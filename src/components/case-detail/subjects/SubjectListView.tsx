@@ -195,7 +195,7 @@ export const SubjectListView = ({
                 <TableCell className="text-muted-foreground">
                   {format(new Date(subject.updated_at), "MMM d, yyyy")}
                 </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
