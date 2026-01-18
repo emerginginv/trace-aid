@@ -52,7 +52,7 @@ export function CaseManagerCard({
 
   return (
     <div
-      className={`rounded-lg border p-4 transition-colors ${
+      className={`rounded-lg border p-3 sm:p-4 transition-colors ${
         isPrimary ? "border-primary/40 bg-primary/5" : "border-border"
       }`}
     >
@@ -98,7 +98,7 @@ export function CaseManagerCard({
                   className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors group"
                 >
                   <Smartphone className="h-3.5 w-3.5 shrink-0" />
-                  <span className="group-hover:underline">
+                  <span className="group-hover:underline whitespace-nowrap">
                     {formatPhoneNumber(manager.mobile_phone)}
                   </span>
                 </a>
@@ -111,7 +111,7 @@ export function CaseManagerCard({
                   className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors group"
                 >
                   <Phone className="h-3.5 w-3.5 shrink-0" />
-                  <span className="group-hover:underline">
+                  <span className="group-hover:underline whitespace-nowrap">
                     {formatPhoneNumber(manager.office_phone)}
                   </span>
                 </a>
@@ -128,10 +128,10 @@ export function CaseManagerCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-9 min-w-[44px] px-2 text-xs"
                   onClick={onChangeClick}
                 >
-                  <Pencil className="h-3 w-3 mr-1" />
+                  <Pencil className="h-3.5 w-3.5 mr-1" />
                   Change
                 </Button>
               </TooltipTrigger>
@@ -141,10 +141,10 @@ export function CaseManagerCard({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="h-9 min-w-[44px] px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={onRemove}
               >
-                <X className="h-3 w-3 mr-1" />
+                <X className="h-3.5 w-3.5 mr-1" />
                 Remove
               </Button>
             )}
@@ -154,16 +154,16 @@ export function CaseManagerCard({
 
       {/* Actions - Bottom on mobile only */}
       {canEdit && (
-        <div className="flex sm:hidden items-center gap-2 mt-3 justify-end">
+        <div className="flex sm:hidden items-center gap-3 mt-3 pt-3 border-t border-border justify-end">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs"
+                className="h-10 min-w-[44px] px-3 text-sm"
                 onClick={onChangeClick}
               >
-                <Pencil className="h-3 w-3 mr-1" />
+                <Pencil className="h-4 w-4 mr-1.5" />
                 Change
               </Button>
             </TooltipTrigger>
@@ -173,10 +173,10 @@ export function CaseManagerCard({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="h-10 min-w-[44px] px-3 text-sm text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={onRemove}
             >
-              <X className="h-3 w-3 mr-1" />
+              <X className="h-4 w-4 mr-1.5" />
               Remove
             </Button>
           )}

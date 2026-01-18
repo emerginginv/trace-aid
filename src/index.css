@@ -2489,3 +2489,45 @@
 .scroll-snap-item {
   scroll-snap-align: start;
 }
+
+/* ===== MOBILE EXPERIENCE UTILITIES ===== */
+
+/* Touch-friendly action buttons - 44px minimum for WCAG */
+.btn-touch {
+  @apply min-h-[44px] min-w-[44px];
+}
+
+/* Mobile card action row - bottom of card */
+.mobile-actions {
+  @apply flex gap-2 mt-3 pt-3 border-t border-border;
+}
+
+/* Prevent horizontal overflow on mobile */
+.mobile-contain {
+  @apply max-w-full overflow-hidden;
+}
+
+/* Touch-safe spacing between interactive elements */
+.touch-safe-gap {
+  @apply gap-3;
+}
+
+/* Mobile-first responsive text that doesn't truncate poorly */
+.mobile-text-wrap {
+  @apply break-words hyphens-auto;
+}
+
+/* Phone number no-break - prevent wrapping mid-number */
+.phone-nowrap {
+  @apply whitespace-nowrap;
+}
+
+/* Responsive card padding */
+.card-mobile-padding {
+  @apply p-3 sm:p-4;
+}
+
+/* Mobile scroll margin for scroll-into-view */
+.scroll-mt-mobile {
+  @apply scroll-mt-16 sm:scroll-mt-4;
+}

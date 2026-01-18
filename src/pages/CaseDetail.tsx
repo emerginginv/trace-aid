@@ -1101,7 +1101,7 @@ const CaseDetail = () => {
                           <p className="text-xs text-muted-foreground mb-1">Case Objective</p>
                           <p className="text-sm">{caseData.description}</p>
                         </div>}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
+                      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-4">
                         {/* Case Type - always show */}
                         <div>
                           <p className="text-xs text-muted-foreground mb-0.5">Case Type</p>
@@ -1138,7 +1138,7 @@ const CaseDetail = () => {
                   </Card>
 
                   {/* Three-column grid for Client, Team, and Budget */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
                     {/* Client Column */}
                     <ClientInfoSection caseId={id!} account={account ? {
                   id: account.id,
