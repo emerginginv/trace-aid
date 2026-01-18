@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -299,26 +300,54 @@ export default function Documentation() {
     
     try {
       // Create a temporary container for the print-optimized version
+      // Position it on-screen but invisible to ensure html2canvas can capture it
       const printContainer = document.createElement('div');
-      printContainer.style.position = 'absolute';
-      printContainer.style.left = '-9999px';
-      printContainer.style.top = '0';
-      printContainer.style.width = '210mm'; // A4 width
-      printContainer.style.backgroundColor = '#ffffff';
+      printContainer.setAttribute('data-pdf-root', 'true');
+      printContainer.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 210mm;
+        min-height: 297mm;
+        background-color: #ffffff;
+        color: #000000;
+        z-index: -9999;
+        overflow: visible;
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
+      `;
       document.body.appendChild(printContainer);
 
-      // Render the print-optimized component
+      // Use flushSync to ensure synchronous rendering before capture
       const root = createRoot(printContainer);
-      root.render(
-        <PrintableDocument 
-          content={content} 
-          title={selectedDocInfo.title} 
-          category={selectedDocInfo.category}
-        />
-      );
+      flushSync(() => {
+        root.render(
+          <PrintableDocument 
+            content={content} 
+            title={selectedDocInfo.title} 
+            category={selectedDocInfo.category}
+          />
+        );
+      });
 
-      // Wait for React to render
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for paint to complete (needed for html2canvas)
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            // Double RAF ensures layout/paint is complete
+            resolve();
+          });
+        });
+      });
+
+      // Additional wait for any async content (images, fonts)
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Verify container has content before proceeding
+      if (!printContainer.innerHTML || printContainer.innerHTML.trim().length === 0) {
+        throw new Error('Print container is empty - content failed to render');
+      }
 
       const filename = `${selectedDocInfo.title.replace(/[^a-zA-Z0-9]/g, '-')}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
       
@@ -331,7 +360,11 @@ export default function Documentation() {
             scale: 2,
             useCORS: true,
             logging: false,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            // Ensure we capture the element even if it's behind other content
+            foreignObjectRendering: false,
+            removeContainer: false,
+            allowTaint: true,
           },
           jsPDF: { 
             unit: 'mm', 
