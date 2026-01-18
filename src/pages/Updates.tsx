@@ -239,7 +239,7 @@ export default function Updates() {
                   </TableCell>
                   <TableCell><span className="text-sm">{update.author?.full_name || "Unknown"}</span></TableCell>
                   <TableCell className="text-muted-foreground">{update.created_at ? format(new Date(update.created_at), "MMM d, yyyy") : "-"}</TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
+                  <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">

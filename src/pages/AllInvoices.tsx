@@ -785,7 +785,7 @@ const AllInvoices = () => {
                       <TableCell className="text-right font-medium">
                         ${balanceDue.toFixed(2)}
                       </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+                      <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">

@@ -251,7 +251,7 @@ export function HelpCenterAdmin() {
                         onCheckedChange={() => toggleActive(article)}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
