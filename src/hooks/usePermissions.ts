@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "./useUserRole";
 
@@ -9,15 +9,33 @@ type Permission = {
 };
 
 /**
+ * Common permission combinations for convenience methods.
+ * These are the feature keys that are checked for each convenience property.
+ */
+const PERMISSION_GROUPS = {
+  viewAllItems: ['view_all_cases', 'view_all_items'],
+  manageFinances: ['edit_finances', 'manage_finances', 'view_finances'],
+  administerUsers: ['manage_users', 'admin_users'],
+  editCases: ['edit_cases'],
+  deleteCases: ['delete_cases'],
+  viewReports: ['view_reports'],
+  manageBudgets: ['manage_budgets', 'edit_budgets'],
+  viewCaseRequests: ['view_case_requests'],
+} as const;
+
+/**
  * Hook for getting the current user's permissions based on their role.
  * Uses React Query for caching to prevent duplicate permissions queries.
+ * 
+ * Provides both individual permission checks via `hasPermission()` and
+ * convenience properties like `canViewAllItems`, `canManageFinances`, etc.
  * 
  * Cache settings:
  * - staleTime: 5 minutes (permissions rarely change during a session)
  * - gcTime: 15 minutes
  */
 export function usePermissions() {
-  const { role, loading: roleLoading } = useUserRole();
+  const { role, isAdmin, isManager, loading: roleLoading } = useUserRole();
 
   const { data: permissions = {}, isLoading: permissionsLoading } = useQuery<Record<string, boolean>>({
     queryKey: ['permissions', role],
@@ -55,9 +73,61 @@ export function usePermissions() {
     return permissions[featureKey] ?? false;
   }, [permissions]);
 
+  // Check if any permission in a group is allowed
+  const hasAnyPermission = useCallback((featureKeys: readonly string[]): boolean => {
+    return featureKeys.some(key => permissions[key] ?? false);
+  }, [permissions]);
+
+  // Convenience properties for common permission checks
+  const conveniences = useMemo(() => ({
+    /**
+     * Can view all items (cases, updates, etc.) across the organization.
+     * Typically true for admins/managers, false for regular users who see only their own.
+     */
+    canViewAllItems: isAdmin || isManager || hasAnyPermission(PERMISSION_GROUPS.viewAllItems),
+    
+    /**
+     * Can manage financial data (invoices, expenses, payments).
+     */
+    canManageFinances: isAdmin || hasAnyPermission(PERMISSION_GROUPS.manageFinances),
+    
+    /**
+     * Can administer user accounts and access control.
+     */
+    canAdministerUsers: isAdmin || hasAnyPermission(PERMISSION_GROUPS.administerUsers),
+    
+    /**
+     * Can edit case details.
+     */
+    canEditCases: isAdmin || isManager || hasAnyPermission(PERMISSION_GROUPS.editCases),
+    
+    /**
+     * Can delete cases.
+     */
+    canDeleteCases: isAdmin || hasAnyPermission(PERMISSION_GROUPS.deleteCases),
+    
+    /**
+     * Can view reports and analytics.
+     */
+    canViewReports: isAdmin || isManager || hasAnyPermission(PERMISSION_GROUPS.viewReports),
+    
+    /**
+     * Can manage case budgets.
+     */
+    canManageBudgets: isAdmin || isManager || hasAnyPermission(PERMISSION_GROUPS.manageBudgets),
+    
+    /**
+     * Can view incoming case requests.
+     */
+    canViewCaseRequests: isAdmin || isManager || hasAnyPermission(PERMISSION_GROUPS.viewCaseRequests),
+  }), [isAdmin, isManager, hasAnyPermission]);
+
   return {
     permissions,
     loading: roleLoading || permissionsLoading,
     hasPermission,
+    hasAnyPermission,
+    // Convenience properties
+    ...conveniences,
   };
 }
