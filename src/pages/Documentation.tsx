@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { createRoot } from "react-dom/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import {
 import html2pdf from "html2pdf.js";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { PrintableDocument } from "@/components/documentation/PrintableDocument";
 
 // Documentation files available for viewing/download
 const DOCUMENTATION_FILES = [
@@ -291,31 +293,59 @@ export default function Documentation() {
   };
 
   const downloadPdf = async () => {
-    if (!printRef.current || !selectedDocInfo) return;
+    if (!selectedDocInfo || !content) return;
     
     setDownloading(true);
     
     try {
+      // Create a temporary container for the print-optimized version
+      const printContainer = document.createElement('div');
+      printContainer.style.position = 'absolute';
+      printContainer.style.left = '-9999px';
+      printContainer.style.top = '0';
+      printContainer.style.width = '210mm'; // A4 width
+      printContainer.style.backgroundColor = '#ffffff';
+      document.body.appendChild(printContainer);
+
+      // Render the print-optimized component
+      const root = createRoot(printContainer);
+      root.render(
+        <PrintableDocument 
+          content={content} 
+          title={selectedDocInfo.title} 
+          category={selectedDocInfo.category}
+        />
+      );
+
+      // Wait for React to render
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const filename = `${selectedDocInfo.title.replace(/[^a-zA-Z0-9]/g, '-')}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
       
-      await html2pdf()
+      await (html2pdf() as any)
         .set({
-          margin: [15, 15, 15, 15],
+          margin: [12, 12, 16, 12], // top, left, bottom, right - extra bottom for page numbers
           filename,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { 
             scale: 2,
             useCORS: true,
-            logging: false
+            logging: false,
+            backgroundColor: '#ffffff'
           },
           jsPDF: { 
             unit: 'mm', 
             format: 'a4', 
             orientation: 'portrait' 
-          }
+          },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         })
-        .from(printRef.current)
+        .from(printContainer)
         .save();
+
+      // Cleanup
+      root.unmount();
+      document.body.removeChild(printContainer);
     } catch (error) {
       console.error("Error generating PDF:", error);
     } finally {
