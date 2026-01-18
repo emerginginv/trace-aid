@@ -606,7 +606,7 @@ export default function Activities() {
                         </div>
                       ) : <span className="text-muted-foreground text-sm">Unassigned</span>}
                     </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>

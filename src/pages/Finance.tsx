@@ -658,7 +658,7 @@ const Finance = () => {
                       </TableCell>
                     )}
                     {isVisible("actions") && (
-                      <TableCell className="w-[60px]" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="w-[60px] text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
