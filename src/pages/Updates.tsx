@@ -316,7 +316,7 @@ export default function Updates() {
                 <TableHead>Case</TableHead>
                 <TableHead>Author</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="w-[80px]">Actions</TableHead>
+                <TableHead className="w-[80px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
