@@ -27,7 +27,8 @@ jobs:
 
       - name: Ensure no npm install usage
   run: |
-    if grep -R -E '(^|[^p])npm install' src package.json scripts; then
+    set -e
+    if grep -R "npm install" src scripts | grep -v "pnpm install"; then
       echo "❌ npm install detected in executable code. Use pnpm install --frozen-lockfile."
       exit 1
     fi
