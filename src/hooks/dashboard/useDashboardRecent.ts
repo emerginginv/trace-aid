@@ -18,9 +18,25 @@ async function fetchRecentData(
   orgId: string,
   userId: string,
   updatesFilter: 'my' | 'all',
-  expensesFilter: 'my' | 'all',
-  users: OrgUser[]
+  expensesFilter: 'my' | 'all'
 ): Promise<RecentData> {
+  // Fetch org users for name lookups
+  const { data: orgMembers } = await supabase
+    .from('organization_members')
+    .select('user_id')
+    .eq('organization_id', orgId);
+
+  const { data: orgUsersData } = await supabase
+    .from('profiles')
+    .select('id, email, full_name')
+    .in('id', orgMembers?.map((m) => m.user_id) || []);
+
+  const users: OrgUser[] = orgUsersData?.map((u) => ({
+    id: u.id,
+    email: u.email,
+    full_name: u.full_name,
+  })) || [];
+
   // Fetch update type picklists
   const { data: picklistData } = await supabase
     .from('picklists')
@@ -92,10 +108,7 @@ async function fetchRecentData(
   return { updates, expenses, updateTypePicklists };
 }
 
-export function useDashboardRecent(
-  { updatesFilter, expensesFilter }: UseDashboardRecentOptions,
-  users: OrgUser[] = []
-) {
+export function useDashboardRecent({ updatesFilter, expensesFilter }: UseDashboardRecentOptions) {
   const { organization } = useOrganization();
   const orgId = organization?.id;
 
@@ -104,9 +117,9 @@ export function useDashboardRecent(
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !orgId) throw new Error('Not authenticated');
-      return fetchRecentData(orgId, user.id, updatesFilter, expensesFilter, users);
+      return fetchRecentData(orgId, user.id, updatesFilter, expensesFilter);
     },
-    enabled: !!orgId && users.length > 0,
+    enabled: !!orgId,
     staleTime: 30 * 1000,
   });
 }

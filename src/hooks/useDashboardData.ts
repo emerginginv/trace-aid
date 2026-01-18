@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useDashboardStats } from './dashboard/useDashboardStats';
 import { useDashboardActivities } from './dashboard/useDashboardActivities';
 import { useDashboardFinancials } from './dashboard/useDashboardFinancials';
@@ -25,6 +24,21 @@ export type {
   OrgUser,
 };
 
+const defaultStats: DashboardStats = {
+  totalCases: 0,
+  activeCases: 0,
+  openCases: 0,
+  closedCases: 0,
+  totalContacts: 0,
+  totalAccounts: 0,
+};
+
+const defaultFinancials: FinancialSummary = {
+  totalRetainerFunds: 0,
+  outstandingExpenses: 0,
+  unpaidInvoices: 0,
+};
+
 /**
  * Composite dashboard data hook that combines specialized hooks.
  * Provides backward compatibility with the original API while using
@@ -36,71 +50,41 @@ export function useDashboardData({
   updatesFilter,
   expensesFilter,
 }: UseDashboardDataOptions) {
-  // Specialized hooks with React Query
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: financialSummary, isLoading: financialsLoading } = useDashboardFinancials();
-  
-  const {
-    tasks,
-    events,
-    users,
-    dueTasks,
-    upcomingEvents,
-    isLoading: activitiesLoading,
-    handleTaskToggle,
-  } = useDashboardActivities({ tasksFilter, eventsFilter });
-
-  const { data: recentData, isLoading: recentLoading } = useDashboardRecent(
-    { updatesFilter, expensesFilter },
-    users
-  );
-
-  // Local state for mutations (backward compatibility)
-  const [localTasks, setTasks] = useState<DashboardTask[]>([]);
-  const [localEvents, setEvents] = useState<DashboardEvent[]>([]);
-  const [localUpdates, setUpdates] = useState<DashboardUpdate[]>([]);
-  const [localExpenses, setExpenses] = useState<DashboardExpense[]>([]);
+  // Specialized hooks with React Query - all independent
+  const statsQuery = useDashboardStats();
+  const financialsQuery = useDashboardFinancials();
+  const activitiesHook = useDashboardActivities({ tasksFilter, eventsFilter });
+  const recentQuery = useDashboardRecent({ updatesFilter, expensesFilter });
 
   // Combined loading state
-  const isLoading = statsLoading || financialsLoading || activitiesLoading || recentLoading;
+  const isLoading = statsQuery.isLoading || financialsQuery.isLoading || activitiesHook.isLoading || recentQuery.isLoading;
 
   return {
     // Data from specialized hooks
-    tasks,
-    events,
-    updates: recentData?.updates || [],
-    expenses: recentData?.expenses || [],
-    users,
-    stats: stats || {
-      totalCases: 0,
-      activeCases: 0,
-      openCases: 0,
-      closedCases: 0,
-      totalContacts: 0,
-      totalAccounts: 0,
-    },
-    financialSummary: financialSummary || {
-      totalRetainerFunds: 0,
-      outstandingExpenses: 0,
-      unpaidInvoices: 0,
-    },
-    updateTypePicklists: recentData?.updateTypePicklists || [],
+    tasks: activitiesHook.tasks,
+    events: activitiesHook.events,
+    updates: recentQuery.data?.updates || [],
+    expenses: recentQuery.data?.expenses || [],
+    users: activitiesHook.users,
+    stats: statsQuery.data || defaultStats,
+    financialSummary: financialsQuery.data || defaultFinancials,
+    updateTypePicklists: recentQuery.data?.updateTypePicklists || [],
 
     // Derived data
-    dueTasks,
-    upcomingEvents,
+    dueTasks: activitiesHook.dueTasks,
+    upcomingEvents: activitiesHook.upcomingEvents,
 
     // State
     isLoading,
 
     // Actions
-    handleTaskToggle,
+    handleTaskToggle: activitiesHook.handleTaskToggle,
     
-    // Setters for backward compatibility
-    setTasks,
-    setEvents,
-    setUpdates,
-    setExpenses,
+    // Setters removed - use React Query mutations instead
+    setTasks: () => {},
+    setEvents: () => {},
+    setUpdates: () => {},
+    setExpenses: () => {},
   };
 }
 
