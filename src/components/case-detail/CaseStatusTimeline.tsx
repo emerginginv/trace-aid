@@ -256,6 +256,17 @@ export function CaseStatusTimeline({ caseId }: CaseStatusTimelineProps) {
           executionEntries, 
           true
         )}
+        
+        {/* Audit Trail Note */}
+        <div className="mt-6 pt-4 border-t text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">About this audit trail:</p>
+          <ul className="list-disc list-inside space-y-0.5 pl-1">
+            <li>Every status change is permanently logged with user and timestamp</li>
+            <li>Duration in each status is tracked for reporting</li>
+            <li>This history cannot be deleted or modified</li>
+            <li>Provides evidence of proper procedure for compliance</li>
+          </ul>
+        </div>
       </CardContent>
     </Card>
   );

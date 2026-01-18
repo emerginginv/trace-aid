@@ -30,6 +30,7 @@ import {
   RequestFilesTab,
   RequestHistoryTab,
 } from "@/components/case-request-detail";
+import { IntakePhaseBanner } from "@/components/case-request-detail/IntakePhaseBanner";
 
 interface CaseRequestSubject {
   id: string;
@@ -513,6 +514,9 @@ export default function CaseRequestDetail() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Intake Phase Banner */}
+      <IntakePhaseBanner status={request.status} />
+
       {/* Header */}
       <CaseRequestDetailHeader
         requestNumber={request.request_number}
