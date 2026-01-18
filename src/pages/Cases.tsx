@@ -5,7 +5,7 @@ import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil, RefreshCw, X, FolderOpen, CheckCircle, PauseCircle, XCircle } from "lucide-react";
+import { Plus, Briefcase, Search, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil, RefreshCw, X, FolderOpen, CheckCircle, PauseCircle, XCircle, ExternalLink } from "lucide-react";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { CaseForm } from "@/components/CaseForm";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -934,21 +934,41 @@ const Cases = () => {
                       </TableCell>
                     )}
                     {isVisible("actions") && (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {hasPermission('delete_cases') && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(caseItem.id);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
                             </Button>
-                          )}
-                        </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/cases/${caseItem.id}`)}>
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              View Case
+                            </DropdownMenuItem>
+                            {hasPermission('edit_cases') && (
+                              <DropdownMenuItem onClick={() => {
+                                setEditingCase(caseItem);
+                                setFormOpen(true);
+                              }}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit Case
+                              </DropdownMenuItem>
+                            )}
+                            {hasPermission('delete_cases') && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteClick(caseItem.id)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Case
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     )}
                   </TableRow>;
