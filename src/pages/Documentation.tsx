@@ -322,7 +322,7 @@ export default function Documentation() {
       toast.success('PDF downloaded successfully');
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.error('Failed to generate PDF');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate PDF');
     } finally {
       setDownloading(false);
     }
