@@ -1,22 +1,22 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigationSource } from "@/hooks/useNavigationSource";
-import { useCaseUpdatesQuery } from "@/hooks/queries";
-// useViewMode hook removed - always use list view
+import { useCaseUpdatesQuery, useDeleteCaseUpdate } from "@/hooks/queries";
 import { useUpdateEnrichment } from "@/hooks/use-enriched-data";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FileText, Users, Bot, Clock, MoreVertical, Eye, ExternalLink } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FileText, Users, Bot, Clock, MoreVertical, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { getUpdateTypeBadgeClasses } from "@/lib/statusUtils";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { HelpfulHeader } from "@/components/help-center/ContextualHelp";
 import { format, subDays, isAfter } from "date-fns";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CaseSelectorDialog } from "@/components/shared/CaseSelectorDialog";
 import { UpdateForm } from "@/components/case-detail/UpdateForm";
@@ -25,6 +25,8 @@ import { StatCardsGrid, StatCardConfig, StatCardsGridSkeleton } from "@/componen
 import { FilterToolbar } from "@/components/shared/FilterToolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { toast } from "sonner";
 
 interface UpdateWithCase {
   id: string;
@@ -59,8 +61,6 @@ const UPDATE_TYPES = [
   { value: "Other", label: "Other" },
 ];
 
-// Badge color function moved to src/lib/statusUtils.ts - use getUpdateTypeBadgeClasses
-
 const EXPORT_COLUMNS: ExportColumn[] = [
   { key: "title", label: "Title" },
   { key: "update_type", label: "Type" },
@@ -75,20 +75,46 @@ export default function Updates() {
   const { organization } = useOrganization();
   const { navigateWithSource } = useNavigationSource();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const { data: user } = useCurrentUser();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [specialFilter, setSpecialFilter] = useState<string | null>(null);
-  // viewMode state removed - always use list view
 
   const [showCaseSelector, setShowCaseSelector] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [showUpdateForm, setShowUpdateForm] = useState(false);
+  const [editingUpdate, setEditingUpdate] = useState<UpdateWithCase | null>(null);
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingUpdateId, setDeletingUpdateId] = useState<string | null>(null);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   const { data: rawUpdates = [], isLoading } = useCaseUpdatesQuery({ limit: 500 });
+  const deleteUpdateMutation = useDeleteCaseUpdate();
   
   // Use the shared enrichment hook
   const { enrichedData: enrichedUpdates, isEnriching: enriching } = useUpdateEnrichment(rawUpdates);
+
+  // Permission checks
+  const canEditUpdates = hasPermission('edit_updates');
+  const canEditOwnUpdates = hasPermission('edit_own_updates');
+  const canDeleteUpdates = hasPermission('delete_updates');
+  const canDeleteOwnUpdates = hasPermission('delete_own_updates');
+  const canBulkAction = canDeleteUpdates;
+
+  // Check if user can edit/delete a specific update
+  const canEditUpdate = useCallback((update: UpdateWithCase) => {
+    const isOwner = update.user_id === user?.id;
+    return canEditUpdates || (canEditOwnUpdates && isOwner);
+  }, [canEditUpdates, canEditOwnUpdates, user?.id]);
+
+  const canDeleteUpdate = useCallback((update: UpdateWithCase) => {
+    const isOwner = update.user_id === user?.id;
+    return canDeleteUpdates || (canDeleteOwnUpdates && isOwner);
+  }, [canDeleteUpdates, canDeleteOwnUpdates, user?.id]);
 
   const counts = useMemo(() => {
     const oneWeekAgo = subDays(new Date(), 7);
@@ -129,6 +155,53 @@ export default function Updates() {
       return true;
     });
   }, [enrichedUpdates, typeFilter, specialFilter, searchQuery]);
+
+  // Selection handlers
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === filteredUpdates.length && filteredUpdates.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredUpdates.map(u => u.id)));
+    }
+  }, [selectedIds.size, filteredUpdates]);
+
+  // Delete handlers
+  const handleDeleteClick = (updateId: string) => {
+    setDeletingUpdateId(updateId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingUpdateId) return;
+    await deleteUpdateMutation.mutateAsync(deletingUpdateId);
+    setDeleteDialogOpen(false);
+    setDeletingUpdateId(null);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    const count = selectedIds.size;
+    for (const id of selectedIds) {
+      await deleteUpdateMutation.mutateAsync(id);
+    }
+    toast.success(`Deleted ${count} update${count !== 1 ? 's' : ''}`);
+    setSelectedIds(new Set());
+    setBulkDeleteDialogOpen(false);
+  };
+
+  // Edit handler
+  const handleEditClick = (update: UpdateWithCase) => {
+    setEditingUpdate(update);
+    setShowUpdateForm(true);
+  };
 
   const loading = isLoading || enriching;
 
@@ -190,6 +263,30 @@ export default function Updates() {
         importEntityDisplayName="Updates"
       />
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-muted rounded-lg">
+          <span className="text-sm font-medium">
+            {selectedIds.size} update{selectedIds.size !== 1 ? 's' : ''} selected
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {canDeleteUpdates && (
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => setBulkDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+              Clear Selection
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Entry count */}
       <div className="text-sm text-muted-foreground">
         Showing {filteredUpdates.length} update{filteredUpdates.length !== 1 ? 's' : ''}
@@ -206,6 +303,14 @@ export default function Updates() {
           <Table>
             <TableHeader>
               <TableRow>
+                {canBulkAction && (
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={selectedIds.size === filteredUpdates.length && filteredUpdates.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="w-[300px]">Update</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Case</TableHead>
@@ -217,6 +322,14 @@ export default function Updates() {
             <TableBody>
               {filteredUpdates.map((update) => (
                 <TableRow key={update.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigateToUpdate(update)}>
+                  {canBulkAction && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(update.id)}
+                        onCheckedChange={() => toggleSelect(update.id)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <UserAvatar name={update.author?.full_name} avatarUrl={update.author?.avatar_url} size="md" />
@@ -241,10 +354,34 @@ export default function Updates() {
                   <TableCell className="text-muted-foreground">{update.created_at ? format(new Date(update.created_at), "MMM d, yyyy") : "-"}</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigateToUpdate(update)}><Eye className="h-4 w-4 mr-2" />View Details</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(`/cases/${update.cases.id}`)}><ExternalLink className="h-4 w-4 mr-2" />Go to Case</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/cases/${update.cases.id}`)}>
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Go to Case
+                        </DropdownMenuItem>
+                        {canEditUpdate(update) && (
+                          <DropdownMenuItem onClick={() => handleEditClick(update)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit Update
+                          </DropdownMenuItem>
+                        )}
+                        {canDeleteUpdate(update) && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteClick(update.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Update
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -263,15 +400,50 @@ export default function Updates() {
         description="Choose a case to add a new update to"
       />
 
-      {selectedCaseId && organization?.id && (
+      {(selectedCaseId || editingUpdate) && organization?.id && (
         <UpdateForm
-          caseId={selectedCaseId}
+          caseId={selectedCaseId || editingUpdate?.case_id || ''}
           open={showUpdateForm}
-          onOpenChange={(open) => { setShowUpdateForm(open); if (!open) setSelectedCaseId(null); }}
-          onSuccess={() => { setShowUpdateForm(false); setSelectedCaseId(null); }}
+          onOpenChange={(open) => { 
+            setShowUpdateForm(open); 
+            if (!open) {
+              setSelectedCaseId(null);
+              setEditingUpdate(null);
+            }
+          }}
+          onSuccess={() => { 
+            setShowUpdateForm(false); 
+            setSelectedCaseId(null);
+            setEditingUpdate(null);
+          }}
+          editingUpdate={editingUpdate}
           organizationId={organization.id}
         />
       )}
+
+      {/* Single Delete Confirmation */}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Update"
+        description="Are you sure you want to delete this update? This action cannot be undone."
+        onConfirm={handleDeleteConfirm}
+        variant="destructive"
+        confirmLabel="Delete"
+        loading={deleteUpdateMutation.isPending}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title="Delete Selected Updates"
+        description={`Are you sure you want to delete ${selectedIds.size} update${selectedIds.size !== 1 ? 's' : ''}? This action cannot be undone.`}
+        onConfirm={handleBulkDeleteConfirm}
+        variant="destructive"
+        confirmLabel="Delete All"
+        loading={deleteUpdateMutation.isPending}
+      />
     </div>
   );
 }
