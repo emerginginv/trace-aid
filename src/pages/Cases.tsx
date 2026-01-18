@@ -1,11 +1,11 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSetBreadcrumbs } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, Search, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil, RefreshCw, X } from "lucide-react";
+import { Plus, Briefcase, Search, Trash2, Download, FileSpreadsheet, FileText, MoreVertical, Pencil, RefreshCw, X, FolderOpen, CheckCircle, PauseCircle, XCircle } from "lucide-react";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { ResponsiveButton } from "@/components/ui/responsive-button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -26,6 +26,7 @@ import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CasesPageSkeleton } from "@/components/ui/list-page-skeleton";
 import { InlineEditCell } from "@/components/ui/inline-edit-cell";
@@ -569,6 +570,19 @@ const Cases = () => {
     return <CasesPageSkeleton />;
   }
 
+  // Calculate stat counts for cases
+  const statCounts = useMemo(() => {
+    return cases.reduce((acc, c) => {
+      const statusKey = c.status_key || c.status || '';
+      const isClosed = isClosedCase(statusKey);
+      if (!isClosed) acc.open++;
+      if (statusKey === 'active' || statusKey === 'assigned') acc.active++;
+      if (statusKey === 'on_hold') acc.onHold++;
+      if (isClosed) acc.closed++;
+      return acc;
+    }, { open: 0, active: 0, onHold: 0, closed: 0 });
+  }, [cases]);
+
   return (
     <div className="space-y-6">
       {isVendor && <Alert className="bg-muted/50 border-primary/20">
@@ -589,6 +603,66 @@ const Cases = () => {
             <Plus className="w-4 h-4" />
             New Case
           </Button>}
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", statusTypeFilter === 'open' && "ring-2 ring-primary")}
+          onClick={() => setStatusTypeFilter(statusTypeFilter === 'open' ? 'all' : 'open')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-blue-500/10">
+              <FolderOpen className="h-6 w-6 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{statCounts.open}</p>
+              <p className="text-sm text-muted-foreground">Open Cases</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", statusFilter === 'active' && "ring-2 ring-primary")}
+          onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-emerald-500/10">
+              <CheckCircle className="h-6 w-6 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{statCounts.active}</p>
+              <p className="text-sm text-muted-foreground">Active</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", statusFilter === 'on_hold' && "ring-2 ring-primary")}
+          onClick={() => setStatusFilter(statusFilter === 'on_hold' ? 'all' : 'on_hold')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-amber-500/10">
+              <PauseCircle className="h-6 w-6 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{statCounts.onHold}</p>
+              <p className="text-sm text-muted-foreground">On Hold</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", statusTypeFilter === 'closed' && "ring-2 ring-primary")}
+          onClick={() => setStatusTypeFilter(statusTypeFilter === 'closed' ? 'all' : 'closed')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-gray-500/10">
+              <XCircle className="h-6 w-6 text-gray-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{statCounts.closed}</p>
+              <p className="text-sm text-muted-foreground">Closed</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
-import { Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck, MoreVertical } from "lucide-react";
+import { Search, Pencil, Trash2, CircleDollarSign, Download, FileSpreadsheet, FileText, Plus, CalendarIcon, X, LayoutGrid, List, FileCheck, MoreVertical, CheckCircle, Clock, Send } from "lucide-react";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 import { InvoiceCard } from "@/components/shared/InvoiceCard";
 
@@ -21,6 +21,7 @@ import { InvoiceFromExpenses } from "@/components/case-detail/InvoiceFromExpense
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import html2pdf from "html2pdf.js";
 
@@ -378,6 +379,63 @@ const AllInvoices = () => {
           <Plus className="h-4 w-4 mr-2" />
           Create Invoice
         </Button>
+      </div>
+
+      {/* Stat Cards - Matching Subjects style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-blue-500/10">
+              <FileCheck className="h-6 w-6 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{invoices.length}</p>
+              <p className="text-sm text-muted-foreground">Total Invoices</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", invoiceStatusFilter === 'draft' && "ring-2 ring-primary")}
+          onClick={() => setInvoiceStatusFilter(invoiceStatusFilter === 'draft' ? 'all' : 'draft')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-gray-500/10">
+              <Clock className="h-6 w-6 text-gray-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{invoices.filter(i => i.status === 'draft').length}</p>
+              <p className="text-sm text-muted-foreground">Draft</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", (invoiceStatusFilter === 'sent' || invoiceStatusFilter === 'partial') && "ring-2 ring-primary")}
+          onClick={() => setInvoiceStatusFilter(invoiceStatusFilter === 'sent' ? 'all' : 'sent')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-amber-500/10">
+              <Send className="h-6 w-6 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{invoices.filter(i => i.status === 'sent' || i.status === 'partial').length}</p>
+              <p className="text-sm text-muted-foreground">Unpaid</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", invoiceStatusFilter === 'paid' && "ring-2 ring-primary")}
+          onClick={() => setInvoiceStatusFilter(invoiceStatusFilter === 'paid' ? 'all' : 'paid')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-emerald-500/10">
+              <CheckCircle className="h-6 w-6 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{invoices.filter(i => i.status === 'paid').length}</p>
+              <p className="text-sm text-muted-foreground">Paid</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Search and Filters - Outside Card */}

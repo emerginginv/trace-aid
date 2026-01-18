@@ -190,6 +190,11 @@ export default function Updates() {
         importEntityDisplayName="Updates"
       />
 
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {filteredUpdates.length} update{filteredUpdates.length !== 1 ? 's' : ''}
+      </div>
+
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-16" />)}

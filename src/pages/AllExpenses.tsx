@@ -18,6 +18,7 @@ import { FinanceForm } from "@/components/case-detail/FinanceForm";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import html2pdf from "html2pdf.js";
@@ -481,6 +482,63 @@ const AllExpenses = () => {
             Add Expense
           </Button>
         </div>
+      </div>
+
+      {/* Stat Cards - Matching Subjects style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-blue-500/10">
+              <Receipt className="h-6 w-6 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{expenses.length}</p>
+              <p className="text-sm text-muted-foreground">Total Expenses</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", expenseStatusFilter === 'pending' && "ring-2 ring-primary")}
+          onClick={() => setExpenseStatusFilter(expenseStatusFilter === 'pending' ? 'all' : 'pending')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-amber-500/10">
+              <Receipt className="h-6 w-6 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{expenses.filter(e => e.status === 'pending').length}</p>
+              <p className="text-sm text-muted-foreground">Pending</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", expenseStatusFilter === 'approved' && "ring-2 ring-primary")}
+          onClick={() => setExpenseStatusFilter(expenseStatusFilter === 'approved' ? 'all' : 'approved')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-emerald-500/10">
+              <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{expenses.filter(e => e.status === 'approved').length}</p>
+              <p className="text-sm text-muted-foreground">Approved</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className={cn("cursor-pointer hover:shadow-md transition-shadow", expenseStatusFilter === 'rejected' && "ring-2 ring-primary")}
+          onClick={() => setExpenseStatusFilter(expenseStatusFilter === 'rejected' ? 'all' : 'rejected')}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-red-500/10">
+              <XCircle className="h-6 w-6 text-red-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{expenses.filter(e => e.status === 'rejected').length}</p>
+              <p className="text-sm text-muted-foreground">Rejected</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Bulk Action Toolbar */}

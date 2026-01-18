@@ -11,11 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, FileSpreadsheet, FileText, DollarSign, Pencil, Trash2, Loader2, History, Plus, MoreVertical, ExternalLink } from "lucide-react";
+import { Search, Download, FileSpreadsheet, FileText, DollarSign, Pencil, Trash2, Loader2, History, Plus, MoreVertical, ExternalLink, TrendingDown, Calendar } from "lucide-react";
 import { ImportTemplateButton } from "@/components/ui/import-template-button";
 
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
@@ -23,6 +23,7 @@ import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
+import { cn } from "@/lib/utils";
 import { FinancePageSkeleton } from "@/components/ui/list-page-skeleton";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 interface RetainerBalance {
@@ -407,6 +408,54 @@ const Finance = () => {
           <Plus className="h-4 w-4 mr-2" />
           Add Retainer
         </Button>
+      </div>
+
+      {/* Stat Cards - Matching Subjects style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-emerald-500/10">
+              <DollarSign className="h-6 w-6 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">${retainerBalances.reduce((sum, r) => sum + r.balance, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-sm text-muted-foreground">Total Funds</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-blue-500/10">
+              <DollarSign className="h-6 w-6 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{retainerBalances.length}</p>
+              <p className="text-sm text-muted-foreground">Cases with Retainers</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-amber-500/10">
+              <TrendingDown className="h-6 w-6 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{retainerBalances.filter(r => r.balance < 500).length}</p>
+              <p className="text-sm text-muted-foreground">Low Balance</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-purple-500/10">
+              <Calendar className="h-6 w-6 text-purple-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{retainerBalances.filter(r => r.last_topup && new Date(r.last_topup) > subDays(new Date(), 30)).length}</p>
+              <p className="text-sm text-muted-foreground">Recent Top-ups</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

@@ -336,6 +336,11 @@ export default function Subjects() {
         <ImportTemplateButton templateFileName="05_Subjects.csv" entityDisplayName="Subjects" />
       </div>
 
+      {/* Entry count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {filteredSubjects.length} subject{filteredSubjects.length !== 1 ? 's' : ''}
+      </div>
+
       {/* Content */}
       {loading ? (
         <div className="space-y-4">
