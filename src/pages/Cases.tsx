@@ -821,7 +821,7 @@ const Cases = () => {
                     {isVisible("due_date") && <TableCell>
                         {caseItem.due_date ? new Date(caseItem.due_date).toLocaleDateString() : "-"}
                       </TableCell>}
-                    {isVisible("actions") && <TableCell onClick={e => e.stopPropagation()}>
+                    {isVisible("actions") && <TableCell onClick={e => e.stopPropagation()} className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
