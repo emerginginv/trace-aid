@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { US_STATES } from "@/components/case-detail/subjects/types";
 import { Step1Data } from "@/hooks/useCaseRequestForm";
 import { CaseRequestFormConfig, isFieldVisible, isFieldRequired, getFieldLabel } from "@/types/case-request-form-config";
@@ -19,6 +19,7 @@ import { useCaseTypesForPublicForm } from "@/hooks/queries/useCaseRequestFormByS
 import { Loader2 } from "lucide-react";
 import { PhoneInput } from "../PhoneInput";
 import { useMemo } from "react";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 const COUNTRIES = [
   { value: "United States", label: "United States" },
@@ -129,6 +130,9 @@ export function ClientInformationStep({
       <Card>
         <CardHeader>
           <CardTitle>What type of case are you requesting?</CardTitle>
+          <CardDescription>
+            Select the category that best describes your investigation need.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loadingCaseTypes ? (
@@ -138,9 +142,12 @@ export function ClientInformationStep({
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="case_type_id">
-                Case Type <span className="text-destructive">*</span>
-              </Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="case_type_id">
+                  Case Type <span className="text-destructive">*</span>
+                </Label>
+                <HelpTooltip content="Determines the workflow and available services for your request" />
+              </div>
               <Select
                 value={watch("case_type_id")}
                 onValueChange={(value) => setValue("case_type_id", value)}
@@ -156,6 +163,9 @@ export function ClientInformationStep({
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                This cannot be changed after submission.
+              </p>
               {errors.case_type_id && (
                 <p className="text-sm text-destructive">{errors.case_type_id.message}</p>
               )}
@@ -169,21 +179,30 @@ export function ClientInformationStep({
         <Card>
           <CardHeader>
             <CardTitle>Enter your company information:</CardTitle>
+            <CardDescription>
+              This information identifies your organization for case correspondence.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isFieldVisible(fieldConfig, 'clientInformation', 'companyName') && (
               <div className="space-y-2">
-                <Label htmlFor="submitted_client_name">
-                  {getFieldLabel(fieldConfig, 'clientInformation', 'companyName')}
-                  {isFieldRequired(fieldConfig, 'clientInformation', 'companyName') && (
-                    <span className="text-destructive"> *</span>
-                  )}
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="submitted_client_name">
+                    {getFieldLabel(fieldConfig, 'clientInformation', 'companyName')}
+                    {isFieldRequired(fieldConfig, 'clientInformation', 'companyName') && (
+                      <span className="text-destructive"> *</span>
+                    )}
+                  </Label>
+                  <HelpTooltip content="The organization submitting this request" />
+                </div>
                 <Input
                   id="submitted_client_name"
                   {...register("submitted_client_name")}
                   className={errors.submitted_client_name ? "border-destructive" : ""}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Enter your company's legal name as it should appear on case documentation.
+                </p>
                 {errors.submitted_client_name && (
                   <p className="text-sm text-destructive">{errors.submitted_client_name.message}</p>
                 )}
@@ -268,6 +287,9 @@ export function ClientInformationStep({
         <Card>
           <CardHeader>
             <CardTitle>Enter your contact information:</CardTitle>
+            <CardDescription>
+              We'll use this information to send you updates about your case request.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isFieldVisible(fieldConfig, 'contactInformation', 'contactName') && (
@@ -311,18 +333,24 @@ export function ClientInformationStep({
 
             {isFieldVisible(fieldConfig, 'contactInformation', 'email') && (
               <div className="space-y-2">
-                <Label htmlFor="submitted_contact_email">
-                  Email
-                  {isFieldRequired(fieldConfig, 'contactInformation', 'email') && (
-                    <span className="text-destructive"> *</span>
-                  )}
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="submitted_contact_email">
+                    Email
+                    {isFieldRequired(fieldConfig, 'contactInformation', 'email') && (
+                      <span className="text-destructive"> *</span>
+                    )}
+                  </Label>
+                  <HelpTooltip content="Used for confirmation and case updates" />
+                </div>
                 <Input
                   id="submitted_contact_email"
                   type="email"
                   {...register("submitted_contact_email")}
                   className={errors.submitted_contact_email ? "border-destructive" : ""}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Enter the email where you want to receive status notifications.
+                </p>
                 {errors.submitted_contact_email && (
                   <p className="text-sm text-destructive">{errors.submitted_contact_email.message}</p>
                 )}
@@ -331,7 +359,10 @@ export function ClientInformationStep({
 
             {isFieldVisible(fieldConfig, 'contactInformation', 'officePhone') && (
               <div className="space-y-2">
-                <Label htmlFor="submitted_contact_office_phone">Office Phone</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="submitted_contact_office_phone">Office Phone</Label>
+                  <HelpTooltip content="Primary business contact number" />
+                </div>
                 <Controller
                   name="submitted_contact_office_phone"
                   control={control}
@@ -350,7 +381,10 @@ export function ClientInformationStep({
             {isFieldVisible(fieldConfig, 'contactInformation', 'mobilePhone') && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="submitted_contact_mobile_phone">Mobile Phone</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="submitted_contact_mobile_phone">Mobile Phone</Label>
+                    <HelpTooltip content="For time-sensitive communications" />
+                  </div>
                   <Controller
                     name="submitted_contact_mobile_phone"
                     control={control}
@@ -365,7 +399,10 @@ export function ClientInformationStep({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="submitted_contact_mobile_carrier">Mobile Carrier</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="submitted_contact_mobile_carrier">Mobile Carrier</Label>
+                    <HelpTooltip content="Helps with text message delivery" />
+                  </div>
                   <Select
                     value={watch("submitted_contact_mobile_carrier")}
                     onValueChange={(value) => setValue("submitted_contact_mobile_carrier", value)}

@@ -19,6 +19,7 @@ import { Loader2, Building2, Upload, X } from "lucide-react";
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 const BUSINESS_TYPES = [
   { value: 'corporation', label: 'Corporation' },
@@ -200,12 +201,18 @@ export function BusinessFormFields({
 
       {/* Business Name */}
       <div className="space-y-2">
-        <Label htmlFor="name">Business Name <span className="text-destructive">*</span></Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="name">Business Name <span className="text-destructive">*</span></Label>
+          <HelpTooltip content="Legal or DBA name" />
+        </div>
         <Input
           id="name"
           placeholder="e.g., ABC Corporation"
           {...register("custom_fields.name")}
         />
+        <p className="text-xs text-muted-foreground">
+          Enter the business name as it appears on signage or registration.
+        </p>
         {errors.custom_fields?.name && (
           <p className="text-xs text-destructive">{errors.custom_fields.name.message}</p>
         )}
@@ -329,12 +336,18 @@ export function BusinessFormFields({
 
       {/* EIN */}
       <div className="space-y-2">
-        <Label htmlFor="ein">EIN (Optional)</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="ein">EIN (Optional)</Label>
+          <HelpTooltip content="Employer Identification Number" />
+        </div>
         <Input
           id="ein"
           placeholder="XX-XXXXXXX"
           {...register("custom_fields.ein")}
         />
+        <p className="text-xs text-muted-foreground">
+          9-digit number assigned by the IRS (format: XX-XXXXXXX).
+        </p>
       </div>
 
       {/* Notes */}

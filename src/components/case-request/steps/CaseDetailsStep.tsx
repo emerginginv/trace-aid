@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Step1Data, Step2Data } from "@/hooks/useCaseRequestForm";
 import { CaseRequestFormConfig, isFieldVisible, isFieldRequired } from "@/types/case-request-form-config";
 import { useCaseServicesForPublicForm, useCaseTypesForPublicForm } from "@/hooks/queries/useCaseRequestFormBySlug";
 import { useCaseTypeConfig } from "@/hooks/useCaseTypeConfig";
 import { Loader2, ArrowLeft, Building2, User } from "lucide-react";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface CaseDetailsStepProps {
   fieldConfig: CaseRequestFormConfig;
@@ -127,6 +128,9 @@ export function CaseDetailsStep({
       <Card>
         <CardHeader>
           <CardTitle>Case Details</CardTitle>
+          <CardDescription>
+            Provide the specific details for your case request.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -142,7 +146,13 @@ export function CaseDetailsStep({
           {/* Case Services */}
           {isFieldVisible(fieldConfig, 'caseDetails', 'caseServices') && caseServices && caseServices.length > 0 && (
             <div className="space-y-2">
-              <Label>Case Services</Label>
+              <div className="flex items-center gap-2">
+                <Label>Case Services</Label>
+                <HelpTooltip content="Select the specific services you need performed" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Select all services that apply. Staff may adjust based on case requirements.
+              </p>
               {loadingServices ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -179,18 +189,24 @@ export function CaseDetailsStep({
           {/* Claim Number / Reference */}
           {isFieldVisible(fieldConfig, 'caseDetails', 'claimNumber') && (
             <div className="space-y-2">
-              <Label htmlFor="claim_number">
-                Claim Number
-                {isFieldRequired(fieldConfig, 'caseDetails', 'claimNumber') && (
-                  <span className="text-destructive"> *</span>
-                )}
-              </Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="claim_number">
+                  Claim Number
+                  {isFieldRequired(fieldConfig, 'caseDetails', 'claimNumber') && (
+                    <span className="text-destructive"> *</span>
+                  )}
+                </Label>
+                <HelpTooltip content="Your internal tracking identifier" />
+              </div>
               <Input
                 id="claim_number"
                 {...register("claim_number")}
                 placeholder="Enter claim or reference number"
                 className={errors.claim_number ? "border-destructive" : ""}
               />
+              <p className="text-xs text-muted-foreground">
+                Enter the claim number exactly as it appears on your documents. This links the case to your records.
+              </p>
               {errors.claim_number && (
                 <p className="text-sm text-destructive">{errors.claim_number.message}</p>
               )}
@@ -237,10 +253,16 @@ export function CaseDetailsStep({
           {/* Budget - based on case type configuration */}
           {!budgetDisabled && (showBudgetDollars || showBudgetHours) && (
             <div className="space-y-2">
-              <Label>
-                Budget
-                {budgetRequired && <span className="text-destructive"> *</span>}
-              </Label>
+              <div className="flex items-center gap-2">
+                <Label>
+                  Budget
+                  {budgetRequired && <span className="text-destructive"> *</span>}
+                </Label>
+                <HelpTooltip content="Maximum authorized spend and/or hours for this case" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Staff will notify you before exceeding these limits.
+              </p>
               <div className="flex items-center gap-4">
                 {showBudgetDollars && (
                   <div className="flex-1">
@@ -288,7 +310,10 @@ export function CaseDetailsStep({
           {/* Notes & Instructions */}
           {isFieldVisible(fieldConfig, 'caseDetails', 'notesInstructions') && (
             <div className="space-y-2">
-              <Label htmlFor="notes_instructions">Notes & Instructions</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="notes_instructions">Notes & Instructions</Label>
+                <HelpTooltip content="Special requirements or context for investigators" />
+              </div>
               <Textarea
                 id="notes_instructions"
                 {...register("notes_instructions")}
@@ -296,6 +321,9 @@ export function CaseDetailsStep({
                 rows={5}
                 className="resize-none"
               />
+              <p className="text-xs text-muted-foreground">
+                Include any timeline requirements or background context that will help staff work your case effectively.
+              </p>
             </div>
           )}
         </CardContent>

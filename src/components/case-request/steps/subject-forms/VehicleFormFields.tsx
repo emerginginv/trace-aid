@@ -19,6 +19,7 @@ import { Loader2, Car, Upload, X } from "lucide-react";
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface SubjectType {
   id: string;
@@ -274,13 +275,19 @@ export function VehicleFormFields({
 
       {/* VIN */}
       <div className="space-y-2">
-        <Label htmlFor="vin">VIN (Vehicle Identification Number)</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="vin">VIN (Vehicle Identification Number)</Label>
+          <HelpTooltip content="17-character vehicle identification number" />
+        </div>
         <Input
           id="vin"
           placeholder="e.g., 1HGBH41JXMN109186"
           maxLength={17}
           {...register("custom_fields.vin")}
         />
+        <p className="text-xs text-muted-foreground">
+          Located on dashboard near windshield or driver's door jamb.
+        </p>
       </div>
 
       {/* Registered Owner */}

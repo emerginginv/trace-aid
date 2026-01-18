@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PhoneInput } from "../../PhoneInput";
 import { SSNInput } from "../../SSNInput";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 const COUNTRIES = [
   { value: "United States", label: "United States" },
@@ -190,7 +191,10 @@ export function PersonFormFields({
       {/* Subject Type Selection */}
       {personSubjectTypes && personSubjectTypes.length > 0 && (
         <div className="space-y-2">
-          <Label>Subject Type <span className="text-destructive">*</span></Label>
+          <div className="flex items-center gap-2">
+            <Label>Subject Type <span className="text-destructive">*</span></Label>
+            <HelpTooltip content="Categorizes the subject for proper handling" />
+          </div>
           <Select
             value={selectedSubjectTypeId || ''}
             onValueChange={(value) => setValue("subject_type_id", value)}
@@ -206,6 +210,9 @@ export function PersonFormFields({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Select the subject category (e.g., Claimant, Insured, Witness).
+          </p>
         </div>
       )}
 
@@ -238,7 +245,13 @@ export function PersonFormFields({
 
       {/* Street Address */}
       <div className="space-y-4">
-        <Label>Street Address</Label>
+        <div className="flex items-center gap-2">
+          <Label>Street Address</Label>
+          <HelpTooltip content="Last known address of the subject" />
+        </div>
+        <p className="text-xs text-muted-foreground -mt-2">
+          Enter the most recent known address. Include apartment/unit numbers.
+        </p>
         <Select
           value={selectedCountry}
           onValueChange={(value) => setValue("country", value)}
@@ -287,7 +300,10 @@ export function PersonFormFields({
       {/* Contact & Personal Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="cell_phone">Cell Phone</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="cell_phone">Cell Phone</Label>
+            <HelpTooltip content="Primary contact number for the subject" />
+          </div>
           <PhoneInput
             id="cell_phone"
             value={watchedCellPhone}
@@ -296,14 +312,23 @@ export function PersonFormFields({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="alias">Alias</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="alias">Alias</Label>
+            <HelpTooltip content="Other names the subject uses" />
+          </div>
           <Input id="alias" placeholder="Known aliases" {...register("alias")} />
+          <p className="text-xs text-muted-foreground">
+            Include maiden names, nicknames, or known aliases.
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="date_of_birth">Date of Birth</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="date_of_birth">Date of Birth</Label>
+            <HelpTooltip content="Used for identification verification" />
+          </div>
           <Input
             id="date_of_birth"
             type="date"
@@ -320,6 +345,9 @@ export function PersonFormFields({
             className="bg-muted"
             {...register("age", { valueAsNumber: true })}
           />
+          <p className="text-xs text-muted-foreground">
+            Auto-calculated from date of birth.
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -339,16 +367,21 @@ export function PersonFormFields({
         <div className="space-y-2">
           <Label htmlFor="height">Height</Label>
           <Input id="height" placeholder="e.g., 5'10&quot;" {...register("height")} />
+          <p className="text-xs text-muted-foreground">Enter as feet and inches.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="weight">Weight</Label>
           <Input id="weight" placeholder="e.g., 180 lbs" {...register("weight")} />
+          <p className="text-xs text-muted-foreground">Enter in pounds.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="race">Race</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="race">Race</Label>
+            <HelpTooltip content="For identification purposes only" />
+          </div>
           <Select
             value={watch("race")}
             onValueChange={(value) => setValue("race", value)}
@@ -389,19 +422,30 @@ export function PersonFormFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="ssn">Social Security Number</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="ssn">Social Security Number</Label>
+          <HelpTooltip content="Required for certain investigation types" />
+        </div>
         <SSNInput
           id="ssn"
           value={watchedSSN}
           onChange={(value) => setValue("ssn", value)}
         />
-        <p className="text-xs text-muted-foreground">This field is encrypted and securely stored.</p>
+        <p className="text-xs text-muted-foreground">
+          This field is encrypted and stored securely. Enter if available and required for your case type.
+        </p>
       </div>
 
       {/* Photo Upload */}
       {isFieldVisible(fieldConfig, 'subjectInformation', 'subjectPhoto') && (
         <div className="space-y-2">
-          <Label>Photo</Label>
+          <div className="flex items-center gap-2">
+            <Label>Photo</Label>
+            <HelpTooltip content="Clear, recent photograph of the subject" />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Upload a clear, recent photo. Accepted formats: JPG, PNG. Maximum 5MB.
+          </p>
           <div className="border-2 border-dashed rounded-lg p-6">
             {photoPreview ? (
               <div className="flex items-center gap-4">

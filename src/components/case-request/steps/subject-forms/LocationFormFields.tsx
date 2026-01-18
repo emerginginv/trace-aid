@@ -19,6 +19,7 @@ import { Loader2, MapPin, Upload, X } from "lucide-react";
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { HelpTooltip } from "@/components/ui/tooltip";
 
 interface SubjectType {
   id: string;
@@ -180,12 +181,18 @@ export function LocationFormFields({
 
       {/* Location Name */}
       <div className="space-y-2">
-        <Label htmlFor="name">Location Name <span className="text-destructive">*</span></Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="name">Location Name <span className="text-destructive">*</span></Label>
+          <HelpTooltip content="Descriptive name for this location" />
+        </div>
         <Input
           id="name"
           placeholder="e.g., Residence, Employer, Medical Facility"
           {...register("custom_fields.name")}
         />
+        <p className="text-xs text-muted-foreground">
+          Enter a descriptive name like 'Residence', 'Employer', or 'Medical Facility'.
+        </p>
         {errors.custom_fields?.name && (
           <p className="text-xs text-destructive">{errors.custom_fields.name.message}</p>
         )}

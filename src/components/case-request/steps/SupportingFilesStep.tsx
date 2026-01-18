@@ -207,6 +207,9 @@ export function SupportingFilesStep({
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           Upload any supporting documents, photos, or files for this case request.
+          Supported formats include documents (PDF, DOC), images (JPG, PNG), and other common file types.
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
           Maximum file size: {formatBytes(maxFileSize)}
         </p>
       </CardHeader>
