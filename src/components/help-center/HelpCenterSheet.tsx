@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -55,10 +55,60 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BookOpen,
 };
 
+// Viewport clamping constants
+const VIEWPORT_MARGIN_PX = 16;
+const MAX_PANEL_PX = 512; // 32rem
+
 export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCenterSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewState, setViewState] = useState<ViewState>({ type: "categories" });
   const [hasNavigatedToFeature, setHasNavigatedToFeature] = useState(false);
+  const [panelWidth, setPanelWidth] = useState<number | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  // Viewport clamp calculation
+  const clampToViewport = useCallback(() => {
+    const vw = window.visualViewport?.width ?? window.innerWidth;
+    const available = Math.max(0, vw - VIEWPORT_MARGIN_PX * 2);
+    const safeWidth = Math.min(MAX_PANEL_PX, available);
+    setPanelWidth(safeWidth);
+
+    // Post-render validation: if still off-screen, force correction
+    requestAnimationFrame(() => {
+      const rect = contentRef.current?.getBoundingClientRect();
+      if (rect) {
+        const currentVw = window.visualViewport?.width ?? window.innerWidth;
+        if (rect.right > currentVw || rect.left < 0) {
+          const correctedWidth = Math.max(0, currentVw - VIEWPORT_MARGIN_PX * 2);
+          setPanelWidth(correctedWidth);
+        }
+      }
+    });
+  }, []);
+
+  // Clamp on open, resize, and view changes
+  useLayoutEffect(() => {
+    if (!open) return;
+    
+    clampToViewport();
+
+    const handleResize = () => clampToViewport();
+    
+    window.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("resize", handleResize);
+    };
+  }, [open, clampToViewport]);
+
+  // Re-clamp when view state changes (category/article navigation)
+  useEffect(() => {
+    if (open) {
+      clampToViewport();
+    }
+  }, [open, viewState, clampToViewport]);
 
   // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
@@ -514,20 +564,20 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
     const { category, article } = viewState;
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 break-words">
         <div className="pb-4 border-b border-border">
           <span className="text-xs text-primary font-medium uppercase tracking-wide">
             {category.name}
           </span>
-          <h3 className="font-semibold text-xl text-foreground mt-2">{article.title}</h3>
-          <p className="text-muted-foreground mt-1">{article.summary}</p>
+          <h3 className="font-semibold text-xl text-foreground mt-2 break-words">{article.title}</h3>
+          <p className="text-muted-foreground mt-1 break-words">{article.summary}</p>
           <p className="text-xs text-muted-foreground mt-3">
             Last updated: {format(new Date(article.updated_at), "MMMM d, yyyy")}
           </p>
         </div>
         
         {/* Article content - rendered as structured outline */}
-        <div className="max-w-none">
+        <div className="max-w-none break-words">
           {renderFormattedContent(article.content)}
         </div>
       </div>
@@ -544,7 +594,15 @@ export function HelpCenterSheet({ open, onOpenChange, initialFeature }: HelpCent
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="right-2 w-[min(32rem,calc(100%-1rem))] max-w-full p-0 flex flex-col overflow-hidden">
+      <SheetContent 
+        ref={contentRef}
+        className="p-0 flex flex-col"
+        style={{
+          right: VIEWPORT_MARGIN_PX,
+          width: panelWidth ?? MAX_PANEL_PX,
+          maxWidth: `calc(100dvw - ${VIEWPORT_MARGIN_PX * 2}px)`,
+        }}
+      >
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             {showBackButton && (
