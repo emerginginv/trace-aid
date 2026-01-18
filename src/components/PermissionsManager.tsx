@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock, Shield } from "lucide-react";
+import { DelayedTooltip, HelpTooltip } from "@/components/ui/tooltip";
+import { SecurityNote } from "@/components/shared/SecurityNote";
 
 type AppRole = 'admin' | 'manager' | 'investigator' | 'vendor';
 
@@ -17,6 +19,7 @@ type Permission = {
 
 type FeatureGroup = {
   name: string;
+  helpText?: string;
   features: Array<{
     key: string;
     label: string;
@@ -27,6 +30,7 @@ type FeatureGroup = {
 const featureGroups: FeatureGroup[] = [
   {
     name: "Cases",
+    helpText: "Controls who can create, view, edit, and close cases. View permission is required for all other case actions.",
     features: [
       { key: "view_cases", label: "View Cases" },
       { key: "add_cases", label: "Add Cases" },
@@ -36,6 +40,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Case Requests",
+    helpText: "Manage incoming case requests from clients. Approval permission allows converting requests to active cases.",
     features: [
       { key: "view_case_requests", label: "View Case Requests", description: "View submitted case requests" },
       { key: "approve_case_requests", label: "Approve/Decline Requests", description: "Accept or decline case requests" },
@@ -45,6 +50,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Activities",
+    helpText: "Activities track scheduled work like surveillance, interviews, and appointments.",
     features: [
       { key: "view_activities", label: "View Activities" },
       { key: "add_activities", label: "Add Activities" },
@@ -54,6 +60,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Attachments",
+    helpText: "Files and documents attached to cases. May contain sensitive evidence or legal documents.",
     features: [
       { key: "view_attachments", label: "View Attachments" },
       { key: "add_attachments", label: "Add Attachments" },
@@ -63,6 +70,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Subjects",
+    helpText: "Subject data includes personal information like SSNs and addresses. Restricting view access hides subject details entirely.",
     features: [
       { key: "view_subjects", label: "View Subjects" },
       { key: "add_subjects", label: "Add Subjects" },
@@ -72,6 +80,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Updates",
+    helpText: "Case updates document investigation progress. Edit/delete permissions can be scoped to 'own' entries only for investigators.",
     features: [
       { key: "view_updates", label: "View Updates" },
       { key: "add_updates", label: "Add Updates" },
@@ -83,6 +92,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Contacts",
+    helpText: "Client contacts and representatives. May include privileged communication details.",
     features: [
       { key: "view_contacts", label: "View Contacts" },
       { key: "add_contacts", label: "Add Contacts" },
@@ -92,6 +102,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Accounts",
+    helpText: "Client accounts and organizations. Contains billing relationships and contract information.",
     features: [
       { key: "view_accounts", label: "View Accounts" },
       { key: "add_accounts", label: "Add Accounts" },
@@ -101,6 +112,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Finances",
+    helpText: "Financial access includes time entries, expenses, and invoices. Billing rates are always restricted to Admin/Manager.",
     features: [
       { key: "view_finances", label: "View Finances" },
       { key: "add_finances", label: "Add Finances" },
@@ -110,6 +122,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Reports & Calendar",
+    helpText: "Reports are client-facing deliverables. Calendar shows scheduled activities.",
     features: [
       { key: "view_reports", label: "View Reports" },
       { key: "view_calendar", label: "View Calendar" },
@@ -117,6 +130,7 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Administration",
+    helpText: "Admin-only features for user management, permissions, and organization settings. These permissions cannot be delegated to non-admin roles.",
     features: [
       { key: "manage_users", label: "Manage Users" },
       { key: "manage_permissions", label: "Manage Permissions" },
@@ -125,17 +139,36 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     name: "Notifications",
+    helpText: "System notifications about case updates, assignments, and deadlines.",
     features: [
       { key: "view_notifications", label: "View Notifications" },
     ],
   },
 ];
 
-const roles: Array<{ value: AppRole; label: string }> = [
-  { value: "admin", label: "Admin" },
-  { value: "manager", label: "Manager" },
-  { value: "investigator", label: "Investigator" },
-  { value: "vendor", label: "Vendor" },
+// Role definitions with tooltips explaining each role's scope
+const roles: Array<{ value: AppRole; label: string; tooltip: string; isLocked?: boolean }> = [
+  { 
+    value: "admin", 
+    label: "Admin", 
+    tooltip: "Full access to all features. Admin permissions are locked for security.",
+    isLocked: true,
+  },
+  { 
+    value: "manager", 
+    label: "Manager", 
+    tooltip: "Case oversight and client management. Cannot modify user permissions.",
+  },
+  { 
+    value: "investigator", 
+    label: "Investigator", 
+    tooltip: "Fieldwork and case documentation. Financial data visibility is restricted.",
+  },
+  { 
+    value: "vendor", 
+    label: "Vendor", 
+    tooltip: "External contractor. Limited to assigned cases with restricted client data visibility.",
+  },
 ];
 
 export function PermissionsManager() {
@@ -208,16 +241,28 @@ export function PermissionsManager() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Role Permissions</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Role Permissions
+          </CardTitle>
           <CardDescription>
-            Configure which features each role can access. Changes take effect immediately.
+            Configure which features each role can access. Changes take effect immediately for all users with that role.
           </CardDescription>
+          <SecurityNote 
+            message="Permission changes are logged for audit compliance" 
+            variant="audit-logged" 
+          />
         </CardHeader>
         <CardContent>
           <div className="space-y-8">
             {featureGroups.map((group) => (
               <div key={group.name} className="space-y-4">
-                <h3 className="text-lg font-semibold">{group.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{group.name}</h3>
+                  {group.helpText && (
+                    <HelpTooltip content={group.helpText} side="right" />
+                  )}
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -225,7 +270,14 @@ export function PermissionsManager() {
                         <th className="text-left p-2 font-medium">Feature</th>
                         {roles.map((role) => (
                           <th key={role.value} className="text-center p-2 font-medium">
-                            {role.label}
+                            <DelayedTooltip content={role.tooltip} side="top">
+                              <span className="inline-flex items-center gap-1 cursor-help">
+                                {role.label}
+                                {role.isLocked && (
+                                  <Lock className="h-3 w-3 text-muted-foreground" />
+                                )}
+                              </span>
+                            </DelayedTooltip>
                           </th>
                         ))}
                       </tr>
@@ -243,16 +295,28 @@ export function PermissionsManager() {
                           </td>
                           {roles.map((role) => (
                             <td key={role.value} className="text-center p-2">
-                              <Switch
-                                checked={getPermissionValue(role.value, feature.key)}
-                                onCheckedChange={() =>
-                                  togglePermission(
-                                    role.value,
-                                    feature.key,
-                                    getPermissionValue(role.value, feature.key)
-                                  )
+                              <DelayedTooltip 
+                                content={
+                                  role.isLocked 
+                                    ? "Admin permissions cannot be modified for security" 
+                                    : `Toggle ${feature.label} for ${role.label}`
                                 }
-                              />
+                                side="top"
+                              >
+                                <span>
+                                  <Switch
+                                    checked={getPermissionValue(role.value, feature.key)}
+                                    onCheckedChange={() =>
+                                      togglePermission(
+                                        role.value,
+                                        feature.key,
+                                        getPermissionValue(role.value, feature.key)
+                                      )
+                                    }
+                                    disabled={role.isLocked}
+                                  />
+                                </span>
+                              </DelayedTooltip>
                             </td>
                           ))}
                         </tr>

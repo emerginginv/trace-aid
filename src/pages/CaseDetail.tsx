@@ -830,7 +830,20 @@ const CaseDetail = () => {
       {isVendor && <Alert className="bg-muted/50 border-primary/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
-            Vendor Access - You can view case details and submit updates. Contact and account information is restricted.
+            <div className="space-y-2">
+              <span className="font-medium">Vendor Access</span>
+              <span className="text-muted-foreground"> — You're viewing this case as an external contractor.</span>
+              <div className="mt-2 text-sm text-muted-foreground">
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  <span>✓ View case details</span>
+                  <span>✓ Submit updates</span>
+                  <span>✓ Upload attachments</span>
+                </div>
+                <div className="mt-1 text-xs">
+                  Client contact and billing details are restricted to protect confidentiality.
+                </div>
+              </div>
+            </div>
           </AlertDescription>
         </Alert>}
 

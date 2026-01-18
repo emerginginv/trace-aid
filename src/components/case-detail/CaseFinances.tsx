@@ -505,11 +505,33 @@ export const CaseFinances = ({ caseId, isClosedCase = false, caseStatusKey }: { 
   // Check view permission
   if (!isLoading && !canViewFinances) {
     return (
-      <Card className="border-yellow-500/50 bg-yellow-500/5">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Lock className="h-12 w-12 text-yellow-500 mb-4" />
-          <p className="text-lg font-medium text-yellow-600 dark:text-yellow-400">Access Restricted</p>
-          <p className="text-muted-foreground mt-2">You don't have permission to view finances.</p>
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center">
+          <div className="rounded-full bg-muted p-3 mb-4">
+            <Lock className="h-8 w-8 text-muted-foreground" />
+          </div>
+          
+          <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
+          
+          <p className="text-muted-foreground mb-4 max-w-md">
+            Financial data is restricted based on your role and case assignment.
+          </p>
+          
+          <div className="bg-muted/50 rounded-lg p-4 mb-4 max-w-md">
+            <div className="flex items-start gap-2 text-sm text-left">
+              <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-medium">Why?</span>
+                <p className="text-muted-foreground mt-1">
+                  Billing rates, client invoices, and expense details require management oversight. This protects both client confidentiality and internal pricing.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-sm text-muted-foreground max-w-md">
+            Investigators can view their own time entries on the My Time page.
+          </p>
         </CardContent>
       </Card>
     );

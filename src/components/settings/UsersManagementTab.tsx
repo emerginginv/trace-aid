@@ -477,10 +477,30 @@ export const UsersManagementTab = ({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                          <SelectItem value="investigator">Investigator</SelectItem>
-                          <SelectItem value="vendor">Vendor</SelectItem>
+                          <SelectItem value="admin">
+                            <div className="flex flex-col">
+                              <span>Admin</span>
+                              <span className="text-xs text-muted-foreground">Full access to all features</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="manager">
+                            <div className="flex flex-col">
+                              <span>Manager</span>
+                              <span className="text-xs text-muted-foreground">Case oversight, no user management</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="investigator">
+                            <div className="flex flex-col">
+                              <span>Investigator</span>
+                              <span className="text-xs text-muted-foreground">Fieldwork, restricted finances</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="vendor">
+                            <div className="flex flex-col">
+                              <span>Vendor</span>
+                              <span className="text-xs text-muted-foreground">External contractor, limited access</span>
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
