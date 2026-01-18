@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Trash2, Check, X, CheckCircle2, XCircle, CalendarIcon, Clock, MoreVertical } from "lucide-react";
+import { Search, Trash2, Check, X, CheckCircle2, XCircle, CalendarIcon, Clock, MoreVertical, Pencil } from "lucide-react";
 import { ImportTemplateDropdown } from "@/components/ui/import-template-button";
 import { ExportDropdown } from "@/components/shared/ExportDropdown";
 import {
@@ -33,6 +33,7 @@ import { ColumnVisibility } from "@/components/ui/column-visibility";
 import { useColumnVisibility, ColumnDefinition } from "@/hooks/use-column-visibility";
 import { useSortPreference } from "@/hooks/use-sort-preference";
 import { ExpensesPageSkeleton } from "@/components/ui/list-page-skeleton";
+import { TimeEntryEditDialog } from "@/components/time-entries/TimeEntryEditDialog";
 
 interface TimeEntry {
   id: string;
@@ -79,6 +80,8 @@ const TimeEntries = () => {
   // Bulk selection state
   const [selectedTimeEntries, setSelectedTimeEntries] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Dynamic columns based on role
   const COLUMNS: ColumnDefinition[] = useMemo(() => {
@@ -878,8 +881,18 @@ const TimeEntries = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover">
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setEditingEntry(entry);
+                                setShowEditDialog(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
                             {(entry.status === "pending" || entry.status === "draft") && (
                               <>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   onClick={() => handleApprove(entry.id)}
                                   className="text-emerald-600"
@@ -894,9 +907,9 @@ const TimeEntries = () => {
                                   <X className="h-4 w-4 mr-2" />
                                   Reject
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator />
                               </>
                             )}
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDeleteTimeEntry(entry.id)}
                               className="text-destructive focus:text-destructive"
@@ -915,6 +928,17 @@ const TimeEntries = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Time Entry Dialog */}
+      <TimeEntryEditDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        entry={editingEntry}
+        onSuccess={() => {
+          fetchTimeData();
+          setEditingEntry(null);
+        }}
+      />
     </div>
   );
 };
