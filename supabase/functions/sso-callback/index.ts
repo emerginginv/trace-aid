@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
       console.error('Failed to generate magic link:', magicLinkError);
       
       // Fallback: redirect to login with SSO success message
-      const loginUrl = new URL(stateData.redirect_url.startsWith('http') ? stateData.redirect_url : `${supabaseUrl.replace('.supabase.co', '.lovable.app')}${stateData.redirect_url}`);
+      const loginUrl = new URL(stateData.redirect_url.startsWith('http') ? stateData.redirect_url : `https://caseinformation.app${stateData.redirect_url}`);
       loginUrl.searchParams.set('sso_success', 'true');
       loginUrl.searchParams.set('email', userEmail);
       
