@@ -11,7 +11,7 @@ import { BreadcrumbProvider } from "@/contexts/BreadcrumbContext";
 import { FaviconProvider } from "@/components/FaviconProvider";
 import { NavigationProvider } from "@/contexts/NavigationContext";
 import { ProviderVerification } from "./ProviderVerification";
-
+import { TenantGuard } from "./TenantGuard";
 /**
  * ROOT PROVIDER TREE
  * ==================
@@ -77,9 +77,11 @@ export function Providers({ children }: ProvidersProps) {
                     <ImpersonationProvider>
                       <BreadcrumbProvider>
                         <FaviconProvider>
-                          <ProviderVerification>
-                            {children}
-                          </ProviderVerification>
+                          <TenantGuard>
+                            <ProviderVerification>
+                              {children}
+                            </ProviderVerification>
+                          </TenantGuard>
                         </FaviconProvider>
                       </BreadcrumbProvider>
                     </ImpersonationProvider>
@@ -109,6 +111,7 @@ export const REQUIRED_ROOT_PROVIDERS = [
   'ImpersonationProvider',
   'BreadcrumbProvider',
   'FaviconProvider',
+  'TenantGuard',
 ] as const;
 
 export type RootProvider = typeof REQUIRED_ROOT_PROVIDERS[number];
