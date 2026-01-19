@@ -872,11 +872,6 @@ const CaseDetail = () => {
           </AlertDescription>
         </Alert>}
       
-      {/* Lifecycle Banner */}
-      <CaseLifecycleBanner 
-        statusKey={caseData.status_key || caseData.status?.toLowerCase().replace(/\s+/g, '_') || null}
-        phase="execution"
-      />
 
       {/* Header */}
       <div className="flex items-start gap-3 md:gap-4 min-w-0">
