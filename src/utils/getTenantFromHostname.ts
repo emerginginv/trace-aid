@@ -3,6 +3,15 @@
  * Works with wildcard subdomains on caseinformation.app
  */
 
+// Only log in development mode
+const isDev = import.meta.env.DEV;
+
+function devLog(category: string, message: string, data?: Record<string, unknown>) {
+  if (isDev) {
+    console.log(`[TenantDetection:${category}]`, message, data ? data : '');
+  }
+}
+
 // Production domains where subdomain-based tenancy applies
 export const TENANT_ENABLED_DOMAINS = [
   "caseinformation.app",
@@ -40,11 +49,13 @@ export function getTenantFromHostname(hostname?: string): TenantDetectionResult 
   const host = hostname || window.location.hostname;
   const parts = host.split(".");
   
+  devLog('Init', 'Starting tenant detection', { hostname: host, parts });
+  
   // Check if this is an ignored/development domain
   const isIgnoredDomain = IGNORED_DOMAINS.some(d => host.includes(d));
   
   if (isIgnoredDomain) {
-    console.log("[getTenantFromHostname] Ignored domain:", host);
+    devLog('Route', 'Ignored domain - skipping tenant detection', { hostname: host });
     return {
       tenantSlug: null,
       isValidDomain: false,
@@ -58,7 +69,11 @@ export function getTenantFromHostname(hostname?: string): TenantDetectionResult 
     const baseDomain = parts.join(".");
     const isEnabled = TENANT_ENABLED_DOMAINS.includes(baseDomain);
     
-    console.log("[getTenantFromHostname] Root domain:", baseDomain, "enabled:", isEnabled);
+    devLog('Route', 'Root domain detected', { 
+      baseDomain, 
+      isEnabled,
+      routing: 'No tenant - loading main app'
+    });
     return {
       tenantSlug: null,
       isValidDomain: isEnabled,
@@ -72,7 +87,7 @@ export function getTenantFromHostname(hostname?: string): TenantDetectionResult 
   
   // Check if this is a tenant-enabled domain
   if (!TENANT_ENABLED_DOMAINS.includes(baseDomain)) {
-    console.log("[getTenantFromHostname] Not a tenant-enabled domain:", baseDomain);
+    devLog('Route', 'Not a tenant-enabled domain', { baseDomain, enabledDomains: TENANT_ENABLED_DOMAINS });
     return {
       tenantSlug: null,
       isValidDomain: false,
@@ -86,7 +101,10 @@ export function getTenantFromHostname(hostname?: string): TenantDetectionResult 
 
   // Check if this is a reserved subdomain
   if (RESERVED_SUBDOMAINS.includes(subdomain)) {
-    console.log("[getTenantFromHostname] Reserved subdomain:", subdomain);
+    devLog('Route', 'Reserved subdomain - treating as root', { 
+      subdomain, 
+      reservedList: RESERVED_SUBDOMAINS 
+    });
     return {
       tenantSlug: null,
       isValidDomain: true,
@@ -95,7 +113,11 @@ export function getTenantFromHostname(hostname?: string): TenantDetectionResult 
     };
   }
 
-  console.log("[getTenantFromHostname] Tenant detected:", subdomain);
+  devLog('Tenant', 'Tenant subdomain detected', { 
+    tenantSlug: subdomain, 
+    baseDomain,
+    routing: 'Will attempt to resolve tenant from database'
+  });
   return {
     tenantSlug: subdomain,
     isValidDomain: true,
@@ -108,5 +130,11 @@ export function getTenantFromHostname(hostname?: string): TenantDetectionResult 
  * Simple helper to get just the tenant slug (for backwards compatibility)
  */
 export function detectTenantSubdomain(hostname?: string): string | null {
-  return getTenantFromHostname(hostname).tenantSlug;
+  const result = getTenantFromHostname(hostname);
+  devLog('Result', 'Final tenant detection result', { 
+    tenantSlug: result.tenantSlug,
+    isValidDomain: result.isValidDomain,
+    hostname: result.hostname
+  });
+  return result.tenantSlug;
 }
