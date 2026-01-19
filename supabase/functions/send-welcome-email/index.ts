@@ -50,8 +50,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const portalUrl = organization.subdomain 
-      ? `https://${organization.subdomain}.unifiedcases.com`
-      : 'https://app.unifiedcases.com';
+      ? `https://${organization.subdomain}.caseinformation.app`
+      : 'https://caseinformation.app';
 
     const userName = profile.first_name || profile.email?.split('@')[0] || 'there';
 
@@ -127,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               
               <p style="margin: 30px 0 0 0; font-size: 14px; line-height: 1.6; color: #6b7280;">
-                Need help? Visit our <a href="https://app.unifiedcases.com/help" style="color: #3b82f6; text-decoration: none;">Help Center</a> or contact us at <a href="mailto:support@unifiedcases.com" style="color: #3b82f6; text-decoration: none;">support@unifiedcases.com</a>
+                Need help? Visit our <a href="https://caseinformation.app/help" style="color: #3b82f6; text-decoration: none;">Help Center</a> or contact us at <a href="mailto:support@caseinformation.app" style="color: #3b82f6; text-decoration: none;">support@caseinformation.app</a>
               </p>
             </td>
           </tr>
