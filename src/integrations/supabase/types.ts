@@ -10978,7 +10978,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "member" | "manager" | "investigator" | "vendor"
+      app_role:
+        | "admin"
+        | "member"
+        | "manager"
+        | "investigator"
+        | "vendor"
+        | "owner"
       backup_status: "pending" | "running" | "success" | "failed"
       backup_type: "database" | "storage" | "config"
       case_status_trigger_event:
@@ -11201,7 +11207,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "member", "manager", "investigator", "vendor"],
+      app_role: [
+        "admin",
+        "member",
+        "manager",
+        "investigator",
+        "vendor",
+        "owner",
+      ],
       backup_status: ["pending", "running", "success", "failed"],
       backup_type: ["database", "storage", "config"],
       case_status_trigger_event: [
