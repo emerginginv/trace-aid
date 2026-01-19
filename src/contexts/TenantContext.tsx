@@ -40,7 +40,7 @@ function getDevSubdomainOverride(): string | null {
 }
 
 /**
- * Check if this is a custom domain (not unifiedcases.com or caseinformation.app)
+ * Check if this is a custom domain (not caseinformation.app)
  */
 function isCustomDomainHostname(): boolean {
   const hostname = window.location.hostname;

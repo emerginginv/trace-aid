@@ -152,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
       Messages: [
         {
           From: {
-            Email: "support@unifiedcases.com",
+            Email: "support@caseinformation.app",
             Name: "CaseWyze",
           },
           To: [

@@ -305,7 +305,7 @@ export default function SupportConsole() {
                 <p className="font-medium">{selectedUser.organization_name}</p>
                 {selectedUser.subdomain && (
                   <p className="text-sm text-muted-foreground">
-                    {selectedUser.subdomain}.unifiedcases.com
+                    {selectedUser.subdomain}.caseinformation.app
                   </p>
                 )}
               </div>

@@ -73,7 +73,7 @@ export function PaymentPending({
             <CardContent className="py-4">
               <p className="text-sm text-muted-foreground mb-1">Your case management portal will be at:</p>
               <p className="font-mono text-lg font-semibold text-primary break-all">
-                https://{organizationSubdomain}.unifiedcases.com
+                https://{organizationSubdomain}.caseinformation.app
               </p>
             </CardContent>
           </Card>

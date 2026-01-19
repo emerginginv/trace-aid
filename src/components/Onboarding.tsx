@@ -48,7 +48,7 @@ export function Onboarding() {
     fetchSubdomain();
   }, []);
 
-  const portalUrl = subdomain ? `https://${subdomain}.unifiedcases.com` : null;
+  const portalUrl = subdomain ? `https://${subdomain}.caseinformation.app` : null;
 
   const copyToClipboard = async () => {
     if (!portalUrl) return;
