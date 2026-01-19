@@ -53,7 +53,6 @@ import { useCaseServiceInstances } from "@/hooks/useCaseServiceInstances";
 import { useCaseLifecycleStatuses, STATUS_KEYS } from "@/hooks/use-case-lifecycle-statuses";
 import { useCaseStatuses } from "@/hooks/use-case-statuses";
 import { useCaseStatusTransition } from "@/hooks/use-case-status-transition";
-
 interface Case {
   id: string;
   case_number: string;
@@ -118,7 +117,7 @@ const CaseDetail = () => {
   const {
     canViewExactStatus,
     getDisplayName: getStatusDisplayNameByPermission,
-    getDisplayStyle: getStatusDisplayStyleByPermission,
+    getDisplayStyle: getStatusDisplayStyleByPermission
   } = useStatusDisplay();
   const {
     organization
@@ -130,18 +129,18 @@ const CaseDetail = () => {
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  
+
   // Use BOTH status systems during transition
   // Legacy system (for backward compat with status_key based code)
-  const { 
-    executionStatuses, 
-    getStatusByKey, 
-    getDisplayName: getLegacyDisplayName, 
+  const {
+    executionStatuses,
+    getStatusByKey,
+    getDisplayName: getLegacyDisplayName,
     getStatusColor: getLifecycleStatusColor,
     isClosedStatus: isClosedLifecycleStatus,
-    isLoading: legacyStatusesLoading 
+    isLoading: legacyStatusesLoading
   } = useCaseLifecycleStatuses();
-  
+
   // New canonical status system (using current_status_id)
   const {
     statuses: newStatuses,
@@ -155,9 +154,9 @@ const CaseDetail = () => {
     getPrevStatus,
     getCategoryByName,
     getStatusesByCategoryId,
-    isLoading: newStatusesLoading,
+    isLoading: newStatusesLoading
   } = useCaseStatuses();
-  
+
   // Status transition engine with validation and workflow filtering
   const {
     getStatusesForWorkflow,
@@ -169,9 +168,8 @@ const CaseDetail = () => {
     getDefaultPrevStatus,
     checkCanReopen,
     canPotentiallyReopen,
-    getFirstOpenStatus,
+    getFirstOpenStatus
   } = useCaseStatusTransition();
-  
   const statusesLoading = legacyStatusesLoading || newStatusesLoading;
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
@@ -347,16 +345,14 @@ const CaseDetail = () => {
       return {
         backgroundColor: `${color}20`,
         color: color,
-        borderColor: color,
+        borderColor: color
       };
     }
     return {};
   };
-  
   const getStatusColor = (statusKey: string) => {
     return getLifecycleStatusColor(statusKey) ? 'border' : 'bg-muted';
   };
-  
   const isClosedCase = () => {
     // Use new status system if current_status_id is set
     if (caseData?.current_status_id) {
@@ -366,9 +362,9 @@ const CaseDetail = () => {
     if (!caseData?.status_key) return false;
     return isClosedLifecycleStatus(caseData.status_key);
   };
-  
+
   // === NEW STATUS SYSTEM HELPERS ===
-  
+
   /** Get current status display style using the new system (respects view_exact_status permission) */
   const getCurrentStatusStyle = () => {
     if (caseData?.current_status_id) {
@@ -378,7 +374,7 @@ const CaseDetail = () => {
     // Fall back to legacy
     return getStatusStyle(caseData?.status_key || '');
   };
-  
+
   /** Get current status display name using the new system (respects view_exact_status permission) */
   const getCurrentStatusDisplayName = () => {
     if (caseData?.current_status_id) {
@@ -388,93 +384,87 @@ const CaseDetail = () => {
     // Fall back to legacy
     return getLegacyDisplayName(caseData?.status_key || '') || caseData?.status || 'Unknown';
   };
-  
+
   /** Handle status change using the NEW canonical status system (current_status_id) */
   const handleNewStatusChange = async (newStatusId: string): Promise<boolean> => {
     if (!caseData) return false;
-    
     const oldStatusId = caseData.current_status_id;
     if (oldStatusId === newStatusId) return true;
-    
-    const previousCaseData = { ...caseData };
+    const previousCaseData = {
+      ...caseData
+    };
     const newStatus = getStatusById(newStatusId);
     if (!newStatus) {
-      toast({ title: "Error", description: "Status not found", variant: "destructive" });
-      return false;
-    }
-    
-    // Validate transition using the transition engine
-    const caseWorkflow = caseData.workflow || "standard";
-    const validation = canTransitionTo(oldStatusId, newStatusId, caseWorkflow);
-    
-    if (!validation.valid) {
-      toast({ 
-        title: "Transition Blocked", 
-        description: validation.reason || "Status change not allowed", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: "Status not found",
+        variant: "destructive"
       });
       return false;
     }
-    
+
+    // Validate transition using the transition engine
+    const caseWorkflow = caseData.workflow || "standard";
+    const validation = canTransitionTo(oldStatusId, newStatusId, caseWorkflow);
+    if (!validation.valid) {
+      toast({
+        title: "Transition Blocked",
+        description: validation.reason || "Status change not allowed",
+        variant: "destructive"
+      });
+      return false;
+    }
     const wasClosedCategory = oldStatusId ? isClosedCategory(oldStatusId) : false;
     const isNowClosedCategory = isClosedCategory(newStatusId);
     const isClosing = !wasClosedCategory && isNowClosedCategory;
-    
+
     // Optimistic update
     setCaseData({
       ...caseData,
       current_status_id: newStatusId,
       current_category_id: newStatus.category_id,
-      status: newStatus.name, // Keep display status in sync for backward compat
+      status: newStatus.name,
+      // Keep display status in sync for backward compat
       status_entered_at: new Date().toISOString(),
       ...(isClosing ? {
         closed_by_user_id: "pending",
         closed_at: new Date().toISOString()
       } : {})
     });
-    
     toast({
       title: "Status updated",
       description: isClosing ? "Case closed" : `Status changed to ${newStatus.name}`
     });
-    
     setUpdatingStatus(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-      
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
-      
+      const {
+        data: profile
+      } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
-      
+
       // Build update data - trigger will handle history tracking
       const updateData: Record<string, unknown> = {
         current_status_id: newStatusId,
-        status: newStatus.name, // Keep display status in sync
+        status: newStatus.name // Keep display status in sync
       };
-      
       if (isClosing) {
         updateData.closed_by_user_id = user.id;
         updateData.closed_at = new Date().toISOString();
       }
-      
-      const { error } = await supabase
-        .from("cases")
-        .update(updateData)
-        .eq("id", id);
-      
+      const {
+        error
+      } = await supabase.from("cases").update(updateData).eq("id", id);
       if (error) throw error;
-      
+
       // Log activity
       const oldStatus = oldStatusId ? getStatusById(oldStatusId) : null;
-      const activityDescription = isClosing 
-        ? `Case closed by ${userName}`
-        : `Status changed from "${oldStatus?.name || 'Unknown'}" to "${newStatus.name}" by ${userName}`;
-      
+      const activityDescription = isClosing ? `Case closed by ${userName}` : `Status changed from "${oldStatus?.name || 'Unknown'}" to "${newStatus.name}" by ${userName}`;
       await supabase.from("case_activities").insert({
         case_id: id,
         user_id: user.id,
@@ -483,9 +473,8 @@ const CaseDetail = () => {
         description: activityDescription,
         status: "completed"
       });
-      
       await NotificationHelpers.caseStatusChanged(caseData.case_number, newStatus.name, id!);
-      
+
       // Confirm the update
       setCaseData(prev => prev ? {
         ...prev,
@@ -498,7 +487,6 @@ const CaseDetail = () => {
           closed_at: new Date().toISOString()
         } : {})
       } : null);
-      
       return true;
     } catch (error) {
       console.error("Error updating status:", error);
@@ -513,24 +501,24 @@ const CaseDetail = () => {
       setUpdatingStatus(false);
     }
   };
-  
   const handleStatusChange = async (newStatusKey: string): Promise<boolean> => {
     if (!caseData) return false;
     const oldStatusKey = caseData.status_key;
     if (oldStatusKey === newStatusKey) return true;
-    const previousCaseData = { ...caseData };
-    
+    const previousCaseData = {
+      ...caseData
+    };
     const newStatusItem = getStatusByKey(newStatusKey);
     const isClosing = newStatusItem?.status_type === 'closed';
     const oldStatusItem = oldStatusKey ? getStatusByKey(oldStatusKey) : null;
     const wasOpen = oldStatusItem?.status_type === 'open';
-    
+
     // Get display name for the new status
     const displayName = newStatusItem?.display_name || newStatusKey;
-    
     setCaseData({
       ...caseData,
-      status: displayName, // Update display status for backward compat
+      status: displayName,
+      // Update display status for backward compat
       status_key: newStatusKey,
       ...(isClosing && wasOpen ? {
         closed_by_user_id: "pending",
@@ -554,7 +542,8 @@ const CaseDetail = () => {
       } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
       const updateData: any = {
-        status: displayName, // Keep display name in status for backward compat
+        status: displayName,
+        // Keep display name in status for backward compat
         status_key: newStatusKey
       };
       if (isClosing && wasOpen) {
@@ -615,7 +604,7 @@ const CaseDetail = () => {
         }
       } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
-      
+
       // Check if reopen is allowed using the transition engine
       const reopenCheck = await checkCanReopen(caseData.id);
       if (!reopenCheck.valid) {
@@ -627,22 +616,20 @@ const CaseDetail = () => {
         setReopenDialogOpen(false);
         return;
       }
-      
       const {
         data: profile
       } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       const userName = profile?.full_name || user.email || "Unknown User";
-      
+
       // Get the case workflow and find the first "Open" category status
       const caseWorkflow = caseData.workflow || "standard";
       const firstOpenStatus = getFirstOpenStatus(caseWorkflow);
-      
+
       // Fall back to legacy if new system doesn't have an open status
       let openStatusName: string;
       let openStatusKey: string | null = null;
       let openStatusId: string | null = null;
       let openCategoryId: string | null = null;
-      
       if (firstOpenStatus) {
         openStatusName = firstOpenStatus.name;
         openStatusId = firstOpenStatus.id;
@@ -661,7 +648,6 @@ const CaseDetail = () => {
         openStatusName = legacyOpenStatus.display_name;
         openStatusKey = legacyOpenStatus.status_key;
       }
-      
       const rootCaseId = caseData.parent_case_id || caseData.id;
       const {
         data: relatedCases
@@ -684,7 +670,7 @@ const CaseDetail = () => {
       const {
         data: subjects
       } = await supabase.from("case_subjects").select("*").eq("case_id", caseData.id);
-      
+
       // Create new case with proper status system fields
       const newCaseData: Record<string, unknown> = {
         case_number: newCaseNumber,
@@ -695,12 +681,13 @@ const CaseDetail = () => {
         contact_id: caseData.contact_id,
         case_manager_id: caseData.case_manager_id,
         investigator_ids: caseData.investigator_ids,
-        parent_case_id: rootCaseId, // Links as case_series_id
+        parent_case_id: rootCaseId,
+        // Links as case_series_id
         instance_number: newInstanceNumber,
         user_id: user.id,
-        workflow: caseWorkflow, // Preserve workflow
+        workflow: caseWorkflow // Preserve workflow
       };
-      
+
       // Set new status system fields if available
       if (openStatusId) {
         newCaseData.current_status_id = openStatusId;
@@ -709,7 +696,6 @@ const CaseDetail = () => {
       if (openStatusKey) {
         newCaseData.status_key = openStatusKey;
       }
-      
       const {
         data: newCase,
         error: caseError
@@ -828,13 +814,7 @@ const CaseDetail = () => {
       </div>;
   };
   return <div className="space-y-4 sm:space-y-6">
-      <FirstTimeGuidance
-        guidanceKey="case-detail-welcome"
-        title="Case Detail"
-        welcome="You're inside a case. The tabs above organize everything - subjects, updates, finances, and more."
-        whatToDoFirst="Add a subject or create your first update to start documenting."
-        whatNotToWorryAbout="Budget warnings and invoicing matter later. Focus on the investigation first."
-      />
+      <FirstTimeGuidance guidanceKey="case-detail-welcome" title="Case Detail" welcome="You're inside a case. The tabs above organize everything - subjects, updates, finances, and more." whatToDoFirst="Add a subject or create your first update to start documenting." whatNotToWorryAbout="Budget warnings and invoicing matter later. Focus on the investigation first." />
       {isVendor && <Alert className="bg-muted/50 border-primary/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
@@ -872,6 +852,8 @@ const CaseDetail = () => {
           </AlertDescription>
         </Alert>}
       
+      {/* Lifecycle Banner */}
+      <CaseLifecycleBanner statusKey={caseData.status_key || caseData.status?.toLowerCase().replace(/\s+/g, '_') || null} phase="execution" />
 
       {/* Header */}
       <div className="flex items-start gap-3 md:gap-4 min-w-0">
@@ -896,148 +878,79 @@ const CaseDetail = () => {
         {/* Status + Actions - break under title until lg, then sit to the right */}
         <div className="flex items-center gap-2 shrink-0 ml-auto">
           {/* Status Navigation - Prev/Next buttons + Status Dropdown (only if user can view exact status) */}
-          {!isVendor && canViewExactStatus && (
-            <div className="flex items-center gap-1">
+          {!isVendor && canViewExactStatus && <div className="flex items-center gap-1">
               {/* Prev Status Button */}
-              <DelayedTooltip
-                content={
-                  !caseData.current_status_id || !getPrevStatus(caseData.current_status_id)
-                    ? "Already at first status in this phase"
-                    : "Move to previous status in workflow"
-                }
-                side="bottom"
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 px-2"
-                  disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getPrevStatus(caseData.current_status_id)}
-                  onClick={() => {
-                    if (caseData.current_status_id) {
-                      const prev = getPrevStatus(caseData.current_status_id);
-                      if (prev) handleNewStatusChange(prev.id);
-                    }
-                  }}
-                >
+              <DelayedTooltip content={!caseData.current_status_id || !getPrevStatus(caseData.current_status_id) ? "Already at first status in this phase" : "Move to previous status in workflow"} side="bottom">
+                <Button variant="outline" size="sm" className="h-9 px-2" disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getPrevStatus(caseData.current_status_id)} onClick={() => {
+              if (caseData.current_status_id) {
+                const prev = getPrevStatus(caseData.current_status_id);
+                if (prev) handleNewStatusChange(prev.id);
+              }
+            }}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </DelayedTooltip>
 
               {/* Status Dropdown - Using new canonical status system */}
-              <DelayedTooltip
-                content="Current case status - affects workflow, reporting, and visibility"
-                side="bottom"
-              >
+              <DelayedTooltip content="Current case status - affects workflow, reporting, and visibility" side="bottom">
                 <div>
-                  <Select 
-                    value={caseData.current_status_id || ''} 
-                    onValueChange={handleNewStatusChange} 
-                    disabled={updatingStatus || statusesLoading}
-                  >
-                    <SelectTrigger 
-                      className="w-[140px] h-9 text-sm border" 
-                      style={getCurrentStatusStyle()}
-                    >
+                  <Select value={caseData.current_status_id || ''} onValueChange={handleNewStatusChange} disabled={updatingStatus || statusesLoading}>
+                    <SelectTrigger className="w-[140px] h-9 text-sm border" style={getCurrentStatusStyle()}>
                       <SelectValue placeholder="Select status">
                         {getCurrentStatusDisplayName()}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map(category => (
-                        <div key={category.id}>
-                          <DelayedTooltip
-                            content={
-                              category.name.toLowerCase().includes('intake') 
-                                ? "Initial assessment and setup statuses"
-                                : category.name.toLowerCase().includes('execution') || category.name.toLowerCase().includes('active')
-                                ? "Active investigation and work statuses"
-                                : category.name.toLowerCase().includes('closed') || category.name.toLowerCase().includes('complete')
-                                ? "Completed or cancelled case statuses"
-                                : `${category.name} workflow statuses`
-                            }
-                            side="left"
-                          >
+                      {categories.map(category => <div key={category.id}>
+                          <DelayedTooltip content={category.name.toLowerCase().includes('intake') ? "Initial assessment and setup statuses" : category.name.toLowerCase().includes('execution') || category.name.toLowerCase().includes('active') ? "Active investigation and work statuses" : category.name.toLowerCase().includes('closed') || category.name.toLowerCase().includes('complete') ? "Completed or cancelled case statuses" : `${category.name} workflow statuses`} side="left">
                             <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
                               {category.name}
                             </div>
                           </DelayedTooltip>
-                          {activeStatuses
-                            .filter(s => s.category_id === category.id)
-                            .sort((a, b) => a.rank_order - b.rank_order)
-                            .map(status => (
-                              <SelectItem key={status.id} value={status.id}>
+                          {activeStatuses.filter(s => s.category_id === category.id).sort((a, b) => a.rank_order - b.rank_order).map(status => <SelectItem key={status.id} value={status.id}>
                                 <span className="flex items-center gap-2">
-                                  <span 
-                                    className="w-2.5 h-2.5 rounded-full shrink-0" 
-                                    style={{ backgroundColor: status.color || '#9ca3af' }} 
-                                  />
+                                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{
+                          backgroundColor: status.color || '#9ca3af'
+                        }} />
                                   {status.name}
                                 </span>
-                              </SelectItem>
-                            ))}
-                        </div>
-                      ))}
+                              </SelectItem>)}
+                        </div>)}
                     </SelectContent>
                   </Select>
                 </div>
               </DelayedTooltip>
 
               {/* Next Status Button */}
-              <DelayedTooltip
-                content={
-                  !caseData.current_status_id || !getNextStatus(caseData.current_status_id)
-                    ? "Already at final status in this phase"
-                    : "Move to next status in workflow"
-                }
-                side="bottom"
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 px-2"
-                  disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getNextStatus(caseData.current_status_id)}
-                  onClick={() => {
-                    if (caseData.current_status_id) {
-                      const next = getNextStatus(caseData.current_status_id);
-                      if (next) handleNewStatusChange(next.id);
-                    }
-                  }}
-                >
+              <DelayedTooltip content={!caseData.current_status_id || !getNextStatus(caseData.current_status_id) ? "Already at final status in this phase" : "Move to next status in workflow"} side="bottom">
+                <Button variant="outline" size="sm" className="h-9 px-2" disabled={updatingStatus || statusesLoading || !caseData.current_status_id || !getNextStatus(caseData.current_status_id)} onClick={() => {
+              if (caseData.current_status_id) {
+                const next = getNextStatus(caseData.current_status_id);
+                if (next) handleNewStatusChange(next.id);
+              }
+            }}>
                   <ChevronLeft className="h-4 w-4 rotate-180" />
                 </Button>
               </DelayedTooltip>
 
               {/* Status History Button */}
-              <DelayedTooltip
-                content="View complete status history with timestamps and durations"
-                side="bottom"
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0"
-                  onClick={() => setStatusHistoryModalOpen(true)}
-                >
+              <DelayedTooltip content="View complete status history with timestamps and durations" side="bottom">
+                <Button variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={() => setStatusHistoryModalOpen(true)}>
                   <History className="h-4 w-4" />
                   <ChevronLeft className="h-4 w-4 rotate-180" />
                 </Button>
               </DelayedTooltip>
-            </div>
-          )}
+            </div>}
           
           {/* Category-only status badge (when user cannot view exact status) */}
-          {!isVendor && !canViewExactStatus && (
-            <Badge className="border" style={getCurrentStatusStyle()}>
+          {!isVendor && !canViewExactStatus && <Badge className="border" style={getCurrentStatusStyle()}>
               {getCurrentStatusDisplayName()}
-            </Badge>
-          )}
+            </Badge>}
           
           {/* Vendor Status Badge */}
-          {isVendor && (
-            <Badge className="border" style={getCurrentStatusStyle()}>
+          {isVendor && <Badge className="border" style={getCurrentStatusStyle()}>
               {getCurrentStatusDisplayName()}
-            </Badge>
-          )}
+            </Badge>}
           
           {/* Action Menu */}
           {!isVendor && <DropdownMenu>
@@ -1120,7 +1033,7 @@ const CaseDetail = () => {
                       </div>
                       
                       {/* Services Section - always show */}
-                      <div className="pt-3 border-t">
+                      <div className="pt-3 border-t text-info-200">
                         <p className="text-xs text-muted-foreground mb-2">Services</p>
                         {serviceInstances.length > 0 ? <div className="flex flex-wrap gap-2">
                             {serviceInstances.map(instance => <Badge key={instance.id} variant="secondary" className="text-xs">
@@ -1237,11 +1150,7 @@ const CaseDetail = () => {
 
       <CaseSummaryPdfDialog open={summaryPdfDialogOpen} onOpenChange={setSummaryPdfDialogOpen} caseId={id!} caseNumber={caseData?.case_number || ""} />
 
-      <CaseStatusHistoryModal 
-        caseId={id!} 
-        open={statusHistoryModalOpen} 
-        onOpenChange={setStatusHistoryModalOpen} 
-      />
+      <CaseStatusHistoryModal caseId={id!} open={statusHistoryModalOpen} onOpenChange={setStatusHistoryModalOpen} />
     </div>;
 };
 export default CaseDetail;
