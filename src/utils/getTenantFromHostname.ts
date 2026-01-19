@@ -6,7 +6,6 @@
 // Production domains where subdomain-based tenancy applies
 export const TENANT_ENABLED_DOMAINS = [
   "caseinformation.app",
-  "unifiedcases.com",
 ];
 
 // Reserved subdomains that should never be treated as tenants

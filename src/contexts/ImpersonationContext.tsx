@@ -144,7 +144,7 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
 
       if (orgData?.subdomain) {
         // Redirect to target org's domain
-        const targetUrl = `https://${orgData.subdomain}.unifiedcases.com/dashboard`;
+        const targetUrl = `https://${orgData.subdomain}.caseinformation.app/dashboard`;
         window.location.href = targetUrl;
       } else {
         // If no subdomain, just refresh
