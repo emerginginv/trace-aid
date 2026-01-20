@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS public.organization_domains (
   domain text NOT NULL,
   domain_type text NOT NULL CHECK (domain_type IN ('root', 'subdomain')),
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'verified', 'active', 'failed', 'disabled')),
-  verification_token text NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+  verification_token text NOT NULL DEFAULT encode(extensions.gen_random_bytes(32), 'hex'),
   created_at timestamptz NOT NULL DEFAULT now(),
   verified_at timestamptz,
   last_checked_at timestamptz,
@@ -423,7 +423,7 @@ BEGIN
     );
   END IF;
   
-  v_verification_token := encode(gen_random_bytes(32), 'hex');
+  v_verification_token := encode(extensions.gen_random_bytes(32), 'hex');
   
   INSERT INTO organization_domains (organization_id, domain, domain_type, status, verification_token)
   VALUES (p_organization_id, v_normalized_domain, p_domain_type, 'pending', v_verification_token)

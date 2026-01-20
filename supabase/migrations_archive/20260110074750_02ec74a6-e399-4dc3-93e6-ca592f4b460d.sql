@@ -363,7 +363,7 @@ BEGIN
   END IF;
   
   -- Generate key
-  v_key := 'cw_' || encode(gen_random_bytes(32), 'hex');
+  v_key := 'cw_' || encode(extensions.gen_random_bytes(32), 'hex');
   v_key_prefix := substring(v_key from 1 for 12);
   
   -- Calculate expiration
@@ -494,7 +494,7 @@ BEGIN
   END IF;
   
   -- Generate secret
-  v_secret := 'whsec_' || encode(gen_random_bytes(32), 'hex');
+  v_secret := 'whsec_' || encode(extensions.gen_random_bytes(32), 'hex');
   
   -- Insert webhook
   INSERT INTO webhooks (

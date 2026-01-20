@@ -252,7 +252,7 @@ DECLARE
   v_subscriber_id uuid;
 BEGIN
   -- Generate verification token
-  v_token := encode(gen_random_bytes(32), 'hex');
+  v_token := encode(extensions.gen_random_bytes(32), 'hex');
   
   -- Check if already subscribed
   IF EXISTS (SELECT 1 FROM status_subscribers WHERE email = lower(p_email)) THEN
