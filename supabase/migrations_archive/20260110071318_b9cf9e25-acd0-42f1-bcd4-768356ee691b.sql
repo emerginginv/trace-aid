@@ -282,7 +282,7 @@ BEGIN
     RAISE EXCEPTION 'SCIM requires an enterprise plan';
   END IF;
   
-  v_token := encode(gen_random_bytes(32), 'hex');
+  v_token := encode(extensions.gen_random_bytes(32), 'hex');
   v_token_hash := encode(extensions.digest(v_token::bytea, 'sha256'), 'hex');
   v_endpoint_url := '/scim/v2/' || p_org_id::text;
   
