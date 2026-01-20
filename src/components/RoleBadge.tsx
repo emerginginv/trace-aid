@@ -31,8 +31,17 @@ export function RoleBadge({
       variant: 'outline' as const
     }
   };
+
+
   const config = roleConfig[role];
+
+  if (!config) {
+    console.warn(`[RoleBadge] Unknown role encountered: ${role}`);
+    return null;
+  }
+
   const Icon = config.icon;
+
   return (
     <Badge variant={config.variant} className={className}>
       <Icon className="h-3 w-3 mr-1" />
