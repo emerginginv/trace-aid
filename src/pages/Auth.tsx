@@ -14,6 +14,7 @@ import { Shield, Eye, EyeOff } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTenantBranding, isValidHexColor } from "@/hooks/use-tenant-branding";
 import { useFavicon } from "@/hooks/use-favicon";
+import { getAuthErrorMessage } from "@/utils/auth-errors";
 const signInSchema = z.object({
   email: z.string().trim().min(1, "Email or username is required").max(255, "Input must be less than 255 characters"),
   password: z.string().min(1, "Password is required")
@@ -136,7 +137,7 @@ const Auth = () => {
         }
       });
       if (error) {
-        toast.error(error.message);
+        toast.error(getAuthErrorMessage(error));
       } else if (authData.user) {
         toast.success("Account created! Setting up your workspace...");
 
@@ -176,8 +177,8 @@ const Auth = () => {
           navigate("/billing");
         }
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
+    } catch (error: any) {
+      toast.error(getAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -191,7 +192,7 @@ const Auth = () => {
         password: data.password
       });
       if (error) {
-        toast.error(error.message);
+        toast.error(getAuthErrorMessage(error));
       } else {
         toast.success("Password updated successfully!");
         setIsPasswordReset(false);
@@ -204,8 +205,8 @@ const Auth = () => {
           navigate("/dashboard");
         }, 1000);
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
+    } catch (error: any) {
+      toast.error(getAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -219,14 +220,14 @@ const Auth = () => {
         redirectTo: `${window.location.origin}/auth?reset=true`
       });
       if (error) {
-        toast.error(error.message);
+        toast.error(getAuthErrorMessage(error));
       } else {
         toast.success("Password reset email sent! Check your inbox.");
         setIsForgotPassword(false);
         forgotPasswordForm.reset();
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
+    } catch (error: any) {
+      toast.error(getAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -257,7 +258,7 @@ const Auth = () => {
         password: data.password
       });
       if (error) {
-        toast.error(error.message);
+        toast.error(getAuthErrorMessage(error));
       } else if (authData.user) {
         toast.success("Signed in successfully!");
 
@@ -269,8 +270,8 @@ const Auth = () => {
         // All users go to dashboard - role determines what they see
         navigate("/dashboard");
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
+    } catch (error: any) {
+      toast.error(getAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }
