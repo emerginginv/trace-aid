@@ -104,6 +104,9 @@ const handler = async (req: Request): Promise<Response> => {
                 <p style="margin: 12px 0 0 0; font-size: 13px; color: #6b7280;">
                   Bookmark this URL for quick access
                 </p>
+                <p style="margin: 12px 0 0 0; font-size: 14px; color: #374151;">
+                  Subdomain: <strong>${organization.subdomain}</strong>
+                </p>
               </div>
               
               <!-- CTA Button -->
