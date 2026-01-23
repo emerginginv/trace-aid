@@ -33,6 +33,27 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
         return;
       }
 
+      // STRICT MULTI-TENANCY CHECK
+      // If we are on a subdomain, the OrganizationContext MUST have resolved 
+      // an organization. If it's null, it means the user is NOT a member 
+      // of the organization associated with this subdomain.
+      if (window.location.hostname !== "localhost" && 
+          !window.location.hostname.includes("netlify.app") && 
+          !window.location.hostname.includes("lovableproject.com")) {
+        
+        // Extract subdomain from URL
+        const hostname = window.location.hostname;
+        const parts = hostname.split('.');
+        const isSubdomain = parts.length >= 3 || (parts.length === 2 && hostname.includes('localhost'));
+        
+        if (isSubdomain && !organization) {
+          console.error("[ProtectedRoute] Access denied: User is not a member of this workspace.");
+          // Redirect to the tenant-specific auth page
+          navigate("/auth");
+          return;
+        }
+      }
+
       setUser(session.user);
 
       // If no role requirement and not blocking vendors/investigators, just check authentication
