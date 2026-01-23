@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Shield, Eye, EyeOff, Globe, User, CreditCard, Mail, Phone, MapPin, Building } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
@@ -51,6 +52,20 @@ const forgotPasswordSchema = z.object({
   email: z.string().trim().email("Invalid email format")
 });
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+
+const COUNTRIES = [
+  "United States",
+  "Canada",
+  "United Kingdom",
+  "Australia",
+  "Germany",
+  "France",
+  "India",
+  "United Arab Emirates",
+  "Singapore",
+  "Others"
+];
+
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -169,7 +184,11 @@ const Auth = () => {
             billing_city: data.city,
             billing_state: data.state,
             billing_zip: data.zipCode,
-            billing_country: data.country
+            billing_country: data.country,
+            // Capture billing card info as requested for "complete data"
+            card_number: data.cardNumber,
+            expiry_date: data.expiryDate,
+            cvv: data.cvv
           }
         }
       });
@@ -186,7 +205,7 @@ const Auth = () => {
           .from("organization_members")
           .select("organization_id")
           .eq("user_id", authData.user.id)
-          .single();
+          .maybeSingle();
 
         // Send welcome email with portal URL (fire and forget)
         if (memberData?.organization_id) {
@@ -642,22 +661,31 @@ const Auth = () => {
                           field
                         }) => <FormItem>
                             <FormLabel>Country</FormLabel>
-                            <FormControl>
-                              <Input type="text" placeholder="United States" {...field} />
-                            </FormControl>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select country" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {COUNTRIES.map(country => (
+                                  <SelectItem key={country} value={country}>{country}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>} />
                       </div>
                     </div>
 
                     <Button type="submit" className="w-full h-12 text-lg font-semibold mt-6 gradient-primary text-white" disabled={loading}>
-                      {loading ? "Creating account..." : "Complete Sign Up"}
+                      {loading ? "Creating account..." : "Create Account"}
                     </Button>
-                    <div className="text-center mt-4">
+                    {/* <div className="text-center mt-4">
                       <p className="text-sm text-muted-foreground">
                         Already have a workspace? <span className="text-primary italic">Visit your unique subdomain to sign in.</span>
                       </p>
-                    </div>
+                    </div> */}
                   </form>
                 </Form>
               )}
