@@ -50,10 +50,10 @@ const TenantNotFound = ({ subdomain }: TenantNotFoundProps) => {
             <Button
               variant="default"
               className="w-full"
-              onClick={() => window.location.href = rootDomain}
+              onClick={() => window.location.href = subdomain ? `https://${subdomain}.caseinformation.app` : rootDomain}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Go to caseinformation.app
+              Go Back
             </Button>
           </div>
 

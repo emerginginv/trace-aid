@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useTenant } from "@/contexts/TenantContext";
+import { useLocation } from "react-router-dom";
 import TenantNotFound from "@/pages/TenantNotFound";
 
 /**
@@ -14,6 +15,9 @@ import TenantNotFound from "@/pages/TenantNotFound";
  */
 export function TenantGuard({ children }: { children: React.ReactNode }) {
   const { isLoading, tenantNotFound, invalidSubdomain, tenantSubdomain } = useTenant();
+  const location = useLocation();
+
+  const isAuthPage = location.pathname === "/auth";
 
   // Show minimal loading state during tenant resolution
   if (isLoading) {
@@ -28,7 +32,8 @@ export function TenantGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Show TenantNotFound if subdomain was detected but org doesn't exist
-  if (tenantNotFound) {
+  // Bypass this for the auth page to allow setup/recovery flows
+  if (tenantNotFound && !isAuthPage) {
     return <TenantNotFound subdomain={invalidSubdomain} />;
   }
 
