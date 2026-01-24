@@ -565,7 +565,7 @@ const Auth = () => {
                     )}
                   />
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Updating..." : "Update Password"}
+                    {loading ? "Setting up..." : "Setup Password"}
                   </Button>
                 </form>
               </Form>
