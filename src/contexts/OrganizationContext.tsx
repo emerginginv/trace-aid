@@ -129,8 +129,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         plan_features: {},
       } as Organization;
     }
-
-    console.log(`${LOG_PREFIX} Full organization loaded for subdomain:`, subdomain);
     return fullOrg as Organization;
   };
 
@@ -195,8 +193,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      console.log(`${LOG_PREFIX} Authenticated user:`, user.id);
-
       // Step 2: Handle no subdomain (development mode or non-tenant domain)
       if (!tenantSubdomain) {
         console.log(`${LOG_PREFIX} No tenant subdomain - using development fallback`);
@@ -228,7 +224,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       }
 
       // Step 3: Production subdomain-based resolution
-      console.log(`${LOG_PREFIX} Resolving organization for subdomain:`, tenantSubdomain);
 
       // Step 3: Fetch organization by subdomain ONLY
       const subdomainOrg = await fetchOrganizationBySubdomain(tenantSubdomain);
@@ -251,8 +246,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
-
-      console.log(`${LOG_PREFIX} User is member of organization`);
 
       // Step 5: Set organization context - ONLY via subdomain resolution
       setOrganization(subdomainOrg);
