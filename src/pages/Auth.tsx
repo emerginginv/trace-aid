@@ -223,8 +223,14 @@ const Auth = () => {
       const accessToken = hashParams.get("access_token");
       const type = hashParams.get("type");
 
-      // If we have a recovery token in the URL, show password reset form
-      if (accessToken && type === "recovery") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isSetup = urlParams.get("setup") === "true";
+
+      // If we have a recovery/signup token in the URL or setup flag, show password form
+      if (
+        (accessToken && (type === "recovery" || type === "signup")) ||
+        isSetup
+      ) {
         setIsPasswordReset(true);
         return;
       }
@@ -232,16 +238,18 @@ const Auth = () => {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
-        // Check user role and redirect accordingly
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-        if (roleData?.role === "vendor") {
-          navigate("/dashboard"); // Vendor dashboard shows automatically via role check
-        } else {
-          navigate("/dashboard");
+        // If not in setup/recovery mode, check role and redirect
+        if (!isSetup && !isPasswordReset) {
+          const { data: roleData } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+          if (roleData?.role === "vendor") {
+            navigate("/dashboard");
+          } else {
+            navigate("/dashboard");
+          }
         }
       }
     };
@@ -257,7 +265,7 @@ const Auth = () => {
         email: data.email,
         password: tempPassword,
         options: {
-          emailRedirectTo: `${window.location.origin}/billing`,
+          emailRedirectTo: `https://${data.subdomain}.caseinformation.app/auth?setup=true`,
           data: {
             first_name: data.firstName,
             last_name: data.lastName,
@@ -339,20 +347,17 @@ const Auth = () => {
       if (error) {
         toast.error(getAuthErrorMessage(error));
       } else {
-        toast.success("Password updated successfully!");
+        toast.success("Password set successfully! You can now sign in.");
         setIsPasswordReset(false);
 
-        // Clear the hash from URL
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname,
-        );
+        // Clear params/hash from URL
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
 
-        // Redirect to dashboard
+        // Redirect to login view (root auth of subdomain)
         setTimeout(() => {
-          navigate("/dashboard");
-        }, 1000);
+          navigate("/auth");
+        }, 1500);
       }
     } catch (error: any) {
       toast.error(getAuthErrorMessage(error));
