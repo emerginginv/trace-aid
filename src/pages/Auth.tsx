@@ -295,25 +295,32 @@ const Auth = () => {
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
         // Get the user's organization to send welcome email
-        const { data: memberData } = await supabase
-          .from("organization_members")
-          .select("organization_id")
-          .eq("user_id", authData.user.id)
-          .maybeSingle();
+        console.log('[DEBUG] Fetching org id for user:', authData.user.id);
+        const { data: orgId, error: rpcError } = await supabase
+          .rpc("get_org_id_by_user_id", { p_user_id: authData.user.id });
+
+        if (rpcError) {
+          console.error('[DEBUG] RPC Error fetching org id:', rpcError);
+        }
+
+        console.log('[DEBUG] Resolved orgId:', orgId);
 
         // Send welcome email with portal URL (fire and forget)
-        if (memberData?.organization_id) {
+        if (orgId) {
+          console.log('[DEBUG] Invoking send-welcome-email for org:', orgId);
           supabase.functions
             .invoke("send-welcome-email", {
               body: {
                 userId: authData.user.id,
-                organizationId: memberData.organization_id,
+                organizationId: orgId,
               },
             })
+            .then(res => console.log('[DEBUG] Welcome email invocation result:', res))
             .catch((err) => {
               console.error("Failed to send welcome email:", err);
-              // Don't block the user flow for email errors
             });
+        } else {
+          console.warn('[DEBUG] No organization found for user, welcome email skipped.');
         }
 
         // Check if user has vendor role - vendors skip payment
