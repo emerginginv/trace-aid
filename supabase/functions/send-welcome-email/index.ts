@@ -155,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
       Messages: [
         {
           From: {
-            Email: "support@casewyze.com",
+            Email: "support@caseinformation.app",
             Name: "CaseWyze",
           },
           To: [
