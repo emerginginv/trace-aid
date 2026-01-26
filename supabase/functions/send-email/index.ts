@@ -86,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Default from email - use verified sender from organization settings or UnifiedCases support
-    let defaultFromEmail = fromEmail || "support@caseinformation.app";
+    let defaultFromEmail = fromEmail || "support@casewyze.com";
     
     // Get sender email from organization settings if available
     if (authHeader) {

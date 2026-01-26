@@ -130,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               
               <p style="margin: 30px 0 0 0; font-size: 14px; line-height: 1.6; color: #6b7280;">
-                Need help? Visit our <a href="https://caseinformation.app/help" style="color: #3b82f6; text-decoration: none;">Help Center</a> or contact us at <a href="mailto:support@caseinformation.app" style="color: #3b82f6; text-decoration: none;">support@caseinformation.app</a>
+                Need help? Visit our <a href="https://casewyze.com/help" style="color: #3b82f6; text-decoration: none;">Help Center</a> or contact us at <a href="mailto:support@casewyze.com" style="color: #3b82f6; text-decoration: none;">support@casewyze.com</a>
               </p>
             </td>
           </tr>
@@ -155,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
       Messages: [
         {
           From: {
-            Email: "support@caseinformation.app",
+            Email: "support@casewyze.com",
             Name: "CaseWyze",
           },
           To: [
