@@ -28,7 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('first_name, last_name, email')
+      .select('full_name, email')
       .eq('id', userId)
       .single();
 
@@ -53,7 +53,7 @@ const handler = async (req: Request): Promise<Response> => {
       ? `https://${organization.subdomain}.caseinformation.app`
       : 'https://caseinformation.app';
 
-    const userName = profile.first_name || profile.email?.split('@')[0] || 'there';
+    const userName = profile.full_name?.split(' ')[0] || profile.email?.split('@')[0] || 'there';
 
     // Get Mailjet credentials
     const apiKey = Deno.env.get("MAILJET_API_KEY");
@@ -161,7 +161,7 @@ const handler = async (req: Request): Promise<Response> => {
           To: [
             {
               Email: profile.email,
-              Name: profile.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : undefined,
+              Name: profile.full_name || undefined,
             },
           ],
           Subject: `Welcome to CaseWyze! Your portal is ready`,
