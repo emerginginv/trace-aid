@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.1';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 interface WelcomeEmailRequest {
@@ -17,43 +18,70 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { userId, organizationId }: WelcomeEmailRequest = await req.json();
 
-    console.log('[WELCOME-EMAIL] Processing request for user:', userId, 'org:', organizationId);
+    console.log(
+      "[WELCOME-EMAIL] Processing request for user:",
+      userId,
+      "org:",
+      organizationId,
+    );
 
     // Get user profile
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('first_name, last_name, email')
-      .eq('id', userId)
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", userId)
       .single();
 
     if (profileError || !profile) {
-      console.error('[WELCOME-EMAIL] Error fetching profile:', profileError);
-      throw new Error('User profile not found');
+      console.error("[WELCOME-EMAIL] Error fetching profile:", profileError);
+      throw new Error("User profile not found");
     }
 
     // Get organization with subdomain
     const { data: organization, error: orgError } = await supabase
-      .from('organizations')
-      .select('name, subdomain')
-      .eq('id', organizationId)
+      .from("organizations")
+      .select("name, subdomain")
+      .eq("id", organizationId)
       .single();
 
     if (orgError || !organization) {
-      console.error('[WELCOME-EMAIL] Error fetching organization:', orgError);
-      throw new Error('Organization not found');
+      console.error("[WELCOME-EMAIL] Error fetching organization:", orgError);
+      throw new Error("Organization not found");
     }
 
-    const portalUrl = organization.subdomain 
+    const portalUrl = organization.subdomain
       ? `https://${organization.subdomain}.caseinformation.app`
-      : 'https://caseinformation.app';
+      : "https://caseinformation.app";
 
-    const userName = profile.first_name || profile.email?.split('@')[0] || 'there';
+    const userName =
+      profile.full_name?.split(" ")[0] ||
+      profile.email?.split("@")[0] ||
+      "there";
+
+    // Generate signup confirmation link
+    const { data: linkData, error: linkError } =
+      await supabase.auth.admin.generateLink({
+        type: "signup",
+        email: profile.email,
+        options: {
+          redirectTo: `${portalUrl}/auth?setup=true`,
+        },
+      });
+
+    if (linkError) {
+      console.error(
+        "[WELCOME-EMAIL] Error generating confirmation link:",
+        linkError,
+      );
+    }
+
+    const confirmationUrl = linkData?.properties?.action_link || portalUrl;
 
     // Get Mailjet credentials
     const apiKey = Deno.env.get("MAILJET_API_KEY");
@@ -92,8 +120,11 @@ const handler = async (req: Request): Promise<Response> => {
               <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #374151;">
                 Your account for <strong>${organization.name}</strong> has been created successfully!
               </p>
+              <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #374151;">
+                To activate your account and access your dashboard, please confirm your email address below.
+              </p>
               
-              <!-- Portal URL Box -->
+              <!-- Portal URL Box
               <div style="background-color: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 24px; margin: 30px 0; text-align: center;">
                 <p style="margin: 0 0 12px 0; font-size: 14px; color: #1e40af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
                   Your Case Management Portal
@@ -107,16 +138,16 @@ const handler = async (req: Request): Promise<Response> => {
                 <p style="margin: 12px 0 0 0; font-size: 14px; color: #374151;">
                   Subdomain: <strong>${organization.subdomain}</strong>
                 </p>
-              </div>
+              </div> -->
               
               <!-- CTA Button -->
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">
-                  Go to Your Portal →
+              <div style="text-align: center; margin-bottom: 32px;">
+                <a href="${confirmationUrl}" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
+                  Active Account & Login
                 </a>
               </div>
               
-              <!-- Quick Start Guide -->
+              <!-- Quick Start Guide
               <div style="background-color: #f9fafb; border-radius: 8px; padding: 24px; margin-top: 30px;">
                 <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #111827;">
                   Quick Start Guide
@@ -131,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
               
               <p style="margin: 30px 0 0 0; font-size: 14px; line-height: 1.6; color: #6b7280;">
                 Need help? Visit our <a href="https://casewyze.com/help" style="color: #3b82f6; text-decoration: none;">Help Center</a> or contact us at <a href="mailto:support@casewyze.com" style="color: #3b82f6; text-decoration: none;">support@casewyze.com</a>
-              </p>
+              </p> -->
             </td>
           </tr>
           
@@ -161,7 +192,7 @@ const handler = async (req: Request): Promise<Response> => {
           To: [
             {
               Email: profile.email,
-              Name: profile.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : undefined,
+              Name: profile.full_name || undefined,
             },
           ],
           Subject: `Welcome to CaseWyze! Your portal is ready`,
@@ -182,26 +213,35 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const responseData = await mailjetResponse.json();
+    console.log(
+      "[WELCOME-EMAIL] Mailjet full response:",
+      JSON.stringify(responseData, null, 2),
+    );
 
     if (!mailjetResponse.ok) {
       console.error("[WELCOME-EMAIL] Mailjet API error:", responseData);
       throw new Error(responseData.ErrorMessage || "Failed to send email");
     }
 
-    console.log("[WELCOME-EMAIL] Email sent successfully to:", profile.email);
-
-    return new Response(
-      JSON.stringify({ success: true, portalUrl }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    const firstMsg = responseData.Messages?.[0];
+    console.log(
+      "[WELCOME-EMAIL] Message status:",
+      firstMsg?.Status,
+      "To:",
+      profile.email,
     );
 
+    return new Response(JSON.stringify({ success: true, portalUrl }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: unknown) {
     console.error("[WELCOME-EMAIL] Error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 };
 

@@ -217,43 +217,36 @@ const Auth = () => {
     },
   });
   useEffect(() => {
-    const checkSessionAndRedirect = async () => {
-      // Check for hash parameters (password reset token from email)
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get("access_token");
-      const type = hashParams.get("type");
+    // 1. Detect if we are in Setup or Recovery mode from URL
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get("access_token");
+    const type = hashParams.get("type");
+    const urlParams = new URLSearchParams(window.location.search);
+    const isSetup = urlParams.get("setup") === "true";
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const isSetup = urlParams.get("setup") === "true";
+    if ((accessToken && (type === "recovery" || type === "signup")) || isSetup) {
+      console.log('[Auth] Setup/Recovery mode detected');
+      setIsPasswordReset(true);
+      return; 
+    }
 
-      // If we have a recovery/signup token in the URL or setup flag, show password form
-      if (
-        (accessToken && (type === "recovery" || type === "signup")) ||
-        isSetup
-      ) {
-        setIsPasswordReset(true);
-        return;
-      }
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) {
-        // If not in setup/recovery mode, check role and redirect
-        if (!isSetup && !isPasswordReset) {
-          const { data: roleData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .maybeSingle();
-          if (roleData?.role === "vendor") {
-            navigate("/dashboard");
-          } else {
-            navigate("/dashboard");
-          }
-        }
+    // 2. Otherwise, check for existing session and redirect if authenticated
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && !isPasswordReset) {
+        console.log('[Auth] Session found, checking roles for redirect');
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        
+        navigate("/dashboard");
       }
     };
-    checkSessionAndRedirect();
+
+    checkSession();
   }, [navigate]);
   const handleSignUp = async (data: SignUpFormData) => {
     setLoading(true);
@@ -450,7 +443,7 @@ const Auth = () => {
     >
       {/* <div className="w-full max-w-md"> */}
       <div
-        className={`w-full transition-all duration-300 ${signUpForm.formState.isDirty || true ? "max-w-2xl" : "max-w-md"}`}
+        className={`w-full transition-all duration-300 ${isPasswordReset ? "max-w-md" : "max-w-2xl"}`}
       >
         <div className="text-center mb-8">
           {/* Tenant Logo or Default */}
@@ -510,7 +503,7 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             {signupSuccess ? (
-              <div className="text-center py-8 space-y-6">
+              <div key="signup-success" className="text-center py-8 space-y-6">
                 <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
                   <Mail className="w-8 h-8 text-green-600" />
                 </div>
@@ -532,7 +525,7 @@ const Auth = () => {
                 </Button> */}
               </div>
             ) : isPasswordReset ? (
-              <Form {...resetPasswordForm}>
+              <Form {...resetPasswordForm} key="reset-password-form">
                 <form
                   onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)}
                   className="space-y-4"
@@ -616,7 +609,7 @@ const Auth = () => {
               </Form>
             ) : tenantSubdomain ? (
               /* Show Login on Tenant Subdomains */
-              <Form {...signInForm}>
+              <Form {...signInForm} key="signin-form">
                 <form
                   onSubmit={signInForm.handleSubmit(handleSignIn)}
                   className="space-y-4"
@@ -702,7 +695,7 @@ const Auth = () => {
               </Form>
             ) : (
               /* Show Signup on Main Domain */
-              <Form {...signUpForm}>
+              <Form {...signUpForm} key="signup-form">
                 <form
                   onSubmit={signUpForm.handleSubmit(handleSignUp)}
                   className="space-y-6"
