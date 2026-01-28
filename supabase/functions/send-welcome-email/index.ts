@@ -64,10 +64,10 @@ const handler = async (req: Request): Promise<Response> => {
       profile.email?.split("@")[0] ||
       "there";
 
-    // Generate magic link for password setup (no password required)
+    // Generate signup confirmation link
     const { data: linkData, error: linkError } =
       await supabase.auth.admin.generateLink({
-        type: "magiclink",
+        type: "signup",
         email: profile.email,
         options: {
           redirectTo: `${portalUrl}/auth?setup=true`,

@@ -289,16 +289,11 @@ const Auth = () => {
 
         // Get the user's organization to send welcome email
         console.log('[DEBUG] Fetching org id for user:', authData.user.id);
-        const { data: orgMembership, error: orgError } = await supabase
-          .from("organization_members")
-          .select("organization_id")
-          .eq("user_id", authData.user.id)
-          .limit(1)
-          .maybeSingle();
+        const { data: orgId, error: rpcError } = await supabase
+          .rpc("get_org_id_by_user_id", { p_user_id: authData.user.id });
 
-        const orgId = orgMembership?.organization_id;
-        if (orgError) {
-          console.error('[DEBUG] Error fetching org id:', orgError);
+        if (rpcError) {
+          console.error('[DEBUG] RPC Error fetching org id:', rpcError);
         }
 
         console.log('[DEBUG] Resolved orgId:', orgId);
