@@ -225,30 +225,27 @@ const Auth = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const isSetup = urlParams.get("setup") === "true";
 
-    if ((accessToken && (type === "recovery" || type === "signup")) || isSetup) {
-      console.log('[Auth] Setup/Recovery mode detected');
-      setIsPasswordReset(true);
-      setCheckingSession(false);
-      return; 
-    }
-
-    // 2. Otherwise, check for existing session and redirect if authenticated
+    // 2. Check current session status
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (session && !isPasswordReset) {
-        // Only redirect if they have completed setup
-        const isSetupCompleted = session.user.user_metadata?.setup_completed === true;
-        
-        if (isSetupCompleted) {
-          console.log('[Auth] Valid session and setup complete, redirecting to dashboard');
-          navigate("/dashboard");
-        } else {
-          console.log('[Auth] Session found but setup is required');
-          setIsPasswordReset(true);
-          setCheckingSession(false);
-        }
+      const isSetupCompleted = session?.user?.user_metadata?.setup_completed === true;
+
+      // If user is already logged in and setup is finished, ALWAYS go to dashboard
+      // even if they tried to visit /auth?setup=true
+      if (session && isSetupCompleted && !isPasswordReset) {
+        console.log('[Auth] User already setup, redirecting to dashboard');
+        navigate("/dashboard");
+        return;
+      }
+
+      // If setup mode is requested and they HAVEN'T finished it yet, show setup form
+      if (((accessToken && (type === "recovery" || type === "signup")) || isSetup) && !isSetupCompleted) {
+        console.log('[Auth] Setup/Recovery mode detected');
+        setIsPasswordReset(true);
+        setCheckingSession(false);
       } else {
+        // Otherwise show standard login/signup
         setCheckingSession(false);
       }
     };
@@ -355,14 +352,19 @@ const Auth = () => {
       if (error) {
         toast.error(getAuthErrorMessage(error));
       } else {
-        toast.success("Password set successfully! You can now sign in.");
+        toast.success("Password set successfully! Please sign in with your new password.");
+        
+        // 2. LOG OUT explicitly to prevent automatic session continuation
+        // This ensures the user must enter their credentials once to confirm they know them.
+        await supabase.auth.signOut();
+        
         setIsPasswordReset(false);
 
         // Clear params/hash from URL
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
 
-        // Redirect to login view (root auth of subdomain)
+        // Redirect to login view
         setTimeout(() => {
           navigate("/auth");
         }, 1500);
@@ -460,7 +462,7 @@ const Auth = () => {
     >
       {/* <div className="w-full max-w-md"> */}
       <div
-        className={`w-full transition-all duration-300 ${isPasswordReset ? "max-w-md" : "max-w-2xl"}`}
+        className={`w-full transition-all duration-300 ${isPasswordReset ? "max-w-2xl" : "max-w-2xl"}`}
       >
         <div className="text-center mb-8">
           {/* Tenant Logo or Default */}
