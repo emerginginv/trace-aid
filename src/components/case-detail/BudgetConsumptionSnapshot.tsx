@@ -69,12 +69,12 @@ export function BudgetConsumptionSnapshot({
       const [{ data: timeData, error: timeError }, { data: expenseData, error: expenseError }] = await Promise.all([
         supabase
           .from("time_entries")
-          .select("total")
+          .select("hours, hourly_rate")
           .eq("case_id", caseId)
           .or("status.is.null,status.neq.rejected"),
         supabase
           .from("expense_entries")
-          .select("total")
+          .select("amount")
           .eq("case_id", caseId)
           .or("status.is.null,status.neq.rejected"),
       ]);
@@ -82,8 +82,8 @@ export function BudgetConsumptionSnapshot({
       if (timeError) throw timeError;
       if (expenseError) throw expenseError;
       
-      const timeTotal = (timeData || []).reduce((sum, item) => sum + (item.total || 0), 0);
-      const expenseTotal = (expenseData || []).reduce((sum, item) => sum + (item.total || 0), 0);
+      const timeTotal = (timeData || []).reduce((sum, item: any) => sum + ((item.hours || 0) * (item.hourly_rate || 0)), 0);
+      const expenseTotal = (expenseData || []).reduce((sum, item: any) => sum + (item.amount || 0), 0);
       setUninvoicedAmount(timeTotal + expenseTotal);
     } catch (error) {
       console.error("Error fetching consumption snapshot:", error);

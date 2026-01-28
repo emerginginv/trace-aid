@@ -711,10 +711,10 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
 
       console.log("Fetching case statuses for organization:", organization.id);
 
-      const { data, error } = await supabase
-        .from("picklists")
+      const { data, error } = await (supabase
+        .from("picklists") as any)
         .select("id, value")
-        .eq("type", "case_status")
+        .eq("category", "case_status")
         .eq("is_active", true)
         .eq("organization_id", organization.id)
         .order("display_order");
