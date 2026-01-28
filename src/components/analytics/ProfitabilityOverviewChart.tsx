@@ -66,21 +66,21 @@ export function ProfitabilityOverviewChart({ organizationId, timeRange }: Profit
         const [{ data: timeData }, { data: expenseData }] = await Promise.all([
           supabase
             .from("time_entries")
-            .select("total")
+            .select("hours, hourly_rate")
             .eq("organization_id", organizationId)
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString()),
           supabase
             .from("expense_entries")
-            .select("total")
+            .select("amount")
             .eq("organization_id", organizationId)
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString()),
         ]);
 
-        const totalRevenue = (invoices || []).reduce((sum, inv) => sum + (inv.total || 0), 0);
-        const totalCosts = (timeData || []).reduce((sum, t) => sum + (t.total || 0), 0) +
-                          (expenseData || []).reduce((sum, e) => sum + (e.total || 0), 0);
+        const totalRevenue = (invoices || []).reduce((sum, inv: any) => sum + (inv.total || 0), 0);
+        const totalCosts = (timeData || []).reduce((sum, t: any) => sum + ((t.hours || 0) * (t.hourly_rate || 0)), 0) +
+                          (expenseData || []).reduce((sum, e: any) => sum + (e.amount || 0), 0);
         const profit = totalRevenue - totalCosts;
 
         setData([

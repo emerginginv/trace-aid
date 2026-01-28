@@ -44,17 +44,36 @@ serve(async (req) => {
     logStep("Stripe key verified");
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) {
+      logStep("ERROR: No authorization header provided");
+      throw new Error("No authorization header provided");
+    }
     logStep("Authorization header found");
 
     const token = authHeader.replace("Bearer ", "");
-    logStep("Authenticating user with token");
+    logStep("Authenticating user with token", { tokenPrefix: token.substring(0, 10) + "..." });
     
+    // We use the supabaseClient created with SUPABASE_URL and SUPABASE_ANON_KEY
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    
+    if (userError) {
+      logStep("ERROR: Authentication failed", { message: userError.message, status: userError.status });
+      return new Response(JSON.stringify({ 
+        error: "Authentication failed", 
+        details: userError.message,
+        code: userError.status 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    if (!user?.email) {
+      logStep("ERROR: User not authenticated or email not available");
+      throw new Error("User not authenticated or email not available");
+    }
+    logStep("User authenticated successfully", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });

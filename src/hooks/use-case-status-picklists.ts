@@ -27,16 +27,24 @@ export function useCaseStatusPicklists() {
     queryFn: async () => {
       if (!organization?.id) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("picklists")
-        .select("id, value, color, status_type, display_order")
-        .eq("type", "case_status")
+        .select("id, value, display_order, metadata") as any)
+        .eq("category", "case_status")
         .eq("is_active", true)
-        .or(`organization_id.eq.${organization.id},organization_id.is.null`)
+        .eq("organization_id", organization.id)
         .order("display_order");
 
       if (error) throw error;
-      return (data || []) as CaseStatusPicklist[];
+      
+      // Map JSONB metadata to fields
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        value: item.value,
+        color: (item.metadata as any)?.color || null,
+        status_type: (item.metadata as any)?.status_type || null,
+        display_order: item.display_order
+      })) as CaseStatusPicklist[];
     },
     enabled: !!organization?.id,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
