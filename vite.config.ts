@@ -16,6 +16,12 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
+      // Route all imports of the auto-generated backend client through a runtime-safe wrapper.
+      // This prevents blank screens when preview env vars fail to inject.
+      "@/integrations/supabase/client": path.resolve(
+        __dirname,
+        "./src/integrations/supabase/client.runtime.ts"
+      ),
       "@": path.resolve(__dirname, "./src"),
     },
     // Prevent "Invalid hook call" errors caused by multiple React copies.
