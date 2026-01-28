@@ -33,6 +33,14 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
         return;
       }
 
+      // Check if setup is completed - MANDATORY before dashboard access
+      const isSetupCompleted = session.user?.user_metadata?.setup_completed === true;
+      if (!isSetupCompleted) {
+        console.warn("[ProtectedRoute] Setup not completed, redirecting to setup page");
+        navigate("/auth?setup=true");
+        return;
+      }
+
       // STRICT MULTI-TENANCY CHECK
       // If we are on a subdomain, the OrganizationContext MUST have resolved 
       // an organization. If it's null, it means the user is NOT a member 

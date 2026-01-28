@@ -153,6 +153,7 @@ const COUNTRIES = [
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true); // New state to prevent flicker
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -227,6 +228,7 @@ const Auth = () => {
     if ((accessToken && (type === "recovery" || type === "signup")) || isSetup) {
       console.log('[Auth] Setup/Recovery mode detected');
       setIsPasswordReset(true);
+      setCheckingSession(false);
       return; 
     }
 
@@ -235,14 +237,19 @@ const Auth = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session && !isPasswordReset) {
-        console.log('[Auth] Session found, checking roles for redirect');
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+        // Only redirect if they have completed setup
+        const isSetupCompleted = session.user.user_metadata?.setup_completed === true;
         
-        navigate("/dashboard");
+        if (isSetupCompleted) {
+          console.log('[Auth] Valid session and setup complete, redirecting to dashboard');
+          navigate("/dashboard");
+        } else {
+          console.log('[Auth] Session found but setup is required');
+          setIsPasswordReset(true);
+          setCheckingSession(false);
+        }
+      } else {
+        setCheckingSession(false);
       }
     };
 
@@ -343,6 +350,7 @@ const Auth = () => {
     try {
       const { error } = await supabase.auth.updateUser({
         password: data.password,
+        data: { setup_completed: true } // Mark setup as complete
       });
       if (error) {
         toast.error(getAuthErrorMessage(error));
@@ -435,6 +443,15 @@ const Auth = () => {
         "--auth-accent-hover": `${accentColor}dd`,
       } as React.CSSProperties)
     : {};
+
+  // Prevent flicker by showing a blank screen or loader while checking session
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div
