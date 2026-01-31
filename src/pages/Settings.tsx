@@ -72,7 +72,7 @@ const Settings = () => {
   useSetBreadcrumbs([{ label: "Settings" }]);
   
   const { impersonatedUserId } = useImpersonation();
-  const { role: currentUserRole, loading: roleLoading } = useUserRole();
+  const { role: currentUserRole, isAdmin, isManager, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -596,7 +596,7 @@ const Settings = () => {
               />
               
               {/* Login Branding Section - Admin/Owner only */}
-              {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+              {isManager && (
                 <LoginBrandingSection
                   organizationId={organization?.id || null}
                   currentUserId={currentUserId}
@@ -636,7 +636,7 @@ const Settings = () => {
               )}
 
               {/* Case Numbering - Admin only */}
-              {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+              {isManager && (
                 <CaseNumberingSection
                   organizationId={organization?.id || null}
                   currentUserId={currentUserId}
@@ -661,35 +661,35 @@ const Settings = () => {
             </TabsContent>
 
             {/* Authentication Tab - Admin Only */}
-            {currentUserRole === 'admin' && (
+            {isAdmin && (
               <TabsContent value="authentication" className="space-y-6">
                 <AuthenticationTab />
               </TabsContent>
             )}
 
             {/* Case Types Tab - Admin and Manager Only */}
-            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+            {isManager && (
               <TabsContent value="case-types" className="space-y-6">
                 <CaseTypesTab />
               </TabsContent>
             )}
 
             {/* Subject Types Tab - Admin and Manager Only */}
-            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+            {isManager && (
               <TabsContent value="subject-types" className="space-y-6">
                 <SubjectTypesTab />
               </TabsContent>
             )}
 
             {/* Case Services Tab - Admin and Manager Only */}
-            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+            {isManager && (
               <TabsContent value="case-services" className="space-y-6">
                 <CaseServicesTab />
               </TabsContent>
             )}
 
             {/* Case Statuses Tab - Admin and Manager Only */}
-            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+            {isManager && (
               <TabsContent value="case-statuses" className="space-y-6">
                 <CaseStatusesTab />
               </TabsContent>
@@ -709,14 +709,14 @@ const Settings = () => {
             </TabsContent>
 
             {/* Finance Items Tab */}
-            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+            {isManager && (
               <TabsContent value="finance-items" className="space-y-6">
                 <FinanceItemsTab />
               </TabsContent>
             )}
 
             {/* Case Request Forms Tab */}
-            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+            {isManager && (
               <TabsContent value="case-request-forms" className="space-y-6">
                 <CaseRequestFormsTab />
               </TabsContent>
@@ -749,14 +749,14 @@ const Settings = () => {
             </TabsContent>
 
             {/* Help Center Admin Tab - Admin Only */}
-            {currentUserRole === 'admin' && (
+            {isAdmin && (
               <TabsContent value="help-center" className="space-y-6">
                 <HelpCenterAdmin />
               </TabsContent>
             )}
 
             {/* Billing Tab */}
-            {currentUserRole === 'admin' && (
+            {isAdmin && (
               <TabsContent value="billing" className="space-y-6">
                 <BillingTab
                   organization={organization}
@@ -766,33 +766,33 @@ const Settings = () => {
             )}
 
             {/* Legal Tab - Admin Only */}
-            {currentUserRole === 'admin' && (
+            {isAdmin && (
               <TabsContent value="legal" className="space-y-6">
                 <LegalTab />
               </TabsContent>
             )}
 
             {/* SLA & Success Tab - Admin Only */}
-            {currentUserRole === 'admin' && (
+            {isAdmin && (
               <TabsContent value="sla" className="space-y-6">
                 <SlaSuccessTab />
               </TabsContent>
             )}
 
             {/* Integrations Tab - Admin Only */}
-            {currentUserRole === 'admin' && (
+            {isAdmin && (
               <TabsContent value="integrations" className="space-y-6">
                 <IntegrationsTab />
               </TabsContent>
             )}
-            {currentUserRole === 'admin' && (
+            {isAdmin && (
               <TabsContent value="data-compliance" className="space-y-6">
                 <DataComplianceTab />
               </TabsContent>
             )}
 
             {/* Data Integrity Tab - Admin Only */}
-            {currentUserRole === 'admin' && (
+            {isAdmin && (
               <TabsContent value="data-integrity" className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -811,7 +811,7 @@ const Settings = () => {
             )}
 
             {/* Data Import Tab - Admin and Manager Only */}
-            {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+            {isManager && (
               <TabsContent value="data-import">
                 <Card>
                   <CardHeader>

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "./useUserRole";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 type Permission = {
   feature_key: string;
@@ -35,19 +36,21 @@ const PERMISSION_GROUPS = {
  * - gcTime: 15 minutes
  */
 export function usePermissions() {
+  const { organization, loading: orgLoading } = useOrganization();
   const { role, isAdmin, isManager, loading: roleLoading } = useUserRole();
 
   const { data: permissions = {}, isLoading: permissionsLoading } = useQuery<Record<string, boolean>>({
-    queryKey: ['permissions', role],
+    queryKey: ['permissions', role, organization?.id],
     queryFn: async () => {
-      if (!role) {
+      if (!role || !organization?.id) {
         return {};
       }
 
       const { data, error } = await supabase
         .from("permissions" as any)
         .select("feature_key, allowed")
-        .eq("role", role);
+        .eq("role", role)
+        .eq("organization_id", organization.id);
 
       if (error) {
         console.error("[usePermissions] Error fetching permissions:", error);
@@ -61,7 +64,7 @@ export function usePermissions() {
 
       return permissionsMap;
     },
-    enabled: !roleLoading && !!role,
+    enabled: !roleLoading && !orgLoading && !!role && !!organization?.id,
     staleTime: 1000 * 60 * 5,  // 5 minutes
     gcTime: 1000 * 60 * 15,    // 15 minutes
     retry: 1,
@@ -70,13 +73,15 @@ export function usePermissions() {
 
   // Memoize hasPermission to prevent re-renders and effect re-triggers
   const hasPermission = useCallback((featureKey: string): boolean => {
+    if (isAdmin) return true;
     return permissions[featureKey] ?? false;
-  }, [permissions]);
+  }, [permissions, isAdmin]);
 
   // Check if any permission in a group is allowed
   const hasAnyPermission = useCallback((featureKeys: readonly string[]): boolean => {
+    if (isAdmin) return true;
     return featureKeys.some(key => permissions[key] ?? false);
-  }, [permissions]);
+  }, [permissions, isAdmin]);
 
   // Convenience properties for common permission checks
   const conveniences = useMemo(() => ({
@@ -124,7 +129,7 @@ export function usePermissions() {
 
   return {
     permissions,
-    loading: roleLoading || permissionsLoading,
+    loading: roleLoading || permissionsLoading || orgLoading,
     hasPermission,
     hasAnyPermission,
     // Convenience properties

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useCurrentUser } from "./useCurrentUser";
 
-type AppRole = 'admin' | 'manager' | 'investigator' | 'vendor';
+type AppRole = 'admin' | 'manager' | 'investigator' | 'vendor' | 'owner' | 'member';
 
 const LOG_PREFIX = "[useUserRole]";
 
@@ -85,9 +85,10 @@ export function useUserRole() {
   return {
     role: role ?? null,
     loading,
-    isAdmin: role === 'admin',
-    isManager: role === 'manager' || role === 'admin',
+    isAdmin: role === 'admin' || role === 'owner',
+    isManager: role === 'manager' || role === 'admin' || role === 'owner',
     isInvestigator: role === 'investigator',
     isVendor: role === 'vendor',
+    isOwner: role === 'owner',
   };
 }
