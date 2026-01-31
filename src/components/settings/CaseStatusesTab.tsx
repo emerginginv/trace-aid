@@ -363,8 +363,8 @@ export function CaseStatusesTab() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[95vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-6 pb-2 border-b shrink-0">
             <DialogTitle>
               {editingStatus ? "Edit Case Status" : "New Case Status"}
             </DialogTitle>
@@ -373,7 +373,7 @@ export function CaseStatusesTab() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {/* Name */}
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
@@ -534,7 +534,7 @@ export function CaseStatusesTab() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="p-4 border-t bg-muted/50 shrink-0 sm:flex-row sm:justify-end sm:space-x-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
