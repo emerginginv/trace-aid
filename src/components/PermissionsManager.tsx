@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,7 @@ import { Loader2, Lock, Shield } from "lucide-react";
 import { DelayedTooltip, HelpTooltip } from "@/components/ui/tooltip";
 import { SecurityNote } from "@/components/shared/SecurityNote";
 
-type AppRole = 'admin' | 'manager' | 'investigator' | 'vendor';
+type AppRole = 'admin' | 'manager' | 'investigator' | 'vendor' | 'owner' | 'member';
 
 type Permission = {
   id: string;
@@ -148,10 +149,16 @@ const featureGroups: FeatureGroup[] = [
 
 // Role definitions with tooltips explaining each role's scope
 const roles: Array<{ value: AppRole; label: string; tooltip: string; isLocked?: boolean }> = [
-  { 
-    value: "admin", 
-    label: "Admin", 
-    tooltip: "Full access to all features. Admin permissions are locked for security.",
+  {
+    value: "owner",
+    label: "Owner",
+    tooltip: "Highest level of access. Owner permissions are locked for security.",
+    isLocked: true,
+  },
+  {
+    value: "admin",
+    label: "Admin",
+    tooltip: "Application management and oversight. Admin permissions are locked for security.",
     isLocked: true,
   },
   { 
@@ -172,18 +179,24 @@ const roles: Array<{ value: AppRole; label: string; tooltip: string; isLocked?: 
 ];
 
 export function PermissionsManager() {
+  const { organization } = useOrganization();
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPermissions();
-  }, []);
+    if (organization?.id) {
+      fetchPermissions();
+    }
+  }, [organization?.id]);
 
   const fetchPermissions = async () => {
+    if (!organization?.id) return;
+
     try {
       const { data, error } = await supabase
         .from("permissions" as any)
         .select("*")
+        .eq("organization_id", organization.id)
         .order("role")
         .order("feature_key");
 
@@ -198,22 +211,38 @@ export function PermissionsManager() {
   };
 
   const togglePermission = async (role: AppRole, featureKey: string, currentValue: boolean) => {
+    if (!organization?.id) {
+      toast.error("No organization selected");
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      const newAllowed = !currentValue;
+      const { data, error } = await supabase
         .from("permissions" as any)
-        .update({ allowed: !currentValue })
-        .eq("role", role)
-        .eq("feature_key", featureKey);
+        .upsert({ 
+          organization_id: organization.id,
+          role, 
+          feature_key: featureKey, 
+          allowed: newAllowed 
+        }, {
+          onConflict: 'organization_id,role,feature_key'
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      setPermissions((prev) =>
-        prev.map((p) =>
-          p.role === role && p.feature_key === featureKey
-            ? { ...p, allowed: !currentValue }
-            : p
-        )
-      );
+      setPermissions((prev) => {
+        const index = prev.findIndex(p => p.role === role && p.feature_key === featureKey);
+        if (index >= 0) {
+          const newState = [...prev];
+          newState[index] = data as any;
+          return newState;
+        } else {
+          return [...prev, data as any];
+        }
+      });
 
       toast.success("Permission updated");
     } catch (error) {
@@ -223,6 +252,9 @@ export function PermissionsManager() {
   };
 
   const getPermissionValue = (role: AppRole, featureKey: string): boolean => {
+    // Admins and Owners always have full access in the UI logic too
+    if (role === 'admin' || role === 'owner') return true;
+
     const permission = permissions.find(
       (p) => p.role === role && p.feature_key === featureKey
     );

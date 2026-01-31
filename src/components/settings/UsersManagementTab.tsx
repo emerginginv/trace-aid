@@ -28,7 +28,7 @@ const inviteSchema = z.object({
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one number"),
-  role: z.enum(["admin", "manager", "investigator", "vendor"]),
+  role: z.enum(["admin", "manager", "investigator", "vendor", "owner", "member"]),
 });
 
 interface User {
@@ -74,7 +74,7 @@ export const UsersManagementTab = ({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteFullName, setInviteFullName] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "manager" | "investigator" | "vendor">("investigator");
+  const [inviteRole, setInviteRole] = useState<"admin" | "manager" | "investigator" | "vendor" | "owner" | "member">("investigator");
   const [inviting, setInviting] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -84,7 +84,7 @@ export const UsersManagementTab = ({
   const [selectedUserForColor, setSelectedUserForColor] = useState<User | null>(null);
   const [showInvitePassword, setShowInvitePassword] = useState(false);
 
-  const isAdmin = currentUserRole === "admin";
+  const isAdmin = currentUserRole === "admin" || currentUserRole === "owner";
 
   const fetchUsers = async () => {
     if (!organization?.id) {
@@ -227,7 +227,7 @@ export const UsersManagementTab = ({
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: "admin" | "manager" | "investigator" | "vendor") => {
+  const handleRoleChange = async (userId: string, newRole: "admin" | "manager" | "investigator" | "vendor" | "owner" | "member") => {
     try {
       if (userId === currentUserId) {
         toast.error("You cannot change your own role");
@@ -501,6 +501,18 @@ export const UsersManagementTab = ({
                               <span className="text-xs text-muted-foreground">External contractor, limited access</span>
                             </div>
                           </SelectItem>
+                          <SelectItem value="owner">
+                            <div className="flex flex-col">
+                              <span>Owner</span>
+                              <span className="text-xs text-muted-foreground">Full organization access</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="member">
+                            <div className="flex flex-col">
+                              <span>Member</span>
+                              <span className="text-xs text-muted-foreground">Basic access</span>
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -637,8 +649,8 @@ export const UsersManagementTab = ({
                             </SelectContent>
                           </Select>
                         ) : (
-                          <Badge variant={user.roles[0] === "admin" ? "default" : "secondary"} className="capitalize">
-                            {user.roles[0] || "user"}
+                          <Badge variant={(user.roles[0] === "admin" || user.roles[0] === "owner") ? "default" : "secondary"} className="capitalize">
+                            {user.roles[0] || "member"}
                           </Badge>
                         )}
                       </TableCell>
@@ -736,6 +748,8 @@ export const UsersManagementTab = ({
                     <SelectItem value="manager">Case Manager</SelectItem>
                     <SelectItem value="investigator">Investigator</SelectItem>
                     <SelectItem value="vendor">Vendor</SelectItem>
+                    <SelectItem value="owner">Owner</SelectItem>
+                    <SelectItem value="member">Member</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

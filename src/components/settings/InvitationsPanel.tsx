@@ -47,7 +47,7 @@ interface InvitationsPanelProps {
 
 const inviteSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
-  role: z.enum(["admin", "manager", "investigator", "vendor"]),
+  role: z.enum(["admin", "manager", "investigator", "vendor", "owner", "member"]),
 });
 
 export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
@@ -56,7 +56,7 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "manager" | "investigator" | "vendor">("investigator");
+  const [inviteRole, setInviteRole] = useState<"admin" | "manager" | "investigator" | "vendor" | "owner" | "member">("investigator");
   const [sending, setSending] = useState(false);
   const [revokeConfirm, setRevokeConfirm] = useState<PendingInvite | null>(null);
   const [revoking, setRevoking] = useState(false);
@@ -168,8 +168,10 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'admin': return 'destructive';
+      case 'owner': return 'destructive';
       case 'manager': return 'default';
       case 'investigator': return 'secondary';
+      case 'member': return 'outline';
       default: return 'outline';
     }
   };
@@ -233,23 +235,27 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
                       <Label htmlFor="inviteRole">Role</Label>
                       <Select 
                         value={inviteRole} 
-                        onValueChange={(v: "admin" | "manager" | "investigator" | "vendor") => setInviteRole(v)}
+                        onValueChange={(v: "admin" | "manager" | "investigator" | "vendor" | "owner" | "member") => setInviteRole(v)}
                       >
                         <SelectTrigger id="inviteRole">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
+                           <SelectItem value="admin">Admin</SelectItem>
                           <SelectItem value="manager">Manager</SelectItem>
                           <SelectItem value="investigator">Investigator</SelectItem>
                           <SelectItem value="vendor">Vendor</SelectItem>
+                          <SelectItem value="owner">Owner</SelectItem>
+                          <SelectItem value="member">Member</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
                         {inviteRole === 'admin' && 'Full access including billing, invites, and domains'}
+                        {inviteRole === 'owner' && 'Highest level of access to organization settings'}
                         {inviteRole === 'manager' && 'Manage cases, tasks, and team members'}
                         {inviteRole === 'investigator' && 'Operational access to cases and tasks'}
                         {inviteRole === 'vendor' && 'Limited access as external vendor'}
+                        {inviteRole === 'member' && 'Basic team member access'}
                       </p>
                     </div>
                   </div>
