@@ -57,6 +57,13 @@ interface RateScheduleItem {
   financeItemId: string;
 }
 
+const stripHtml = (html: string) => {
+  if (!html) return "";
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
+
 interface TimeExpensesPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -89,6 +96,7 @@ export const TimeExpensesPanel = ({
   const [linkedActivityId, setLinkedActivityId] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [appliedBudgetStrategy, setAppliedBudgetStrategy] = useState<string | null>(null);
+  const [initialNarrative, setInitialNarrative] = useState("");
 
   // Current user ID for staff pricing lookup
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -136,13 +144,16 @@ export const TimeExpensesPanel = ({
       // Fetch update details
       const { data: updateData } = await supabase
         .from("case_updates")
-        .select("title, linked_activity_id")
+        .select("title, linked_activity_id, description")
         .eq("id", updateId)
         .maybeSingle();
 
       if (updateData) {
         setUpdateTitle(updateData.title);
         setLinkedActivityId(updateData.linked_activity_id);
+        
+        const narrativeSource = updateData.description || updateData.title || "";
+        setInitialNarrative(stripHtml(narrativeSource));
 
         // Fetch linked activity/event name
         if (updateData.linked_activity_id) {
@@ -283,6 +294,22 @@ export const TimeExpensesPanel = ({
   const hasData = timeEntries.length > 0 || expenseEntries.length > 0;
   const hasEnteredData = timeEntries.some(e => e.hours > 0 || e.notes) || 
                          expenseEntries.some(e => e.quantity > 0 || e.notes);
+
+  // Auto-fill first time entry if narrative and rate items are ready
+  useEffect(() => {
+    if (initialNarrative && timeEntriesEnabled && timeEntries.length === 0 && rateScheduleItems.length > 0) {
+      const defaultItem = rateScheduleItems[0];
+      setTimeEntries([{
+        id: crypto.randomUUID(),
+        itemId: defaultItem?.id || "",
+        itemName: defaultItem?.name || "",
+        financeItemId: defaultItem?.financeItemId || null,
+        notes: initialNarrative,
+        hours: 0,
+        rate: defaultItem?.rate || 0,
+      }]);
+    }
+  }, [initialNarrative, timeEntriesEnabled, rateScheduleItems.length]);
 
   // Handle cancel with confirmation
   const handleCancel = () => {

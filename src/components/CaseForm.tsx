@@ -1001,15 +1001,16 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
         newCaseTypeName={pendingServiceConflict?.newCaseTypeName || ""}
       />
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[95vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-6 pb-2 shrink-0 border-b">
             <DialogTitle>{editingCase ? "Edit Case" : "Create New Case"}</DialogTitle>
             <DialogDescription>
               {editingCase ? "Update case details" : "Start a new investigation case"}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -1564,8 +1565,9 @@ export function CaseForm({ open, onOpenChange, onSuccess, editingCase }: CaseFor
               />
             </div>
             )}
-
-            <div className="flex justify-end gap-3 pt-4">
+            </div>
+            
+            <div className="p-4 border-t flex justify-end gap-3 bg-muted/50 shrink-0">
               <Button
                 type="button"
                 variant="outline"

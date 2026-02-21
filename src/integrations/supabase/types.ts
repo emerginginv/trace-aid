@@ -774,6 +774,7 @@ export type Database = {
       }
       case_attachments: {
         Row: {
+          access_group_id: string | null
           ai_tags: string[] | null
           case_id: string
           created_at: string
@@ -794,6 +795,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_group_id?: string | null
           ai_tags?: string[] | null
           case_id: string
           created_at?: string
@@ -814,6 +816,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_group_id?: string | null
           ai_tags?: string[] | null
           case_id?: string
           created_at?: string
@@ -3053,6 +3056,7 @@ export type Database = {
       }
       case_updates: {
         Row: {
+          access_group_id: string | null
           activity_timeline: Json | null
           ai_approved_by: string | null
           ai_source_update_ids: string[] | null
@@ -3073,6 +3077,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_group_id?: string | null
           activity_timeline?: Json | null
           ai_approved_by?: string | null
           ai_source_update_ids?: string[] | null
@@ -3093,6 +3098,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_group_id?: string | null
           activity_timeline?: Json | null
           ai_approved_by?: string | null
           ai_source_update_ids?: string[] | null

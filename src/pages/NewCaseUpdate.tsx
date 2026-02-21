@@ -97,7 +97,7 @@ const NewCaseUpdate = () => {
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
   const [includeTimeline, setIncludeTimeline] = useState(false);
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
-  const [addTimeExpensesAfterSave, setAddTimeExpensesAfterSave] = useState(false);
+  const [addTimeExpensesAfterSave, setAddTimeExpensesAfterSave] = useState(true);
   const [loading, setLoading] = useState(true);
 
   // Cancel confirmation dialog
