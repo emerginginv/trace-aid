@@ -290,7 +290,8 @@ export default function Activities() {
 
   // Bulk status change handler
   const handleBulkStatusChange = useCallback(async (newStatus: string) => {
-    const count = selectedIds.size;
+    const ids = Array.from(selectedIds);
+    const count = ids.length;
     
     try {
       const { error } = await supabase
@@ -306,18 +307,35 @@ export default function Activities() {
             completed_at: null 
           }),
         })
-        .in("id", Array.from(selectedIds));
+        .in("id", ids);
       
       if (error) throw error;
       
-      toast.success(`Updated ${count} activit${count !== 1 ? 'ies' : 'y'} to "${STATUS_OPTIONS.find(s => s.value === newStatus)?.label || newStatus}"`);
+      if (newStatus === 'completed' && count === 1) {
+        const activity = filteredActivities.find(a => a.id === ids[0]);
+        if (activity && isScheduledActivity(activity as any)) {
+          toast("Event Completed", {
+            description: "Did this happen? Create an update to record details and log time.",
+            action: {
+              label: "Create Update",
+              onClick: () => navigate(`/cases/${activity.case_id}/updates/new?activityId=${activity.id}`)
+            },
+            duration: 10000,
+          });
+        } else {
+          toast.success(`Updated ${count} activit${count !== 1 ? 'ies' : 'y'} to "${STATUS_OPTIONS.find(s => s.value === newStatus)?.label || newStatus}"`);
+        }
+      } else {
+        toast.success(`Updated ${count} activit${count !== 1 ? 'ies' : 'y'} to "${STATUS_OPTIONS.find(s => s.value === newStatus)?.label || newStatus}"`);
+      }
+
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['activities'] });
     } catch (error) {
       console.error("Bulk status update failed:", error);
       toast.error("Failed to update activities.");
     }
-  }, [selectedIds, queryClient]);
+  }, [selectedIds, queryClient, filteredActivities, navigate]);
 
   // Bulk delete handler
   const handleBulkDeleteConfirm = useCallback(() => {

@@ -9,7 +9,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/exportUtils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { ActivityForm } from "./ActivityForm";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -59,6 +61,7 @@ type ViewFilter = "all" | "scheduled" | "unscheduled";
 
 export function CaseActivities({ caseId, isClosedCase = false, caseStatusKey }: CaseActivitiesProps) {
   const { organization } = useOrganization();
+  const navigate = useNavigate();
   
   // Status-based action gating
   const { 
@@ -243,10 +246,26 @@ export function CaseActivities({ caseId, isClosedCase = false, caseStatusKey }: 
           : a
       ));
 
-      toast({
-        title: "Success",
-        description: "Activity updated successfully",
-      });
+      if (isCompleting && isScheduled) {
+        toast({
+          title: "Event Completed",
+          description: "Did this happen? Create an update to record details and log time.",
+          action: (
+            <ToastAction 
+              altText="Create Update"
+              onClick={() => navigate(`/cases/${caseId}/updates/new?activityId=${activity.id}`)}
+            >
+              Create Update
+            </ToastAction>
+          ),
+          duration: 10000,
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Activity updated successfully",
+        });
+      }
 
       // Note: Billing prompts removed - billing now initiated only from Update Details page
     } catch (error) {
