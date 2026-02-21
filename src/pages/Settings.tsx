@@ -176,11 +176,11 @@ const Settings = () => {
         setNotificationPush(profile.notification_push ?? true);
       }
 
-      // Load organization settings
+      // Load organization settings by organization_id (multi-tenant)
       const { data: orgSettings } = await supabase
         .from("organization_settings")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("organization_id", organization.id)
         .maybeSingle();
 
       if (orgSettings) {
@@ -430,7 +430,7 @@ const Settings = () => {
       const { data: existing } = await supabase
         .from("organization_settings")
         .select("id")
-        .eq("user_id", currentUserId)
+        .eq("organization_id", organization.id)
         .maybeSingle();
 
       const updateData = {
@@ -460,7 +460,7 @@ const Settings = () => {
         const { error } = await supabase
           .from("organization_settings")
           .update(updateData)
-          .eq("user_id", currentUserId);
+          .eq("organization_id", organization.id);
 
         if (error) throw error;
       } else {

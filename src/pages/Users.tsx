@@ -48,7 +48,7 @@ interface OrgUser {
 
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
-  role: z.enum(["admin", "manager", "investigator", "vendor"]),
+  role: z.enum(["admin", "manager", "investigator", "vendor", "owner"]),
 });
 
 const COLUMNS: ColumnDefinition[] = [
@@ -129,7 +129,7 @@ const Users = () => {
       const profileMap = new Map(profiles?.map(p => [p.id, p.color]) || []);
       
       const validUsers = (data || []).filter((u: any) => 
-        ['admin', 'manager', 'investigator', 'vendor'].includes(u.role)
+        ['admin', 'manager', 'investigator', 'vendor', 'owner'].includes(u.role)
       ).map((u: any) => ({
         ...u,
         color: profileMap.get(u.id) || null
@@ -168,7 +168,7 @@ const Users = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'admin' | 'manager' | 'investigator' | 'vendor') => {
+  const handleRoleChange = async (userId: string, newRole: 'admin' | 'manager' | 'investigator' | 'vendor' | 'owner') => {
     if (!organization?.id) return;
 
     try {
@@ -360,6 +360,7 @@ const Users = () => {
                             <SelectItem value="manager">Case Manager - Can create and manage cases</SelectItem>
                             <SelectItem value="investigator">Investigator - Can view and update assigned cases</SelectItem>
                             <SelectItem value="vendor">Vendor - External collaborator with limited access</SelectItem>
+                            <SelectItem value="owner">Owner - Primary organization control</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -399,6 +400,7 @@ const Users = () => {
             <SelectItem value="manager">Case Manager</SelectItem>
             <SelectItem value="investigator">Investigator</SelectItem>
             <SelectItem value="vendor">Vendor</SelectItem>
+            <SelectItem value="owner">Owner</SelectItem>
           </SelectContent>
         </Select>
         <ColumnVisibility
@@ -732,6 +734,7 @@ const Users = () => {
                                 <SelectItem value="manager">Case Manager</SelectItem>
                                 <SelectItem value="investigator">Investigator</SelectItem>
                                 <SelectItem value="vendor">Vendor</SelectItem>
+                                <SelectItem value="owner">Owner</SelectItem>
                               </SelectContent>
                             </Select>
                           ) : (

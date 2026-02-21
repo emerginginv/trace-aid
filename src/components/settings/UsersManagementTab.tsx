@@ -472,7 +472,7 @@ export const UsersManagementTab = ({
                     </div>
                     <div>
                       <Label htmlFor="inviteRole">Role</Label>
-                      <Select value={inviteRole} onValueChange={(value: "admin" | "manager" | "investigator" | "vendor") => setInviteRole(value)}>
+                      <Select value={inviteRole} onValueChange={(value: "admin" | "manager" | "investigator" | "vendor" | "owner" | "member") => setInviteRole(value)}>
                         <SelectTrigger id="inviteRole">
                           <SelectValue />
                         </SelectTrigger>
@@ -568,6 +568,7 @@ export const UsersManagementTab = ({
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="investigator">Investigator</SelectItem>
                 <SelectItem value="vendor">Vendor</SelectItem>
+                <SelectItem value="owner">Owner</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -634,7 +635,7 @@ export const UsersManagementTab = ({
                         {isAdmin && user.id !== currentUserId ? (
                           <Select
                             value={user.roles[0] || "investigator"}
-                            onValueChange={(value: "admin" | "manager" | "investigator" | "vendor") =>
+                            onValueChange={(value: "admin" | "manager" | "investigator" | "vendor" | "owner" | "member") =>
                               handleRoleChange(user.id, value)
                             }
                           >
@@ -646,6 +647,8 @@ export const UsersManagementTab = ({
                               <SelectItem value="manager">Manager</SelectItem>
                               <SelectItem value="investigator">Investigator</SelectItem>
                               <SelectItem value="vendor">Vendor</SelectItem>
+                              <SelectItem value="owner">Owner</SelectItem>
+                              <SelectItem value="member">Member</SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
