@@ -7,8 +7,8 @@ import type { User } from "@supabase/supabase-js";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'manager' | 'investigator' | 'vendor';
-  requiresAnyRole?: ('admin' | 'manager' | 'investigator' | 'vendor')[];
+  requiredRole?: 'admin' | 'manager' | 'investigator' | 'vendor' | 'owner';
+  requiresAnyRole?: ('admin' | 'manager' | 'investigator' | 'vendor' | 'owner')[];
   blockVendors?: boolean;
   blockInvestigators?: boolean;
   skipBillingGate?: boolean; // Allow bypassing billing gate for specific routes
@@ -109,14 +109,16 @@ const ProtectedRoute = ({ children, requiredRole, requiresAnyRole, blockVendors 
         }
 
         // Check if user has required role
-        if (requiredRole && userRole !== requiredRole) {
+        // Owners have all rights, so if any role is required, they pass
+        if (requiredRole && userRole !== requiredRole && userRole !== 'owner') {
           console.log("[ProtectedRoute] User does not have required role");
           navigate("/");
           return;
         }
 
         // Check if user has any of the required roles
-        if (requiresAnyRole && !requiresAnyRole.includes(userRole as any)) {
+        // Owners always have access if ANY role is required
+        if (requiresAnyRole && userRole !== 'owner' && !requiresAnyRole.includes(userRole as any)) {
           console.log("[ProtectedRoute] User role not in requiresAnyRole array");
           navigate("/");
           return;
