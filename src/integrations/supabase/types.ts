@@ -118,6 +118,82 @@ export type Database = {
           },
         ]
       }
+      access_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          include_in_documents: boolean | null
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          refresh_last_update: boolean | null
+          require_validation: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          include_in_documents?: boolean | null
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          refresh_last_update?: boolean | null
+          require_validation?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          include_in_documents?: boolean | null
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          refresh_last_update?: boolean | null
+          require_validation?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_group_roles: {
+        Row: {
+          access_group_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          access_group_id: string
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          access_group_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_group_roles_access_group_id_fkey"
+            columns: ["access_group_id"]
+            isOneToOne: false
+            referencedRelation: "access_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           address: string | null
