@@ -4,8 +4,14 @@ This document serves as a master reference for all permissions and access contro
 
 ## Role Definitions
 
+### Owner
+- **Description**: The primary account holder and highest authority. Bypasses all permission checks.
+- **Internal/External**: Internal staff
+- **Key Capabilities**: Full system control, billing administration, subscription management, and all privileges held by Admins.
+- **Tooltip**: "Highest organization authority. All permissions are granted by default."
+
 ### Admin
-- **Description**: Full access to all features. Can manage all settings, users, and permissions.
+- **Description**: Technical and operational administration. Full access to all features except specific ownership transfers.
 - **Internal/External**: Internal staff
 - **Key Capabilities**: User management, permissions configuration, organization settings, all data access
 - **Tooltip**: "Full access to all features. Admin permissions are locked for security."
@@ -30,18 +36,18 @@ This document serves as a master reference for all permissions and access contro
 
 ## Data Visibility Matrix
 
-| Data Type | Admin | Manager | Investigator | Vendor |
-|-----------|:-----:|:-------:|:------------:|:------:|
-| Subject SSN | ✓ | ✓ | ✗ | ✗ |
-| Billing Rates | ✓ | ✓ | ✗ | ✗ |
-| Staff Compensation | ✓ | View only | Own only | ✗ |
-| Client Contacts | ✓ | ✓ | ✓ | ✗ |
-| Case Finances | ✓ | ✓ | Per permission | ✗ |
-| Attachments | ✓ | ✓ | Per permission | Per case |
-| Generated Reports | ✓ | ✓ | View only | ✗ |
-| Audit Logs | ✓ | ✓ | ✗ | ✗ |
-| User List | ✓ | ✓ | ✗ | ✗ |
-| Organization Settings | ✓ | ✗ | ✗ | ✗ |
+| Data Type | Owner | Admin | Manager | Investigator | Vendor |
+|-----------|:-----:|:-----:|:-------:|:------------:|:------:|
+| Subject SSN | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Billing Rates | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Staff Compensation | ✓ | ✓ | View only | Own only | ✗ |
+| Client Contacts | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Case Finances | ✓ | ✓ | ✓ | Per permission | ✗ |
+| Attachments | ✓ | ✓ | ✓ | Per permission | Per case |
+| Generated Reports | ✓ | ✓ | ✓ | View only | ✗ |
+| Audit Logs | ✓ | ✓ | ✓ | ✗ | ✗ |
+| User List | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Organization Settings | ✓ | ✓ | ✗ | ✗ | ✗ |
 
 ## Permission Feature Groups
 
@@ -137,3 +143,27 @@ This document serves as a master reference for all permissions and access contro
 - Cannot view billing or invoice information
 - Updates they submit are logged with their identity
 - Limited to case-specific work only
+
+## QA Testing Steps (Role-Based Access)
+
+To verify permissions are working correctly, follow this checklist from the frontend:
+
+### 1. Owner & Admin Verification
+- [ ] Login as **Owner**: Verify the Crown icon in the header.
+- [ ] Access **Settings**: Ensure all tabs (Preferences, Organization, Users, Permissions, Billing) are visible.
+- [ ] **Sidebar Check**: Ensure high-level groups like "Analytics" and "Clients" are visible.
+
+### 2. Manager/Investigator Restrictions
+- [ ] Switch to **Manager**: Settings should hide "Billing" and "Permissions".
+- [ ] Switch to **Investigator**: Finance section in sidebar should disappear if the "Financial Access" permission is toggled off in the Admin dashboard.
+
+### 3. Permission Bypassing
+- [ ] As **Admin/Owner**: Attempt to access a "Restricted" case. Access should be granted regardless of assignment.
+- [ ] As **Investigator**: Attempt to access a case you are not assigned to. You should be redirected or see an access denied message.
+
+### 4. User Management
+- [ ] **Role Toggle**: As Admin, change a user's role and verify the header badge updates on their next refresh/navigation.
+- [ ] **Self-State**: Verify that no user can delete themselves or change their own role from the Users management tab.
+
+### 5. Multi-Tenant Isolation
+- [ ] **Org Switching**: Verify that organization-wide settings (Logo, Company Name) updated by an Owner are immediately visible to an Admin in the *same* organization, but invisible to users in a *different* organization.

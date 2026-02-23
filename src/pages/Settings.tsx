@@ -16,6 +16,7 @@ import { useSearchParams } from "react-router-dom";
 import { OrgIsolationAudit } from "@/components/OrgIsolationAudit";
 import { CaseDataAudit } from "@/components/CaseDataAudit";
 import { SettingsNav } from "@/components/settings/SettingsNav";
+import { AccessGroupsTab } from "@/components/settings/AccessGroupsTab";
 import { DataImportTab } from "@/components/settings/DataImportTab";
 import { UserPreferencesTab } from "@/components/settings/UserPreferencesTab";
 import { OrganizationTab } from "@/components/settings/OrganizationTab";
@@ -647,6 +648,11 @@ const Settings = () => {
             {/* Permissions Tab */}
             <TabsContent value="permissions">
               <PermissionsManager />
+            </TabsContent>
+
+            {/* Access Groups Tab */}
+            <TabsContent value="access-groups">
+              <AccessGroupsTab />
             </TabsContent>
 
             {/* Users Tab */}
