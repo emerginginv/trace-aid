@@ -29,3 +29,7 @@ verify_jwt = false
 
 [functions.send-case-request-notifications]
 verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
+
