@@ -67,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('user_id', adminUser.id)
       .single();
 
-    if (memberError || membership?.role !== 'admin') {
+    if (memberError || (membership?.role !== 'admin' && membership?.role !== 'owner')) {
       // Log permission denied
       await supabase.rpc('log_security_event', {
         p_event_type: 'permission_denied',
@@ -77,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
       
       return new Response(
-        JSON.stringify({ error: 'Only admins can create users' }),
+        JSON.stringify({ error: 'Only admins and owners can create users' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
