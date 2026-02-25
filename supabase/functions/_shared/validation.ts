@@ -205,7 +205,7 @@ export function validateOptional<T>(
 
 // Validation schemas for edge functions
 
-export const VALID_ROLES = ['admin', 'manager', 'investigator', 'vendor'] as const;
+export const VALID_ROLES = ['admin', 'manager', 'investigator', 'vendor', 'owner'] as const;
 export type ValidRole = typeof VALID_ROLES[number];
 
 export interface CreateUserInput {
