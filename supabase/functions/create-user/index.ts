@@ -197,7 +197,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Send welcome email (existing user)
       try {
-        await supabase.functions.invoke('send-email', {
+        const { data: emailData, error: emailErr } = await supabase.functions.invoke('send-email', {
           headers: {
             Authorization: authHeader
           },
@@ -208,8 +208,14 @@ const handler = async (req: Request): Promise<Response> => {
             isHtml: true,
           }
         });
+        
+        console.log('[CREATE-USER] Existing user email response:', { emailData, emailErr });
+        
+        if (emailErr) {
+          console.error('[CREATE-USER] Failed to send email (existing):', emailErr);
+        }
       } catch (emailError) {
-        console.error('Failed to send welcome email:', emailError);
+        console.error('[CREATE-USER] Failed to invoke send-email (existing):', emailError);
       }
 
       return new Response(
@@ -320,7 +326,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send welcome email with credentials (new user)
     try {
-      await supabase.functions.invoke('send-email', {
+      const { data: emailData, error: emailErr } = await supabase.functions.invoke('send-email', {
         headers: {
           Authorization: authHeader
         },
@@ -341,8 +347,14 @@ const handler = async (req: Request): Promise<Response> => {
           isHtml: true,
         }
       });
+      
+      console.log('[CREATE-USER] New user email response:', { emailData, emailErr });
+      
+      if (emailErr) {
+        console.error('[CREATE-USER] Failed to send email (new):', emailErr);
+      }
     } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
+      console.error('[CREATE-USER] Failed to invoke send-email (new):', emailError);
     }
 
     return new Response(
