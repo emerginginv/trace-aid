@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { 
   validateCreateUserInput, 
   getClientIp, 
-  getUserAgent 
+  getUserAgent,
+  escapeHtml
 } from "../_shared/validation.ts";
 
 const corsHeaders = {
@@ -84,8 +85,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Check if user already exists in auth.users by trying to get them via email
     console.log('[CREATE-USER] Checking if user exists:', email);
+    
+    // Fetch organization info for the welcome email
+    let orgName = 'your organization';
+    try {
+      const { data: currentOrg } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', organizationId)
+        .maybeSingle();
+      
+      if (currentOrg?.name) {
+        orgName = currentOrg.name;
+      }
+    } catch (e) {
+      console.error('Error fetching org name:', e);
+    }
+    
     const { data: authUsers } = await supabase.auth.admin.listUsers();
-    const existingAuthUser = authUsers.users.find(u => u.email === email);
+    const existingAuthUser = authUsers.users.find((u: any) => u.email === email);
 
     if (existingAuthUser) {
       console.log('[CREATE-USER] Found existing auth user:', existingAuthUser.id);
@@ -176,6 +194,23 @@ const handler = async (req: Request): Promise<Response> => {
         p_user_agent: getUserAgent(req),
         p_metadata: { role, added_existing_user: true },
       });
+
+      // Send welcome email (existing user)
+      try {
+        await supabase.functions.invoke('send-email', {
+          headers: {
+            Authorization: authHeader
+          },
+          body: {
+            to: email,
+            subject: `You've been added to ${orgName} on CaseWyze`,
+            body: `<p>Hello,</p><p>You have been added to the organization <b>${escapeHtml(orgName)}</b> on CaseWyze with the role of <b>${escapeHtml(role)}</b>.</p><p>You can now log in and access this organization's workspace.</p>`,
+            isHtml: true,
+          }
+        });
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+      }
 
       return new Response(
         JSON.stringify({ 
@@ -282,6 +317,33 @@ const handler = async (req: Request): Promise<Response> => {
       p_user_agent: getUserAgent(req),
       p_metadata: { role, created_new_user: true },
     });
+
+    // Send welcome email with credentials (new user)
+    try {
+      await supabase.functions.invoke('send-email', {
+        headers: {
+          Authorization: authHeader
+        },
+        body: {
+          to: email,
+          subject: `Welcome to ${orgName} on CaseWyze`,
+          body: `
+            <p>Hello ${escapeHtml(fullName)},</p>
+            <p>An account has been created for you on CaseWyze under the organization <b>${escapeHtml(orgName)}</b> with the role of <b>${escapeHtml(role)}</b>.</p>
+            <p>Here are your temporary login credentials:</p>
+            <ul>
+              <li><b>Email:</b> ${escapeHtml(email)}</li>
+              <li><b>Password:</b> ${escapeHtml(password)}</li>
+            </ul>
+            <p>Please log in and change your password as soon as possible.</p>
+            <p><a href="https://caseinformation.app/login">Click here to log in</a></p>
+          `,
+          isHtml: true,
+        }
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+    }
 
     return new Response(
       JSON.stringify({ 
