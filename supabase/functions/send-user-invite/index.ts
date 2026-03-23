@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { escapeHtml } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -126,10 +127,10 @@ const handler = async (req: Request): Promise<Response> => {
         }
       });
 
-    // Get the organization's subdomain for constructing invite link
+    // Get the organization's subdomain and name for constructing invite link
     const { data: org } = await supabase
       .from('organizations')
-      .select('subdomain')
+      .select('subdomain, name')
       .eq('id', organizationId)
       .single();
 
@@ -142,13 +143,54 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Invite created for ${email} with role ${role} in organization ${organizationId}`);
     console.log(`Invite link: ${inviteLink}`);
 
-    // TODO: Send actual email with invite link using send-notification-email function
+    // Get organization name for email
+    const orgName = org?.name || 'CaseWyze';
+
+    // Send invitation email with link
+    try {
+      const emailBody = `
+        <p>Hello,</p>
+        <p>You have been invited to join <b>${escapeHtml(orgName)}</b> on CaseWyze as a <b>${escapeHtml(role)}</b>.</p>
+        <p>Click the link below to accept your invitation:</p>
+        <p style="margin: 20px 0;">
+          <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+            Accept Invitation
+          </a>
+        </p>
+        <p>Or copy and paste this link in your browser:</p>
+        <p style="word-break: break-all; color: #666;">${inviteLink}</p>
+        <p style="color: #999; font-size: 12px; margin-top: 20px;">This invitation will expire in 7 days.</p>
+      `;
+
+      const { error: emailError } = await supabase.functions.invoke('send-email', {
+        headers: {
+          Authorization: req.headers.get('Authorization') || '',
+        },
+        body: {
+          to: email,
+          subject: `You're invited to join ${orgName} on CaseWyze`,
+          body: emailBody,
+          isHtml: true,
+          fromName: 'CaseWyze'
+        }
+      });
+
+      if (emailError) {
+        console.error('Error sending invitation email:', emailError);
+        // Don't fail the whole request if email sending fails - the invite is still created
+      } else {
+        console.log(`Invitation email sent successfully to ${email}`);
+      }
+    } catch (emailException) {
+      console.error('Exception in send-email invocation:', emailException);
+      // Continue - invite is created, email sending failure doesn't block the flow
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         invite,
-        message: 'Invite sent successfully (email functionality will be added later)'
+        message: 'Invitation sent successfully'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
