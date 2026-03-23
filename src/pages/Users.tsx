@@ -48,6 +48,8 @@ interface OrgUser {
 
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
+  full_name: z.string().min(2, "Name is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   role: z.enum(["admin", "manager", "investigator", "vendor", "owner"]),
 });
 
@@ -91,6 +93,8 @@ const Users = () => {
     resolver: zodResolver(inviteSchema),
     defaultValues: {
       email: "",
+      full_name: "",
+      password: "",
       role: "investigator",
     },
   });
@@ -148,23 +152,29 @@ const Users = () => {
     if (!organization?.id) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-user-invite', {
+      const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: values.email,
+          fullName: values.full_name,
+          password: values.password,
           role: values.role,
           organizationId: organization.id,
         }
       });
 
       if (error) throw error;
+      if (data?.error) {
+         toast.error(data.error);
+         return;
+      }
 
       toast.success(`Invite sent to ${values.email}`);
       setInviteDialogOpen(false);
       form.reset();
       fetchUsers();
     } catch (error: any) {
-      console.error("Error sending invite:", error);
-      toast.error(error.message || "Failed to send invite");
+      console.error("Error creating/inviting user:", error);
+      toast.error(error.message || "Failed to create/invite user");
     }
   };
 
@@ -332,12 +342,38 @@ const Users = () => {
                 <form onSubmit={form.handleSubmit(handleInviteUser)} className="space-y-4">
                   <FormField
                     control={form.control}
+                    name="full_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Email Address</FormLabel>
                         <FormControl>
                           <Input placeholder="user@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Temporary Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Min 8 characters" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
