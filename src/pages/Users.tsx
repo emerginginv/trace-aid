@@ -201,7 +201,14 @@ const Users = () => {
       toast.success(`Invite sent to ${values.email}`);
       setInviteDialogOpen(false);
       form.reset();
-      fetchUsers();
+      
+      // Intensive refresh
+      await fetchUsers();
+      
+      // Delay slightly and refresh again to ensure DB consistency
+      setTimeout(() => {
+        fetchUsers();
+      }, 1000);
     } catch (error: any) {
       console.error("Error creating/inviting user:", error);
       toast.error(error.message || "Failed to create/invite user");

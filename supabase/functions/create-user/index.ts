@@ -105,6 +105,31 @@ const handler = async (req: Request): Promise<Response> => {
     } catch (e) {
       console.error('Error fetching org info:', e);
     }
+
+    // Fetch organization settings for sender email and branding
+    let senderEmail = 'support@caseinformation.app';
+    let signatureName = '';
+    let signatureTitle = '';
+    let signaturePhone = '';
+    let signatureEmail = '';
+    
+    try {
+      const { data: orgSettings } = await supabase
+        .from('organization_settings')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+      
+      if (orgSettings) {
+        if (orgSettings.sender_email) senderEmail = orgSettings.sender_email;
+        signatureName = orgSettings.signature_name || '';
+        signatureTitle = orgSettings.signature_title || '';
+        signaturePhone = orgSettings.signature_phone || '';
+        signatureEmail = orgSettings.signature_email || '';
+      }
+    } catch (e) {
+      console.error('Error fetching org settings:', e);
+    }
     
     const loginUrl = subdomain && subdomain !== 'caseinformation.app' 
       ? `https://${subdomain}.caseinformation.app/login`
@@ -229,6 +254,7 @@ const handler = async (req: Request): Promise<Response> => {
           body: {
             to: email,
             subject: `You've been added to ${orgName} on CaseWyze`,
+            fromEmail: senderEmail,
             body: `
               <p>Hello,</p>
               <p>You have been added to the organization <b>${escapeHtml(orgName)}</b> on CaseWyze with the role of <b>${escapeHtml(role)}</b>.</p>
@@ -387,6 +413,7 @@ const handler = async (req: Request): Promise<Response> => {
         body: {
           to: email,
           subject: `Welcome to ${orgName} on CaseWyze`,
+          fromEmail: senderEmail,
           body: `
             <p>Hello ${escapeHtml(fullName)},</p>
             <p>An account has been created for you on CaseWyze under the organization <b>${escapeHtml(orgName)}</b> with the role of <b>${escapeHtml(role)}</b>.</p>

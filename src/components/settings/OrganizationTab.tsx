@@ -261,7 +261,7 @@ export function OrganizationTab({
       const { data: existing } = await supabase
         .from("organization_settings")
         .select("id")
-        .eq("user_id", currentUserId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
 
       const updateData = {
@@ -292,7 +292,7 @@ export function OrganizationTab({
         const { error } = await supabase
           .from("organization_settings")
           .update(updateData)
-          .eq("user_id", currentUserId);
+          .eq("organization_id", organizationId);
 
         if (error) throw error;
       } else {
