@@ -86,21 +86,29 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if user already exists in auth.users by trying to get them via email
     console.log('[CREATE-USER] Checking if user exists:', email);
     
-    // Fetch organization info for the welcome email
+    // Fetch organization info for the welcome email and subdomain
     let orgName = 'your organization';
+    let subdomain = 'caseinformation.app';
     try {
       const { data: currentOrg } = await supabase
         .from('organizations')
-        .select('name')
+        .select('name, subdomain')
         .eq('id', organizationId)
         .maybeSingle();
       
       if (currentOrg?.name) {
         orgName = currentOrg.name;
       }
+      if (currentOrg?.subdomain) {
+        subdomain = currentOrg.subdomain;
+      }
     } catch (e) {
-      console.error('Error fetching org name:', e);
+      console.error('Error fetching org info:', e);
     }
+    
+    const loginUrl = subdomain && subdomain !== 'caseinformation.app' 
+      ? `https://${subdomain}.caseinformation.app/login`
+      : 'https://caseinformation.app/login';
     
     const { data: authUsers } = await supabase.auth.admin.listUsers();
     const existingAuthUser = authUsers.users.find((u: any) => u.email === email);
@@ -195,7 +203,24 @@ const handler = async (req: Request): Promise<Response> => {
         p_metadata: { role, added_existing_user: true },
       });
 
-      // Send welcome email (existing user)
+      // Create pending invite record for existing user
+      const { error: inviteError } = await supabase
+        .from('organization_invites')
+        .insert({
+          organization_id: organizationId,
+          email,
+          role,
+          invited_by: adminUser.id,
+        })
+        .select()
+        .maybeSingle();
+
+      if (inviteError) {
+        console.error('Error creating invite record:', inviteError);
+        // Don't fail - the user is already added to organization
+      }
+
+      // Send welcome email (existing user) with subdomain link
       try {
         const { data: emailData, error: emailErr } = await supabase.functions.invoke('send-email', {
           headers: {
@@ -204,7 +229,16 @@ const handler = async (req: Request): Promise<Response> => {
           body: {
             to: email,
             subject: `You've been added to ${orgName} on CaseWyze`,
-            body: `<p>Hello,</p><p>You have been added to the organization <b>${escapeHtml(orgName)}</b> on CaseWyze with the role of <b>${escapeHtml(role)}</b>.</p><p>You can now log in and access this organization's workspace.</p>`,
+            body: `
+              <p>Hello,</p>
+              <p>You have been added to the organization <b>${escapeHtml(orgName)}</b> on CaseWyze with the role of <b>${escapeHtml(role)}</b>.</p>
+              <p style="margin-top: 16px;">
+                <a href="${loginUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+                  Log In to CaseWyze
+                </a>
+              </p>
+              <p style="margin-top: 16px; font-size: 14px; color: #666;">You can now log in and access this organization's workspace.</p>
+            `,
             isHtml: true,
           }
         });
@@ -324,7 +358,24 @@ const handler = async (req: Request): Promise<Response> => {
       p_metadata: { role, created_new_user: true },
     });
 
-    // Send welcome email with credentials (new user)
+    // Create pending invite record so user shows under "Pending Invites"
+    const { data: inviteRecord, error: inviteError } = await supabase
+      .from('organization_invites')
+      .insert({
+        organization_id: organizationId,
+        email,
+        role,
+        invited_by: adminUser.id,
+      })
+      .select()
+      .maybeSingle();
+
+    if (inviteError) {
+      console.error('Error creating invite record:', inviteError);
+      // Don't fail - the user is already created, just log the error
+    }
+
+    // Send welcome email with credentials and subdomain login link (new user)
     try {
       const { data: emailData, error: emailErr } = await supabase.functions.invoke('send-email', {
         headers: {
@@ -336,13 +387,17 @@ const handler = async (req: Request): Promise<Response> => {
           body: `
             <p>Hello ${escapeHtml(fullName)},</p>
             <p>An account has been created for you on CaseWyze under the organization <b>${escapeHtml(orgName)}</b> with the role of <b>${escapeHtml(role)}</b>.</p>
-            <p>Here are your temporary login credentials:</p>
-            <ul>
-              <li><b>Email:</b> ${escapeHtml(email)}</li>
-              <li><b>Password:</b> ${escapeHtml(password)}</li>
+            <p><strong>Your login credentials:</strong></p>
+            <ul style="list-style-type: none; padding-left: 0;">
+              <li style="margin-bottom: 8px;"><strong>Email:</strong> ${escapeHtml(email)}</li>
+              <li><strong>Password:</strong> ${escapeHtml(password)}</li>
             </ul>
-            <p>Please log in and change your password as soon as possible.</p>
-            <p><a href="https://caseinformation.app/login">Click here to log in</a></p>
+            <p style="margin-top: 20px;">
+              <a href="${loginUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+                Log In to CaseWyze
+              </a>
+            </p>
+            <p style="margin-top: 16px; font-size: 14px; color: #666;">Please log in and change your password as soon as possible.</p>
           `,
           isHtml: true,
         }

@@ -138,8 +138,32 @@ const Users = () => {
         ...u,
         color: profileMap.get(u.id) || null
       }));
-      
-      setUsers(validUsers as OrgUser[]);
+
+      // Also fetch pending invites
+      const { data: pendingInvites, error: pendingError } = await supabase
+        .from('organization_invites')
+        .select('id, email, role, created_at')
+        .eq('organization_id', organization.id)
+        .is('accepted_at', null);
+
+      if (pendingError) {
+        console.error("Error fetching pending invites:", pendingError);
+      }
+
+      // Transform pending invites to match OrgUser structure
+      const pendingUsers = (pendingInvites || []).map((invite: any) => ({
+        id: invite.id,
+        email: invite.email,
+        full_name: null,
+        role: invite.role,
+        status: 'pending',
+        created_at: invite.created_at,
+        color: null,
+      }));
+
+      // Combine active and pending users
+      const allUsers = [...validUsers, ...pendingUsers] as OrgUser[];
+      setUsers(allUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
