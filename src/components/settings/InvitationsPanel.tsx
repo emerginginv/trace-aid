@@ -1,24 +1,12 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Mail, Clock, Trash2, RefreshCw, UserPlus } from "lucide-react";
+import { Mail, Clock, Trash2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,10 +42,6 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
   const { organization } = useOrganization();
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "manager" | "investigator" | "vendor" | "owner" | "member">("investigator");
-  const [sending, setSending] = useState(false);
   const [revokeConfirm, setRevokeConfirm] = useState<PendingInvite | null>(null);
   const [revoking, setRevoking] = useState(false);
 
@@ -84,56 +68,7 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
     fetchPendingInvites();
   }, [organization?.id]);
 
-  const handleSendInvite = async () => {
-    try {
-      const validation = inviteSchema.safeParse({
-        email: inviteEmail,
-        role: inviteRole,
-      });
 
-      if (!validation.success) {
-        toast.error(validation.error.errors[0].message);
-        return;
-      }
-
-      if (!organization?.id) {
-        toast.error("Organization not found");
-        return;
-      }
-
-      setSending(true);
-
-      const { data, error } = await supabase.functions.invoke('send-user-invite', {
-        body: {
-          email: inviteEmail,
-          role: inviteRole,
-          organizationId: organization.id,
-        }
-      });
-
-      if (error) {
-        toast.error(error.message || "Failed to send invitation");
-        return;
-      }
-
-      if (data?.error) {
-        toast.error(data.error);
-        return;
-      }
-
-      toast.success(`Invitation sent to ${inviteEmail}`);
-      setInviteDialogOpen(false);
-      setInviteEmail("");
-      setInviteRole("investigator");
-      fetchPendingInvites();
-
-    } catch (err: any) {
-      console.error("Error sending invite:", err);
-      toast.error("Failed to send invitation");
-    } finally {
-      setSending(false);
-    }
-  };
 
   const handleRevokeInvite = async () => {
     if (!revokeConfirm) return;
@@ -205,71 +140,6 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
-            {isAdmin && (
-              <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Invite User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Invite New User</DialogTitle>
-                    <DialogDescription>
-                      Send an invitation email to add a new team member to your organization.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="inviteEmail">Email Address</Label>
-                      <Input
-                        id="inviteEmail"
-                        type="email"
-                        placeholder="user@example.com"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="inviteRole">Role</Label>
-                      <Select 
-                        value={inviteRole} 
-                        onValueChange={(v: "admin" | "manager" | "investigator" | "vendor" | "owner" | "member") => setInviteRole(v)}
-                      >
-                        <SelectTrigger id="inviteRole">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                           <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                          <SelectItem value="investigator">Investigator</SelectItem>
-                          <SelectItem value="vendor">Vendor</SelectItem>
-                          <SelectItem value="owner">Owner</SelectItem>
-                          <SelectItem value="member">Member</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        {inviteRole === 'admin' && 'Full access including billing, invites, and domains'}
-                        {inviteRole === 'owner' && 'Highest level of access to organization settings'}
-                        {inviteRole === 'manager' && 'Manage cases, tasks, and team members'}
-                        {inviteRole === 'investigator' && 'Operational access to cases and tasks'}
-                        {inviteRole === 'vendor' && 'Limited access as external vendor'}
-                        {inviteRole === 'member' && 'Basic team member access'}
-                      </p>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSendInvite} disabled={sending}>
-                      {sending ? 'Sending...' : 'Send Invitation'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
           </div>
         </div>
       </CardHeader>

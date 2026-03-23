@@ -530,14 +530,14 @@ export const UsersManagementTab = ({
                 <DialogTrigger asChild>
                   <Button>
                     <UserPlus className="w-4 h-4 mr-2" />
-                    Add User
+                    Invite User
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogTitle>Invite New User</DialogTitle>
                     <DialogDescription>
-                      Create a new user account for your team
+                      Create a new user account and send an invitation email
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
@@ -656,10 +656,10 @@ export const UsersManagementTab = ({
                       {inviting ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Creating User...
+                          Inviting User...
                         </>
                       ) : (
-                        "Create User"
+                        "Invite User"
                       )}
                     </Button>
                   </div>
