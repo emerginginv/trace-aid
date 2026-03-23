@@ -373,10 +373,13 @@ const handler = async (req: Request): Promise<Response> => {
     if (inviteError) {
       console.error('Error creating invite record:', inviteError);
       // Don't fail - the user is already created, just log the error
+    } else {
+      console.log('Invite record created successfully:', inviteRecord);
     }
 
     // Send welcome email with credentials and subdomain login link (new user)
     try {
+      console.log('Sending email to:', email, 'with login URL:', loginUrl);
       const { data: emailData, error: emailErr } = await supabase.functions.invoke('send-email', {
         headers: {
           Authorization: authHeader
@@ -407,6 +410,8 @@ const handler = async (req: Request): Promise<Response> => {
       
       if (emailErr) {
         console.error('[CREATE-USER] Failed to send email (new):', emailErr);
+      } else {
+        console.log('[CREATE-USER] Email sent successfully to:', email);
       }
     } catch (emailError) {
       console.error('[CREATE-USER] Failed to invoke send-email (new):', emailError);
