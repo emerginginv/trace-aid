@@ -140,11 +140,11 @@ const Users = () => {
       }));
 
       // Also fetch pending invites
-      const { data: pendingInvites, error: pendingError } = await supabase
-        .from('organization_invites')
-        .select('id, email, role, created_at')
-        .eq('organization_id', organization.id)
-        .is('accepted_at', null);
+      const { data: pendingInvites, error: pendingError } = await supabase.rpc('get_pending_invites', {
+        p_organization_id: organization.id
+      });
+
+      console.log('Pending invites data:', pendingInvites, 'error:', pendingError);
 
       if (pendingError) {
         console.error("Error fetching pending invites:", pendingError);
@@ -161,6 +161,8 @@ const Users = () => {
         color: null,
       }));
 
+      console.log('Pending users:', pendingUsers);
+
       // Combine active and pending users
       const allUsers = [...validUsers, ...pendingUsers] as OrgUser[];
       setUsers(allUsers);
@@ -175,6 +177,8 @@ const Users = () => {
   const handleInviteUser = async (values: z.infer<typeof inviteSchema>) => {
     if (!organization?.id) return;
 
+    console.log('Inviting user with values:', values);
+
     try {
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
@@ -185,6 +189,8 @@ const Users = () => {
           organizationId: organization.id,
         }
       });
+
+      console.log('Create user response:', { data, error });
 
       if (error) throw error;
       if (data?.error) {
