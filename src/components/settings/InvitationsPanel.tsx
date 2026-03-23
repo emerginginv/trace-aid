@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Mail, Clock, Trash2, RefreshCw } from "lucide-react";
+import { Mail, Clock, Trash2, RefreshCw, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,8 +20,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 interface PendingInvite {
   id: string;
@@ -44,6 +51,16 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
   const [loading, setLoading] = useState(true);
   const [revokeConfirm, setRevokeConfirm] = useState<PendingInvite | null>(null);
   const [revoking, setRevoking] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const form = useForm<z.infer<typeof inviteSchema>>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: {
+      email: "",
+      role: "investigator",
+    },
+  });
 
   const fetchPendingInvites = async () => {
     if (!organization?.id) return;
@@ -67,6 +84,45 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
   useEffect(() => {
     fetchPendingInvites();
   }, [organization?.id]);
+
+  const handleSendInvite = async (values: z.infer<typeof inviteSchema>) => {
+    if (!organization?.id) {
+      toast.error("Organization not found");
+      return;
+    }
+
+    try {
+      setSending(true);
+      const { data, session } = await supabase.auth.getSession();
+      
+      const response = await supabase.functions.invoke('send-user-invite', {
+        body: {
+          email: values.email,
+          role: values.role,
+          organizationId: organization.id,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to send invite');
+      }
+
+      if (response.data?.error) {
+        toast.error(response.data.error);
+        return;
+      }
+
+      toast.success(`Invitation sent to ${values.email}`);
+      setInviteDialogOpen(false);
+      form.reset();
+      fetchPendingInvites();
+    } catch (error: any) {
+      console.error("Error sending invite:", error);
+      toast.error(error.message || "Failed to send invitation");
+    } finally {
+      setSending(false);
+    }
+  };
 
 
 
@@ -132,6 +188,87 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
             </CardDescription>
           </div>
           <div className="flex gap-2">
+            {isAdmin && (
+              <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-2">
+                    <Send className="h-4 w-4" />
+                    Send Invite
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Send Invitation</DialogTitle>
+                    <DialogDescription>
+                      Send an email invitation to a new team member. They'll receive a link to accept the invite.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleSendInvite)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Address</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="colleague@example.com" 
+                                type="email"
+                                {...field}
+                                disabled={sending}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="role"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Role</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              defaultValue={field.value}
+                              disabled={sending}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="manager">Case Manager</SelectItem>
+                                <SelectItem value="investigator">Investigator</SelectItem>
+                                <SelectItem value="vendor">Vendor</SelectItem>
+                                <SelectItem value="member">Member</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setInviteDialogOpen(false)}
+                          disabled={sending}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={sending}>
+                          {sending ? 'Sending...' : 'Send Invitation'}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            )}
             <Button
               variant="outline"
               size="sm"
