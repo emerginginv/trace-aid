@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -208,12 +208,11 @@ export const UsersManagementTab = ({
     }
   };
 
-  // Load users on mount
-  useState(() => {
-    if (organization?.id && users.length === 0) {
+  useEffect(() => {
+    if (organization?.id) {
       fetchUsers();
     }
-  });
+  }, [organization?.id]);
 
   const handleInviteUser = async () => {
     try {
@@ -313,7 +312,12 @@ export const UsersManagementTab = ({
       setInvitePassword("");
       setInviteRole("investigator");
       setShowInvitePassword(false);
-      fetchUsers();
+      
+      // Refresh both lists immediately
+      await fetchUsers();
+      if (typeof refreshOrganization === 'function') {
+        await refreshOrganization();
+      }
     } catch (error: any) {
       console.error("Error inviting user:", error);
       toast.error("An unexpected error occurred. Please try again.");
