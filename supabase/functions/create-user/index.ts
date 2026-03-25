@@ -134,6 +134,7 @@ const handler = async (req: Request): Promise<Response> => {
     const loginUrl = subdomain && subdomain !== 'caseinformation.app' 
       ? `https://${subdomain}.caseinformation.app/login`
       : 'https://caseinformation.app/login';
+    const portalUrl = loginUrl.replace(/\/login$/, '');
     
     const { data: authUsers } = await supabase.auth.admin.listUsers();
     const existingAuthUser = authUsers.users.find((u: any) => u.email === email);
@@ -176,6 +177,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const inviteLink = `${loginUrl.replace('/login', '/accept-invite')}?token=${invite.token}`;
+    let emailSent = false;
+    let emailError: string | null = null;
 
     // 2. Send invitation email with link and details
     try {
@@ -190,6 +193,10 @@ const handler = async (req: Request): Promise<Response> => {
           body: `
             <p>Hello ${escapeHtml(fullName)},</p>
             <p>You have been invited to join the organization <b>${escapeHtml(orgName)}</b> on CaseWyze with the role of <b>${escapeHtml(role)}</b>.</p>
+            <p style="margin-top: 16px; font-size: 14px; color: #666;">
+              <strong>Portal URL:</strong>
+              <a href="${portalUrl}" target="_blank" style="color: #2563eb; text-decoration: none;">${escapeHtml(portalUrl)}</a>
+            </p>
             <p><strong>Your temporary credentials:</strong></p>
             <ul style="list-style-type: none; padding-left: 0;">
               <li style="margin-bottom: 8px;"><strong>Email:</strong> ${escapeHtml(email)}</li>
@@ -209,9 +216,15 @@ const handler = async (req: Request): Promise<Response> => {
       
       if (emailErr) {
         console.error('[CREATE-USER] Failed to send invite email:', emailErr);
+        emailSent = false;
+        emailError = emailErr.message || 'Failed to send invite email';
+      } else {
+        emailSent = true;
       }
-    } catch (emailError) {
-      console.error('[CREATE-USER] Failed to invoke send-email:', emailError);
+    } catch (err) {
+      console.error('[CREATE-USER] Failed to invoke send-email:', err);
+      emailSent = false;
+      emailError = err instanceof Error ? err.message : String(err);
     }
 
     // 3. Log the security event
@@ -229,7 +242,11 @@ const handler = async (req: Request): Promise<Response> => {
           id: invite.id,
           email: invite.email,
         },
-        message: 'Invitation sent successfully. User will show under Pending Invites.'
+        message: 'Invitation created successfully.',
+        email: {
+          sent: emailSent,
+          error: emailError,
+        },
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

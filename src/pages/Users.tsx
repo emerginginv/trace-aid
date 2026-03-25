@@ -199,6 +199,11 @@ const Users = () => {
       }
 
       toast.success(`Invite sent to ${values.email}`);
+      if (data?.email && data.email.sent === false) {
+        toast.error("Invite created, but email was not sent", {
+          description: data.email.error || "Check Mailjet configuration and sender email.",
+        });
+      }
       setInviteDialogOpen(false);
       form.reset();
       

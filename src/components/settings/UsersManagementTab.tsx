@@ -307,6 +307,11 @@ export const UsersManagementTab = ({
       }
 
       toast.success(`User ${inviteEmail} has been added successfully`);
+      if (data?.email && data.email.sent === false) {
+        toast.error("Invite created, but email was not sent", {
+          description: data.email.error || "Check Mailjet configuration and sender email.",
+        });
+      }
       setInviteDialogOpen(false);
       setInviteEmail("");
       setInviteFullName("");
@@ -316,7 +321,9 @@ export const UsersManagementTab = ({
       
       // Refresh both lists immediately
       await fetchUsers();
-      setRefreshTrigger(prev => prev + 1);
+      // Small delay to ensure the invite row is visible to the RPC query.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      setRefreshTrigger((prev) => prev + 1);
       if (typeof refreshOrganization === 'function') {
         await refreshOrganization();
       }
@@ -1033,7 +1040,11 @@ export const UsersManagementTab = ({
       </Dialog>
 
       {/* Pending Invitations Panel */}
-      <InvitationsPanel isAdmin={isAdmin} refreshTrigger={refreshTrigger} />
+      <InvitationsPanel
+        isAdmin={isAdmin}
+        refreshTrigger={refreshTrigger}
+        organizationId={organization?.id ?? null}
+      />
     </>
   );
 };

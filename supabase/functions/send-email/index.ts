@@ -36,20 +36,23 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Mailjet API key exists:", !!apiKey);
     console.log("Mailjet secret key exists:", !!secretKey);
 
-    // For testing purposes, if credentials are missing, log and return success
+    // If credentials are missing, fail the request (so callers don't assume
+    // an email was actually delivered).
     if (!apiKey || !secretKey) {
-      console.warn("Mailjet API credentials not configured - skipping email send for testing");
-      return new Response(JSON.stringify({ 
-        success: true, 
-        warning: "Mailjet credentials not configured - email not sent",
-        testMode: true 
-      }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
+      console.error("Mailjet API credentials not configured");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Mailjet API credentials not configured",
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
         },
-      });
+      );
     }
 
     // Get auth header
