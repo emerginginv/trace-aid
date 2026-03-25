@@ -272,10 +272,16 @@ const Auth = () => {
   const handleSignUp = async (data: SignUpFormData) => {
     setLoading(true);
     try {
-      // Generate a temporary random password
-      const tempPassword = Math.random().toString(36).slice(-10) + "Aa1!";
       const urlParams = new URLSearchParams(window.location.search);
       const inviteToken = urlParams.get("invite_token");
+      const inviteTempPassword = urlParams.get("temp_password");
+
+      // For invited users we can use the password embedded in the invite metadata.
+      // Otherwise (normal signup) generate a temporary random password.
+      const tempPassword =
+        inviteTempPassword && inviteTempPassword.length >= 8
+          ? inviteTempPassword
+          : Math.random().toString(36).slice(-10) + "Aa1!";
 
       const redirectTo = inviteToken
         ? `${window.location.origin}/accept-invite?token=${inviteToken}`
@@ -318,7 +324,7 @@ const Auth = () => {
         // Get the user's organization to send welcome email
         console.log('[DEBUG] Fetching org id for user:', authData.user.id);
         const { data: orgId, error: rpcError } = await supabase
-          .rpc("get_org_id_by_user_id", { p_user_id: authData.user.id });
+          .rpc("get_org_id_by_user_id" as any, { p_user_id: authData.user.id });
 
         if (rpcError) {
           console.error('[DEBUG] RPC Error fetching org id:', rpcError);

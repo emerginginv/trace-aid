@@ -32,6 +32,8 @@ interface PendingInvite {
 interface InvitationsPanelProps {
   isAdmin: boolean;
   refreshTrigger?: number;
+  // Ensures this panel always queries the same tenant the invite was created for.
+  organizationId?: string | null;
 }
 
 const inviteSchema = z.object({
@@ -39,20 +41,21 @@ const inviteSchema = z.object({
   role: z.enum(["admin", "manager", "investigator", "vendor", "owner", "member"]),
 });
 
-  export function InvitationsPanel({ isAdmin, refreshTrigger = 0 }: InvitationsPanelProps) {
+  export function InvitationsPanel({ isAdmin, refreshTrigger = 0, organizationId }: InvitationsPanelProps) {
   const { organization } = useOrganization();
+  const effectiveOrganizationId = organizationId ?? organization?.id ?? null;
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [revokeConfirm, setRevokeConfirm] = useState<PendingInvite | null>(null);
   const [revoking, setRevoking] = useState(false);
 
   const fetchPendingInvites = async () => {
-    if (!organization?.id) return;
+    if (!effectiveOrganizationId) return;
     
     try {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_pending_invites', {
-        p_organization_id: organization.id
+        p_organization_id: effectiveOrganizationId
       });
 
       if (error) throw error;
@@ -67,7 +70,7 @@ const inviteSchema = z.object({
 
   useEffect(() => {
     fetchPendingInvites();
-  }, [organization?.id, refreshTrigger]);
+  }, [effectiveOrganizationId, refreshTrigger]);
 
 
 

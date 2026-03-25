@@ -64,6 +64,9 @@ export default function AcceptInvite() {
         if (subdomain) {
           authUrl += `&subdomain=${subdomain}`;
         }
+        if (invite?.metadata && (invite.metadata as any).temporary_password) {
+          authUrl += `&temp_password=${encodeURIComponent((invite.metadata as any).temporary_password)}`;
+        }
         if (invite?.metadata && (invite.metadata as any).full_name) {
           authUrl += `&full_name=${encodeURIComponent((invite.metadata as any).full_name)}`;
         }
