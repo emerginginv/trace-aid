@@ -155,6 +155,7 @@ export const UsersManagementTab = ({
     null,
   );
   const [showInvitePassword, setShowInvitePassword] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const isAdmin = currentUserRole === "admin" || currentUserRole === "owner";
 
@@ -315,6 +316,7 @@ export const UsersManagementTab = ({
       
       // Refresh both lists immediately
       await fetchUsers();
+      setRefreshTrigger(prev => prev + 1);
       if (typeof refreshOrganization === 'function') {
         await refreshOrganization();
       }
@@ -1031,7 +1033,7 @@ export const UsersManagementTab = ({
       </Dialog>
 
       {/* Pending Invitations Panel */}
-      <InvitationsPanel isAdmin={isAdmin} />
+      <InvitationsPanel isAdmin={isAdmin} refreshTrigger={refreshTrigger} />
     </>
   );
 };

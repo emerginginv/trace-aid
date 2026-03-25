@@ -31,6 +31,7 @@ interface PendingInvite {
 
 interface InvitationsPanelProps {
   isAdmin: boolean;
+  refreshTrigger?: number;
 }
 
 const inviteSchema = z.object({
@@ -38,7 +39,7 @@ const inviteSchema = z.object({
   role: z.enum(["admin", "manager", "investigator", "vendor", "owner", "member"]),
 });
 
-export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
+  export function InvitationsPanel({ isAdmin, refreshTrigger = 0 }: InvitationsPanelProps) {
   const { organization } = useOrganization();
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +67,7 @@ export function InvitationsPanel({ isAdmin }: InvitationsPanelProps) {
 
   useEffect(() => {
     fetchPendingInvites();
-  }, [organization?.id]);
+  }, [organization?.id, refreshTrigger]);
 
 
 
