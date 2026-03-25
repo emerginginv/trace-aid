@@ -224,6 +224,19 @@ const Auth = () => {
     const type = hashParams.get("type");
     const urlParams = new URLSearchParams(window.location.search);
     const isSetup = urlParams.get("setup") === "true";
+    const inviteToken = urlParams.get("invite_token");
+    const inviteEmail = urlParams.get("email");
+    const inviteFullName = urlParams.get("full_name");
+    const inviteSubdomain = urlParams.get("subdomain");
+
+    // Pre-fill invite data if present
+    if (inviteEmail) signUpForm.setValue("email", inviteEmail);
+    if (inviteSubdomain) signUpForm.setValue("subdomain", inviteSubdomain);
+    if (inviteFullName) {
+      const parts = inviteFullName.split(' ');
+      if (parts.length > 0) signUpForm.setValue("firstName", parts[0]);
+      if (parts.length > 1) signUpForm.setValue("lastName", parts.slice(1).join(' '));
+    }
 
     // 2. Check current session status
     const checkSession = async () => {
@@ -231,9 +244,13 @@ const Auth = () => {
       
       const isSetupCompleted = session?.user?.user_metadata?.setup_completed === true;
 
-      // If user is already logged in and setup is finished, ALWAYS go to dashboard
-      // even if they tried to visit /auth?setup=true
+      // If user is already logged in and setup is finished, check if we need to redirect to accept-invite
       if (session && isSetupCompleted && !isPasswordReset) {
+        const redirect = urlParams.get("redirect");
+        if (redirect) {
+          navigate(redirect);
+          return;
+        }
         console.log('[Auth] User already setup, redirecting to dashboard');
         navigate("/dashboard");
         return;
@@ -257,12 +274,18 @@ const Auth = () => {
     try {
       // Generate a temporary random password
       const tempPassword = Math.random().toString(36).slice(-10) + "Aa1!";
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteToken = urlParams.get("invite_token");
+
+      const redirectTo = inviteToken
+        ? `${window.location.origin}/accept-invite?token=${inviteToken}`
+        : `https://${data.subdomain}.caseinformation.app/auth?setup=true`;
 
       const { data: authData, error } = await supabase.auth.signUp({
         email: data.email,
         password: tempPassword,
         options: {
-          emailRedirectTo: `https://${data.subdomain}.caseinformation.app/auth?setup=true`,
+          emailRedirectTo: redirectTo,
           data: {
             first_name: data.firstName,
             last_name: data.lastName,
@@ -276,6 +299,7 @@ const Auth = () => {
             billing_state: data.state,
             billing_zip: data.zipCode,
             billing_country: data.country,
+            invite_token: inviteToken,
             // Capture billing card info as requested for "complete data"
             card_number: data.cardNumber,
             expiry_date: data.expiryDate,

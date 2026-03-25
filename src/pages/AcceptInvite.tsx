@@ -37,10 +37,38 @@ export default function AcceptInvite() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        // Redirect to auth with return URL
+        // Fetch org details to pre-fill subdomain if possible
+        const { data: inviteData } = await supabase
+          .from('organization_invites')
+          .select('organization_id, email, metadata')
+          .eq('token', token)
+          .maybeSingle();
+        
+        const invite = inviteData as any;
+        
+        let subdomain = '';
+        if (invite?.organization_id) {
+          const { data: org } = await supabase
+            .from('organizations')
+            .select('subdomain')
+            .eq('id', invite.organization_id)
+            .single();
+          subdomain = (org as any)?.subdomain || '';
+        }
+
+        // Redirect to auth with return URL AND invite info
         const returnUrl = `/accept-invite?token=${token}`;
-        toast.info("Please sign in to accept the invitation");
-        navigate(`/auth?redirect=${encodeURIComponent(returnUrl)}`);
+        toast.info("Please sign up to accept your invitation");
+        
+        let authUrl = `/auth?redirect=${encodeURIComponent(returnUrl)}&invite_token=${token}&email=${encodeURIComponent(invite?.email || '')}`;
+        if (subdomain) {
+          authUrl += `&subdomain=${subdomain}`;
+        }
+        if (invite?.metadata && (invite.metadata as any).full_name) {
+          authUrl += `&full_name=${encodeURIComponent((invite.metadata as any).full_name)}`;
+        }
+
+        navigate(authUrl);
         return;
       }
 
