@@ -198,11 +198,75 @@ const Users = () => {
          return;
       }
 
-      toast.success(`Invite sent to ${values.email}`);
-      if (data?.email && data.email.sent === false) {
-        toast.error("Invite created, but email was not sent", {
-          description: data.email.error || "Check Mailjet configuration and sender email.",
+      const inviteToken = data?.invite?.token;
+      if (!inviteToken) {
+        toast.error("Invite created, but missing invite token (email send skipped).");
+        return;
+      }
+
+      // Send the invitation email as a separate call (like signup welcome emails).
+      const subdomain = organization?.subdomain;
+      const loginUrl =
+        subdomain && subdomain !== 'caseinformation.app'
+          ? `https://${subdomain}.caseinformation.app/login`
+          : 'https://caseinformation.app/login';
+      const inviteLink = `${loginUrl.replace('/login', '/accept-invite')}?token=${inviteToken}`;
+      const portalUrl = loginUrl.replace(/\/login$/, '');
+
+      const emailBody = `
+        <p>Hello ${values.full_name},</p>
+        <p>You have been invited to join the organization <b>${organization?.name || "your organization"}</b> on CaseWyze with the role of <b>${values.role}</b>.</p>
+        <p style="margin-top: 16px; font-size: 14px; color: #666;">
+          <strong>Portal URL:</strong>
+          <a href="${portalUrl}" target="_blank" style="color: #2563eb; text-decoration: none;">${portalUrl}</a>
+        </p>
+        <p><strong>Your temporary credentials:</strong></p>
+        <ul style="list-style-type: none; padding-left: 0;">
+          <li style="margin-bottom: 8px;"><strong>Email:</strong> ${values.email}</li>
+          <li><strong>Temporary Password:</strong> ${values.password}</li>
+        </ul>
+        <p style="margin-top: 20px;">
+          <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+            Accept Invitation
+          </a>
+        </p>
+        <p style="margin-top: 16px; font-size: 14px; color: #666;">Alternatively, you can copy and paste this link into your browser:</p>
+        <p style="font-size: 12px; color: #2563eb; word-break: break-all;">${inviteLink}</p>
+      `;
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Not authenticated. Please sign in and try again.");
+        return;
+      }
+
+      const { data: emailResult, error: emailInvokeError } =
+        await supabase.functions.invoke('send-email', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: {
+            to: values.email,
+            subject: `You're invited to join ${organization?.name || 'your organization'} on CaseWyze`,
+            fromEmail: 'support@caseinformation.app',
+            fromName: 'CaseWyze',
+            body: emailBody,
+            isHtml: true,
+          },
         });
+
+      if (emailInvokeError) {
+        toast.error("Invite created, but email send failed.", {
+          description: emailInvokeError.message || emailInvokeError.toString(),
+        });
+      } else if (!emailResult?.success) {
+        toast.error("Invite created, but email was not sent.", {
+          description: emailResult?.error || "Check Mailjet configuration.",
+        });
+      } else {
+        toast.success(`Invite sent to ${values.email}`);
       }
       setInviteDialogOpen(false);
       form.reset();

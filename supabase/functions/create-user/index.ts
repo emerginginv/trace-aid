@@ -106,7 +106,8 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Error fetching org info:', e);
     }
 
-    // Fetch organization settings for sender email and branding
+    // Use the same verified From.Email as `send-welcome-email`
+    // (signup emails) to avoid Mailjet sender verification issues.
     let senderEmail = 'support@caseinformation.app';
     let signatureName = '';
     let signatureTitle = '';
@@ -121,7 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
         .maybeSingle();
       
       if (orgSettings) {
-        if (orgSettings.sender_email) senderEmail = orgSettings.sender_email;
+        // Keep senderEmail fixed to match the signup email sender.
         signatureName = orgSettings.signature_name || '';
         signatureTitle = orgSettings.signature_title || '';
         signaturePhone = orgSettings.signature_phone || '';
@@ -176,57 +177,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const inviteLink = `${loginUrl.replace('/login', '/accept-invite')}?token=${invite.token}`;
-    let emailSent = false;
-    let emailError: string | null = null;
-
-    // 2. Send invitation email with link and details
-    try {
-      const { data: emailData, error: emailErr } = await supabase.functions.invoke('send-email', {
-        headers: {
-          Authorization: authHeader
-        },
-        body: {
-          to: email,
-          subject: `You're invited to join ${orgName} on CaseWyze`,
-          fromEmail: senderEmail,
-          body: `
-            <p>Hello ${escapeHtml(fullName)},</p>
-            <p>You have been invited to join the organization <b>${escapeHtml(orgName)}</b> on CaseWyze with the role of <b>${escapeHtml(role)}</b>.</p>
-            <p style="margin-top: 16px; font-size: 14px; color: #666;">
-              <strong>Portal URL:</strong>
-              <a href="${portalUrl}" target="_blank" style="color: #2563eb; text-decoration: none;">${escapeHtml(portalUrl)}</a>
-            </p>
-            <p><strong>Your temporary credentials:</strong></p>
-            <ul style="list-style-type: none; padding-left: 0;">
-              <li style="margin-bottom: 8px;"><strong>Email:</strong> ${escapeHtml(email)}</li>
-              <li><strong>Temporary Password:</strong> ${escapeHtml(password)}</li>
-            </ul>
-            <p style="margin-top: 20px;">
-              <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
-                Accept Invitation
-              </a>
-            </p>
-            <p style="margin-top: 16px; font-size: 14px; color: #666;">Alternatively, you can copy and paste this link into your browser:</p>
-            <p style="font-size: 12px; color: #2563eb; word-break: break-all;">${inviteLink}</p>
-          `,
-          isHtml: true,
-        }
-      });
-      
-      if (emailErr) {
-        console.error('[CREATE-USER] Failed to send invite email:', emailErr);
-        emailSent = false;
-        emailError = emailErr.message || 'Failed to send invite email';
-      } else {
-        emailSent = true;
-      }
-    } catch (err) {
-      console.error('[CREATE-USER] Failed to invoke send-email:', err);
-      emailSent = false;
-      emailError = err instanceof Error ? err.message : String(err);
-    }
-
     // 3. Log the security event
     await supabase.rpc('log_security_event', {
       p_event_type: 'user_invited',
@@ -241,12 +191,10 @@ const handler = async (req: Request): Promise<Response> => {
         invite: {
           id: invite.id,
           email: invite.email,
+          token: invite.token,
+          role: invite.role,
         },
         message: 'Invitation created successfully.',
-        email: {
-          sent: emailSent,
-          error: emailError,
-        },
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
