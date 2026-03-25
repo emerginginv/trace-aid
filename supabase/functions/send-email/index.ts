@@ -20,10 +20,10 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (!validationResult.success) {
       console.log('[SEND-EMAIL] Validation failed:', validationResult.error);
-      return new Response(
-        JSON.stringify({ error: validationResult.error }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: false, error: validationResult.error }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const { to, subject, body, isHtml, fromName, fromEmail } = validationResult.data!;
@@ -45,13 +45,7 @@ const handler = async (req: Request): Promise<Response> => {
           success: false,
           error: "Mailjet API credentials not configured",
         }),
-        {
-          status: 500,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        },
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
@@ -103,33 +97,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Default from email - use verified sender from organization settings or UnifiedCases support
-    let defaultFromEmail = fromEmail || "support@caseinformation.app";
-    
-    // Get sender email from organization settings if available
-    if (authHeader) {
-      try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user } } = await supabase.auth.getUser(token);
-        
-        if (user) {
-          const { data: orgSettings } = await supabase
-            .from('organization_settings')
-            .select('sender_email')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          if (orgSettings?.sender_email) {
-            defaultFromEmail = orgSettings.sender_email;
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching sender email:', error);
-      }
-    }
+    // Default From email: use the caller-provided value (create-user sets this),
+    // otherwise fall back to the verified sender used by send-welcome-email.
+    const defaultFromEmail = fromEmail || "support@caseinformation.app";
 
     // Sanitize the email body to prevent HTML injection attacks
     // For HTML emails, sanitize the content; for plain text, escape HTML entities
@@ -182,10 +152,37 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!mailjetResponse.ok) {
       console.error("Mailjet API error:", responseData);
-      throw new Error(responseData.ErrorMessage || "Failed to send email");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: responseData?.ErrorMessage || "Failed to send email",
+          response: responseData,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
-    console.log("Email sent successfully:", responseData);
+    // Even when HTTP 200, Mailjet can return message-level failures.
+    const msg = responseData?.Messages?.[0];
+    const msgStatus = (msg?.Status ?? "").toString().toLowerCase();
+    const isSuccess =
+      msgStatus === "success" ||
+      msgStatus === "queued" ||
+      msgStatus === "sent";
+
+    if (!isSuccess) {
+      console.error("Mailjet message-level failure:", responseData);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: msg?.ErrorMessage || msg?.Status || "Failed to send email",
+          response: responseData,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    console.log("Email accepted by Mailjet:", responseData);
 
     return new Response(JSON.stringify({ success: true, data: responseData }), {
       status: 200,
@@ -198,9 +195,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.error("Error in send-email function:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ success: false, error: errorMessage }),
       {
-        status: 500,
+        status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
