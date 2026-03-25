@@ -50,13 +50,22 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'already_member', true, 'organization_id', v_invite.organization_id);
   END IF;
 
-  -- 4. Add user to the organization
+  -- 4. Create profile if it doesn't exist
+  INSERT INTO public.profiles (id, email, full_name)
+  VALUES (
+    v_user_id, 
+    v_user_email, 
+    COALESCE(v_invite.metadata->>'full_name', split_part(v_user_email, '@', 1))
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    full_name = EXCLUDED.full_name
+    WHERE profiles.full_name IS NULL OR profiles.full_name = '';
+
+  -- 5. Add user to the organization
   INSERT INTO public.organization_members (organization_id, user_id, role)
   VALUES (v_invite.organization_id, v_user_id, v_invite.role);
 
-  -- 5. Add corresponding app role if not already present
-  -- Mapping: if role in members is 'owner'/'admin'/'manager' -> they get 'admin' in user_roles
-  -- Otherwise they get 'investigator' or similar.
+  -- 6. Add corresponding app role if not already present
   INSERT INTO public.user_roles (user_id, role)
   VALUES (
     v_user_id, 
@@ -67,7 +76,7 @@ BEGIN
   )
   ON CONFLICT (user_id, role) DO NOTHING;
 
-  -- 6. Mark invite as accepted
+  -- 7. Mark invite as accepted
   UPDATE public.organization_invites 
   SET accepted_at = now() 
   WHERE id = v_invite.id;

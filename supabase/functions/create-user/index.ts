@@ -138,321 +138,98 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: authUsers } = await supabase.auth.admin.listUsers();
     const existingAuthUser = authUsers.users.find((u: any) => u.email === email);
 
-    if (existingAuthUser) {
-      console.log('[CREATE-USER] Found existing auth user:', existingAuthUser.id);
-      
-      const { data: existingMember, error: memberCheckError } = await supabase
-        .from('organization_members')
-        .select('id, user_id, organization_id, role')
-        .eq('user_id', existingAuthUser.id)
-        .eq('organization_id', organizationId)
-        .maybeSingle();
-
-      console.log('[CREATE-USER] Member check result:', { 
-        existingMember, 
-        memberCheckError,
-        userId: existingAuthUser.id,
-        orgId: organizationId 
-      });
-
-      if (existingMember) {
-        console.log('[CREATE-USER] User already a member, rejecting');
-        return new Response(
-          JSON.stringify({ 
-            error: `This user (${email}) is already a member of your organization`,
-            details: {
-              userId: existingAuthUser.id,
-              membershipId: existingMember.id,
-              role: existingMember.role
-            }
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      console.log('[CREATE-USER] User exists in auth but not in org, will add to org');
-
-      // User exists but not in this org - add them to the organization
-      const { error: orgMemberError } = await supabase
-        .from('organization_members')
-        .insert({
-          user_id: existingAuthUser.id,
-          organization_id: organizationId,
-          role: role,
-        });
-
-      if (orgMemberError) {
-        console.error('Error adding existing user to organization:', orgMemberError);
-        return new Response(
-          JSON.stringify({ error: `Failed to add existing user to organization: ${orgMemberError.message}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Add the new role to user_roles WITHOUT deleting existing roles
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: existingAuthUser.id,
-          role: role,
-        })
-        .select()
-        .maybeSingle();
-
-      if (roleError && !roleError.message.includes('duplicate')) {
-        console.error('Error adding role:', roleError);
-      }
-
-      // Update organization user count
-      const { data: orgData } = await supabase
-        .from('organizations')
-        .select('current_users_count')
-        .eq('id', organizationId)
-        .single();
-
-      if (orgData) {
-        await supabase
-          .from('organizations')
-          .update({ current_users_count: (orgData.current_users_count || 0) + 1 })
-          .eq('id', organizationId);
-      }
-
-      // Log the security event
-      await supabase.rpc('log_security_event', {
-        p_event_type: 'user_created',
-        p_user_id: adminUser.id,
-        p_organization_id: organizationId,
-        p_target_user_id: existingAuthUser.id,
-        p_ip_address: getClientIp(req),
-        p_user_agent: getUserAgent(req),
-        p_metadata: { role, added_existing_user: true },
-      });
-
-      // Create pending invite record for existing user
-      const { error: inviteError } = await supabase
-        .from('organization_invites')
-        .insert({
-          organization_id: organizationId,
-          email,
-          role,
-          invited_by: adminUser.id,
-        })
-        .select()
-        .maybeSingle();
-
-      if (inviteError) {
-        console.error('Error creating invite record:', inviteError);
-        // Don't fail - the user is already added to organization
-      }
-
-      // Send welcome email (existing user) with subdomain link
-      try {
-        const { data: emailData, error: emailErr } = await supabase.functions.invoke('send-email', {
-          headers: {
-            Authorization: authHeader
-          },
-          body: {
-            to: email,
-            subject: `You've been added to ${orgName} on CaseWyze`,
-            fromEmail: senderEmail,
-            body: `
-              <p>Hello,</p>
-              <p>You have been added to the organization <b>${escapeHtml(orgName)}</b> on CaseWyze with the role of <b>${escapeHtml(role)}</b>.</p>
-              <p style="margin-top: 16px;">
-                <a href="${loginUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
-                  Log In to CaseWyze
-                </a>
-              </p>
-              <p style="margin-top: 16px; font-size: 14px; color: #666;">You can now log in and access this organization's workspace.</p>
-            `,
-            isHtml: true,
-          }
-        });
-        
-        console.log('[CREATE-USER] Existing user email response:', { emailData, emailErr });
-        
-        if (emailErr) {
-          console.error('[CREATE-USER] Failed to send email (existing):', emailErr);
-        }
-      } catch (emailError) {
-        console.error('[CREATE-USER] Failed to invoke send-email (existing):', emailError);
-      }
-
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          user: {
-            id: existingAuthUser.id,
-            email: email,
-          },
-          message: 'Existing user added to organization successfully'
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Create the user with service role (bypasses RLS)
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-      }
-    });
-
-    if (createError) {
-      console.error('Error creating user:', createError);
-      return new Response(
-        JSON.stringify({ error: `Failed to create user: ${createError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!newUser.user) {
-      return new Response(
-        JSON.stringify({ error: 'User creation failed' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Add user to organization_members
-    const { error: orgMemberError } = await supabase
+    // Check if user already exists in THIS organization
+    const { data: existingMember } = await supabase
       .from('organization_members')
-      .insert({
-        user_id: newUser.user.id,
-        organization_id: organizationId,
-        role: role,
-      });
-
-    if (orgMemberError) {
-      console.error('Error adding to organization:', orgMemberError);
-      await supabase.auth.admin.deleteUser(newUser.user.id);
-      return new Response(
-        JSON.stringify({ error: `Failed to add user to organization: ${orgMemberError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Add role to user_roles
-    const { error: deleteRoleError } = await supabase
-      .from('user_roles')
-      .delete()
-      .eq('user_id', newUser.user.id);
-
-    if (deleteRoleError) {
-      console.error('Error deleting existing roles:', deleteRoleError);
-    }
-
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .insert({
-        user_id: newUser.user.id,
-        role: role,
-      });
-
-    if (roleError) {
-      console.error('Error adding role:', roleError);
-      return new Response(
-        JSON.stringify({ error: `User created but failed to assign role: ${roleError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Update organization user count
-    const { data: orgData } = await supabase
-      .from('organizations')
-      .select('current_users_count')
-      .eq('id', organizationId)
+      .select('id')
+      .eq('organization_id', organizationId)
       .single();
+    
+    // Note: In a real scenario, we'd check if the email exists in profiles first
+    // but for invitations, we focus on the organization_invites table.
 
-    if (orgData) {
-      await supabase
-        .from('organizations')
-        .update({ current_users_count: (orgData.current_users_count || 0) + 1 })
-        .eq('id', organizationId);
-    }
-
-    // Log the security event
-    await supabase.rpc('log_security_event', {
-      p_event_type: 'user_created',
-      p_user_id: adminUser.id,
-      p_organization_id: organizationId,
-      p_target_user_id: newUser.user.id,
-      p_ip_address: getClientIp(req),
-      p_user_agent: getUserAgent(req),
-      p_metadata: { role, created_new_user: true },
-    });
-
-    // Create pending invite record so user shows under "Pending Invites"
-    const { data: inviteRecord, error: inviteError } = await supabase
+    // 1. Create the invitation record
+    const { data: invite, error: inviteError } = await supabase
       .from('organization_invites')
       .insert({
         organization_id: organizationId,
         email,
         role,
         invited_by: adminUser.id,
+        // Optional: store fullName and temp password in metadata if needed, 
+        // though usually users set their own password on signup.
+        // We'll store them so the accept_invitation flow can use them.
+        metadata: {
+          full_name: fullName,
+          temporary_password: password
+        }
       })
       .select()
-      .maybeSingle();
+      .single();
 
     if (inviteError) {
-      console.error('Error creating invite record:', inviteError);
-      // Don't fail - the user is already created, just log the error
-    } else {
-      console.log('Invite record created successfully:', inviteRecord);
+      console.error('[CREATE-USER] Error creating invite:', inviteError);
+      return new Response(
+        JSON.stringify({ error: `Failed to create invitation: ${inviteError.message}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Send welcome email with credentials and subdomain login link (new user)
+    const inviteLink = `${loginUrl.replace('/login', '/accept-invite')}?token=${invite.token}`;
+
+    // 2. Send invitation email with link and details
     try {
-      console.log('Sending email to:', email, 'with login URL:', loginUrl);
       const { data: emailData, error: emailErr } = await supabase.functions.invoke('send-email', {
         headers: {
           Authorization: authHeader
         },
         body: {
           to: email,
-          subject: `Welcome to ${orgName} on CaseWyze`,
+          subject: `You're invited to join ${orgName} on CaseWyze`,
           fromEmail: senderEmail,
           body: `
             <p>Hello ${escapeHtml(fullName)},</p>
-            <p>An account has been created for you on CaseWyze under the organization <b>${escapeHtml(orgName)}</b> with the role of <b>${escapeHtml(role)}</b>.</p>
-            <p><strong>Your login credentials:</strong></p>
+            <p>You have been invited to join the organization <b>${escapeHtml(orgName)}</b> on CaseWyze with the role of <b>${escapeHtml(role)}</b>.</p>
+            <p><strong>Your temporary credentials:</strong></p>
             <ul style="list-style-type: none; padding-left: 0;">
               <li style="margin-bottom: 8px;"><strong>Email:</strong> ${escapeHtml(email)}</li>
-              <li><strong>Password:</strong> ${escapeHtml(password)}</li>
+              <li><strong>Temporary Password:</strong> ${escapeHtml(password)}</li>
             </ul>
             <p style="margin-top: 20px;">
-              <a href="${loginUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
-                Log In to CaseWyze
+              <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+                Accept Invitation
               </a>
             </p>
-            <p style="margin-top: 16px; font-size: 14px; color: #666;">Please log in and change your password as soon as possible.</p>
+            <p style="margin-top: 16px; font-size: 14px; color: #666;">Alternatively, you can copy and paste this link into your browser:</p>
+            <p style="font-size: 12px; color: #2563eb; word-break: break-all;">${inviteLink}</p>
           `,
           isHtml: true,
         }
       });
       
-      console.log('[CREATE-USER] New user email response:', { emailData, emailErr });
-      
       if (emailErr) {
-        console.error('[CREATE-USER] Failed to send email (new):', emailErr);
-      } else {
-        console.log('[CREATE-USER] Email sent successfully to:', email);
+        console.error('[CREATE-USER] Failed to send invite email:', emailErr);
       }
     } catch (emailError) {
-      console.error('[CREATE-USER] Failed to invoke send-email (new):', emailError);
+      console.error('[CREATE-USER] Failed to invoke send-email:', emailError);
     }
+
+    // 3. Log the security event
+    await supabase.rpc('log_security_event', {
+      p_event_type: 'user_invited',
+      p_user_id: adminUser.id,
+      p_organization_id: organizationId,
+      p_metadata: { email, role, invite_id: invite.id },
+    });
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        user: {
-          id: newUser.user.id,
-          email: newUser.user.email,
-          full_name: fullName,
+        invite: {
+          id: invite.id,
+          email: invite.email,
         },
-        message: 'User created successfully'
+        message: 'Invitation sent successfully. User will show under Pending Invites.'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
