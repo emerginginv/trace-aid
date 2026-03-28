@@ -58,7 +58,7 @@ export default function AcceptInvite() {
 
         // Redirect to auth with return URL AND invite info
         const returnUrl = `/accept-invite?token=${token}`;
-        toast.info("Please sign up to accept your invitation");
+        toast.info("Please sign in to accept your invitation");
         
         let authUrl = `/auth?redirect=${encodeURIComponent(returnUrl)}&invite_token=${token}&email=${encodeURIComponent(invite?.email || '')}`;
         if (subdomain) {

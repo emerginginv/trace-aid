@@ -138,17 +138,48 @@ const handler = async (req: Request): Promise<Response> => {
     const portalUrl = loginUrl.replace(/\/login$/, '');
     
     const { data: authUsers } = await supabase.auth.admin.listUsers();
-    const existingAuthUser = authUsers.users.find((u: any) => u.email === email);
+    let existingAuthUser = authUsers.users.find((u: any) => u.email === email);
+
+    if (!existingAuthUser) {
+      // Create user in Auth because we want them to login with credentials instead of signing up
+      const { data: newAuthUser, error: createAuthError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName,
+          setup_completed: true
+        }
+      });
+      if (createAuthError) {
+        return new Response(
+          JSON.stringify({ error: `Failed to create auth user: ${createAuthError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      existingAuthUser = newAuthUser.user;
+    } else {
+      // If user exists, we might still want to update their password to the new one so they can login.
+      // But maybe they already have an account and password. We will NOT update their password if they exist,
+      // they should login with their existing password.
+    }
 
     // Check if user already exists in THIS organization
-    const { data: existingMember } = await supabase
-      .from('organization_members')
-      .select('id')
-      .eq('organization_id', organizationId)
-      .single();
-    
-    // Note: In a real scenario, we'd check if the email exists in profiles first
-    // but for invitations, we focus on the organization_invites table.
+    if (existingAuthUser) {
+      const { data: existingMember } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('user_id', existingAuthUser.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        return new Response(
+          JSON.stringify({ error: 'User is already a member of this organization' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // 1. Create the invitation record
     const { data: invite, error: inviteError } = await supabase

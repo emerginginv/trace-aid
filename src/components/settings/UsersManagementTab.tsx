@@ -327,10 +327,6 @@ export const UsersManagementTab = ({
       const emailBody = `
         <p>Hello ${inviteFullName},</p>
         <p>You have been invited to join the organization <b>${organization?.name || "your organization"}</b> on CaseWyze with the role of <b>${inviteRole}</b>.</p>
-        <p style="margin-top: 16px; font-size: 14px; color: #666;">
-          <strong>Portal URL:</strong>
-          <a href="${portalUrl}" target="_blank" style="color: #2563eb; text-decoration: none;">${portalUrl}</a>
-        </p>
         <p><strong>Your temporary credentials:</strong></p>
         <ul style="list-style-type: none; padding-left: 0;">
           <li style="margin-bottom: 8px;"><strong>Email:</strong> ${inviteEmail}</li>

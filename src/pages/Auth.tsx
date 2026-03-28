@@ -460,7 +460,13 @@ const Auth = () => {
           .maybeSingle();
 
         // All users go to dashboard - role determines what they see
-        navigate("/dashboard");
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectTo = urlParams.get("redirect");
+        if (redirectTo) {
+          navigate(redirectTo);
+        } else {
+          navigate("/dashboard");
+        }
       }
     } catch (error: any) {
       toast.error(getAuthErrorMessage(error));
