@@ -203,8 +203,10 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         
         if (allOrgs.length === 0) {
           console.log(`${LOG_PREFIX} User has no organizations`);
+          toast.error("Your access to this workspace has been revoked.");
           clearOrganizationState();
           setLoading(false);
+          await supabase.auth.signOut();
           return;
         }
         
@@ -230,8 +232,10 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       
       if (!subdomainOrg) {
         console.warn(`${LOG_PREFIX} No organization found for subdomain:`, tenantSubdomain);
+        toast.error("Invalid workspace.");
         clearOrganizationState();
         setLoading(false);
+        await supabase.auth.signOut();
         return;
       }
 
@@ -242,8 +246,10 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       
       if (!isMember) {
         console.warn(`${LOG_PREFIX} User is not a member of organization for subdomain:`, tenantSubdomain);
+        toast.error("Your access to this workspace has been revoked.");
         clearOrganizationState();
         setLoading(false);
+        await supabase.auth.signOut();
         return;
       }
 
