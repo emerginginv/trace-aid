@@ -96,8 +96,8 @@ const signUpSchema = z.object({
   // Billing Information
   cardNumber: z
     .string()
-    .min(16, "Card number must be at least 16 digits")
-    .max(19, "Card number is too long"),
+    .min(16, "Card number must be 16 digits")
+    .max(16, "Card number must be 16 digits"),
   expiryDate: z
     .string()
     .regex(
@@ -106,8 +106,8 @@ const signUpSchema = z.object({
     ),
   cvv: z
     .string()
-    .min(3, "CVV must be 3 or 4 digits")
-    .max(4, "CVV must be 3 or 4 digits"),
+    .min(3, "CVV must be 3 digits")
+    .max(3, "CVV must be 3 digits"),
   billingAddress: z.string().min(1, "Billing address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State / Province is required"),
@@ -157,6 +157,7 @@ const Auth = () => {
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [newSubdomain, setNewSubdomain] = useState("");
 
@@ -592,11 +593,26 @@ const Auth = () => {
                       <FormItem>
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="••••••••"
-                            {...field}
-                          />
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="••••••••"
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -609,11 +625,26 @@ const Auth = () => {
                       <FormItem>
                         <FormLabel>Confirm Password</FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="••••••••"
-                            {...field}
-                          />
+                          <div className="relative">
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="••••••••"
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -917,6 +948,10 @@ const Auth = () => {
                                 className="pl-9"
                                 placeholder="0000 0000 0000 0000"
                                 {...field}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                                  field.onChange(value);
+                                }}
                               />
                             </div>
                           </FormControl>
@@ -936,6 +971,16 @@ const Auth = () => {
                                 type="text"
                                 placeholder="MM/YY"
                                 {...field}
+                                onChange={(e) => {
+                                  let value = e.target.value.replace(/\D/g, '');
+                                  if (value.length > 4) {
+                                    value = value.slice(0, 4);
+                                  }
+                                  if (value.length > 2) {
+                                    value = `${value.slice(0, 2)}/${value.slice(2)}`;
+                                  }
+                                  field.onChange(value);
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
@@ -949,7 +994,15 @@ const Auth = () => {
                           <FormItem>
                             <FormLabel>CVV</FormLabel>
                             <FormControl>
-                              <Input type="text" placeholder="123" {...field} />
+                              <Input
+                                type="text"
+                                placeholder="123"
+                                {...field}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\D/g, '').slice(0, 3);
+                                  field.onChange(value);
+                                }}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
