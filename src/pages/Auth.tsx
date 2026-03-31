@@ -316,6 +316,8 @@ const Auth = () => {
       });
       if (error) {
         toast.error(getAuthErrorMessage(error));
+      } else if (authData.user?.identities?.length === 0) {
+        toast.error("An account with this email already exists.");
       } else if (authData.user) {
         toast.success("Account created! Sending setup link...");
 
